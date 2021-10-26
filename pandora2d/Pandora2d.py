@@ -22,3 +22,43 @@
 """
 This module contains the general function to run Pandora 2D pipeline.
 """
+
+import argparse
+
+import pandora2d
+
+
+def get_parser():
+    """
+    ArgumentParser for Pandora 2D
+
+    :return parser
+    """
+
+    parser = argparse.ArgumentParser(description="Pandora 2D")
+    parser.add_argument(
+        "config", 
+        help="path to a json file containing the input/output files paths and \
+            algorithm parameters",
+    )
+    parser.add_argument(
+        "path_output",
+        help="path to the output directory for disparity maps"
+    )
+    parser.add_argument("-v", "--verbose", help="Increase output verbosity", action="store_true")
+    return parser
+
+def main():
+    """
+    Call Pandora2D's main
+    """   
+
+    #Get parser
+    parser = get_parser()
+    args = parser.parse_args()
+
+    #Run the Pandora 2D pipeline
+    pandora2d.main(args.config, args.path_output, args.verbose)
+
+if __name__ == "__main__":
+    main()
