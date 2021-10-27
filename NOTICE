@@ -1,0 +1,34 @@
+PANDORA2D Copyright (c) 2020 Centre National d'Etudes Spatiales (CNES).
+
+This software is distributed under the Apache Software License (ASL) v2.0, see
+LICENSE file or http://www.apache.org/licenses/LICENSE-2.0 for details.
+
+PANDORA2D depends on or includes source code from the following third-party
+software:
+
+Pandora:XXXX
+
+Python: programming language that lets you work quickly and integrate systems more effectively.
+Copyright (c) 2001-2020 Python Software Foundation. All Rights reserved.
+Website: http://python.org/
+License: Python Software License.
+
+NumPy: The fundamental package for scientific computing with Python.
+Copyright (c) 2005-2020, NumPy Developers.
+Website: https://numpy.org/
+License: BSD 3 Clause.
+
+Setuptools: build system
+Copyright (C) 2016 Jason R Coombs <jaraco@jaraco.com>
+Website: https://setuptools.readthedocs.io/
+License: MIT.
+
+Xarray: N-D labeled arrays and datasets in Python
+Copyright 2014-2019, xarray Developers
+Website: http://xarray.pydata.org
+License: Apache v2.0.
+
+Pytest: Testing module for Python codes
+Copyright Holger Krekel and others, 2004-2021.
+Website: https://github.com/pytest-dev/pytest
+License: MIT.
