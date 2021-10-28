@@ -23,8 +23,9 @@
 This module contains functions to run Pandora pipeline.
 """
 
-def main(cfg_path:str, path_output:str, verbose: bool) -> None:
-    
+
+def main(cfg_path: str, path_output: str, verbose: bool) -> None:
+
     """
     Check config file and run pandora 2D framework accordingly
 
@@ -33,12 +34,15 @@ def main(cfg_path:str, path_output:str, verbose: bool) -> None:
     :param verbose: verbose mode
     :type verbose: bool
     :return: None
-    """    
-    print("#---------------# \
+    """
+    print(
+        "#---------------# \
     		    début du main\
-    		  #---------------#")
-    
+    		  #---------------#"
+    )
 
-    print("#---------------# \
+    print(
+        "#---------------# \
  		       fin du main\
- 		       #---------------#")
+ 		       #---------------#"
+    )

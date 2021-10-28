@@ -126,7 +126,8 @@ disable=print-statement,
         invalid-unary-operand-type,
         broad-except,
         unsubscriptable-object,
-        unsupported-membership-test
+        unsupported-membership-test,
+        W0613, C0103 #unused argument, don't conform snake_case
 
 
 # Enable the message, report, category or checker with the given id(s). You can

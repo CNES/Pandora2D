@@ -24,17 +24,39 @@
 This module contains the required libraries and softwares allowing to execute the software,
 and setup elements to configure and identify the software.
 """
-
+from codecs import open as copen
 from setuptools import setup
 
-if __name__ == "__main__":
-    try:
-        setup(use_scm_version={"version_scheme": "no-guess-dev"})
-    except:  # noqa
-        print(
-            "\n\nAn error occurred while building the project, "
-            "please ensure you have the most updated version of setuptools, "
-            "setuptools_scm and wheel with:\n"
-            "   pip install -U setuptools setuptools_scm wheel\n\n"
-        )
-        raise
+# try:
+#     from sphinx.setup_command import BuildDoc
+
+#     CMDCLASS["build_sphinx"] = BuildDoc
+# except ImportError:
+#     print("WARNING: sphinx not available. Doc cannot be built")
+
+
+REQUIREMENTS = ["pandora"]
+
+REQUIREMENTS_EXTRA = {"dev": ["pytest", "pytest-cov", "pylint", "pre-commit", "mypy", "black"]}
+
+
+def readme():
+    with copen("README.md", "r", "utf-8") as fstream:
+        return fstream.read()
+
+
+setup(
+    name="pandora2D",
+    use_scm_version=True,
+    description="Pandora2D is used for coregistration",
+    long_description=readme(),
+    # long_description_content_type="text/markdown",
+    # url="https://github.com/CNES/Pandora",
+    author="CNES",
+    # author_email="myriam.cournet@cnes.fr",
+    license="Apache License 2.0",
+    # entry_points={"console_scripts": ["pandora = pandora.Pandora:main"]},
+    python_requires=">=3.6",
+    install_requires=REQUIREMENTS,
+    extras_require=REQUIREMENTS_EXTRA,
+)
