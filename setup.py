@@ -35,28 +35,9 @@ from setuptools import setup
 #     print("WARNING: sphinx not available. Doc cannot be built")
 
 
-REQUIREMENTS = ["pandora"]
-
-REQUIREMENTS_EXTRA = {"dev": ["pytest", "pytest-cov", "pylint", "pre-commit", "mypy", "black"]}
-
-
 def readme():
     with copen("README.md", "r", "utf-8") as fstream:
         return fstream.read()
 
 
-setup(
-    name="pandora2D",
-    use_scm_version=True,
-    description="Pandora2D is used for coregistration",
-    long_description=readme(),
-    # long_description_content_type="text/markdown",
-    # url="https://github.com/CNES/Pandora",
-    author="CNES",
-    # author_email="myriam.cournet@cnes.fr",
-    license="Apache License 2.0",
-    # entry_points={"console_scripts": ["pandora = pandora.Pandora:main"]},
-    python_requires=">=3.6",
-    install_requires=REQUIREMENTS,
-    extras_require=REQUIREMENTS_EXTRA,
-)
+setup(use_scm_version=True)
