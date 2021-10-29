@@ -23,9 +23,10 @@
 This module contains functions to run Pandora pipeline.
 """
 
-import pandora
+from pandora import read_config_file, read_img
 
 from pandora2d import check_json
+
 
 def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
@@ -40,15 +41,11 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     """
 
     # read the user input's configuration
-    user_cfg = pandora.read_config_file(cfg_path)
+    user_cfg = read_config_file(cfg_path)
 
     cfg = check_json.check_input_section(user_cfg)
 
-    #read images
-    _ = pandora.read_img(cfg["input"]["img_left"],cfg["input"]["no_data"])
+    # read images
+    _ = read_img(cfg["input"]["img_left"], cfg["input"]["no_data"])
 
-    _ = pandora.read_img(cfg["input"]["img_right"],cfg["input"]["no_data"])
-
-
-
-
+    _ = read_img(cfg["input"]["img_right"], cfg["input"]["no_data"])
