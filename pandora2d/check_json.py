@@ -22,3 +22,37 @@
 """
 This module contains functions allowing to check the configuration given to Pandora pipeline.
 """
+import sys
+from typing import Dict
+import logging
+import numpy as np
+
+from pandora.check_json import check_disparities, check_images
+
+
+def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+    """
+    Check if the input dictionary is correct
+
+    Args:
+        user_cfg (Dict[str, dict]): user pipeline configuration
+
+    Returns:
+        Dict[str, dict]: global configuration
+    """
+
+    # test images
+    check_images(user_cfg["input"]["img_left"], user_cfg["input"]["img_right"], None, None)
+
+    if "no_data" in user_cfg["input"]:
+        if user_cfg["input"]["no_data"] is None:
+            user_cfg["input"]["no_data"] = np.nan
+    else:
+        logging.error("no_data must be initialized")
+        sys.exit(1)
+
+    # test disparities
+    check_disparities(user_cfg["input"]["disp_min_x"], user_cfg["input"]["disp_max_x"], None)
+    check_disparities(user_cfg["input"]["disp_min_y"], user_cfg["input"]["disp_max_y"], None)
+
+    return user_cfg
