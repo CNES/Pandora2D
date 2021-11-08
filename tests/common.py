@@ -73,3 +73,19 @@ false_input_disp = {
         "disp_max_y": 2,
     }
 }
+
+correct_pipeline = {
+    "matching_cost" : {"matching_cost_mathod":"zncc", "window_size":5},
+    "disparity":{"disparity_method":"WTA"}, 
+    "refinement":{"refinement_method":"interpolation"}
+}
+
+false_pipeline_mc = {
+    "disparity":{"disparity_method":"WTA"}, 
+    "refinement":{"refinement_method":"interpolation"}
+}
+
+false_pipeline_disp = {
+    "matching_cost" : {"matching_cost_mathod":"zncc", "window_size":5},
+    "refinement":{"refinement_method":"interpolation"}
+}
