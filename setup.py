@@ -27,12 +27,14 @@ and setup elements to configure and identify the software.
 from codecs import open as copen
 from setuptools import setup
 
-# try:
-#     from sphinx.setup_command import BuildDoc
+CMDCLASS = {}
 
-#     CMDCLASS["build_sphinx"] = BuildDoc
-# except ImportError:
-#     print("WARNING: sphinx not available. Doc cannot be built")
+try:
+    from sphinx.setup_command import BuildDoc
+
+    CMDCLASS["build_sphinx"] = BuildDoc
+except ImportError:
+    print("WARNING: sphinx not available. Doc cannot be built")
 
 
 def readme():
@@ -40,4 +42,14 @@ def readme():
         return fstream.read()
 
 
-setup(use_scm_version=True)
+setup(
+    use_scm_version=True,
+    long_description=readme(),
+    command_options={
+        "build_sphinx": {
+            "build_dir": ("setup.py", "doc/build/"),
+            "source_dir": ("setup.py", "doc/sources/"),
+            "warning_is_error": ("setup.py", True),
+        }
+    },
+)
