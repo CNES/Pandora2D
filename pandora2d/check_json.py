@@ -27,7 +27,9 @@ from typing import Dict
 import logging
 import numpy as np
 
-from pandora.check_json import check_disparities, check_images
+from pandora.check_json import check_disparities, check_images, get_config_input, get_config_pipeline, concat_conf
+
+from pandora2d.state_machine import Pandora2DMachine
 
 
 def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
@@ -56,3 +58,48 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     check_disparities(user_cfg["input"]["disp_min_y"], user_cfg["input"]["disp_max_y"], None)
 
     return user_cfg
+
+
+def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> Dict[str, dict]:
+    """
+
+    Check if the pipeline is correct by
+    - Checking the sequence of steps according to the machine transitions
+    - Checking parameters, define in dictionary, of each Pandora step
+
+    Args:
+        user_cfg (Dict[str, dict]): user pipeline configuration
+        pandora2d_machine (Pandora2DMachine): instance of Pandora2DMachine
+
+    Returns:
+        Dict[str, dict]: pipeline configuration
+    """
+
+    pandora2d_machine.check_conf(user_cfg["pipeline"])
+
+    return user_cfg
+
+
+def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> dict:
+    """
+    Check if dictionnary is correct
+
+    Args:
+        user_cfg (Dict[str, dict]): pipeline configuration
+        pandora2d_machine (Pandora2DMachine): instance of Pandora2DMachine
+
+    Returns:
+        dict: global configuration
+    """
+
+    # check input
+    user_cfg_input = get_config_input(user_cfg)
+    cfg_input = check_input_section(user_cfg_input)
+
+    # check pipeline
+    user_cfg_pipeline = get_config_pipeline(user_cfg)
+    cfg_pipeline = check_pipeline_section(user_cfg_pipeline, pandora2d_machine)
+
+    cfg = concat_conf([cfg_input, cfg_pipeline])
+
+    return cfg
