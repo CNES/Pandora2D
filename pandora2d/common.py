@@ -30,15 +30,16 @@ from pandora.common import mkdir_p, write_data_array
 
 def save_dataset(dataset: xr.Dataset, output: str) -> None:
     """
-     Save results in the output directory
+    Save results in the output directory
 
-    Args:
-        dataset (xr.Dataset): Dataset which contains:
+    :param dataset: Dataset which contains:
 
         - lines : the disparity map for the lines 2D DataArray (row, col)
         - columns : the disparity map for the columns 2D DataArray (row, col)
-
-        output (str): output directory
+    :type dataset: xr.Dataset
+    :param output: output directory
+    :type output: string
+    :return: None
     """
 
     # create output dir
