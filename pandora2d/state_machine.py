@@ -61,18 +61,18 @@ class Pandora2DMachine(Machine):
         """
         Initialize Pandora2D Machine
 
-        Args:
-            img_left (xr.Dataset, optional): left Dataset image containing :
-
-                - im : 2D (row, col) xarray.DataArray. Defaults to None.
-            img_right (xr.Dataset, optional): right Dataset image containing :
-
-                - im : 2D (row, col) xarray.DataArray. Defaults to None.
-            no_data (float, optional): [description]. Defaults to None.
-            disp_min_x (int, optional): minimal disparity for columns. Defaults to None.
-            disp_max_x (int, optional): maximal disparity for columns. Defaults to None.
-            disp_min_y (int, optional): minimal disparity for lines. Defaults to None.
-            disp_max_y (int, optional): maximal disparity for lines. Defaults to None.
+        :type img_right_pyramid: xarray.Dataset
+        :param no_data: nodata value
+        :type no_data: float or None
+        :param disp_min_x: minimal disparity for columns
+        :type disp_min_x: int
+        :param disp_max_x: maximal disparity for columns
+        :type disp_max_x: int
+        :param disp_min_y: minimal disparity for lines
+        :type disp_min_y: int
+        :param disp_max_y: maximal disparity for lines
+        :type disp_max_y: int
+        :return: None
         """
 
         # Left image
@@ -118,20 +118,26 @@ class Pandora2DMachine(Machine):
         """
         Prepare the machine before running
 
-        Args:
-            img_left (xr.Dataset): left Dataset image containing :
+        :param img_left: left Dataset image containing :
 
                 - im : 2D (row, col) xarray.DataArray
-                - msk (optional): 2D (row, col) xarray.DataArray
-            img_right (xr.Dataset): right Dataset image containing :
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_left: xarray.Dataset
+        :param img_right: left Dataset image containing :
 
                 - im : 2D (row, col) xarray.DataArray
-                - msk (optional): 2D (row, col) xarray.DataArray
-            disp_min_x (int, optional): minimal disparity for columns
-            disp_max_x (int, optional): maximal disparity for columns
-            disp_min_y (int, optional): minimal disparity for lines
-            disp_max_y (int, optional): maximal disparity for lines
-            cfg_pipeline (Dict[str, dict]): configuration
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xarray.Dataset
+        :param disp_min_x: minimal disparity for columns
+        :type disp_min_x: int
+        :param disp_max_x: maximal disparity for columns
+        :type disp_max_x: int
+        :param disp_min_y: minimal disparity for lines
+        :type disp_min_y: int
+        :param disp_max_y: maximal disparity for lines
+        :type disp_max_y: int
+        :param cfg_pipeline: pipeline configuration
+        :type cfg_pipeline: Dict[str, dict]
         """
 
         self.left_img = img_left
@@ -147,9 +153,11 @@ class Pandora2DMachine(Machine):
         """
         Run pandora 2D step by triggering the corresponding machine transition
 
-        Args:
-            input_step (str): step to trigger
-            cfg (Dict[str, dict]):  pipeline configuration
+        :param input_step: step to trigger
+        :type input_step: str
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :return: None
         """
         try:
             if len(input_step.split(".")) != 1:
@@ -168,15 +176,16 @@ class Pandora2DMachine(Machine):
 
         :return: None
         """
-        self.remove_transitions(self._transitions_run)
+        self.remove_transitions(self._transitions_run)  # type: ignore
         self.set_state("begin")
 
     def check_conf(self, cfg: Dict[str, dict]) -> None:
         """
         Check configuration and transitions
 
-        Args:
-            cfg (Dict[str, dict]): pipeline configuration
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :return:
         """
 
         # Add transitions to the empty machine.
@@ -194,7 +203,7 @@ class Pandora2DMachine(Machine):
                 raise
 
         # Remove transitions
-        self.remove_transitions(self._transitions_check)
+        self.remove_transitions(self._transitions_check)  # type: ignore
 
         # Coming back to the initial state
         self.set_state("begin")
@@ -212,9 +221,9 @@ class Pandora2DMachine(Machine):
         # deleted_triggers list is used to avoid multiple call of "remove_transition" with the same trigger name.
         deleted_triggers = []
         for trans in transition_list:
-            if trans["trigger"] not in deleted_triggers:
-                self.remove_transition(trans["trigger"])
-                deleted_triggers.append(trans["trigger"])
+            if trans["trigger"] not in deleted_triggers:  # type: ignore
+                self.remove_transition(trans["trigger"])  # type: ignore
+                deleted_triggers.append(trans["trigger"])  # type: ignore
 
     def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -255,26 +264,31 @@ class Pandora2DMachine(Machine):
         """
         Matching cost computation
 
-        Args:
-            cfg (Dict[str, dict]): pipeline configuration
-            input_step (str): step to trigger
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :param input_step: step to trigger
+        :type input_step: str
+        :return: None
         """
 
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
-        Disparity computation
+        Disparity computation and validity mask
 
-        Args:
-            cfg (Dict[str, dict]): pipeline configuration
-            input_step (str): step to trigger
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :param input_step: step to trigger
+        :type input_step: str
+        :return: None
         """
 
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
+        Subpixel disparity refinement
 
-        Refinement computation
-
-        Args:
-            cfg (Dict[str, dict]): pipeline configuration
-            input_step (str): step to trigger
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :param input_step: step to trigger
+        :type input_step: str
+        :return: None
         """

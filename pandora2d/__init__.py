@@ -45,24 +45,30 @@ def run(
     """
     Run the Pandora 2D pipeline
 
-    Args:
-        pandora2d_machine (Pandora2DMachine): instance of Pandora2DMachine
-        img_left (xr.Dataset): left Dataset image containing :
+    :param pandora2d_machine: instance of Pandora2DMachine
+    :type pandora2d_machine: Pandora2DMachine
+    :param img_left: left Dataset image containing :
 
-              - im : 2D (row, col) xarray.DataArray
-              - msk (optional): 2D (row, col) xarray.DataArray
-        img_right (xr.Dataset): right Dataset image containing :
+            - im : 2D (row, col) xarray.DataArray
+            - msk (optional): 2D (row, col) xarray.DataArray
+    :type img_left: xarray.Dataset
+    :param img_right: right Dataset image containing :
 
-              - im : 2D (row, col) xarray.DataArray
-              - msk (optional): 2D (row, col) xarray.DataArray
-        disp_min_x (int): minimal disparity for columns
-        disp_max_x (int): maximal disparity for columns
-        disp_min_y (int): minimal disparity for lines
-        disp_max_y (int): maximal disparity for lines
-        cfg_pipeline (Dict[str, dict]): pipeline configuration
+            - im : 2D (row, col) xarray.DataArray
+            - msk (optional): 2D (row, col) xarray.DataArray
+    :type img_right: xarray.Dataset
+    :param disp_min_x: minimal disparity for columns
+    :type disp_min_x: int
+    :param disp_max_x: maximal disparity for columns
+    :type disp_max_x: int
+    :param disp_min_y: minimal disparity for lines
+    :type disp_min_y: int
+    :param disp_max_y: maximal disparity for lines
+    :type disp_max_y: int
+    :param cfg_pipeline: pipeline configuration
+    :type cfg_pipeline: Dict[str, dict]
 
-    Returns:
-        int: [description]
+    :return: None
     """
 
     pandora2d_machine.run_prepare(img_left, img_right, disp_min_x, disp_max_x, disp_min_y, disp_max_y)

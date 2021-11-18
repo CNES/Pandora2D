@@ -34,13 +34,12 @@ from pandora2d.state_machine import Pandora2DMachine
 
 def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     """
-    Check if the input dictionary is correct
+    Complete and check if the dictionary is correct
 
-    Args:
-        user_cfg (Dict[str, dict]): user pipeline configuration
-
-    Returns:
-        Dict[str, dict]: global configuration
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :return: cfg: global configuration
+    :rtype: cfg: dict
     """
 
     # test images
@@ -62,17 +61,16 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
 
 def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> Dict[str, dict]:
     """
-
     Check if the pipeline is correct by
     - Checking the sequence of steps according to the machine transitions
     - Checking parameters, define in dictionary, of each Pandora step
 
-    Args:
-        user_cfg (Dict[str, dict]): user pipeline configuration
-        pandora2d_machine (Pandora2DMachine): instance of Pandora2DMachine
-
-    Returns:
-        Dict[str, dict]: pipeline configuration
+    :param user_cfg: pipeline user configuration
+    :type user_cfg: dict
+    :param pandora_machine: instance of PandoraMachine
+    :type pandora_machine: PandoraMachine object
+    :return: cfg: pipeline configuration
+    :rtype: cfg: dict
     """
 
     pandora2d_machine.check_conf(user_cfg["pipeline"])
@@ -82,14 +80,14 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
 
 def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> dict:
     """
-    Check if dictionnary is correct
+    Complete and check if the dictionary is correct
 
-    Args:
-        user_cfg (Dict[str, dict]): pipeline configuration
-        pandora2d_machine (Pandora2DMachine): instance of Pandora2DMachine
-
-    Returns:
-        dict: global configuration
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :param pandora_machine: instance of PandoraMachine
+    :type pandora_machine: PandoraMachine
+    :return: cfg: global configuration
+    :rtype: cfg: dict
     """
 
     # check input
