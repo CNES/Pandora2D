@@ -23,9 +23,56 @@
 This module contains functions to run Pandora pipeline.
 """
 
+from typing import Dict
+import xarray as xr
+
 from pandora import read_config_file, read_img
 
 from pandora2d import check_json
+from pandora2d.state_machine import Pandora2DMachine
+
+
+def run(
+    pandora2d_machine: Pandora2DMachine,
+    img_left: xr.Dataset,
+    img_right: xr.Dataset,
+    disp_min_x: int,
+    disp_max_x: int,
+    disp_min_y: int,
+    disp_max_y: int,
+    cfg_pipeline: Dict[str, dict],
+):
+    """
+    Run the Pandora 2D pipeline
+
+    Args:
+        pandora2d_machine (Pandora2DMachine): instance of Pandora2DMachine
+        img_left (xr.Dataset): left Dataset image containing :
+
+              - im : 2D (row, col) xarray.DataArray
+              - msk (optional): 2D (row, col) xarray.DataArray
+        img_right (xr.Dataset): right Dataset image containing :
+
+              - im : 2D (row, col) xarray.DataArray
+              - msk (optional): 2D (row, col) xarray.DataArray
+        disp_min_x (int): minimal disparity for columns
+        disp_max_x (int): maximal disparity for columns
+        disp_min_y (int): minimal disparity for lines
+        disp_max_y (int): maximal disparity for lines
+        cfg_pipeline (Dict[str, dict]): pipeline configuration
+
+    Returns:
+        int: [description]
+    """
+
+    pandora2d_machine.run_prepare(img_left, img_right, disp_min_x, disp_max_x, disp_min_y, disp_max_y)
+
+    for e in list(cfg_pipeline):
+        pandora2d_machine.run(e, cfg_pipeline)
+        if pandora2d_machine.state == "begin":
+            break
+
+    pandora2d_machine.run_exit()
 
 
 def main(cfg_path: str, path_output: str, verbose: bool) -> None:
@@ -45,7 +92,20 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     cfg = check_json.check_input_section(user_cfg)
 
-    # read images
-    _ = read_img(cfg["input"]["img_left"], cfg["input"]["no_data"])
+    pandora2d_machine = Pandora2DMachine()
 
-    _ = read_img(cfg["input"]["img_right"], cfg["input"]["no_data"])
+    cfg = check_json.check_conf(user_cfg, pandora2d_machine)
+
+    # read images
+    img_left = read_img(cfg["input"]["img_left"], cfg["input"]["no_data"])
+
+    img_right = read_img(cfg["input"]["img_right"], cfg["input"]["no_data"])
+
+    ## read disparities values
+
+    disp_min_x = cfg["input"]["disp_min_x"]
+    disp_max_x = cfg["input"]["disp_max_x"]
+    disp_min_y = cfg["input"]["disp_min_y"]
+    disp_max_y = cfg["input"]["disp_max_y"]
+
+    run(pandora2d_machine, img_left, img_right, disp_min_x, disp_max_x, disp_min_y, disp_max_y, cfg["pipeline"])
