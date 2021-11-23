@@ -26,7 +26,6 @@ This module contains common functions present in Pandora2D's tests.
 
 import numpy as np
 
-
 correct_input = {
     "input": {
         "img_left": "./data/left.png",
@@ -64,8 +63,8 @@ false_input_disp = {
 }
 
 correct_pipeline = {
-    "matching_cost" : {"matching_cost_mathod":"zncc", "window_size":5},
-    "disparity":{"disparity_method":"WTA"},
+    "matching_cost" : {"matching_cost_method":"zncc", "window_size":5},
+    "disparity":{"disparity_method":"WTA"}, 
     "refinement":{"refinement_method":"interpolation"}
 }
 
@@ -75,6 +74,6 @@ false_pipeline_mc = {
 }
 
 false_pipeline_disp = {
-    "matching_cost" : {"matching_cost_mathod":"zncc", "window_size":5},
+    "matching_cost" : {"matching_cost_method":"zncc", "window_size":5},
     "refinement":{"refinement_method":"interpolation"}
 }
