@@ -164,10 +164,9 @@ class Pandora2DMachine(Machine):
                 self.trigger(input_step.split(".")[0], cfg, input_step)
             else:
                 self.trigger(input_step, cfg, input_step)
-        except (MachineError, KeyError):
-            print(
-                "\n A problem occurs during Pandora2D running " + input_step + ". Be sure of your sequencement step  \n"
-            )
+        except (MachineError, KeyError, AttributeError):
+            logging.error("Problem occurs during Pandora2D running %s. "
+                          "Be sure of your sequencement step", input_step)
             raise
 
     def run_exit(self) -> None:
@@ -194,12 +193,9 @@ class Pandora2DMachine(Machine):
         for input_step in list(cfg):
             try:
                 self.trigger(input_step, cfg, input_step)
-
-            except (MachineError, KeyError):
-                print(
-                    "\n Problem during Pandora2D checking configuration steps sequencing. "
-                    "Check your configuration file. \n"
-                )
+            except (MachineError, KeyError, AttributeError):
+                logging.error("Problem occurs during Pandora2D running %s."
+                              " Be sure of your sequencement step", input_step)
                 raise
 
         # Remove transitions

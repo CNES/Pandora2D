@@ -50,9 +50,6 @@ class TestCheckJson(unittest.TestCase):
 
         assert check_json.check_input_section(common.correct_input)
 
-        with pytest.raises(rasterio.errors.RasterioIOError):
-            check_json.check_input_section(common.false_input_path_image)
-
         with pytest.raises(BaseException):
-            check_json.check_input_section(common.false_input_no_data)
             check_json.check_input_section(common.false_input_disp)
+            check_json.check_input_section(common.false_input_path_image)
