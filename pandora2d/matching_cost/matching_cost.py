@@ -22,3 +22,171 @@
 """
 This module contains functions associated to the matching cost computation step.
 """
+
+from typing import Dict, Union
+from json_checker import And, Checker
+
+import xarray as xr
+import numpy as np
+
+from pandora import matching_cost
+from pandora.check_json import update_conf
+
+from pandora2d import img_tools
+
+
+class MatchingCost:
+    """
+    Matching Cost class
+    """
+    _WINDOW_SIZE = 5
+
+    def __init__(self, **cfg: Dict[str, Union[str, int]]) -> None:
+        """
+        Initialisation of matching_cost class
+
+        :param cfg: user_config for matching cost
+        :type cfg: dict
+        :return: None
+        """
+        self.cfg = self.check_conf(**cfg)
+        self._window_size = self.cfg["window_size"]
+        self._matching_cost_method = self.cfg["matching_cost_method"]
+
+
+    def check_conf(self, **cfg: Dict[str, Union[str, int]]) -> Dict[str, Dict[str, Union[str, int]]]:
+        """
+        Check the matching cost configuration
+
+        :param cfg: user_config for matching cost
+        :type cfg: dict
+        :return: cfg: global configuration
+        :rtype: cfg: dict
+        """
+        if "window_size" not in cfg:
+            cfg["window_size"] = self._WINDOW_SIZE
+
+        schema = {
+            "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc"]),
+            "window_size": And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0)
+        }
+
+        checker = Checker(schema)
+        checker.validate(cfg)
+
+        return cfg
+
+    @staticmethod
+    def allocate_cost_volumes(
+        cost_volume_attr: dict,
+        row: np.array,
+        col: np.array,
+        disp_min_x: int,
+        disp_max_x: int,
+        disp_min_y: int,
+        disp_max_y: int,
+        np_data: np.ndarray = None,
+    ) -> xr.Dataset:
+        """
+        Allocate the cost volumes
+
+        :param cost_volume_attr: the cost_volume's attributs product by Pandora
+        :type cost_volume: xr.Dataset
+        :param row: dimension of the image (row)
+        :type row: np.array
+        :param col: dimension of the image (columns)
+        :type col: np.array
+        :param disp_min_x: minimum disparity in columns
+        :type disp_min_x: int
+        :param disp_max_x: maximum disparity in columns
+        :type disp_max_x: int
+        :param disp_min_y: minimum disparity in lines
+        :type disp_min_y: int
+        :param disp_max_y: maximum disparity in lines
+        :type disp_max_y: int
+        :param np_data: 4D numpy.array og cost_volumes. Defaults to None.
+        :type np_data: np.ndarray
+        :return: cost_volumes: 4D Dataset containing the cost_volumes
+        :rtype: cost_volumes: xr.Dataset
+        """
+        disparity_range_col = np.arange(disp_min_x, disp_max_x + 1)
+        disparity_range_row = np.arange(disp_min_y, disp_max_y + 1)
+
+        # Create the cost volume
+        if np_data is None:
+            np_data = np.zeros(
+                (len(row), len(col), len(disparity_range_col), len(disparity_range_row)), dtype=np.float32
+            )
+
+        cost_volumes = xr.Dataset(
+            {"cost_volumes": (["row", "col", "disp_col", "disp_row"], np_data)},
+            coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
+        )
+
+        cost_volumes.attrs = cost_volume_attr
+
+
+        return cost_volumes
+
+    def compute_cost_volumes(
+            self,
+            img_left: xr.Dataset,
+            img_right: xr.Dataset,
+            min_x: int,
+            max_x: int,
+            min_y: int,
+            max_y: int,
+            **cfg: Dict[str, dict]
+        ) -> xr.Dataset:
+        """
+
+        Computes the cost volumes
+
+        :param img_left: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_left: xr.Dataset
+        :param img_right: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xr.Dataset
+        :param min_x: minimum disparity in columns
+        :type min_x: int
+        :param max_x: maximum disparity in columns
+        :type max_x: int
+        :param min_y: minimum disparity in lines
+        :type min_y: int
+        :param max_y: maximum disparity in lines
+        :type max_y: int
+        :param cfg: matching_cost computation configuration
+        :type max_y: dict
+        :return: cost_volumes: 4D Dataset containing the cost_volumes
+        :rtype: cost_volumes: xr.Dataset
+        """
+        # Initialize Pandora matching cost
+        pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**cfg)
+        # Array with all y disparities
+        disps_y = range(min_y, max_y + 1)
+        for idx, disp_y in enumerate(disps_y):
+            # Shift image in the y axis
+            img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_y)
+            # Compute cost volume
+            cost_volume = pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, min_x, max_x)
+            # Mask cost volume
+            pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, min_x, max_x)
+            # If first iteration, initialize cost_volumes dataset
+            if idx == 0:
+                c_row = cost_volume["cost_volume"].coords["row"]
+                c_col = cost_volume["cost_volume"].coords["col"]
+
+                # First pixel in the image that is fully computable (aggregation windows are complete)
+                row = np.arange(c_row[0], c_row[-1] + 1)
+                col = np.arange(c_col[0], c_col[-1] + 1)
+
+                cost_volumes = self.allocate_cost_volumes(cost_volume.attrs, row, col,
+                                                          min_x, max_x, min_y, max_y, None)
+            # Add current cost volume to the cost_volumes dataset
+            cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data
+
+        return cost_volumes
+

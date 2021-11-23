@@ -30,6 +30,8 @@ import logging
 from transitions import Machine, MachineError
 import xarray as xr
 
+from pandora2d import matching_cost
+
 
 class Pandora2DMachine(Machine):
     """
@@ -103,8 +105,6 @@ class Pandora2DMachine(Machine):
         )
 
         logging.getLogger("transitions").setLevel(logging.WARNING)
-
-    ###### checking configuration################
 
     def run_prepare(
         self,
@@ -232,6 +232,9 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
+        matching_cost_ = matching_cost.MatchingCost(**cfg[input_step])
+        self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
+
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the disparity computation configuration
@@ -254,8 +257,6 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-    ###### run pipeline configuration ################
-
     def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Matching cost computation
@@ -266,6 +267,19 @@ class Pandora2DMachine(Machine):
         :type input_step: str
         :return: None
         """
+
+        logging.info("Matching cost computation...")
+        matching_cost_run = matching_cost.MatchingCost(**cfg[input_step])
+
+        self.cost_volumes = matching_cost_run.compute_cost_volumes(
+            self.left_img,
+            self.right_img,
+            self.disp_min_x,
+            self.disp_max_x,
+            self.disp_min_y,
+            self.disp_max_y,
+            **cfg[input_step]
+        )
 
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
