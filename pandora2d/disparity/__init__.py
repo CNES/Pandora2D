@@ -22,3 +22,6 @@
 """
 Init file for disparity module
 """
+
+from .disparity import Disparity
+

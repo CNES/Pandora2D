@@ -77,8 +77,10 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     :rtype: cfg: dict
     """
 
-    pandora2d_machine.check_conf(user_cfg["pipeline"])
-    cfg = pandora2d_machine.pipeline_cfg
+    cfg = update_conf({}, user_cfg)
+    pandora2d_machine.check_conf(cfg["pipeline"])
+
+    cfg = update_conf(cfg, pandora2d_machine.pipeline_cfg)
 
     configuration_schema = {"pipeline": dict}
 

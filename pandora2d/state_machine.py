@@ -30,7 +30,7 @@ import logging
 from transitions import Machine, MachineError
 import xarray as xr
 
-from pandora2d import matching_cost
+from pandora2d import matching_cost, disparity
 
 
 class Pandora2DMachine(Machine):
@@ -246,6 +246,9 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
+        disparity_ = disparity.Disparity(**cfg[input_step])
+        self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
+
     def refinement_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the refinement configuration
@@ -291,6 +294,12 @@ class Pandora2DMachine(Machine):
         :type input_step: str
         :return: None
         """
+
+        logging.info("Disparity computation...")
+        disparity_run = disparity.Disparity(**cfg[input_step])
+
+        map_col, map_row = disparity_run.compute_disp_maps(self.cost_volumes)
+        self.dataset_disp_maps = disparity_run.dataset_disp_maps(map_row, map_col)
 
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
