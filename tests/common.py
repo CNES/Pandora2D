@@ -26,12 +26,11 @@ This module contains common functions present in Pandora2D's tests.
 
 import numpy as np
 
-
 correct_input = {
     "input": {
         "img_left": "./data/left.png",
         "img_right": "./data/right.png",
-        "no_data": np.nan,
+        "nodata_left": "NaN",
         "disp_min_x": -2,
         "disp_max_x": 2,
         "disp_min_y": -2,
@@ -39,22 +38,12 @@ correct_input = {
     }
 }
 
-false_input_no_data = {
-    "input": {
-        "img_left": "./data/left.png",
-        "img_right": "./data/right.png",
-        "disp_min_x": 5,
-        "disp_max_x": 2,
-        "disp_min_y": -2,
-        "disp_max_y": 2,
-    }
-}
 
 false_input_path_image = {
     "input": {
         "img_left": "./data/lt.png",
         "img_right": "./data/right.png",
-        "no_data": np.nan,
+        "nodata_left": "NaN",
         "disp_min_x": -2,
         "disp_max_x": 2,
         "disp_min_y": -2,
@@ -66,7 +55,6 @@ false_input_disp = {
     "input": {
         "img_left": "./data/left.png",
         "img_right": "./data/right.png",
-        "no_data": np.nan,
         "disp_min_x": 7,
         "disp_max_x": 2,
         "disp_min_y": -2,
@@ -75,7 +63,7 @@ false_input_disp = {
 }
 
 correct_pipeline = {
-    "matching_cost" : {"matching_cost_mathod":"zncc", "window_size":5},
+    "matching_cost" : {"matching_cost_method":"zncc", "window_size":5},
     "disparity":{"disparity_method":"WTA"}, 
     "refinement":{"refinement_method":"interpolation"}
 }
@@ -86,6 +74,6 @@ false_pipeline_mc = {
 }
 
 false_pipeline_disp = {
-    "matching_cost" : {"matching_cost_mathod":"zncc", "window_size":5},
+    "matching_cost" : {"matching_cost_method":"zncc", "window_size":5},
     "refinement":{"refinement_method":"interpolation"}
 }

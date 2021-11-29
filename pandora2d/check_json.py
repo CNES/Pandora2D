@@ -25,9 +25,12 @@ This module contains functions allowing to check the configuration given to Pand
 import sys
 from typing import Dict
 import logging
+from json_checker import Checker, Or, And
 import numpy as np
 
-from pandora.check_json import check_disparities, check_images, get_config_input, get_config_pipeline, concat_conf
+from pandora.check_json import check_disparities, check_images, get_config_input
+from pandora.check_json import get_config_pipeline, concat_conf, update_conf, rasterio_can_open_mandatory
+
 
 from pandora2d.state_machine import Pandora2DMachine
 
@@ -42,21 +45,22 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     :rtype: cfg: dict
     """
 
-    # test images
-    check_images(user_cfg["input"]["img_left"], user_cfg["input"]["img_right"], None, None)
+    # Add missing steps and inputs defaults values in user_cfg
+    cfg = update_conf(default_short_configuration_input, user_cfg)
 
-    if "no_data" in user_cfg["input"]:
-        if user_cfg["input"]["no_data"] is None:
-            user_cfg["input"]["no_data"] = np.nan
-    else:
-        logging.error("no_data must be initialized")
-        sys.exit(1)
+    # check schema
+    configuration_schema = {"input": input_configuration_schema}
+    checker = Checker(configuration_schema)
+    checker.validate(cfg)
+
+    # test images
+    check_images(cfg["input"]["img_left"], cfg["input"]["img_right"], None, None)
 
     # test disparities
-    check_disparities(user_cfg["input"]["disp_min_x"], user_cfg["input"]["disp_max_x"], None)
-    check_disparities(user_cfg["input"]["disp_min_y"], user_cfg["input"]["disp_max_y"], None)
+    check_disparities(cfg["input"]["disp_min_x"], cfg["input"]["disp_max_x"], None)
+    check_disparities(cfg["input"]["disp_min_y"], cfg["input"]["disp_max_y"], None)
 
-    return user_cfg
+    return cfg
 
 
 def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> Dict[str, dict]:
@@ -74,8 +78,14 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     """
 
     pandora2d_machine.check_conf(user_cfg["pipeline"])
+    cfg = pandora2d_machine.pipeline_cfg
 
-    return user_cfg
+    configuration_schema = {"pipeline": dict}
+
+    checker = Checker(configuration_schema)
+    checker.validate(cfg)
+
+    return cfg
 
 
 def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> dict:
@@ -98,6 +108,29 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
     user_cfg_pipeline = get_config_pipeline(user_cfg)
     cfg_pipeline = check_pipeline_section(user_cfg_pipeline, pandora2d_machine)
 
+    if type(cfg_input["input"]["nodata_right"]) is float and \
+            cfg_pipeline["pipeline"]["matching_cost"]["matching_cost_method"] in ["sad", "ssd"]:
+        logging.error("nodata_right must be int type with sad or ssd matching_cost_method (ex: 9999)")
+        sys.exit(1)
+
     cfg = concat_conf([cfg_input, cfg_pipeline])
 
     return cfg
+
+input_configuration_schema = {
+    "img_left": And(str, rasterio_can_open_mandatory),
+    "img_right": And(str, rasterio_can_open_mandatory),
+    "nodata_left": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+    "nodata_right": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+    "disp_min_x" : int,
+    "disp_max_x": int,
+    "disp_min_y": int,
+    "disp_max_y": int
+}
+
+default_short_configuration_input = {
+    "input": {
+        "nodata_left": -9999,
+        "nodata_right": -9999,
+    }
+}

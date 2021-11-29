@@ -96,19 +96,15 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     # read the user input's configuration
     user_cfg = read_config_file(cfg_path)
 
-    cfg = check_json.check_input_section(user_cfg)
-
     pandora2d_machine = Pandora2DMachine()
 
     cfg = check_json.check_conf(user_cfg, pandora2d_machine)
 
     # read images
-    img_left = read_img(cfg["input"]["img_left"], cfg["input"]["no_data"])
-
-    img_right = read_img(cfg["input"]["img_right"], cfg["input"]["no_data"])
+    img_left = read_img(cfg["input"]["img_left"], cfg["input"]["nodata_left"])
+    img_right = read_img(cfg["input"]["img_right"], cfg["input"]["nodata_right"])
 
     ## read disparities values
-
     disp_min_x = cfg["input"]["disp_min_x"]
     disp_max_x = cfg["input"]["disp_max_x"]
     disp_min_y = cfg["input"]["disp_min_y"]
