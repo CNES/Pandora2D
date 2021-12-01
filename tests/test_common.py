@@ -42,8 +42,8 @@ class TestCommon(unittest.TestCase):
         Method called to prepare the test fixture
 
         """
-        self.row = np.ones((2,2))
-        self.col = np.ones((2,2))
+        self.row = np.ones((2, 2))
+        self.col = np.ones((2, 2))
 
     def test_save_dataset(self):
         """

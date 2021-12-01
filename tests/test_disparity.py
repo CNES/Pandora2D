@@ -33,6 +33,7 @@ import json_checker
 
 from pandora2d import matching_cost, disparity
 
+
 class TestDisparity(unittest.TestCase):
     """
     TestDisparity class allows to test all the methods in the class Disparity
@@ -51,7 +52,7 @@ class TestDisparity(unittest.TestCase):
         mask = np.array(([1, 1, 1], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
         self.left = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         self.left.attrs = {
             "no_data_img": -9999,
@@ -68,7 +69,7 @@ class TestDisparity(unittest.TestCase):
         mask = np.array(([0, 0, 0], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
         self.right = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         self.right.attrs = {
             "no_data_img": -9999,
@@ -81,11 +82,12 @@ class TestDisparity(unittest.TestCase):
             ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
             dtype=np.float64,
         )
-        mask = np.array(([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(
+            ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
+        )
         self.left_arg = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         self.left_arg.attrs = {
             "no_data_img": -9999,
@@ -99,11 +101,12 @@ class TestDisparity(unittest.TestCase):
             ([[1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
             dtype=np.float64,
         )
-        mask = np.array(([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(
+            ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
+        )
         self.right_arg = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         self.right_arg.attrs = {
             "no_data_img": -9999,
@@ -118,7 +121,7 @@ class TestDisparity(unittest.TestCase):
         """
         test check_conf of matching cost pipeline
         """
-        disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity" : -9999})
+        disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
             disparity.Disparity(**{"invalid_disparity": "5"})
@@ -138,14 +141,10 @@ class TestDisparity(unittest.TestCase):
         cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, **cfg)
 
         ad_ground_truth = np.zeros((3, 3, 2))
-        ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan],
-                                             [0, 0, 0],
-                                             [0, 0, 0]])
-        ad_ground_truth[:, :, 1] = np.array([[np.nan, np.nan, np.nan],
-                                             [0, 0, np.nan],
-                                             [1, 1, np.nan]])
+        ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
+        ad_ground_truth[:, :, 1] = np.array([[np.nan, np.nan, np.nan], [0, 0, np.nan], [1, 1, np.nan]])
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity" : -9999})
+        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
         # searching along dispy axis
         cvs_min = disparity_test.min_split(cvs, 3)
 
@@ -164,14 +163,10 @@ class TestDisparity(unittest.TestCase):
         cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, **cfg)
 
         ad_ground_truth = np.zeros((3, 3, 2))
-        ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan],
-                                             [2, 3, 4],
-                                             [2, 3, 4]])
-        ad_ground_truth[:, :, 1] = np.array([[np.nan, np.nan, np.nan],
-                                             [3, 4, np.nan],
-                                             [2, 3, np.nan]])
+        ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [2, 3, 4], [2, 3, 4]])
+        ad_ground_truth[:, :, 1] = np.array([[np.nan, np.nan, np.nan], [3, 4, np.nan], [2, 3, np.nan]])
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity" : -9999})
+        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
         # searching along dispy axis
         cvs_max = disparity_test.max_split(cvs, 3)
 
@@ -189,18 +184,16 @@ class TestDisparity(unittest.TestCase):
 
         cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, **cfg)
 
-        ad_ground_truth = np.array([[0, 0, 0, 0, 0],
-                                    [0, 0, 0, 0, 0],
-                                    [0, 0, 0, 1, 0],
-                                    [0, 0, 0, 1, 0],
-                                    [0, 0, 0, 0, 0]])
+        ad_ground_truth = np.array(
+            [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
+        )
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity" : -9999})
+        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
         # searching along dispy axis
         cvs_max = disparity_test.min_split(cvs, 3)
-        max = disparity_test.argmin_split(cvs_max, 2)
+        min_tensor = disparity_test.argmin_split(cvs_max, 2)
 
-        np.testing.assert_allclose(max, ad_ground_truth, atol=1e-06)
+        np.testing.assert_allclose(min_tensor, ad_ground_truth, atol=1e-06)
 
     def test_argmax_split(self):
         """
@@ -213,20 +206,19 @@ class TestDisparity(unittest.TestCase):
 
         cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, **cfg)
 
-        ad_ground_truth = np.array([[0, 0, 0, 0, 0],
-                                    [0, 0, 0, 0, 0],
-                                    [0, 1, 1, 1, 0],
-                                    [0, 0, 0, 1, 0],
-                                    [0, 0, 0, 0, 0]])
+        ad_ground_truth = np.array(
+            [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
+        )
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity" : -9999})
+        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
         # searching along dispy axis
         cvs_max = disparity_test.max_split(cvs, 3)
-        max = disparity_test.argmax_split(cvs_max, 2)
+        max_tensor = disparity_test.argmax_split(cvs_max, 2)
 
-        np.testing.assert_allclose(max, ad_ground_truth, atol=1e-06)
+        np.testing.assert_allclose(max_tensor, ad_ground_truth, atol=1e-06)
 
-    def test_compute_disparity_map_row(self):
+    @staticmethod
+    def test_compute_disparity_map_row():
         """
         Test function for disparity computation
         """
@@ -234,11 +226,10 @@ class TestDisparity(unittest.TestCase):
             ([[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]),
             dtype=np.float64,
         )
-        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
         left = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         left.attrs = {
             "no_data_img": -9999,
@@ -248,14 +239,14 @@ class TestDisparity(unittest.TestCase):
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
         }
 
-        data = np.array([[5, 6, 7, 8], [1, 2, 3, 4], [9, 10, 11, 12]],
+        data = np.array(
+            [[5, 6, 7, 8], [1, 2, 3, 4], [9, 10, 11, 12]],
             dtype=np.float64,
         )
-        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
         right = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         right.attrs = {
             "no_data_img": -9999,
@@ -273,19 +264,18 @@ class TestDisparity(unittest.TestCase):
         cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
         matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc)
         # create disparity object with WTA method
-        cfg_disp = {"disparity_method": "wta", "invalid_disparity" : -5}
+        cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(**cfg_disp)
 
-        cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_x=-2, max_x=2, min_y=-2, max_y=2, **cfg_mc
-        )
+        cvs = matching_cost_matcher.compute_cost_volumes(left, right, min_x=-2, max_x=2, min_y=-2, max_y=2, **cfg_mc)
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
         np.testing.assert_array_equal(ground_truth_col, delta_x)
         np.testing.assert_array_equal(ground_truth_row, delta_y)
 
-    def test_compute_disparity_map_col(self):
+    @staticmethod
+    def test_compute_disparity_map_col():
         """
         Test function for disparity computation
         """
@@ -293,11 +283,10 @@ class TestDisparity(unittest.TestCase):
             ([[5, 6, 7, 8], [1, 2, 3, 4], [9, 10, 11, 12]]),
             dtype=np.float64,
         )
-        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
         left = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         left.attrs = {
             "no_data_img": -9999,
@@ -307,14 +296,14 @@ class TestDisparity(unittest.TestCase):
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
         }
 
-        data = np.array([[8, 5, 6, 7], [4, 1, 2, 3], [12, 9, 10, 11]],
-                        dtype=np.float64,
-                        )
-        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]),
-                        dtype=np.int16)
+        data = np.array(
+            [[8, 5, 6, 7], [4, 1, 2, 3], [12, 9, 10, 11]],
+            dtype=np.float64,
+        )
+        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
         right = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         right.attrs = {
             "no_data_img": -9999,
@@ -335,16 +324,15 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(**cfg_disp)
 
-        cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc
-        )
+        cvs = matching_cost_matcher.compute_cost_volumes(left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc)
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
         np.testing.assert_array_equal(ground_truth_col, delta_x)
         np.testing.assert_array_equal(ground_truth_row, delta_y)
 
-    def test_compute_disparity_map_col_row(self):
+    @staticmethod
+    def test_compute_disparity_map_col_row():
         """
         Test function for disparity computation
         """
@@ -352,11 +340,10 @@ class TestDisparity(unittest.TestCase):
             ([[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]),
             dtype=np.float64,
         )
-        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
         left = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         left.attrs = {
             "no_data_img": -9999,
@@ -366,14 +353,14 @@ class TestDisparity(unittest.TestCase):
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
         }
 
-        data = np.array([[8, 5, 6, 7], [4, 1, 2, 3], [12, 9, 10, 11]],
-                        dtype=np.float64,
-                        )
-        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]),
-                        dtype=np.int16)
+        data = np.array(
+            [[8, 5, 6, 7], [4, 1, 2, 3], [12, 9, 10, 11]],
+            dtype=np.float64,
+        )
+        mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
         right = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         right.attrs = {
             "no_data_img": -9999,
@@ -394,43 +381,38 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(**cfg_disp)
 
-        cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc
-        )
+        cvs = matching_cost_matcher.compute_cost_volumes(left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc)
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
         np.testing.assert_array_equal(ground_truth_col, delta_x)
         np.testing.assert_array_equal(ground_truth_row, delta_y)
 
-    def test_masked_nan(self):
+    @staticmethod
+    def test_masked_nan():
         """
         Test the capacity of disparity_computation to find nans
         """
-        cv = np.zeros((4,5,2,2))
+        cv = np.zeros((4, 5, 2, 2))
         # disp_x = -1, disp_y = -1
-        cv[:, :, 0, 0] = np.array([[np.nan, np.nan, np.nan, 6, 8],
-                                    [np.nan, 0, 0, np.nan, 5],
-                                    [1, 1, 1, 1, 1],
-                                    [1, np.nan, 2, 3, np.nan]])
+        cv[:, :, 0, 0] = np.array(
+            [[np.nan, np.nan, np.nan, 6, 8], [np.nan, 0, 0, np.nan, 5], [1, 1, 1, 1, 1], [1, np.nan, 2, 3, np.nan]]
+        )
 
         # disp_x = -1, disp_y = 0
-        cv[:, :, 0, 1] = np.array([[np.nan, np.nan, np.nan, 1, 2],
-                                    [np.nan, 2, 2, 3, 6],
-                                    [4, np.nan, 1, 1, 1],
-                                    [6, 6, 6, 6, np.nan]])
+        cv[:, :, 0, 1] = np.array(
+            [[np.nan, np.nan, np.nan, 1, 2], [np.nan, 2, 2, 3, 6], [4, np.nan, 1, 1, 1], [6, 6, 6, 6, np.nan]]
+        )
 
         # disp_x = 0, disp_y = 0
-        cv[:, :, 1, 1] = np.array([[np.nan, np.nan, np.nan, 0, 4],
-                                    [np.nan, np.nan, 3, 3, 3],
-                                    [2, np.nan, 4, 4, 5],
-                                    [1, 2, 3, 4, np.nan]])
+        cv[:, :, 1, 1] = np.array(
+            [[np.nan, np.nan, np.nan, 0, 4], [np.nan, np.nan, 3, 3, 3], [2, np.nan, 4, 4, 5], [1, 2, 3, 4, np.nan]]
+        )
 
         # disp_x = 0, disp_y = -1
-        cv[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan, 5, 60],
-                                    [np.nan, 7, 8, 9, 10],
-                                    [ np.nan, np.nan, 6, 10, 11],
-                                    [7, 8, 9, 10, np.nan]])
+        cv[:, :, 1, 0] = np.array(
+            [[np.nan, np.nan, np.nan, 5, 60], [np.nan, 7, 8, 9, 10], [np.nan, np.nan, 6, 10, 11], [7, 8, 9, 10, np.nan]]
+        )
 
         c_row = [0, 1, 2, 3]
         c_col = [0, 1, 2, 3, 4]
@@ -452,43 +434,39 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -99}
         disparity_matcher = disparity.Disparity(**cfg_disp)
 
-        ground_truth_col = np.array([[-99, -99, -99, -1, 0],
-                                    [-99, 0, 0, 0, 0],
-                                    [-1, -1, 0, 0, 0],
-                                    [0, 0, 0, 0, -99]])
+        ground_truth_col = np.array([[-99, -99, -99, -1, 0], [-99, 0, 0, 0, 0], [-1, -1, 0, 0, 0], [0, 0, 0, 0, -99]])
 
-        ground_truth_row = np.array([[-99, -99, -99, -1, -1],
-                                    [-99, -1, -1, -1, -1],
-                                    [0, -1, -1, -1, -1],
-                                    [-1, -1, -1, -1, -99]])
+        ground_truth_row = np.array(
+            [[-99, -99, -99, -1, -1], [-99, -1, -1, -1, -1], [0, -1, -1, -1, -1], [-1, -1, -1, -1, -99]]
+        )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cost_volumes_dataset)
 
         np.testing.assert_array_equal(ground_truth_col, delta_x)
         np.testing.assert_array_equal(ground_truth_row, delta_y)
 
-
-    def test_dataset_disp_maps(self):
+    @staticmethod
+    def test_dataset_disp_maps():
         """
         Test function for create a dataset
         """
 
         # create a test dataset for map row
-        delta_y = np.zeros((2,2))
+        delta_y = np.zeros((2, 2))
         dataset_y = xr.Dataset(
             {"row_map": (["row", "col"], delta_y)},
             coords={"row": np.arange(delta_y.shape[0]), "col": np.arange(delta_y.shape[1])},
         )
         # create a test dataset for map col
-        delta_x = np.ones((2,2))
+        delta_x = np.ones((2, 2))
         dataset_x = xr.Dataset(
             {"col_map": (["row", "col"], delta_x)},
             coords={"row": np.arange(delta_x.shape[0]), "col": np.arange(delta_x.shape[1])},
         )
         # merge two dataset into one
         dataset_test = dataset_y.merge(dataset_x, join="override", compat="override")
-        #create object disparity
-        cfg_disp = {"disparity_method": "wta", "invalid_disparity" : -9999}
+        # create object disparity
+        cfg_disp = {"disparity_method": "wta", "invalid_disparity": -9999}
         disparity_matcher = disparity.Disparity(**cfg_disp)
 
         # create dataset with function

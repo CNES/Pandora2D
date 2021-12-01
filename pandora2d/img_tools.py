@@ -30,7 +30,7 @@ import numpy as np
 from scipy.ndimage.interpolation import shift
 
 
-def shift_img_pandora2d(img_right : xr.Dataset, dec_y: int)->xr.Dataset:
+def shift_img_pandora2d(img_right: xr.Dataset, dec_y: int) -> xr.Dataset:
     """
     Return a Dataset that contains the shifted right images
 
@@ -47,9 +47,7 @@ def shift_img_pandora2d(img_right : xr.Dataset, dec_y: int)->xr.Dataset:
     # shifted image by scipy
     data = shift(img_right["im"].data, (-dec_y, 0), cval=img_right.attrs["no_data_img"])
     # create shifted image dataset
-    img_right_shift = xr.Dataset(
-                 {"im": (["row", "col"], data)},
-                 coords={"row": np.arange(ny_), "col": np.arange(nx_)})
+    img_right_shift = xr.Dataset({"im": (["row", "col"], data)}, coords={"row": np.arange(ny_), "col": np.arange(nx_)})
     # add attributes to dataset
     img_right_shift.attrs = {
         "no_data_img": img_right.attrs["no_data_img"],

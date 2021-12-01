@@ -91,6 +91,8 @@ class Pandora2DMachine(Machine):
         self.disp_max_y: int = disp_max_y
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
+        self.cost_volumes: xr.Dataset = xr.Dataset()
+        self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
         # Define avalaible states
         states_ = ["begin", "cost_volumes", "disp_maps"]
@@ -165,8 +167,9 @@ class Pandora2DMachine(Machine):
             else:
                 self.trigger(input_step, cfg, input_step)
         except (MachineError, KeyError, AttributeError):
-            logging.error("Problem occurs during Pandora2D running %s. "
-                          "Be sure of your sequencement step", input_step)
+            logging.error(
+                "Problem occurs during Pandora2D running %s. " "Be sure of your sequencement step", input_step
+            )
             raise
 
     def run_exit(self) -> None:
@@ -194,8 +197,9 @@ class Pandora2DMachine(Machine):
             try:
                 self.trigger(input_step, cfg, input_step)
             except (MachineError, KeyError, AttributeError):
-                logging.error("Problem occurs during Pandora2D running %s."
-                              " Be sure of your sequencement step", input_step)
+                logging.error(
+                    "Problem occurs during Pandora2D running %s." " Be sure of your sequencement step", input_step
+                )
                 raise
 
         # Remove transitions

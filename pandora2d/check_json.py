@@ -110,8 +110,9 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
     user_cfg_pipeline = get_config_pipeline(user_cfg)
     cfg_pipeline = check_pipeline_section(user_cfg_pipeline, pandora2d_machine)
 
-    if type(cfg_input["input"]["nodata_right"]) is float and \
-            cfg_pipeline["pipeline"]["matching_cost"]["matching_cost_method"] in ["sad", "ssd"]:
+    if isinstance(cfg_input["input"]["nodata_right"], float) and cfg_pipeline["pipeline"]["matching_cost"][
+        "matching_cost_method"
+    ] in ["sad", "ssd"]:
         logging.error("nodata_right must be int type with sad or ssd matching_cost_method (ex: 9999)")
         sys.exit(1)
 
@@ -119,15 +120,16 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
 
     return cfg
 
+
 input_configuration_schema = {
     "img_left": And(str, rasterio_can_open_mandatory),
     "img_right": And(str, rasterio_can_open_mandatory),
     "nodata_left": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
     "nodata_right": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
-    "disp_min_x" : int,
+    "disp_min_x": int,
     "disp_max_x": int,
     "disp_min_y": int,
-    "disp_max_y": int
+    "disp_max_y": int,
 }
 
 default_short_configuration_input = {

@@ -31,7 +31,6 @@ import numpy as np
 from pandora2d import img_tools
 
 
-
 class TestImgTools(unittest.TestCase):
     """
     TestImgTools class allows to test all the methods in the img_tools function
@@ -42,14 +41,14 @@ class TestImgTools(unittest.TestCase):
         Method called to prepare the test fixture
 
         """
-        #original image
+        # original image
         data = np.array(([1, 1, 1], [1, 1, 1], [1, 1, 1]))
-        #original mask
+        # original mask
         mask = np.array(([0, 0, 0], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
-        #create original dataset
+        # create original dataset
         self.data = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         # add attributes for mask
         self.data.attrs = {
@@ -70,8 +69,9 @@ class TestImgTools(unittest.TestCase):
         # original mask
         shifted_mask = np.array(([1, 1, 1], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
         self.data_down = xr.Dataset(
-            {"im": (["row", "col"], shifted_data),  "msk": (["row", "col"], shifted_mask)},
-            coords={"row": np.arange(shifted_data.shape[0]), "col": np.arange(shifted_data.shape[1])})
+            {"im": (["row", "col"], shifted_data), "msk": (["row", "col"], shifted_mask)},
+            coords={"row": np.arange(shifted_data.shape[0]), "col": np.arange(shifted_data.shape[1])},
+        )
 
         self.data_down.attrs = {
             "no_data_img": -9999,
@@ -81,8 +81,9 @@ class TestImgTools(unittest.TestCase):
 
         no_data_pixels = np.where(shifted_data == -9999)
         self.data_down["msk"] = xr.DataArray(
-            np.full((shifted_data.shape[0], shifted_data.shape[1]),
-                    self.data_down.attrs["valid_pixels"]).astype(np.int16),
+            np.full((shifted_data.shape[0], shifted_data.shape[1]), self.data_down.attrs["valid_pixels"]).astype(
+                np.int16
+            ),
             dims=["row", "col"],
         )
         # associate nan value in mask to the no_data param
@@ -94,8 +95,3 @@ class TestImgTools(unittest.TestCase):
         """
         my_data_down = img_tools.shift_img_pandora2d(self.data, 1)
         assert my_data_down.equals(self.data_down)
-
-
-
-
-

@@ -30,10 +30,12 @@ import numpy as np
 import xarray as xr
 from pandora.check_json import update_conf
 
+
 class Disparity:
     """
     Disparity class
     """
+
     _INVALID_DISPARITY = -9999
 
     def __init__(self, **cfg: Dict[str, Union[str, int]]) -> None:
@@ -54,8 +56,8 @@ class Disparity:
         cfg = update_conf({"disparity_method": "wta"}, cfg)
 
         schema = {
-            "disparity_method": And(str, lambda x : x in ["wta"]),
-            "invalid_disparity": Or(int, float, lambda input: np.isnan(input), lambda input: np.isinf(input))
+            "disparity_method": And(str, lambda x: x in ["wta"]),
+            "invalid_disparity": Or(int, float, lambda input: np.isnan(input), lambda input: np.isinf(input)),
         }
 
         checker = Checker(schema)
@@ -93,8 +95,9 @@ class Disparity:
             cv_chunked_x = np.array_split(cv_y, np.arange(100, cv_dims[0], 100), axis=1)
             x_begin = 0
             for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disps_min[y_begin: y_begin + cv_y.shape[0], x_begin: x_begin + cv_x.shape[1], :] = \
-                    np.min(cv_x, axis=axis)
+                disps_min[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1], :] = np.min(
+                    cv_x, axis=axis
+                )
                 x_begin += cv_x.shape[1]
 
             y_begin += cv_y.shape[0]
@@ -130,8 +133,9 @@ class Disparity:
             cv_chunked_x = np.array_split(cv_y, np.arange(100, cv_dims[0], 100), axis=1)
             x_begin = 0
             for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disps_max[y_begin: y_begin + cv_y.shape[0], x_begin: x_begin + cv_x.shape[1], :] = \
-                    np.max(cv_x, axis=axis)
+                disps_max[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1], :] = np.max(
+                    cv_x, axis=axis
+                )
                 x_begin += cv_x.shape[1]
 
             y_begin += cv_y.shape[0]
@@ -165,7 +169,7 @@ class Disparity:
             cv_chunked_x = np.array_split(cv_y, np.arange(100, nrow, 100), axis=1)
             x_begin = 0
             for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disp[y_begin: y_begin + cv_y.shape[0], x_begin: x_begin + cv_x.shape[1]] = np.argmax(cv_x, axis=axis)
+                disp[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1]] = np.argmax(cv_x, axis=axis)
                 x_begin += cv_x.shape[1]
 
             y_begin += cv_y.shape[0]
@@ -199,7 +203,7 @@ class Disparity:
             cv_chunked_x = np.array_split(cv_y, np.arange(100, nrow, 100), axis=1)
             x_begin = 0
             for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disp[y_begin: y_begin + cv_y.shape[0], x_begin: x_begin + cv_x.shape[1]] = np.argmin(cv_x, axis=axis)
+                disp[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1]] = np.argmin(cv_x, axis=axis)
                 x_begin += cv_x.shape[1]
 
             y_begin += cv_y.shape[0]
@@ -249,17 +253,16 @@ class Disparity:
             # process of argmin for dispx
             disp_map_col = cost_volumes["disp_col"].data[self.argmin_split(maps_min_y, 2)]
 
-
         invalid_mc = np.all(indices_nan, axis=(2, 3))
-        disp_map_col = disp_map_col.astype('float32')
-        disp_map_row = disp_map_row.astype('float32')
+        disp_map_col = disp_map_col.astype("float32")
+        disp_map_row = disp_map_row.astype("float32")
         disp_map_col[invalid_mc] = self._invalid_disparity
         disp_map_row[invalid_mc] = self._invalid_disparity
 
         return disp_map_col, disp_map_row
 
     @staticmethod
-    def dataset_disp_maps(delta_y:np.array, delta_x:np.array) -> xr.Dataset:
+    def dataset_disp_maps(delta_y: np.array, delta_x: np.array) -> xr.Dataset:
         """
         Create the dataset containing disparity maps
 
@@ -288,6 +291,3 @@ class Disparity:
         dataset = dataset_y.merge(dataset_x, join="override", compat="override")
 
         return dataset
-
-
-

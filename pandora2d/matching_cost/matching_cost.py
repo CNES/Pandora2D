@@ -30,7 +30,6 @@ import xarray as xr
 import numpy as np
 
 from pandora import matching_cost
-from pandora.check_json import update_conf
 
 from pandora2d import img_tools
 
@@ -39,6 +38,7 @@ class MatchingCost:
     """
     Matching Cost class
     """
+
     _WINDOW_SIZE = 5
 
     def __init__(self, **cfg: Dict[str, Union[str, int]]) -> None:
@@ -52,7 +52,6 @@ class MatchingCost:
         self.cfg = self.check_conf(**cfg)
         self._window_size = self.cfg["window_size"]
         self._matching_cost_method = self.cfg["matching_cost_method"]
-
 
     def check_conf(self, **cfg: Dict[str, Union[str, int]]) -> Dict[str, Dict[str, Union[str, int]]]:
         """
@@ -68,7 +67,7 @@ class MatchingCost:
 
         schema = {
             "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc"]),
-            "window_size": And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0)
+            "window_size": And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0),
         }
 
         checker = Checker(schema)
@@ -125,19 +124,18 @@ class MatchingCost:
 
         cost_volumes.attrs = cost_volume_attr
 
-
         return cost_volumes
 
     def compute_cost_volumes(
-            self,
-            img_left: xr.Dataset,
-            img_right: xr.Dataset,
-            min_x: int,
-            max_x: int,
-            min_y: int,
-            max_y: int,
-            **cfg: Dict[str, dict]
-        ) -> xr.Dataset:
+        self,
+        img_left: xr.Dataset,
+        img_right: xr.Dataset,
+        min_x: int,
+        max_x: int,
+        min_y: int,
+        max_y: int,
+        **cfg: Dict[str, dict]
+    ) -> xr.Dataset:
         """
 
         Computes the cost volumes
@@ -163,6 +161,8 @@ class MatchingCost:
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
+
+        cost_volumes = xr.Dataset()
         # Initialize Pandora matching cost
         pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**cfg)
         # Array with all y disparities
@@ -183,10 +183,8 @@ class MatchingCost:
                 row = np.arange(c_row[0], c_row[-1] + 1)
                 col = np.arange(c_col[0], c_col[-1] + 1)
 
-                cost_volumes = self.allocate_cost_volumes(cost_volume.attrs, row, col,
-                                                          min_x, max_x, min_y, max_y, None)
+                cost_volumes = self.allocate_cost_volumes(cost_volume.attrs, row, col, min_x, max_x, min_y, max_y, None)
             # Add current cost volume to the cost_volumes dataset
             cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data
 
         return cost_volumes
-

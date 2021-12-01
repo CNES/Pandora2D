@@ -119,4 +119,3 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     common.save_dataset(dataset_disp_maps, path_output)
     save_config(path_output, user_cfg)
-
