@@ -30,6 +30,7 @@ from abc import abstractmethod, ABCMeta
 import xarray as xr
 import numpy as np
 
+
 class AbstractRefinement:
     """
     Abstract Refinement class
