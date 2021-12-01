@@ -30,7 +30,7 @@ import logging
 from transitions import Machine, MachineError
 import xarray as xr
 
-from pandora2d import matching_cost, disparity
+from pandora2d import matching_cost, disparity, refinement, common
 
 
 class Pandora2DMachine(Machine):
@@ -264,6 +264,9 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
+        refinement_ = refinement.AbstractRefinement(**cfg[input_step])
+        self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
+
     def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Matching cost computation
@@ -303,7 +306,7 @@ class Pandora2DMachine(Machine):
         disparity_run = disparity.Disparity(**cfg[input_step])
 
         map_col, map_row = disparity_run.compute_disp_maps(self.cost_volumes)
-        self.dataset_disp_maps = disparity_run.dataset_disp_maps(map_row, map_col)
+        self.dataset_disp_maps = common.dataset_disp_maps(map_row, map_col)
 
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -315,3 +318,9 @@ class Pandora2DMachine(Machine):
         :type input_step: str
         :return: None
         """
+
+        logging.info("Refinement computation...")
+        refinement_run = refinement.AbstractRefinement(**cfg[input_step])
+
+        refine_map_col, refine_map_row = refinement_run.refinement_method(self.cost_volumes, self.dataset_disp_maps)
+        self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col)
