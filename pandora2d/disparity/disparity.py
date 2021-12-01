@@ -260,34 +260,3 @@ class Disparity:
         disp_map_row[invalid_mc] = self._invalid_disparity
 
         return disp_map_col, disp_map_row
-
-    @staticmethod
-    def dataset_disp_maps(delta_y: np.array, delta_x: np.array) -> xr.Dataset:
-        """
-        Create the dataset containing disparity maps
-
-        :param delta_y: disparity map for row
-        :type delta_y: np.array
-        :param delta_x: disparity map for col
-        :type delta_x: np.array
-        :return: dataset: Dataset with the disparity maps with the data variables :
-
-                - row_map 2D xarray.DataArray (row, col)
-                - col_map 2D xarray.DataArray (row, col)
-        :rtype: xarray.Dataset
-        """
-
-        # create a test dataset for map row
-        dataset_y = xr.Dataset(
-            {"row_map": (["row", "col"], delta_y)},
-            coords={"row": np.arange(delta_y.shape[0]), "col": np.arange(delta_y.shape[1])},
-        )
-        # create a test dataset for map col
-        dataset_x = xr.Dataset(
-            {"col_map": (["row", "col"], delta_x)},
-            coords={"row": np.arange(delta_x.shape[0]), "col": np.arange(delta_x.shape[1])},
-        )
-        # merge two dataset into one
-        dataset = dataset_y.merge(dataset_x, join="override", compat="override")
-
-        return dataset

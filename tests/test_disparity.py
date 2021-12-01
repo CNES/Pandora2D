@@ -444,32 +444,3 @@ class TestDisparity(unittest.TestCase):
 
         np.testing.assert_array_equal(ground_truth_col, delta_x)
         np.testing.assert_array_equal(ground_truth_row, delta_y)
-
-    @staticmethod
-    def test_dataset_disp_maps():
-        """
-        Test function for create a dataset
-        """
-
-        # create a test dataset for map row
-        delta_y = np.zeros((2, 2))
-        dataset_y = xr.Dataset(
-            {"row_map": (["row", "col"], delta_y)},
-            coords={"row": np.arange(delta_y.shape[0]), "col": np.arange(delta_y.shape[1])},
-        )
-        # create a test dataset for map col
-        delta_x = np.ones((2, 2))
-        dataset_x = xr.Dataset(
-            {"col_map": (["row", "col"], delta_x)},
-            coords={"row": np.arange(delta_x.shape[0]), "col": np.arange(delta_x.shape[1])},
-        )
-        # merge two dataset into one
-        dataset_test = dataset_y.merge(dataset_x, join="override", compat="override")
-        # create object disparity
-        cfg_disp = {"disparity_method": "wta", "invalid_disparity": -9999}
-        disparity_matcher = disparity.Disparity(**cfg_disp)
-
-        # create dataset with function
-        dataset_fun = disparity_matcher.dataset_disp_maps(delta_y, delta_x)
-
-        assert dataset_fun.equals(dataset_test)
