@@ -22,3 +22,40 @@
 """
 This module contains functions associated to the interpolation method used in the refinement step.
 """
+
+from typing import Dict, Union
+from pandora.check_json import update_conf
+from json_checker import And, Checker
+
+from . import refinement
+
+
+@refinement.AbstractRefinement.register_subclass("interpolation")
+class Interpolation(refinement.AbstractRefinement):
+    """
+    Interpolation class allows to perform the subpixel cost refinement step
+    """
+
+    def __init__(self, **cfg: Dict[str, Union[str, int]]) -> None:
+        self.cfg = self.check_conf(**cfg)
+
+    @staticmethod
+    def check_conf(**cfg: Dict[str, Union[str, int]]) -> Dict[str, Dict[str, Union[str, int]]]:
+        """
+        Check the refinement configuration
+
+        :param cfg: user_config for refinement
+        :type cfg: dict
+        :return: cfg: global configuration
+        :rtype: cfg: dict
+        """
+        cfg = update_conf({"refinement_method": "interpolation"}, cfg)
+
+        schema = {
+            "refinement_method": And(str, lambda x: x in ["interpolation"]),
+        }
+
+        checker = Checker(schema)
+        checker.validate(cfg)
+
+        return cfg

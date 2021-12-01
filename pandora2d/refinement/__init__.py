@@ -22,3 +22,6 @@
 """
 Init file for refinement module
 """
+
+from . import interpolation
+from .refinement import AbstractRefinement
