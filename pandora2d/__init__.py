@@ -113,9 +113,12 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     disp_min_y = cfg["input"]["disp_min_y"]
     disp_max_y = cfg["input"]["disp_max_y"]
 
+    # run pandora 2D and store disp maps in a dataset
     dataset_disp_maps = run(
         pandora2d_machine, img_left, img_right, disp_min_x, disp_max_x, disp_min_y, disp_max_y, cfg["pipeline"]
     )
 
+    # save dataset
     common.save_dataset(dataset_disp_maps, path_output)
+    #save config
     save_config(path_output, user_cfg)

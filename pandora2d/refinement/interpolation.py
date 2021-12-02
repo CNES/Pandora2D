@@ -42,11 +42,16 @@ class Interpolation(refinement.AbstractRefinement):
     Interpolation class allows to perform the subpixel cost refinement step
     """
 
-    def __init__(self, **cfg: Dict[str, Union[str, int]]) -> None:
+    def __init__(self, **cfg: str) -> None:
+        """
+        :param cfg: optional configuration, {}
+        :type cfg: dict
+        :return: None
+        """
         self.cfg = self.check_conf(**cfg)
 
     @staticmethod
-    def check_conf(**cfg: Dict[str, Union[str, int]]) -> Dict[str, Dict[str, Union[str, int]]]:
+    def check_conf(**cfg: str) -> Dict[str, str]:
         """
         Check the refinement configuration
 
@@ -55,7 +60,6 @@ class Interpolation(refinement.AbstractRefinement):
         :return: cfg: global configuration
         :rtype: cfg: dict
         """
-        cfg = update_conf({"refinement_method": "interpolation"}, cfg)
 
         schema = {
             "refinement_method": And(str, lambda x: x in ["interpolation"]),
@@ -66,7 +70,8 @@ class Interpolation(refinement.AbstractRefinement):
 
         return cfg
 
-    def compute_cost_matrix(self, p_args) -> Tuple[float, float]:
+    @staticmethod
+    def compute_cost_matrix(p_args) -> Tuple[float, float]:
         """
         Process the interpolation and minimize of a cost_matrix
         :param cost_volumes: Dataset with 4D datas

@@ -121,13 +121,13 @@ class TestDisparity(unittest.TestCase):
         """
         test check_conf of matching cost pipeline
         """
-        disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
+        disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
+
+        with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError):
+            disparity.Disparity(**{"invalid_disparity": "5"}) # type: ignore
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            disparity.Disparity(**{"invalid_disparity": "5"})
-
-        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            disparity.Disparity(**{"disparity_method": "WTN"})
+            disparity.Disparity(**{"disparity_method": "WTN"}) # type: ignore
 
     def test_min_split(self):
         """
@@ -136,15 +136,15 @@ class TestDisparity(unittest.TestCase):
 
         # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
         cfg = {"matching_cost_method": "sad", "window_size": 1}
-        matching_cost_test = matching_cost.MatchingCost(**cfg)
+        matching_cost_test = matching_cost.MatchingCost(**cfg) # type: ignore
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, **cfg)
+        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, **cfg) # type: ignore
 
         ad_ground_truth = np.zeros((3, 3, 2))
         ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
         ad_ground_truth[:, :, 1] = np.array([[np.nan, np.nan, np.nan], [0, 0, np.nan], [1, 1, np.nan]])
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
+        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
         # searching along dispy axis
         cvs_min = disparity_test.min_split(cvs, 3)
 
@@ -158,15 +158,15 @@ class TestDisparity(unittest.TestCase):
 
         # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
         cfg = {"matching_cost_method": "sad", "window_size": 1}
-        matching_cost_test = matching_cost.MatchingCost(**cfg)
+        matching_cost_test = matching_cost.MatchingCost(**cfg) # type: ignore
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, **cfg)
+        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, **cfg) # type: ignore
 
         ad_ground_truth = np.zeros((3, 3, 2))
         ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [2, 3, 4], [2, 3, 4]])
         ad_ground_truth[:, :, 1] = np.array([[np.nan, np.nan, np.nan], [3, 4, np.nan], [2, 3, np.nan]])
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
+        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
         # searching along dispy axis
         cvs_max = disparity_test.max_split(cvs, 3)
 
@@ -180,15 +180,15 @@ class TestDisparity(unittest.TestCase):
 
         # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
         cfg = {"matching_cost_method": "sad", "window_size": 3}
-        matching_cost_test = matching_cost.MatchingCost(**cfg)
+        matching_cost_test = matching_cost.MatchingCost(**cfg) # type: ignore
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, **cfg)
+        cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, **cfg) # type: ignore
 
         ad_ground_truth = np.array(
             [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
         )
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
+        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
         # searching along dispy axis
         cvs_max = disparity_test.min_split(cvs, 3)
         min_tensor = disparity_test.argmin_split(cvs_max, 2)
@@ -202,15 +202,15 @@ class TestDisparity(unittest.TestCase):
 
         # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
         cfg = {"matching_cost_method": "sad", "window_size": 3}
-        matching_cost_test = matching_cost.MatchingCost(**cfg)
+        matching_cost_test = matching_cost.MatchingCost(**cfg) # type: ignore
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, **cfg)
+        cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, **cfg) # type: ignore
 
         ad_ground_truth = np.array(
             [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
         )
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
+        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
         # searching along dispy axis
         cvs_max = disparity_test.max_split(cvs, 3)
         max_tensor = disparity_test.argmax_split(cvs_max, 2)
@@ -262,12 +262,14 @@ class TestDisparity(unittest.TestCase):
 
         # create matching_cost object with measure = ssd, window_size = 3
         cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc) # type: ignore
         # create disparity object with WTA method
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
-        disparity_matcher = disparity.Disparity(**cfg_disp)
+        disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
 
-        cvs = matching_cost_matcher.compute_cost_volumes(left, right, min_x=-2, max_x=2, min_y=-2, max_y=2, **cfg_mc)
+        cvs = matching_cost_matcher.compute_cost_volumes(
+            left, right, min_x=-2, max_x=2, min_y=-2, max_y=2, **cfg_mc
+        ) # type: ignore
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
@@ -319,12 +321,14 @@ class TestDisparity(unittest.TestCase):
 
         # create matching_cost object with measure = ssd, window_size = 3
         cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc) # type: ignore
         # create disparity object with WTA method
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
-        disparity_matcher = disparity.Disparity(**cfg_disp)
+        disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
 
-        cvs = matching_cost_matcher.compute_cost_volumes(left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc)
+        cvs = matching_cost_matcher.compute_cost_volumes(
+            left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc
+        ) # type: ignore
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
@@ -376,10 +380,10 @@ class TestDisparity(unittest.TestCase):
 
         # create matching_cost object with measure = ssd, window_size = 3
         cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc) # type: ignore
         # create disparity object with WTA method
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
-        disparity_matcher = disparity.Disparity(**cfg_disp)
+        disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
 
         cvs = matching_cost_matcher.compute_cost_volumes(left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc)
 
@@ -432,7 +436,7 @@ class TestDisparity(unittest.TestCase):
         cost_volumes_dataset.attrs["type_measure"] = "max"
 
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -99}
-        disparity_matcher = disparity.Disparity(**cfg_disp)
+        disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
 
         ground_truth_col = np.array([[-99, -99, -99, -1, 0], [-99, 0, 0, 0, 0], [-1, -1, 0, 0, 0], [0, 0, 0, 0, -99]])
 

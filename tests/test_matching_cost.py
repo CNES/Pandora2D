@@ -85,13 +85,13 @@ class TestMatchingCost(unittest.TestCase):
         """
         test check_conf of matching cost pipeline
         """
-        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5})
+        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5}) # type: ignore
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "census", "window_size": 5})
+            matching_cost.MatchingCost(**{"matching_cost_method": "census", "window_size": 5}) # type: ignore
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": -1})
+            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": -1}) # type: ignore
 
     def test_compute_cv_ssd(self):
         """
@@ -123,12 +123,12 @@ class TestMatchingCost(unittest.TestCase):
         # disp_x = 0, disp_y = -1
         ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
 
         # compute cost volumes
         ssd = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left, img_right=self.right, min_x=-1, max_x=0, min_y=-1, max_y=0, **cfg
-        )
+        ) # type: ignore
 
         # check that the generated cost_volumes is equal to ground truth
         np.testing.assert_allclose(ssd["cost_volumes"].data, ad_ground_truth, atol=1e-06)
@@ -165,11 +165,11 @@ class TestMatchingCost(unittest.TestCase):
         ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
 
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
         # compute cost volumes
         sad = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left, img_right=self.right, min_x=-1, max_x=0, min_y=-1, max_y=0, **cfg
-        )
+        ) # type: ignore
         # check that the generated cost_volumes is equal to ground truth
         np.testing.assert_allclose(sad["cost_volumes"].data, ad_ground_truth, atol=1e-06)
 
@@ -250,11 +250,11 @@ class TestMatchingCost(unittest.TestCase):
         ) / (np.std(left[1:4, 1:4]) * np.std(right_shift[1:4, 1:4]))
 
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
         # compute cost volumes
         zncc = matching_cost_matcher.compute_cost_volumes(
             img_left=left_zncc, img_right=right_zncc, min_x=0, max_x=1, min_y=-1, max_y=0, **cfg
-        )
+        ) # type: ignore
         # check that the generated cost_volumes is equal to ground truth
 
         np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_0, rtol=1e-06)
@@ -303,11 +303,11 @@ class TestMatchingCost(unittest.TestCase):
 
         # data by function compute_cost_volume
         cfg = {"matching_cost_method": "zncc", "window_size": 3}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
 
         cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left, img_right=self.right, min_x=-1, max_x=1, min_y=-1, max_y=1, **cfg
-        )
+        ) # type: ignore
 
         # check that the generated xarray dataset is equal to the ground truth
         np.testing.assert_array_equal(cost_volumes_fun["cost_volumes"].data, cost_volumes_test["cost_volumes"].data)

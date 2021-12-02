@@ -264,7 +264,7 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-        refinement_ = refinement.AbstractRefinement(**cfg[input_step])
+        refinement_ = refinement.AbstractRefinement(**cfg[input_step])  # type: ignore
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
 
     def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
@@ -320,7 +320,7 @@ class Pandora2DMachine(Machine):
         """
 
         logging.info("Refinement computation...")
-        refinement_run = refinement.AbstractRefinement(**cfg[input_step])
+        refinement_run = refinement.AbstractRefinement(**cfg[input_step]) # type: ignore
 
         refine_map_col, refine_map_row = refinement_run.refinement_method(self.cost_volumes, self.dataset_disp_maps)
         self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col)

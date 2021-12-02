@@ -43,10 +43,10 @@ class TestRefinement(unittest.TestCase):
         Test the interpolation method
         """
 
-        refinement.AbstractRefinement(**{"refinement_method": "interpolation"})
+        refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
 
         with pytest.raises(KeyError):
-            refinement.AbstractRefinement(**{"refinement_method": "wta"})
+            refinement.AbstractRefinement(**{"refinement_method": "wta"}) # type: ignore
 
     @staticmethod
     def test_refinement_method_subpixel():

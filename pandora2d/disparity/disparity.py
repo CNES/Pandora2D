@@ -38,11 +38,11 @@ class Disparity:
 
     _INVALID_DISPARITY = -9999
 
-    def __init__(self, **cfg: Dict[str, Union[str, int]]) -> None:
+    def __init__(self, **cfg: str) -> None:
         self.cfg = self.check_conf(**cfg)
         self._invalid_disparity = self.cfg["invalid_disparity"]
 
-    def check_conf(self, **cfg: Dict[str, Union[str, int]]) -> Dict[str, Dict[str, Union[str, int]]]:
+    def check_conf(self, **cfg: str) -> Dict[str, str]:
         """
         Check the disparity configuration
 
@@ -51,9 +51,7 @@ class Disparity:
         """
         # Give the default value if the required element is not in the configuration
         if "invalid_disparity" not in cfg:
-            cfg["invalid_disparity"] = self._INVALID_DISPARITY
-
-        cfg = update_conf({"disparity_method": "wta"}, cfg)
+            cfg["invalid_disparity"] = self._INVALID_DISPARITY  # type: ignore
 
         schema = {
             "disparity_method": And(str, lambda x: x in ["wta"]),

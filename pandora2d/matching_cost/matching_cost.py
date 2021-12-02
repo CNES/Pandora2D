@@ -41,7 +41,7 @@ class MatchingCost:
 
     _WINDOW_SIZE = 5
 
-    def __init__(self, **cfg: Dict[str, Union[str, int]]) -> None:
+    def __init__(self, **cfg: str) -> None:
         """
         Initialisation of matching_cost class
 
@@ -53,7 +53,7 @@ class MatchingCost:
         self._window_size = self.cfg["window_size"]
         self._matching_cost_method = self.cfg["matching_cost_method"]
 
-    def check_conf(self, **cfg: Dict[str, Union[str, int]]) -> Dict[str, Dict[str, Union[str, int]]]:
+    def check_conf(self, **cfg: str) -> Dict[str, str]:
         """
         Check the matching cost configuration
 
@@ -63,7 +63,7 @@ class MatchingCost:
         :rtype: cfg: dict
         """
         if "window_size" not in cfg:
-            cfg["window_size"] = self._WINDOW_SIZE
+            cfg["window_size"] = self._WINDOW_SIZE  # type: ignore
 
         schema = {
             "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc"]),
