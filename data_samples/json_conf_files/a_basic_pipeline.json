@@ -1,8 +1,8 @@
 {
   "input": {
-    "img_left": "./left.tif",
+    "img_left": "./maricopa/left.tif",
     "nodata_left": -9999,
-    "img_right": "./right.tif",
+    "img_right": "./maricopa/right.tif",
     "nodata_right": -9999,
 
     "disp_min_x": -2,
