@@ -27,8 +27,14 @@ This module contains class associated to the pandora state machine
 from typing import Dict
 import logging
 
-from transitions import Machine, MachineError
 import xarray as xr
+
+try:
+    import graphviz  # pylint: disable=unused-import
+    from transitions.extensions import GraphMachine as Machine
+except ImportError:
+    from transitions import Machine
+from transitions import MachineError
 
 from pandora2d import matching_cost, disparity, refinement, common
 
