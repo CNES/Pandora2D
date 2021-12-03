@@ -10,4 +10,4 @@ The following sections describe Pandora's stereo matching steps.
 
     step_by_step/matching_cost.rst
     step_by_step/disparity.rst
-    step_by_step/filtering.rst
+    step_by_step/refinement.rst
