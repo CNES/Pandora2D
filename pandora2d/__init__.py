@@ -27,8 +27,9 @@ from typing import Dict
 import xarray as xr
 
 from pandora import read_config_file, read_img
+from pandora.common import save_config
 
-from pandora2d import check_json
+from pandora2d import check_json, common
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -80,6 +81,8 @@ def run(
 
     pandora2d_machine.run_exit()
 
+    return pandora2d_machine.dataset_disp_maps
+
 
 def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
@@ -110,4 +113,10 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     disp_min_y = cfg["input"]["disp_min_y"]
     disp_max_y = cfg["input"]["disp_max_y"]
 
-    run(pandora2d_machine, img_left, img_right, disp_min_x, disp_max_x, disp_min_y, disp_max_y, cfg["pipeline"])
+    dataset_disp_maps = run(
+        pandora2d_machine, img_left, img_right, disp_min_x, disp_max_x, disp_min_y, disp_max_y, cfg["pipeline"]
+    )
+
+    common.save_dataset(dataset_disp_maps, path_output)
+    save_config(path_output, user_cfg)
+

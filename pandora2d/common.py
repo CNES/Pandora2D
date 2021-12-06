@@ -46,7 +46,7 @@ def save_dataset(dataset: xr.Dataset, output: str) -> None:
     mkdir_p(output)
 
     # save disp map for lines
-    write_data_array(dataset["im_line"], os.path.join(output, "lines_diparity.tif"))
+    write_data_array(dataset["row_map"], os.path.join(output, "row_disparity.tif"))
 
     # save disp map for columns
-    write_data_array(dataset["im_col"], os.path.join(output, "columns_diparity.tif"))
+    write_data_array(dataset["col_map"], os.path.join(output, "columns_disparity.tif"))
