@@ -20,7 +20,7 @@ Pandora2D is available on Gitlab and can be installed by:
 First step
 ##########
 
-Pandora2d requires a `config.json` to declare the pipeline and the pair of images to process.
+Pandora2d requires a `config.json` input file to declare the pipeline and the pair of images to process.
 Download our data sample to start right away !
 
 .. code-block:: bash

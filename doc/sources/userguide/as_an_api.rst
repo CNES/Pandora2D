@@ -4,7 +4,7 @@ As an API
 Pandora2D API usage
 *******************
 
-Pandora2D provides a full python API which can be used to compute disparity maps as show in this basic example:
+Pandora2D provides a full python API which can be used to compute disparity maps as shown in this basic example:
 
 .. sourcecode:: python
 
@@ -77,8 +77,8 @@ Pandora2D's data
 Images
 ######
 
-Pandora2D reads input images before stereo computation and creates two datasets for left and right
-images containing data's image, data's mask and additionnal information.
+Pandora2D reads the input images before the stereo computation and creates two datasets, one for the left and one for the right
+image which contain the data's image, data's mask and additionnal information.
 
 Example of an image dataset
 
@@ -105,9 +105,9 @@ Example of an image dataset
 
 .. note::
     This example comes from a dataset created by Pandora's reading function. Dataset attributes
-    *valid_pixels* and *no_data_mask* cannot be modified with this function. Its indicate the *msk*
+    *valid_pixels* and *no_data_mask* cannot be modified with this function, as they are defined by the *msk*
     data convention.
-    For API user who wants to create own dataset, without using Pandora's reading function, it is
+    For an API user who wants to create its own dataset without using Pandora's reading function, it is
     possible to declare its own mask convention with these attributes:
 
       * *no_data_img* : value of no_data in input image
@@ -119,7 +119,6 @@ Cost volumes
 ############
 Pandora2D will then store all the cost volumes together in a 4D (dims: row, col, disp_col, disp_row)
 xarray.DataArray named cost_volumes. When matching is impossible, the matching cost is set to np.nan.
-
 
 ::
 

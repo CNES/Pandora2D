@@ -15,10 +15,10 @@ and 3 transitions, each one corresponding to a step described in :ref:`step_by_s
  - disparity (:ref:`disparity`)
  - refinement (:ref:`refinement`)
 
-Pandora2D machine starts at the begin state. To go from a state to another one, transitions are called and triggered
+Pandora2D machine starts at the begin state. To go from one state to another one, transitions are called and triggered
 by specific name. It corresponds to the name of Pandora2D steps you can write in configuration file.
 
-The following diagram highligts all states and possible transitions.
+The following diagram highlights all states and possible transitions.
 
     .. figure:: ../Images/Pandora2D_pipeline.png
 
@@ -31,8 +31,8 @@ Examples
 SSD measurment with refinement step disparity maps
 ###################################################
 
-Configuration to produce a disparity map, computed by SSD method, and filterd by
-median filter method.
+Configuration to produce a disparity map, computed by the SSD method, and refined by the
+interpolation method.
 
 .. sourcecode:: text
 

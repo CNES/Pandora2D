@@ -3,7 +3,7 @@
 Step by step
 ============
 
-The following sections describe Pandora's stereo matching steps.
+The following sections describe Pandora2D's stereo matching steps.
 
 .. toctree::
 
