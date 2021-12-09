@@ -26,8 +26,8 @@ This module contains common functions present in Pandora2D's tests.
 
 correct_input = {
     "input": {
-        "img_left": "./data/left.png",
-        "img_right": "./data/right.png",
+        "img_left": "./tests/data/left.png",
+        "img_right": "./tests/data/right.png",
         "nodata_left": "NaN",
         "disp_min_col": -2,
         "disp_max_col": 2,
@@ -39,8 +39,8 @@ correct_input = {
 
 false_input_path_image = {
     "input": {
-        "img_left": "./data/lt.png",
-        "img_right": "./data/right.png",
+        "img_left": "./tests/data/lt.png",
+        "img_right": "./tests/data/right.png",
         "nodata_left": "NaN",
         "disp_min_col": -2,
         "disp_max_col": 2,
