@@ -26,7 +26,7 @@ This module contains functions to run Pandora pipeline.
 from typing import Dict
 import xarray as xr
 
-from pandora import read_config_file, read_img
+from pandora import read_config_file, read_img, setup_logging
 from pandora.common import save_config
 
 from pandora2d import check_json, common
@@ -102,6 +102,8 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     pandora2d_machine = Pandora2DMachine()
 
     cfg = check_json.check_conf(user_cfg, pandora2d_machine)
+
+    setup_logging(verbose)
 
     # read images
     img_left = read_img(cfg["input"]["img_left"], cfg["input"]["nodata_left"])
