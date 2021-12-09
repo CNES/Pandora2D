@@ -37,10 +37,10 @@ def run(
     pandora2d_machine: Pandora2DMachine,
     img_left: xr.Dataset,
     img_right: xr.Dataset,
-    disp_min_x: int,
-    disp_max_x: int,
-    disp_min_y: int,
-    disp_max_y: int,
+    disp_min_col: int,
+    disp_max_col: int,
+    disp_min_row: int,
+    disp_max_row: int,
     cfg_pipeline: Dict[str, dict],
 ):
     """
@@ -58,26 +58,24 @@ def run(
             - im : 2D (row, col) xarray.DataArray
             - msk (optional): 2D (row, col) xarray.DataArray
     :type img_right: xarray.Dataset
-    :param disp_min_x: minimal disparity for columns
-    :type disp_min_x: int
-    :param disp_max_x: maximal disparity for columns
-    :type disp_max_x: int
-    :param disp_min_y: minimal disparity for lines
-    :type disp_min_y: int
-    :param disp_max_y: maximal disparity for lines
-    :type disp_max_y: int
+    :param disp_min_col: minimal disparity for columns
+    :type disp_min_col: int
+    :param disp_max_col: maximal disparity for columns
+    :type disp_max_col: int
+    :param disp_min_row: minimal disparity for lines
+    :type disp_min_row: int
+    :param disp_max_row: maximal disparity for lines
+    :type disp_max_row: int
     :param cfg_pipeline: pipeline configuration
     :type cfg_pipeline: Dict[str, dict]
 
     :return: None
     """
 
-    pandora2d_machine.run_prepare(img_left, img_right, disp_min_x, disp_max_x, disp_min_y, disp_max_y)
+    pandora2d_machine.run_prepare(img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row)
 
     for e in list(cfg_pipeline):
         pandora2d_machine.run(e, cfg_pipeline)
-        if pandora2d_machine.state == "begin":
-            break
 
     pandora2d_machine.run_exit()
 
@@ -110,14 +108,14 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     img_right = read_img(cfg["input"]["img_right"], cfg["input"]["nodata_right"])
 
     ## read disparities values
-    disp_min_x = cfg["input"]["disp_min_x"]
-    disp_max_x = cfg["input"]["disp_max_x"]
-    disp_min_y = cfg["input"]["disp_min_y"]
-    disp_max_y = cfg["input"]["disp_max_y"]
+    disp_min_col = cfg["input"]["disp_min_col"]
+    disp_max_col = cfg["input"]["disp_max_col"]
+    disp_min_row = cfg["input"]["disp_min_row"]
+    disp_max_row = cfg["input"]["disp_max_row"]
 
     # run pandora 2D and store disp maps in a dataset
     dataset_disp_maps = run(
-        pandora2d_machine, img_left, img_right, disp_min_x, disp_max_x, disp_min_y, disp_max_y, cfg["pipeline"]
+        pandora2d_machine, img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row, cfg["pipeline"]
     )
 
     # save dataset

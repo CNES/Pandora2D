@@ -30,24 +30,26 @@ import numpy as np
 from scipy.ndimage.interpolation import shift
 
 
-def shift_img_pandora2d(img_right: xr.Dataset, dec_y: int) -> xr.Dataset:
+def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     """
     Return a Dataset that contains the shifted right images
 
     :param img_right: right Dataset image containing :
                 - im : 2D (row, col) xarray.Datasat
     :type img_right: xr.Dataset
-    :param dec_y: the value of shifting for dispy
-    :type dec_y: int
+    :param dec_row: the value of shifting for dispy
+    :type dec_row: int
     :return: img_right_shift: Dataset containing the shifted image
     :rtype: xr.Dataset
     """
     # dimensions of images
-    ny_, nx_ = img_right["im"].shape
+    nrow_, ncol_ = img_right["im"].shape
     # shifted image by scipy
-    data = shift(img_right["im"].data, (-dec_y, 0), cval=img_right.attrs["no_data_img"])
+    data = shift(img_right["im"].data, (-dec_row, 0), cval=img_right.attrs["no_data_img"])
     # create shifted image dataset
-    img_right_shift = xr.Dataset({"im": (["row", "col"], data)}, coords={"row": np.arange(ny_), "col": np.arange(nx_)})
+    img_right_shift = xr.Dataset(
+        {"im": (["row", "col"], data)}, coords={"row": np.arange(nrow_), "col": np.arange(ncol_)}
+    )
     # add attributes to dataset
     img_right_shift.attrs = {
         "no_data_img": img_right.attrs["no_data_img"],

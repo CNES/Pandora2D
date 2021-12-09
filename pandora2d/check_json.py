@@ -57,8 +57,8 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     check_images(cfg["input"]["img_left"], cfg["input"]["img_right"], None, None)
 
     # test disparities
-    check_disparities(cfg["input"]["disp_min_x"], cfg["input"]["disp_max_x"], None)
-    check_disparities(cfg["input"]["disp_min_y"], cfg["input"]["disp_max_y"], None)
+    check_disparities(cfg["input"]["disp_min_col"], cfg["input"]["disp_max_col"], None)
+    check_disparities(cfg["input"]["disp_min_row"], cfg["input"]["disp_max_row"], None)
 
     return cfg
 
@@ -126,10 +126,10 @@ input_configuration_schema = {
     "img_right": And(str, rasterio_can_open_mandatory),
     "nodata_left": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
     "nodata_right": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
-    "disp_min_x": int,
-    "disp_max_x": int,
-    "disp_min_y": int,
-    "disp_max_y": int,
+    "disp_min_col": int,
+    "disp_max_col": int,
+    "disp_min_row": int,
+    "disp_max_row": int,
 }
 
 default_short_configuration_input = {

@@ -268,7 +268,7 @@ class TestDisparity(unittest.TestCase):
         disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
 
         cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_x=-2, max_x=2, min_y=-2, max_y=2, **cfg_mc
+            left, right, min_col=-2, max_col=2, min_row=-2, max_row=2, **cfg_mc
         ) # type: ignore
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
@@ -327,7 +327,7 @@ class TestDisparity(unittest.TestCase):
         disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
 
         cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc
+            left, right, min_col=-3, max_col=3, min_row=-3, max_row=3, **cfg_mc
         ) # type: ignore
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
@@ -385,7 +385,9 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
 
-        cvs = matching_cost_matcher.compute_cost_volumes(left, right, min_x=-3, max_x=3, min_y=-3, max_y=3, **cfg_mc)
+        cvs = matching_cost_matcher.compute_cost_volumes(
+            left, right, min_col=-3, max_col=3, min_row=-3, max_row=3, **cfg_mc
+        )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 

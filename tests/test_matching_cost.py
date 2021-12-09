@@ -127,7 +127,7 @@ class TestMatchingCost(unittest.TestCase):
 
         # compute cost volumes
         ssd = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_x=-1, max_x=0, min_y=-1, max_y=0, **cfg
+            img_left=self.left, img_right=self.right, min_col=-1, max_col=0, min_row=-1, max_row=0, **cfg
         ) # type: ignore
 
         # check that the generated cost_volumes is equal to ground truth
@@ -168,7 +168,7 @@ class TestMatchingCost(unittest.TestCase):
         matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
         # compute cost volumes
         sad = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_x=-1, max_x=0, min_y=-1, max_y=0, **cfg
+            img_left=self.left, img_right=self.right, min_col=-1, max_col=0, min_row=-1, max_row=0, **cfg
         ) # type: ignore
         # check that the generated cost_volumes is equal to ground truth
         np.testing.assert_allclose(sad["cost_volumes"].data, ad_ground_truth, atol=1e-06)
@@ -253,7 +253,7 @@ class TestMatchingCost(unittest.TestCase):
         matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
         # compute cost volumes
         zncc = matching_cost_matcher.compute_cost_volumes(
-            img_left=left_zncc, img_right=right_zncc, min_x=0, max_x=1, min_y=-1, max_y=0, **cfg
+            img_left=left_zncc, img_right=right_zncc, min_col=0, max_col=1, min_row=-1, max_row=0, **cfg
         ) # type: ignore
         # check that the generated cost_volumes is equal to ground truth
 
@@ -306,7 +306,7 @@ class TestMatchingCost(unittest.TestCase):
         matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
 
         cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_x=-1, max_x=1, min_y=-1, max_y=1, **cfg
+            img_left=self.left, img_right=self.right, min_col=-1, max_col=1, min_row=-1, max_row=1, **cfg
         ) # type: ignore
 
         # check that the generated xarray dataset is equal to the ground truth
