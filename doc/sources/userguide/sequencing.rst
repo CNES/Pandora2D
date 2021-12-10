@@ -18,10 +18,6 @@ and 3 transitions, each one corresponding to a step described in :ref:`step_by_s
 Pandora2D machine starts at the begin state. To go from one state to another one, transitions are called and triggered
 by specific name. It corresponds to the name of Pandora2D steps you can write in configuration file.
 
-The following diagram highlights all states and possible transitions.
-
-    .. figure:: ../Images/Pandora2D_pipeline.png
-
 If you want to understand in more details how Pandora2D machine works, please consult our `Pandora machine state tutorial notebook <https://github.com/CNES/Pandora2D/tree/master/notebooks/...>`_.
 
 
