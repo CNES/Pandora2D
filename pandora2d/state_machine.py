@@ -30,7 +30,7 @@ import logging
 from transitions import Machine, MachineError
 import xarray as xr
 
-from pandora2d import matching_cost, disparity
+from pandora2d import matching_cost, disparity, refinement, common
 
 
 class Pandora2DMachine(Machine):
@@ -91,6 +91,8 @@ class Pandora2DMachine(Machine):
         self.disp_max_y: int = disp_max_y
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
+        self.cost_volumes: xr.Dataset = xr.Dataset()
+        self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
         # Define avalaible states
         states_ = ["begin", "cost_volumes", "disp_maps"]
@@ -165,8 +167,9 @@ class Pandora2DMachine(Machine):
             else:
                 self.trigger(input_step, cfg, input_step)
         except (MachineError, KeyError, AttributeError):
-            logging.error("Problem occurs during Pandora2D running %s. "
-                          "Be sure of your sequencement step", input_step)
+            logging.error(
+                "Problem occurs during Pandora2D running %s. " "Be sure of your sequencement step", input_step
+            )
             raise
 
     def run_exit(self) -> None:
@@ -194,8 +197,9 @@ class Pandora2DMachine(Machine):
             try:
                 self.trigger(input_step, cfg, input_step)
             except (MachineError, KeyError, AttributeError):
-                logging.error("Problem occurs during Pandora2D running %s."
-                              " Be sure of your sequencement step", input_step)
+                logging.error(
+                    "Problem occurs during Pandora2D running %s." " Be sure of your sequencement step", input_step
+                )
                 raise
 
         # Remove transitions
@@ -260,6 +264,9 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
+        refinement_ = refinement.AbstractRefinement(**cfg[input_step])  # type: ignore
+        self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
+
     def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Matching cost computation
@@ -299,7 +306,7 @@ class Pandora2DMachine(Machine):
         disparity_run = disparity.Disparity(**cfg[input_step])
 
         map_col, map_row = disparity_run.compute_disp_maps(self.cost_volumes)
-        self.dataset_disp_maps = disparity_run.dataset_disp_maps(map_row, map_col)
+        self.dataset_disp_maps = common.dataset_disp_maps(map_row, map_col)
 
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -311,3 +318,9 @@ class Pandora2DMachine(Machine):
         :type input_step: str
         :return: None
         """
+
+        logging.info("Refinement computation...")
+        refinement_run = refinement.AbstractRefinement(**cfg[input_step]) # type: ignore
+
+        refine_map_col, refine_map_row = refinement_run.refinement_method(self.cost_volumes, self.dataset_disp_maps)
+        self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col)

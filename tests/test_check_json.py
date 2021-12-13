@@ -25,7 +25,6 @@ Test configuration
 """
 import unittest
 import pytest
-import rasterio
 
 from pandora2d import check_json
 from tests import common

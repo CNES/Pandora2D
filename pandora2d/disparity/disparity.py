@@ -30,17 +30,19 @@ import numpy as np
 import xarray as xr
 from pandora.check_json import update_conf
 
+
 class Disparity:
     """
     Disparity class
     """
+
     _INVALID_DISPARITY = -9999
 
-    def __init__(self, **cfg: Dict[str, Union[str, int]]) -> None:
+    def __init__(self, **cfg: str) -> None:
         self.cfg = self.check_conf(**cfg)
         self._invalid_disparity = self.cfg["invalid_disparity"]
 
-    def check_conf(self, **cfg: Dict[str, Union[str, int]]) -> Dict[str, Dict[str, Union[str, int]]]:
+    def check_conf(self, **cfg: str) -> Dict[str, str]:
         """
         Check the disparity configuration
 
@@ -49,13 +51,11 @@ class Disparity:
         """
         # Give the default value if the required element is not in the configuration
         if "invalid_disparity" not in cfg:
-            cfg["invalid_disparity"] = self._INVALID_DISPARITY
-
-        cfg = update_conf({"disparity_method": "wta"}, cfg)
+            cfg["invalid_disparity"] = self._INVALID_DISPARITY  # type: ignore
 
         schema = {
-            "disparity_method": And(str, lambda x : x in ["wta"]),
-            "invalid_disparity": Or(int, float, lambda input: np.isnan(input), lambda input: np.isinf(input))
+            "disparity_method": And(str, lambda x: x in ["wta"]),
+            "invalid_disparity": Or(int, float, lambda input: np.isnan(input), lambda input: np.isinf(input)),
         }
 
         checker = Checker(schema)
@@ -93,8 +93,9 @@ class Disparity:
             cv_chunked_x = np.array_split(cv_y, np.arange(100, cv_dims[0], 100), axis=1)
             x_begin = 0
             for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disps_min[y_begin: y_begin + cv_y.shape[0], x_begin: x_begin + cv_x.shape[1], :] = \
-                    np.min(cv_x, axis=axis)
+                disps_min[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1], :] = np.min(
+                    cv_x, axis=axis
+                )
                 x_begin += cv_x.shape[1]
 
             y_begin += cv_y.shape[0]
@@ -130,8 +131,9 @@ class Disparity:
             cv_chunked_x = np.array_split(cv_y, np.arange(100, cv_dims[0], 100), axis=1)
             x_begin = 0
             for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disps_max[y_begin: y_begin + cv_y.shape[0], x_begin: x_begin + cv_x.shape[1], :] = \
-                    np.max(cv_x, axis=axis)
+                disps_max[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1], :] = np.max(
+                    cv_x, axis=axis
+                )
                 x_begin += cv_x.shape[1]
 
             y_begin += cv_y.shape[0]
@@ -165,7 +167,7 @@ class Disparity:
             cv_chunked_x = np.array_split(cv_y, np.arange(100, nrow, 100), axis=1)
             x_begin = 0
             for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disp[y_begin: y_begin + cv_y.shape[0], x_begin: x_begin + cv_x.shape[1]] = np.argmax(cv_x, axis=axis)
+                disp[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1]] = np.argmax(cv_x, axis=axis)
                 x_begin += cv_x.shape[1]
 
             y_begin += cv_y.shape[0]
@@ -199,7 +201,7 @@ class Disparity:
             cv_chunked_x = np.array_split(cv_y, np.arange(100, nrow, 100), axis=1)
             x_begin = 0
             for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disp[y_begin: y_begin + cv_y.shape[0], x_begin: x_begin + cv_x.shape[1]] = np.argmin(cv_x, axis=axis)
+                disp[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1]] = np.argmin(cv_x, axis=axis)
                 x_begin += cv_x.shape[1]
 
             y_begin += cv_y.shape[0]
@@ -249,45 +251,10 @@ class Disparity:
             # process of argmin for dispx
             disp_map_col = cost_volumes["disp_col"].data[self.argmin_split(maps_min_y, 2)]
 
-
         invalid_mc = np.all(indices_nan, axis=(2, 3))
-        disp_map_col = disp_map_col.astype('float32')
-        disp_map_row = disp_map_row.astype('float32')
+        disp_map_col = disp_map_col.astype("float32")
+        disp_map_row = disp_map_row.astype("float32")
         disp_map_col[invalid_mc] = self._invalid_disparity
         disp_map_row[invalid_mc] = self._invalid_disparity
 
         return disp_map_col, disp_map_row
-
-    @staticmethod
-    def dataset_disp_maps(delta_y:np.array, delta_x:np.array) -> xr.Dataset:
-        """
-        Create the dataset containing disparity maps
-
-        :param delta_y: disparity map for row
-        :type delta_y: np.array
-        :param delta_x: disparity map for col
-        :type delta_x: np.array
-        :return: dataset: Dataset with the disparity maps with the data variables :
-
-                - row_map 2D xarray.DataArray (row, col)
-                - col_map 2D xarray.DataArray (row, col)
-        :rtype: xarray.Dataset
-        """
-
-        # create a test dataset for map row
-        dataset_y = xr.Dataset(
-            {"row_map": (["row", "col"], delta_y)},
-            coords={"row": np.arange(delta_y.shape[0]), "col": np.arange(delta_y.shape[1])},
-        )
-        # create a test dataset for map col
-        dataset_x = xr.Dataset(
-            {"col_map": (["row", "col"], delta_x)},
-            coords={"row": np.arange(delta_x.shape[0]), "col": np.arange(delta_x.shape[1])},
-        )
-        # merge two dataset into one
-        dataset = dataset_y.merge(dataset_x, join="override", compat="override")
-
-        return dataset
-
-
-

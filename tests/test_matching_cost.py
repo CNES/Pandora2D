@@ -53,7 +53,7 @@ class TestMatchingCost(unittest.TestCase):
         mask = np.array(([1, 1, 1], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
         self.left = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         self.left.attrs = {
             "no_data_img": -9999,
@@ -70,7 +70,7 @@ class TestMatchingCost(unittest.TestCase):
         mask = np.array(([0, 0, 0], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
         self.right = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords = {"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         self.right.attrs = {
             "no_data_img": -9999,
@@ -80,17 +80,18 @@ class TestMatchingCost(unittest.TestCase):
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
         }
 
-    def test_check_conf(self):
+    @staticmethod
+    def test_check_conf():
         """
         test check_conf of matching cost pipeline
         """
-        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5})
+        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5}) # type: ignore
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "census", "window_size": 5})
+            matching_cost.MatchingCost(**{"matching_cost_method": "census", "window_size": 5}) # type: ignore
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": -1})
+            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": -1}) # type: ignore
 
     def test_compute_cv_ssd(self):
         """
@@ -99,33 +100,35 @@ class TestMatchingCost(unittest.TestCase):
         # sum of squared difference images self.left, self.right, window_size=1
         cfg = {"matching_cost_method": "ssd", "window_size": 1}
         # sum of squared difference ground truth for the images self.left, self.right, window_size=1
-        ad_ground_truth = np.zeros((3,3,2,2))
+        ad_ground_truth = np.zeros((3, 3, 2, 2))
         # disp_x = -1, disp_y = -1
-        ad_ground_truth[:, :, 0, 0] = np.array([[np.nan, np.nan, np.nan],
-                                                [np.nan, 0, 0],
-                                                [np.nan, (4-3)**2, (5-4)**2]])
+        ad_ground_truth[:, :, 0, 0] = np.array(
+            [[np.nan, np.nan, np.nan], [np.nan, 0, 0], [np.nan, (4 - 3) ** 2, (5 - 4) ** 2]]
+        )
 
         # disp_x = -1, disp_y = 0
-        ad_ground_truth[:, :, 0, 1] = np.array([[np.nan, np.nan, np.nan],
-                                                [np.nan, (1-3)**2, (1-4)**2],
-                                                [np.nan, (4-1)**2, (5-1)**2]])
+        ad_ground_truth[:, :, 0, 1] = np.array(
+            [[np.nan, np.nan, np.nan], [np.nan, (1 - 3) ** 2, (1 - 4) ** 2], [np.nan, (4 - 1) ** 2, (5 - 1) ** 2]]
+        )
 
         # disp_x = 0, disp_y = 0
-        ad_ground_truth[:, :, 1, 1] = np.array([[np.nan, np.nan, np.nan],
-                                                [(1-3)**2, (1-4)**2, (1-5)**2],
-                                                [(3-1)**2, (4-1)**2, (5-1)**2]])
+        ad_ground_truth[:, :, 1, 1] = np.array(
+            [
+                [np.nan, np.nan, np.nan],
+                [(1 - 3) ** 2, (1 - 4) ** 2, (1 - 5) ** 2],
+                [(3 - 1) ** 2, (4 - 1) ** 2, (5 - 1) ** 2],
+            ]
+        )
 
         # disp_x = 0, disp_y = -1
-        ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan],
-                                                [0, 0, 0],
-                                                [0, 0, 0]])
+        ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
 
-        #compute cost volumes
+        # compute cost volumes
         ssd = matching_cost_matcher.compute_cost_volumes(
-             img_left=self.left, img_right=self.right, min_x=-1, max_x=0, min_y=-1, max_y=0, **cfg
-        )
+            img_left=self.left, img_right=self.right, min_x=-1, max_x=0, min_y=-1, max_y=0, **cfg
+        ) # type: ignore
 
         # check that the generated cost_volumes is equal to ground truth
         np.testing.assert_allclose(ssd["cost_volumes"].data, ad_ground_truth, atol=1e-06)
@@ -140,35 +143,38 @@ class TestMatchingCost(unittest.TestCase):
         # sum of absolute difference ground truth for the images self.left, self.right, window_size=1
         ad_ground_truth = np.zeros((3, 3, 2, 2))
         # disp_x = -1, disp_y = -1
-        ad_ground_truth[:, :, 0, 0] = np.array([[np.nan, np.nan, np.nan],
-                                                [np.nan, 0, 0],
-                                                [np.nan, np.abs(4-3), np.abs(5-4)]])
+        ad_ground_truth[:, :, 0, 0] = np.array(
+            [[np.nan, np.nan, np.nan], [np.nan, 0, 0], [np.nan, np.abs(4 - 3), np.abs(5 - 4)]]
+        )
 
         # disp_x = -1, disp_y = 0
-        ad_ground_truth[:, :, 0, 1] = np.array([[np.nan, np.nan, np.nan],
-                                                [np.nan, np.abs(1-3), np.abs(1-4)],
-                                                [np.nan, np.abs(4-1), np.abs(5-1)]])
+        ad_ground_truth[:, :, 0, 1] = np.array(
+            [[np.nan, np.nan, np.nan], [np.nan, np.abs(1 - 3), np.abs(1 - 4)], [np.nan, np.abs(4 - 1), np.abs(5 - 1)]]
+        )
 
         # disp_x = 0, disp_y = 0
-        ad_ground_truth[:, :, 1, 1] = np.array([[np.nan, np.nan, np.nan],
-                                                [np.abs(1-3), np.abs(1-4), np.abs(1-5)],
-                                                [np.abs(3-1), np.abs(4-1), np.abs(5-1)]])
+        ad_ground_truth[:, :, 1, 1] = np.array(
+            [
+                [np.nan, np.nan, np.nan],
+                [np.abs(1 - 3), np.abs(1 - 4), np.abs(1 - 5)],
+                [np.abs(3 - 1), np.abs(4 - 1), np.abs(5 - 1)],
+            ]
+        )
 
         # disp_x = 0, disp_y = -1
-        ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan],
-                                                [0, 0, 0],
-                                                [0, 0, 0]])
+        ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
 
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
         # compute cost volumes
         sad = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left, img_right=self.right, min_x=-1, max_x=0, min_y=-1, max_y=0, **cfg
-        )
+        ) # type: ignore
         # check that the generated cost_volumes is equal to ground truth
         np.testing.assert_allclose(sad["cost_volumes"].data, ad_ground_truth, atol=1e-06)
 
-    def test_compute_cv_zncc(self):
+    @staticmethod
+    def test_compute_cv_zncc():
         """
         Test the  cost volume product by zncc
         """
@@ -176,11 +182,12 @@ class TestMatchingCost(unittest.TestCase):
             ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
             dtype=np.float64,
         )
-        mask = np.array(([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(
+            ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
+        )
         left_zncc = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         left_zncc.attrs = {
             "no_data_img": -9999,
@@ -194,11 +201,12 @@ class TestMatchingCost(unittest.TestCase):
             ([[1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
             dtype=np.float64,
         )
-        mask = np.array(([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(
+            ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
+        )
         right_zncc = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
         right_zncc.attrs = {
             "no_data_img": -9999,
@@ -214,35 +222,39 @@ class TestMatchingCost(unittest.TestCase):
 
         left = left_zncc["im"].data
         right = right_zncc["im"].data
-        right_shift = np.array([[np.nan, np.nan, np.nan, np.nan, np.nan],
-                                [1, 1, 1, 1, 1],
-                                [3, 4, 5, 6, 7],
-                                [1, 1, 1, 1, 1],
-                                [1, 1, 1, 1, 1]])
+        right_shift = np.array(
+            [
+                [np.nan, np.nan, np.nan, np.nan, np.nan],
+                [1, 1, 1, 1, 1],
+                [3, 4, 5, 6, 7],
+                [1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1],
+            ]
+        )
 
         # row = 1, col = 1, disp_x = 0, disp_y = 0, ground truth equal -0,45
-        ad_ground_truth_1_1_0_0 = (np.mean(left[0:3, 0:3] * right[0:3, 0:3]) -
-                                   (np.mean(left[0:3, 0:3]) * np.mean(right[0:3, 0:3]))) / \
-                                  (np.std(left[0:3, 0:3]) * np.std(right[0:3, 0:3]))
+        ad_ground_truth_1_1_0_0 = (
+            np.mean(left[0:3, 0:3] * right[0:3, 0:3]) - (np.mean(left[0:3, 0:3]) * np.mean(right[0:3, 0:3]))
+        ) / (np.std(left[0:3, 0:3]) * np.std(right[0:3, 0:3]))
         # row = 1, col = 1, disp_x = 0, disp_y = -1, , ground truth equal NaN
-        ad_ground_truth_1_1_0_1 = (np.mean(left[0:3, 0:3] * right_shift[0:3, 0:3]) -
-                                   (np.mean(left[0:3, 0:3]) * np.mean(right_shift[0:3, 0:3]))) / \
-                                  (np.std(left[0:3, 0:3]) * np.std(right_shift[0:3, 0:3]))
+        ad_ground_truth_1_1_0_1 = (
+            np.mean(left[0:3, 0:3] * right_shift[0:3, 0:3]) - (np.mean(left[0:3, 0:3]) * np.mean(right_shift[0:3, 0:3]))
+        ) / (np.std(left[0:3, 0:3]) * np.std(right_shift[0:3, 0:3]))
         # row = 2, col = 2, disp_x = 0, disp_y = 0, , ground truth equal -0,47
-        ad_ground_truth_2_2_0_0 = (np.mean(left[1:4, 1:4] * right[1:4, 1:4]) -
-                                   (np.mean(left[1:4, 1:4]) * np.mean(right[1:4, 1:4]))) / \
-                                  (np.std(left[1:4, 1:4]) * np.std(right[1:4, 1:4]))
+        ad_ground_truth_2_2_0_0 = (
+            np.mean(left[1:4, 1:4] * right[1:4, 1:4]) - (np.mean(left[1:4, 1:4]) * np.mean(right[1:4, 1:4]))
+        ) / (np.std(left[1:4, 1:4]) * np.std(right[1:4, 1:4]))
         # row = 2, col = 2, disp_x = 0, disp_y = -1, ground truth equal 1
-        ad_ground_truth_2_2_0_1 = (np.mean(left[1:4, 1:4] * right_shift[1:4, 1:4]) -
-                                   (np.mean(left[1:4, 1:4]) * np.mean(right_shift[1:4, 1:4]))) / \
-                                  (np.std(left[1:4, 1:4]) * np.std(right_shift[1:4, 1:4]))
+        ad_ground_truth_2_2_0_1 = (
+            np.mean(left[1:4, 1:4] * right_shift[1:4, 1:4]) - (np.mean(left[1:4, 1:4]) * np.mean(right_shift[1:4, 1:4]))
+        ) / (np.std(left[1:4, 1:4]) * np.std(right_shift[1:4, 1:4]))
 
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
         # compute cost volumes
         zncc = matching_cost_matcher.compute_cost_volumes(
             img_left=left_zncc, img_right=right_zncc, min_x=0, max_x=1, min_y=-1, max_y=0, **cfg
-        )
+        ) # type: ignore
         # check that the generated cost_volumes is equal to ground truth
 
         np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_0, rtol=1e-06)
@@ -289,15 +301,13 @@ class TestMatchingCost(unittest.TestCase):
         cost_volumes_test.attrs["crs"] = None
         cost_volumes_test.attrs["transform"] = Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
 
-
-
         # data by function compute_cost_volume
         cfg = {"matching_cost_method": "zncc", "window_size": 3}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
 
         cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left, img_right=self.right, min_x=-1, max_x=1, min_y=-1, max_y=1, **cfg
-        )
+        ) # type: ignore
 
         # check that the generated xarray dataset is equal to the ground truth
         np.testing.assert_array_equal(cost_volumes_fun["cost_volumes"].data, cost_volumes_test["cost_volumes"].data)

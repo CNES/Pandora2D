@@ -42,8 +42,8 @@ class TestCommon(unittest.TestCase):
         Method called to prepare the test fixture
 
         """
-        self.row = np.ones((2,2))
-        self.col = np.ones((2,2))
+        self.row = np.ones((2, 2))
+        self.col = np.ones((2, 2))
 
     def test_save_dataset(self):
         """
@@ -70,3 +70,28 @@ class TestCommon(unittest.TestCase):
         os.remove("./tests/res_test/columns_disparity.tif")
         os.remove("./tests/res_test/row_disparity.tif")
         os.rmdir("./tests/res_test")
+
+    @staticmethod
+    def test_dataset_disp_maps():
+        """
+        Test function for create a dataset
+        """
+
+        # create a test dataset for map row
+        data = np.zeros((2, 2))
+        dataset_y = xr.Dataset(
+            {"row_map": (["row", "col"], data)},
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        )
+        # create a test dataset for map col
+        dataset_x = xr.Dataset(
+            {"col_map": (["row", "col"], data)},
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        )
+        # merge two dataset into one
+        dataset_test = dataset_y.merge(dataset_x, join="override", compat="override")
+
+        # create dataset with function
+        dataset_fun = common.dataset_disp_maps(data, data)
+
+        assert dataset_fun.equals(dataset_test)
