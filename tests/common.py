@@ -75,3 +75,25 @@ false_pipeline_disp = {
     "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
     "refinement": {"refinement_method": "interpolation"},
 }
+
+correct_pipeline_dict = {
+    "pipeline": {
+        "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+        "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+        "refinement": {"refinement_method": "interpolation"},
+        }
+}
+
+false_pipeline_mc_dict = {
+    "pipeline": {
+        "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+        "refinement": {"refinement_method": "interpolation"},
+        }
+}
+
+false_pipeline_disp_dict = {
+    "pipeline": {
+        "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+        "refinement": {"refinement_method": "interpolation"},
+        }
+}
