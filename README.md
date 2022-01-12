@@ -1,7 +1,7 @@
 # Pandora2D
 
 <h1 align="center">
-<img src="./doc/sources/Images/pandora2d_logo.png"/>
+<img src="./doc/sources/Images/logo/logo_pandora2d.png"/>
 </h1>
 
 <h4 align="center">Pandora2d  is a tool based on [Pandora](https://github.com/CNES/Pandora) to provide disparity maps

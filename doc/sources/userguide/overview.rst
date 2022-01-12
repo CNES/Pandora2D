@@ -13,34 +13,27 @@ The following interactive diagram highlights all steps available in Pandora2D.
 
 .. image:: ../Images/img_pipeline/arrow.png
     :align: center
-    :width: 20
 
 .. image:: ../Images/img_pipeline/mc_step.png
     :align: center
     :target: step_by_step/matching_cost.html
-    :width: 200
 
 .. image:: ../Images/img_pipeline/arrow.png
     :align: center
-    :width: 20
 
 .. image:: ../Images/img_pipeline/dp_step.png
     :align: center
     :target: step_by_step/disparity.html
-    :width: 200
 
 .. image:: ../Images/img_pipeline/arrow.png
     :align: center
-    :width: 20
 
 .. image:: ../Images/img_pipeline/refi_step.png
     :align: center
     :target: step_by_step/refinement.html
-    :width: 200
 
 .. image:: ../Images/img_pipeline/arrow.png
     :align: center
-    :width: 20
 
 .. image:: ../Images/img_pipeline/outputs.png
     :align: center

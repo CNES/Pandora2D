@@ -39,9 +39,9 @@ sys.path.insert(0, os.path.abspath("."))
 # -- Project information -----------------------------------------------------
 
 project = "Pandora2D"
-copyright = "2020, CNES"
+copyright = "2021, CNES"
 author = "CNES"
-version = "1.0.0"
+version = "0.0.1"
 # The full version, including alpha/beta/rc tags
 # not useful at the moment :  see  https://gitlab.cnes.fr/OutilsCommuns/CorrelateurChaine3D/pandora/issues/124
 # release = '0.2.0'
@@ -94,7 +94,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 #
 html_theme = "sphinx_rtd_theme"
 
-# html_logo = 'Images/logo/logo_typo_large.png'
+html_logo = "Images/logo/logo_pandora2d.png"
 
 html_theme_options = {
     "logo_only": True,
