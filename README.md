@@ -64,8 +64,8 @@ algorithms we provide, please consult :ref `userguide`.
 
 You will learn:
 
-    * which steps you can use and combine
-    * how to quickly set up a Pandora2D pipeline
+* which steps you can use and combine
+* how to quickly set up a Pandora2D pipeline
 
 ## Credits
 
