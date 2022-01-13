@@ -53,14 +53,14 @@ def save_dataset(dataset: xr.Dataset, output: str) -> None:
     write_data_array(dataset["col_map"], os.path.join(output, "columns_disparity.tif"))
 
 
-def dataset_disp_maps(delta_y: np.array, delta_x: np.array) -> xr.Dataset:
+def dataset_disp_maps(delta_row: np.array, delta_col: np.array) -> xr.Dataset:
     """
     Create the dataset containing disparity maps
 
-    :param delta_y: disparity map for row
-    :type delta_y: np.array
-    :param delta_x: disparity map for col
-    :type delta_x: np.array
+    :param delta_row: disparity map for row
+    :type delta_row: np.array
+    :param delta_col: disparity map for col
+    :type delta_col: np.array
     :return: dataset: Dataset with the disparity maps with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)
@@ -69,16 +69,16 @@ def dataset_disp_maps(delta_y: np.array, delta_x: np.array) -> xr.Dataset:
     """
 
     # create a test dataset for map row
-    dataset_y = xr.Dataset(
-        {"row_map": (["row", "col"], delta_y)},
-        coords={"row": np.arange(delta_y.shape[0]), "col": np.arange(delta_y.shape[1])},
+    dataset_row = xr.Dataset(
+        {"row_map": (["row", "col"], delta_row)},
+        coords={"row": np.arange(delta_row.shape[0]), "col": np.arange(delta_row.shape[1])},
     )
     # create a test dataset for map col
-    dataset_x = xr.Dataset(
-        {"col_map": (["row", "col"], delta_x)},
-        coords={"row": np.arange(delta_x.shape[0]), "col": np.arange(delta_x.shape[1])},
+    dataset_col = xr.Dataset(
+        {"col_map": (["row", "col"], delta_col)},
+        coords={"row": np.arange(delta_col.shape[0]), "col": np.arange(delta_col.shape[1])},
     )
     # merge two dataset into one
-    dataset = dataset_y.merge(dataset_x, join="override", compat="override")
+    dataset = dataset_row.merge(dataset_col, join="override", compat="override")
 
     return dataset

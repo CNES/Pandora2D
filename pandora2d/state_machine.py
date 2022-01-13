@@ -27,8 +27,14 @@ This module contains class associated to the pandora state machine
 from typing import Dict
 import logging
 
-from transitions import Machine, MachineError
 import xarray as xr
+
+try:
+    import graphviz  # pylint: disable=unused-import
+    from transitions.extensions import GraphMachine as Machine
+except ImportError:
+    from transitions import Machine
+from transitions import MachineError
 
 from pandora2d import matching_cost, disparity, refinement, common
 
@@ -54,26 +60,27 @@ class Pandora2DMachine(Machine):
         self,
         img_left: xr.Dataset = None,
         img_right: xr.Dataset = None,
-        no_data: float = None,
-        disp_min_x: int = None,
-        disp_max_x: int = None,
-        disp_min_y: int = None,
-        disp_max_y: int = None,
+
+        disp_min_col: int = None,
+        disp_max_col: int = None,
+        disp_min_row: int = None,
+        disp_max_row: int = None,
     ) -> None:
         """
         Initialize Pandora2D Machine
 
-        :type img_right_pyramid: xarray.Dataset
-        :param no_data: nodata value
-        :type no_data: float or None
-        :param disp_min_x: minimal disparity for columns
-        :type disp_min_x: int
-        :param disp_max_x: maximal disparity for columns
-        :type disp_max_x: int
-        :param disp_min_y: minimal disparity for lines
-        :type disp_min_y: int
-        :param disp_max_y: maximal disparity for lines
-        :type disp_max_y: int
+        :param img_left: left image
+        :type img_left: xarray.Dataset
+        :param img_right: right image
+        :type img_right: xarray.Dataset
+        :param disp_min_col: minimal disparity for columns
+        :type disp_min_col: int
+        :param disp_max_col: maximal disparity for columns
+        :type disp_max_col: int
+        :param disp_min_row: minimal disparity for lines
+        :type disp_min_row: int
+        :param disp_max_row: maximal disparity for lines
+        :type disp_max_row: int
         :return: None
         """
 
@@ -81,14 +88,12 @@ class Pandora2DMachine(Machine):
         self.left_img: xr.Dataset = img_left
         # Right image
         self.right_img: xr.Dataset = img_right
-        # no data
-        self.no_data: float = no_data
         # Minimum disparity
-        self.disp_min_x: int = disp_min_x
-        self.disp_min_y: int = disp_min_y
+        self.disp_min_col: int = disp_min_col
+        self.disp_min_row: int = disp_min_row
         # Maximum disparity
-        self.disp_max_x: int = disp_max_x
-        self.disp_max_y: int = disp_max_y
+        self.disp_max_col: int = disp_max_col
+        self.disp_max_row: int = disp_max_row
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
         self.cost_volumes: xr.Dataset = xr.Dataset()
@@ -112,10 +117,10 @@ class Pandora2DMachine(Machine):
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        disp_min_x: int,
-        disp_max_x: int,
-        disp_min_y: int,
-        disp_max_y: int,
+        disp_min_col: int,
+        disp_max_col: int,
+        disp_min_row: int,
+        disp_max_row: int,
     ) -> None:
         """
         Prepare the machine before running
@@ -130,24 +135,22 @@ class Pandora2DMachine(Machine):
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_right: xarray.Dataset
-        :param disp_min_x: minimal disparity for columns
-        :type disp_min_x: int
-        :param disp_max_x: maximal disparity for columns
-        :type disp_max_x: int
-        :param disp_min_y: minimal disparity for lines
-        :type disp_min_y: int
-        :param disp_max_y: maximal disparity for lines
-        :type disp_max_y: int
-        :param cfg_pipeline: pipeline configuration
-        :type cfg_pipeline: Dict[str, dict]
+        :param disp_min_col: minimal disparity for columns
+        :type disp_min_col: int
+        :param disp_max_col: maximal disparity for columns
+        :type disp_max_col: int
+        :param disp_min_row: minimal disparity for lines
+        :type disp_min_row: int
+        :param disp_max_row: maximal disparity for lines
+        :type disp_max_row: int
         """
 
         self.left_img = img_left
         self.right_img = img_right
-        self.disp_min_x = disp_min_x
-        self.disp_max_x = disp_max_x
-        self.disp_min_y = disp_min_y
-        self.disp_max_y = disp_max_y
+        self.disp_min_col = disp_min_col
+        self.disp_max_col = disp_max_col
+        self.disp_min_row = disp_min_row
+        self.disp_max_row = disp_max_row
 
         self.add_transitions(self._transitions_run)
 
@@ -284,10 +287,10 @@ class Pandora2DMachine(Machine):
         self.cost_volumes = matching_cost_run.compute_cost_volumes(
             self.left_img,
             self.right_img,
-            self.disp_min_x,
-            self.disp_max_x,
-            self.disp_min_y,
-            self.disp_max_y,
+            self.disp_min_col,
+            self.disp_max_col,
+            self.disp_min_row,
+            self.disp_max_row,
             **cfg[input_step]
         )
 

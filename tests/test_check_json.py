@@ -27,6 +27,7 @@ import unittest
 import pytest
 
 from pandora2d import check_json
+from pandora2d.state_machine import Pandora2DMachine
 from tests import common
 
 
@@ -52,3 +53,17 @@ class TestCheckJson(unittest.TestCase):
         with pytest.raises(BaseException):
             check_json.check_input_section(common.false_input_disp)
             check_json.check_input_section(common.false_input_path_image)
+
+    @staticmethod
+    def test_check_pipeline_section() -> None:
+        """
+        Test function for checking user pipeline section
+        """
+
+        pandora2d_machine = Pandora2DMachine()
+
+        assert check_json.check_pipeline_section(common.correct_pipeline_dict, pandora2d_machine)
+
+        with pytest.raises(BaseException):
+            check_json.check_pipeline_section(common.false_pipeline_mc_dict, pandora2d_machine)
+            check_json.check_pipeline_section(common.false_pipeline_disp_dict, pandora2d_machine)

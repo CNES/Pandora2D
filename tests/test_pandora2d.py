@@ -30,6 +30,7 @@ import pytest
 
 
 from transitions.core import MachineError
+from pandora import read_img
 
 from tests import common
 from pandora2d import state_machine
@@ -62,3 +63,24 @@ class TestPandora2D(unittest.TestCase):
         with pytest.raises(MachineError):
             pandora2d_machine.check_conf(false_cfg_mc) # type: ignore
             pandora2d_machine.check_conf(false_cfg_disp) # type: ignore
+
+    @staticmethod
+    def test_run_prepare() -> None:
+        """
+        Test run_prepare function
+        """
+        pandora2d_machine = state_machine.Pandora2DMachine()
+
+        img_left = read_img("./tests/data/left.png", -9999)
+        img_right = read_img("./tests/data/right.png", -9999)
+
+        pandora2d_machine.run_prepare(img_left, img_right, -2, 2, -2, 2)
+
+        assert pandora2d_machine.left_img == img_left
+        assert pandora2d_machine.right_img == img_right
+        assert pandora2d_machine.disp_min_row == -2
+        assert pandora2d_machine.disp_max_row == 2
+        assert pandora2d_machine.disp_min_col == -2
+        assert pandora2d_machine.disp_max_col == 2
+
+

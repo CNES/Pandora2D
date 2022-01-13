@@ -76,25 +76,25 @@ class Interpolation(refinement.AbstractRefinement):
         Process the interpolation and minimize of a cost_matrix
         :param cost_volumes: Dataset with 4D datas
         :type cost_volumes: xr.Dataset
-        :param coords_pix_y: array from disp_min_y to disp_max_y
-        :type coords_pix_y: np.array
-        :param coords_pix_x: array from disp_min_x to disp_max_x
-        :type coords_pix_x: np.array
+        :param coords_pix_row: array from disp_min_row to disp_max_row
+        :type coords_pix_row: np.array
+        :param coords_pix_col: array from disp_min_col to disp_max_col
+        :type coords_pix_col: np.array
         :param args_matrix_cost: 2D matrix with cost for one pixel (dim: dispy, dispx)
         :type args_matrix_cost: np.array
         :return: res: min of args_matrix_cost in 2D
         :rtype: Tuple(float, float)
         """
 
-        cost_volumes, coords_pix_y, coords_pix_x, args_matrix_cost = p_args
+        cost_volumes, coords_pix_row, coords_pix_col, args_matrix_cost = p_args
 
-        # bounds ((disp_min_y, disp_max_y), (disp_min_x, disp_max_x))
+        # bounds ((disp_min_row, disp_max_row), (disp_min_col, disp_max_col))
         bounds = [
             (cost_volumes["disp_col"].data[0], cost_volumes["disp_col"].data[-1]),
             (cost_volumes["disp_row"].data[0], cost_volumes["disp_row"].data[-1]),
         ]
         # start point for minimize
-        x_0 = (coords_pix_y, coords_pix_x)
+        x_0 = (coords_pix_row, coords_pix_col)
 
         # prepare cost_matrix for min or max research
         if cost_volumes.attrs["type_measure"] == "max":
@@ -141,32 +141,34 @@ class Interpolation(refinement.AbstractRefinement):
         :type cost_volumes: xr.Dataset
         :param pixel_maps: dataset of pixel disparity maps
         :type pixel_maps: xr.Dataset
-        :return: delta_x, delta_y: subpixel disparity maps
+        :return: delta_col, delta_row: subpixel disparity maps
         :rtype: Tuple[np.array, np.array]
         """
         #cost_columes data
         data = cost_volumes["cost_volumes"].data
 
         # transform 4D row, col, dcol, drow into drow, dcol, row * col
-        nrow, ncol, ndispx, ndispy = data.shape
-        cost_matrix = np.rollaxis(np.rollaxis(data, 3, 0), 3, 1).reshape((ndispy, ndispx, nrow * ncol))
+        nrow, ncol, ndispcol, ndisprow = data.shape
+        cost_matrix = np.rollaxis(np.rollaxis(data, 3, 0), 3, 1).reshape((ndisprow, ndispcol, nrow * ncol))
 
         # flatten pixel maps for multiprocessing
-        liste_y = list(pixel_maps["row_map"].data.flatten().tolist())
-        liste_x = list(pixel_maps["col_map"].data.flatten().tolist())
+        liste_row = list(pixel_maps["row_map"].data.flatten().tolist())
+        liste_col = list(pixel_maps["col_map"].data.flatten().tolist())
 
         # args for multiprocessing
-        args = [(cost_volumes, liste_x[i], liste_y[i], cost_matrix[:, :, i]) for i in range(0, cost_matrix.shape[2])]
+        args = [
+            (cost_volumes, liste_col[i], liste_row[i], cost_matrix[:, :, i]) for i in range(0, cost_matrix.shape[2])
+        ]
         with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
             # liste([drow, dcol])
-            mat_carte = p.map(self.compute_cost_matrix, args)
+            map_carte = p.map(self.compute_cost_matrix, args)
 
         # compute disparity maps
-        delta_x = np.array(mat_carte)[:, 0]
-        delta_y = np.array(mat_carte)[:, 1]
+        delta_col = np.array(map_carte)[:, 0]
+        delta_row = np.array(map_carte)[:, 1]
 
         # reshape disparity maps
-        delta_x = np.reshape(delta_x, (pixel_maps["col_map"].data.shape[0], pixel_maps["col_map"].data.shape[1]))
-        delta_y = np.reshape(delta_y, (pixel_maps["col_map"].data.shape[0], pixel_maps["col_map"].data.shape[1]))
+        delta_col = np.reshape(delta_col, (pixel_maps["col_map"].data.shape[0], pixel_maps["col_map"].data.shape[1]))
+        delta_row = np.reshape(delta_row, (pixel_maps["col_map"].data.shape[0], pixel_maps["col_map"].data.shape[1]))
 
-        return delta_x, delta_y
+        return delta_col, delta_row

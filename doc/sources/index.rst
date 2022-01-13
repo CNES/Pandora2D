@@ -7,8 +7,8 @@ Welcome to Pandora2D's documentation!
 =====================================
 
 
-**Pandora2D is ...**
-
+**Pandora2d  is a tool that provide disparity maps for images pairs with a combination in both direction.**
+**It uses** `Pandora <https://github.com/cnes/pandora>`_
 
 .. toctree::
    :maxdepth: 2

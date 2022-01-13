@@ -83,22 +83,21 @@ class Disparity:
         # Numpy min is making a copy of the cost volume.
         # To reduce memory, numpy min is applied on a small part of the cost volume.
         # The cost volume is split (along the row axis) into multiple sub-arrays with a step of 100
-        cv_chunked_y = np.array_split(cost_volumes["cost_volumes"].data, np.arange(100, cv_dims[1], 100), axis=0)
+        cv_chunked_row = np.array_split(cost_volumes["cost_volumes"].data, np.arange(100, cv_dims[1], 100), axis=0)
 
-        y_begin = 0
+        row_begin = 0
 
-        for col, cv_y in enumerate(cv_chunked_y):  # pylint: disable=unused-variable
+        for col, cv_row in enumerate(cv_chunked_row):  # pylint: disable=unused-variable
             # To reduce memory, the cost volume is split (along the col axis) into
             # multiple sub-arrays with a step of 100
-            cv_chunked_x = np.array_split(cv_y, np.arange(100, cv_dims[0], 100), axis=1)
-            x_begin = 0
-            for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disps_min[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1], :] = np.min(
-                    cv_x, axis=axis
-                )
-                x_begin += cv_x.shape[1]
+            cv_chunked_col = np.array_split(cv_row, np.arange(100, cv_dims[0], 100), axis=1)
+            col_begin = 0
+            for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
+                disps_min[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = \
+                    np.min(cv_col, axis=axis)
+                col_begin += cv_col.shape[1]
 
-            y_begin += cv_y.shape[0]
+            row_begin += cv_row.shape[0]
 
         return disps_min
 
@@ -121,22 +120,21 @@ class Disparity:
         # Numpy min is making a copy of the cost volume.
         # To reduce memory, numpy min is applied on a small part of the cost volume.
         # The cost volume is split (along the row axis) into multiple sub-arrays with a step of 100
-        cv_chunked_y = np.array_split(cost_volumes["cost_volumes"].data, np.arange(100, cv_dims[1], 100), axis=0)
+        cv_chunked_row = np.array_split(cost_volumes["cost_volumes"].data, np.arange(100, cv_dims[1], 100), axis=0)
 
-        y_begin = 0
+        row_begin = 0
 
-        for col, cv_y in enumerate(cv_chunked_y):  # pylint: disable=unused-variable
+        for col, cv_row in enumerate(cv_chunked_row):  # pylint: disable=unused-variable
             # To reduce memory, the cost volume is split (along the col axis) into
             # multiple sub-arrays with a step of 100
-            cv_chunked_x = np.array_split(cv_y, np.arange(100, cv_dims[0], 100), axis=1)
-            x_begin = 0
-            for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disps_max[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1], :] = np.max(
-                    cv_x, axis=axis
-                )
-                x_begin += cv_x.shape[1]
+            cv_chunked_col = np.array_split(cv_row, np.arange(100, cv_dims[0], 100), axis=1)
+            col_begin = 0
+            for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
+                disps_max[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = \
+                    np.max(cv_col, axis=axis)
+                col_begin += cv_col.shape[1]
 
-            y_begin += cv_y.shape[0]
+            row_begin += cv_row.shape[0]
 
         return disps_max
 
@@ -157,20 +155,21 @@ class Disparity:
         # Numpy argmin is making a copy of the cost volume.
         # To reduce memory, numpy argmin is applied on a small part of the cost volume.
         # The cost volume is split (along the row axis) into multiple sub-arrays with a step of 100
-        cv_chunked_y = np.array_split(max_maps, np.arange(100, ncol, 100), axis=0)
+        cv_chunked_row = np.array_split(max_maps, np.arange(100, ncol, 100), axis=0)
 
-        y_begin = 0
+        row_begin = 0
 
-        for col, cv_y in enumerate(cv_chunked_y):  # pylint: disable=unused-variable
+        for col, cv_row in enumerate(cv_chunked_row):  # pylint: disable=unused-variable
             # To reduce memory, the cost volume is split (along the col axis) into
             # multiple sub-arrays with a step of 100
-            cv_chunked_x = np.array_split(cv_y, np.arange(100, nrow, 100), axis=1)
-            x_begin = 0
-            for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disp[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1]] = np.argmax(cv_x, axis=axis)
-                x_begin += cv_x.shape[1]
+            cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)
+            col_begin = 0
+            for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
+                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = \
+                    np.argmax(cv_col, axis=axis)
+                col_begin += cv_col.shape[1]
 
-            y_begin += cv_y.shape[0]
+            row_begin += cv_row.shape[0]
 
         return disp
 
@@ -191,20 +190,21 @@ class Disparity:
         # Numpy argmin is making a copy of the cost volume.
         # To reduce memory, numpy argmin is applied on a small part of the cost volume.
         # The cost volume is split (along the row axis) into multiple sub-arrays with a step of 100
-        cv_chunked_y = np.array_split(min_maps, np.arange(100, ncol, 100), axis=0)
+        cv_chunked_row = np.array_split(min_maps, np.arange(100, ncol, 100), axis=0)
 
-        y_begin = 0
+        row_begin = 0
 
-        for col, cv_y in enumerate(cv_chunked_y):  # pylint: disable=unused-variable
+        for col, cv_row in enumerate(cv_chunked_row):  # pylint: disable=unused-variable
             # To reduce memory, the cost volume is split (along the col axis) into
             # multiple sub-arrays with a step of 100
-            cv_chunked_x = np.array_split(cv_y, np.arange(100, nrow, 100), axis=1)
-            x_begin = 0
-            for row, cv_x in enumerate(cv_chunked_x):  # pylint: disable=unused-variable
-                disp[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1]] = np.argmin(cv_x, axis=axis)
-                x_begin += cv_x.shape[1]
+            cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)
+            col_begin = 0
+            for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
+                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = \
+                    np.argmin(cv_col, axis=axis)
+                col_begin += cv_col.shape[1]
 
-            y_begin += cv_y.shape[0]
+            row_begin += cv_row.shape[0]
 
         return disp
 
@@ -229,27 +229,27 @@ class Disparity:
             cost_volumes["cost_volumes"].data[indices_nan] = -np.inf
             # -------compute disp_map row---------
             # process of maximum for dispx
-            maps_max_x = self.max_split(cost_volumes, 2)
+            maps_max_col = self.max_split(cost_volumes, 2)
             # process of argmax for dispy
-            disp_map_row = cost_volumes["disp_row"].data[self.argmax_split(maps_max_x, 2)]
+            disp_map_row = cost_volumes["disp_row"].data[self.argmax_split(maps_max_col, 2)]
             # -------compute disp_map col---------
             # process of maximum for dispy
-            maps_max_y = self.max_split(cost_volumes, 3)
+            maps_max_row = self.max_split(cost_volumes, 3)
             # process of argmax for dispx
-            disp_map_col = cost_volumes["disp_col"].data[self.argmax_split(maps_max_y, 2)]
+            disp_map_col = cost_volumes["disp_col"].data[self.argmax_split(maps_max_row, 2)]
 
         else:
             # -------compute disp_map row---------
             cost_volumes["cost_volumes"].data[indices_nan] = np.inf
             # process of minimum for dispx
-            maps_min_x = self.min_split(cost_volumes, 2)
+            maps_min_col = self.min_split(cost_volumes, 2)
             # process of argmin for disp
-            disp_map_row = cost_volumes["disp_row"].data[self.argmin_split(maps_min_x, 2)]
+            disp_map_row = cost_volumes["disp_row"].data[self.argmin_split(maps_min_col, 2)]
             # -------compute disp_map col---------
             # process of maximum for dispy
-            maps_min_y = self.min_split(cost_volumes, 3)
+            maps_min_row = self.min_split(cost_volumes, 3)
             # process of argmin for dispx
-            disp_map_col = cost_volumes["disp_col"].data[self.argmin_split(maps_min_y, 2)]
+            disp_map_col = cost_volumes["disp_col"].data[self.argmin_split(maps_min_row, 2)]
 
         invalid_mc = np.all(indices_nan, axis=(2, 3))
         disp_map_col = disp_map_col.astype("float32")

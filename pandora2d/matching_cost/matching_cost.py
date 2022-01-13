@@ -80,10 +80,10 @@ class MatchingCost:
         cost_volume_attr: dict,
         row: np.array,
         col: np.array,
-        disp_min_x: int,
-        disp_max_x: int,
-        disp_min_y: int,
-        disp_max_y: int,
+        disp_min_col: int,
+        disp_max_col: int,
+        disp_min_row: int,
+        disp_max_row: int,
         np_data: np.ndarray = None,
     ) -> xr.Dataset:
         """
@@ -95,21 +95,21 @@ class MatchingCost:
         :type row: np.array
         :param col: dimension of the image (columns)
         :type col: np.array
-        :param disp_min_x: minimum disparity in columns
-        :type disp_min_x: int
-        :param disp_max_x: maximum disparity in columns
-        :type disp_max_x: int
-        :param disp_min_y: minimum disparity in lines
-        :type disp_min_y: int
-        :param disp_max_y: maximum disparity in lines
-        :type disp_max_y: int
+        :param disp_min_col: minimum disparity in columns
+        :type disp_min_col: int
+        :param disp_max_col: maximum disparity in columns
+        :type disp_max_col: int
+        :param disp_min_row: minimum disparity in lines
+        :type disp_min_row: int
+        :param disp_max_row: maximum disparity in lines
+        :type disp_max_row: int
         :param np_data: 4D numpy.array og cost_volumes. Defaults to None.
         :type np_data: np.ndarray
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
-        disparity_range_col = np.arange(disp_min_x, disp_max_x + 1)
-        disparity_range_row = np.arange(disp_min_y, disp_max_y + 1)
+        disparity_range_col = np.arange(disp_min_col, disp_max_col + 1)
+        disparity_range_row = np.arange(disp_min_row, disp_max_row + 1)
 
         # Create the cost volume
         if np_data is None:
@@ -130,10 +130,10 @@ class MatchingCost:
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        min_x: int,
-        max_x: int,
-        min_y: int,
-        max_y: int,
+        min_col: int,
+        max_col: int,
+        min_row: int,
+        max_row: int,
         **cfg: Dict[str, dict]
     ) -> xr.Dataset:
         """
@@ -148,16 +148,16 @@ class MatchingCost:
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_right: xr.Dataset
-        :param min_x: minimum disparity in columns
-        :type min_x: int
-        :param max_x: maximum disparity in columns
-        :type max_x: int
-        :param min_y: minimum disparity in lines
-        :type min_y: int
-        :param max_y: maximum disparity in lines
-        :type max_y: int
+        :param min_col: minimum disparity in columns
+        :type min_col: int
+        :param max_col: maximum disparity in columns
+        :type max_col: int
+        :param min_row: minimum disparity in lines
+        :type min_row: int
+        :param max_row: maximum disparity in lines
+        :type max_row: int
         :param cfg: matching_cost computation configuration
-        :type max_y: dict
+        :type max_row: dict
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
@@ -166,14 +166,14 @@ class MatchingCost:
         # Initialize Pandora matching cost
         pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**cfg)
         # Array with all y disparities
-        disps_y = range(min_y, max_y + 1)
-        for idx, disp_y in enumerate(disps_y):
+        disps_row = range(min_row, max_row + 1)
+        for idx, disp_row in enumerate(disps_row):
             # Shift image in the y axis
-            img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_y)
+            img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_row)
             # Compute cost volume
-            cost_volume = pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, min_x, max_x)
+            cost_volume = pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, min_col, max_col)
             # Mask cost volume
-            pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, min_x, max_x)
+            pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, min_col, max_col)
             # If first iteration, initialize cost_volumes dataset
             if idx == 0:
                 c_row = cost_volume["cost_volume"].coords["row"]
@@ -183,7 +183,9 @@ class MatchingCost:
                 row = np.arange(c_row[0], c_row[-1] + 1)
                 col = np.arange(c_col[0], c_col[-1] + 1)
 
-                cost_volumes = self.allocate_cost_volumes(cost_volume.attrs, row, col, min_x, max_x, min_y, max_y, None)
+                cost_volumes = self.allocate_cost_volumes(
+                    cost_volume.attrs, row, col, min_col, max_col, min_row, max_row, None
+                )
             # Add current cost volume to the cost_volumes dataset
             cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data
 
