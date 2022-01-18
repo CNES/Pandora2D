@@ -23,7 +23,7 @@
 This module contains functions associated to the matching cost computation step.
 """
 
-from typing import Dict, Union
+from typing import Dict
 from json_checker import And, Checker
 
 import xarray as xr
