@@ -23,12 +23,11 @@
 This module contains functions associated to the disparity map computation step.
 """
 
-from typing import Dict, Union, Tuple
+from typing import Dict, Tuple
 from json_checker import Or, And, Checker
 
 import numpy as np
 import xarray as xr
-from pandora.check_json import update_conf
 
 
 class Disparity:

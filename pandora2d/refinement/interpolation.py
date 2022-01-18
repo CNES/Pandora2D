@@ -24,8 +24,7 @@ This module contains functions associated to the interpolation method used in th
 """
 
 import multiprocessing
-from typing import Dict, Union, Tuple
-from pandora.check_json import update_conf
+from typing import Dict, Tuple
 from json_checker import And, Checker
 
 from scipy.interpolate import interp2d
