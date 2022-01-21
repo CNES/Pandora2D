@@ -17,7 +17,7 @@ for images pairs with a combination of vertical and horizontal stereo.</h4>
   <a href="#references">References</a>
 </p>
 
-## Example of use :
+## Example of use
 
 * Not-aligned Sentinel2 images from Ouarzazate's Solar Central.
 
@@ -60,7 +60,7 @@ Download our data sample to start right away !
 ## To go further
 
 To create your own coregistration pipeline and choose among the variety of
-algorithms we provide, please consult :ref `userguide`.
+algorithms we provide, please consult [our online documentation](https://pandora2d.readthedocs.io/index.html).
 
 You will learn:
 
@@ -69,7 +69,8 @@ You will learn:
 
 ## Credits
 
-Our data test sample is based on the Peps Sentinel2 website (by CNES).
+Our data test sample contains  modified  'Copernicus  Sentinel  data  [2021]'  for  Sentinel  data, provided by the Peps Sentinel2 website (CNES). 
+
 
 ## Related
 
