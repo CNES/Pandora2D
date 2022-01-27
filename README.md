@@ -1,20 +1,25 @@
 # Pandora2D
 
 <h1 align="center">
-<img src="./doc/sources/Images/logo/logo_pandora2d.png"/>
+<img src="./doc/sources/Images/logo/logo_pandora2d.png" width="432"/>
 </h1>
 
 <h4 align="center">Pandora2d  is a tool based on [Pandora](https://github.com/CNES/Pandora) to provide disparity maps
 for images pairs with a combination of vertical and horizontal stereo.</h4>
 
 <p align="center">
-  <a href="#install">Example of use</a> •
+  <a><img src="https://github.com/CNES/Pandora2D/actions/workflows/pandora2d_ci.yml/badge.svg?branch=master"></a>
+  <a href='https://pandora2d.readthedocs.io/?badge=latest'><img src='https://readthedocs.org/projects/pandora2d/badge/?version=latest' alt='Documentation Status' /></a>
+  <a href="https://opensource.org/licenses/Apache-2.0/"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
+</p>
+
+<p align="center">
+  <a href="#example-of-use">Example of use</a> •
   <a href="#install">Install</a> •
-  <a href="#firststep">First Step</a> •
-  <a href="#customize">Customize</a> •
+  <a href="#first-step">First Step</a> •
+  <a href="#to-go-further">To go further</a> •
   <a href="#credits">Credits</a> •
-  <a href="#related">Related</a> •
-  <a href="#references">References</a>
+  <a href="#related">Related</a> 
 </p>
 
 ## Example of use
