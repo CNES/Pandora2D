@@ -45,14 +45,14 @@ Pandora2D is available on Pypi and can be installed by:
 Pandora2d requires a `config.json` to declare the pipeline and the pair of images to process.
 Download our data sample to start right away !
 
-- [maricopa's pair with combination of vertical and horizontal stereo](https://raw.githubusercontent.com/CNES/Pandora/master/data_samples/images/maricopa.zip)
-- [a configuration file](https://raw.githubusercontent.com/CNES/Pandora/master/data_samples/json_conf_files/a_basic_pipeline.json)
+- [maricopa's pair with combination of vertical and horizontal stereo](https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/images/maricopa.zip)
+- [a configuration file](https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/json_conf_files/a_basic_pipeline.json)
 
 ```bash
     # Images pairs with a combination of vertical and horizontal stereo
-    wget https://raw.githubusercontent.com/CNES/Pandora/master/data_samples/images/maricopa.zip
+    wget https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/images/maricopa.zip
     # Config file
-    wget https://raw.githubusercontent.com/CNES/Pandora/master/data_samples/json_conf_files/a_basic_pipeline.json
+    wget https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/json_conf_files/a_basic_pipeline.json
     #uncompress data
     unzip maricopa.zip
     # run Pandora2d
@@ -65,7 +65,7 @@ Download our data sample to start right away !
 ## To go further
 
 To create your own coregistration pipeline and choose among the variety of
-algorithms we provide, please consult [our online documentation](https://pandora2d.readthedocs.io/index.html).
+algorithms we provide, please consult [our online documentation](https://pandora2d.readthedocs.io/en/latest/).
 
 You will learn:
 
