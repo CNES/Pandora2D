@@ -4,7 +4,7 @@
 <img src="./doc/sources/Images/logo/logo_pandora2d.png" width="432"/>
 </h1>
 
-<h4 align="center">Pandora2d  is a tool based on [Pandora](https://github.com/CNES/Pandora) to provide disparity maps
+<h4 align="center">Pandora2d  is a tool based on <a href="https://github.com/CNES/Pandora">Pandora<a/> to provide disparity maps
 for images pairs with a combination of vertical and horizontal stereo.</h4>
 
 <p align="center">
