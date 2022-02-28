@@ -60,7 +60,6 @@ class Pandora2DMachine(Machine):
         self,
         img_left: xr.Dataset = None,
         img_right: xr.Dataset = None,
-
         disp_min_col: int = None,
         disp_max_col: int = None,
         disp_min_row: int = None,
@@ -325,5 +324,7 @@ class Pandora2DMachine(Machine):
         logging.info("Refinement computation...")
         refinement_run = refinement.AbstractRefinement(**cfg[input_step]) # type: ignore
 
-        refine_map_col, refine_map_row = refinement_run.refinement_method(self.cost_volumes, self.dataset_disp_maps)
+        refine_map_col, refine_map_row = refinement_run.refinement_method(
+            self.cost_volumes, self.dataset_disp_maps, self.left_img, self.right_img
+        )
         self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col)
