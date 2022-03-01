@@ -25,12 +25,13 @@ This module contains functions associated to the optical flow method used in the
 
 from typing import Dict, Tuple
 import itertools
-from json_checker import And, Checker
+from json_checker import And, Or, Checker
 
 import numpy as np
 import xarray as xr
 from scipy.ndimage import map_coordinates
 
+from pandora2d.common import dataset_disp_maps
 from . import refinement
 
 
@@ -39,6 +40,9 @@ class OpticalFlow(refinement.AbstractRefinement):
     """
     OpticalFLow class allows to perform the subpixel cost refinement step
     """
+
+    _WINDOW_SIZE = None
+    _NBR_ITERATION = 1
 
     def __init__(self, **cfg: str) -> None:
         """
@@ -56,9 +60,10 @@ class OpticalFlow(refinement.AbstractRefinement):
         """
 
         self.cfg = self.check_conf(**cfg)
+        self._window_size = self.cfg["window_size"]
+        self._nbr_iteration = self.cfg["nbr_iteration"]
 
-    @staticmethod
-    def check_conf(**cfg: str) -> Dict[str, str]:
+    def check_conf(self, **cfg: str) -> Dict[str, str]:
         """
         Check the refinement configuration
 
@@ -68,8 +73,16 @@ class OpticalFlow(refinement.AbstractRefinement):
         :rtype: cfg: dict
         """
 
+        if "window_size" not in cfg:
+            cfg["window_size"] = self._WINDOW_SIZE  # type: ignore
+
+        if "nbr_iteration" not in cfg:
+            cfg["nbr_iteration"] = self._NBR_ITERATION  # type: ignore
+
         schema = {
             "refinement_method": And(str, lambda x: x in ["optical_flow"]),
+            "window_size": Or(None, And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0)),
+            "nbr_iteration": And(int, lambda nbr_i: nbr_i > 0)
         }
 
         checker = Checker(schema)
@@ -189,9 +202,18 @@ class OpticalFlow(refinement.AbstractRefinement):
             cost_volumes["disp_col"].data[-1],
         ]
 
+        # first warp after pixel research
         warped_right = self.warped_img(img_right, pixel_maps)
-        delta_row, delta_col = self.optical_flow(
-            img_left["im"].data, warped_right, cost_volumes.attrs["window_size"], pixel_maps, disp_range
-        )
+
+        if self._window_size is None:
+            self._window_size = cost_volumes.attrs["window_size"]
+
+        for _ in range(self._nbr_iteration):  # type: ignore
+            delta_row, delta_col = self.optical_flow(
+                img_left["im"].data, warped_right, cost_volumes.attrs["window_size"], pixel_maps, disp_range
+            )
+            pixel_maps = dataset_disp_maps(delta_row, delta_col)
+
+            warped_right = self.warped_img(img_right, pixel_maps)
 
         return delta_col, delta_row
