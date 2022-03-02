@@ -1,10 +1,10 @@
 # Pandora2D
 
 <h1 align="center">
-<img src="./doc/sources/Images/logo/logo_pandora2d.png" width="432"/>
+<a href="https://pandora2d.readthedocs.io/?badge=latest"><img src="https://raw.githubusercontent.com/CNES/Pandora2D/master/doc/sources/Images/logo/logo_pandora2d.png?inline=false" alt="Pandora2D coregistration Framework" width="432"></a>
 </h1>
 
-<h4 align="center">Pandora2d  is a tool based on [Pandora](https://github.com/CNES/Pandora) to provide disparity maps
+<h4 align="center">Pandora2d  is a tool based on <a href="https://github.com/CNES/Pandora">Pandora<a/> to provide disparity maps
 for images pairs with a combination of vertical and horizontal stereo.</h4>
 
 <p align="center">
@@ -28,7 +28,7 @@ for images pairs with a combination of vertical and horizontal stereo.</h4>
 
 Before Pandora2D   |  After Pandora2D
 :-----------------:|:----------------:
-![](./doc/sources/Images/avant_recalage.gif)  |  ![](./doc/sources/Images/apres_recalage.gif)
+![](https://raw.githubusercontent.com/CNES/Pandora2D/master/doc/sources/Images/avant_recalage.gif?inline=false)  |  ![](https://raw.githubusercontent.com/CNES/Pandora2D/master/doc/sources/Images/apres_recalage.gif?inline=false)
 
 
 ## Install
