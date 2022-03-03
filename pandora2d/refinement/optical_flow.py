@@ -74,7 +74,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         """
 
         if "window_size" not in cfg:
-            cfg["window_size"] = self._WINDOW_SIZE  # type: ignore
+            cfg["window_size"] = self._WINDOW_SIZE
 
         if "nbr_iteration" not in cfg:
             cfg["nbr_iteration"] = self._NBR_ITERATION  # type: ignore
@@ -82,7 +82,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         schema = {
             "refinement_method": And(str, lambda x: x in ["optical_flow"]),
             "window_size": Or(None, And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0)),
-            "nbr_iteration": And(int, lambda nbr_i: nbr_i > 0)
+            "nbr_iteration": And(int, lambda nbr_i: nbr_i > 0),
         }
 
         checker = Checker(schema)
@@ -92,7 +92,7 @@ class OpticalFlow(refinement.AbstractRefinement):
 
     @staticmethod
     def optical_flow(
-            left: np.ndarray, right: np.ndarray, window_size: int, pixel_maps: xr.Dataset, disp_range: list
+        left: np.ndarray, right: np.ndarray, window_size: int, pixel_maps: xr.Dataset, disp_range: list
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute Lucas & Kanade's optical flow algorithm
@@ -137,14 +137,16 @@ class OpticalFlow(refinement.AbstractRefinement):
                 motion = np.matmul(np.linalg.inv(np.matmul(A.T, A)), np.matmul(A.T, B))
             # if matrix is full of NaN or 0
             except np.linalg.LinAlgError:
-                motion = [np.nan, np.nan]
+                motion = [pixel_maps.attrs["invalid_disparity"], pixel_maps.attrs["invalid_disparity"]]
 
             dec_row[i, j] = dec_row[i, j] + motion[1]
             dec_col[i, j] = dec_col[i, j] + motion[0]
 
-        # erase nonsense values
-        dec_row = np.clip(dec_row, disp_range[0], disp_range[1])
-        dec_col = np.clip(dec_col, disp_range[2], disp_range[3])
+        # replace values outside user's range
+        dec_col[dec_col < disp_range[0]] = pixel_maps.attrs["invalid_disparity"]
+        dec_col[dec_col > disp_range[1]] = pixel_maps.attrs["invalid_disparity"]
+        dec_row[dec_row < disp_range[2]] = pixel_maps.attrs["invalid_disparity"]
+        dec_row[dec_row > disp_range[3]] = pixel_maps.attrs["invalid_disparity"]
 
         return dec_row, dec_col
 
@@ -196,10 +198,10 @@ class OpticalFlow(refinement.AbstractRefinement):
         """
 
         disp_range = [
-            cost_volumes["disp_row"].data[0],
-            cost_volumes["disp_row"].data[-1],
             cost_volumes["disp_col"].data[0],
             cost_volumes["disp_col"].data[-1],
+            cost_volumes["disp_row"].data[0],
+            cost_volumes["disp_row"].data[-1],
         ]
 
         # first warp after pixel research
@@ -208,11 +210,16 @@ class OpticalFlow(refinement.AbstractRefinement):
         if self._window_size is None:
             self._window_size = cost_volumes.attrs["window_size"]
 
+        # first warp after pixel research
+        warped_right = self.warped_img(img_right, pixel_maps)
+        invalid_disparity = pixel_maps.attrs["invalid_disparity"]
+
         for _ in range(self._nbr_iteration):  # type: ignore
             delta_row, delta_col = self.optical_flow(
                 img_left["im"].data, warped_right, cost_volumes.attrs["window_size"], pixel_maps, disp_range
             )
             pixel_maps = dataset_disp_maps(delta_row, delta_col)
+            pixel_maps.attrs["invalid_disparity"] = invalid_disparity
 
             warped_right = self.warped_img(img_right, pixel_maps)
 
