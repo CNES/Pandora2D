@@ -38,7 +38,7 @@ class TestRefinement(unittest.TestCase):
     TestRefinement class allows to test the refinement module
     """
 
-    def SetUp(self) -> None:
+    def setUp(self) -> None:
         """
         Method called to prepare the test fixture
         """
@@ -185,15 +185,20 @@ class TestRefinement(unittest.TestCase):
         test warped image
         """
 
-        ground_truth = np.array([[13, 14,  -10000,  -10000,  -10000],
-                          [18, 19,  -10000,  -10000,  -10000],
-                          [23, 24,  -10000,  -10000,  -10000],
-                          [-10000,  -10000,  -10000,  -10000,  -10000],
-                          [-10000,  -10000,  -10000,  -10000,  -10000]])
+        ground_truth = np.array(
+            [
+                [13, 14, -10000, -10000, -10000],
+                [18, 19, -10000, -10000, -10000],
+                [23, 24, -10000, -10000, -10000],
+                [-10000, -10000, -10000, -10000, -10000],
+                [-10000, -10000, -10000, -10000, -10000],
+            ]
+        )
 
         data = np.arange(25).reshape(5, 5)
-        mask = np.array(([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]),
-                        dtype=np.int16)
+        mask = np.array(
+            ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
+        )
         img = xr.Dataset(
             {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
@@ -224,20 +229,19 @@ class TestRefinement(unittest.TestCase):
         """
 
         dataset_disp_map = common.dataset_disp_maps(np.zeros((3, 3)), np.zeros((3, 3)))
+        dataset_disp_map.attrs["invalid_disparity"] = np.nan
 
         disparity_range_col = np.arange(-2, 2 + 1)
         disparity_range_row = np.arange(-2, 2 + 1)
 
-        cost_volumes = xr.Dataset(
-            coords={"disp_col": disparity_range_col, "disp_row": disparity_range_row}
-        )
+        cost_volumes = xr.Dataset(coords={"disp_col": disparity_range_col, "disp_row": disparity_range_row})
         cost_volumes.attrs["window_size"] = 3
 
         test = refinement.AbstractRefinement(**{"refinement_method": "optical_flow"})  # type: ignore
         map_col, map_row = test.refinement_method(cost_volumes, dataset_disp_map, self.left, self.right)
 
         ground_truth_row = np.array([[0, 0, 0], [0, 0.68201902, 0], [0, 0, 0]])
-        ground_truth_col = np.array([[0, 0, 0], [0, -2, 0], [0, 0, 0]])
+        ground_truth_col = np.array([[0, 0, 0], [0, np.nan, 0], [0, 0, 0]])
 
         np.testing.assert_allclose(ground_truth_row, map_row, atol=1e-06)
         np.testing.assert_allclose(ground_truth_col, map_col, atol=1e-06)
