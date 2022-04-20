@@ -24,7 +24,6 @@ This module contains functions associated to the optical flow method used in the
 """
 
 from typing import Dict, Tuple
-import itertools
 from json_checker import And, Or, Checker
 
 import numpy as np
@@ -33,6 +32,9 @@ from scipy.ndimage import map_coordinates
 
 from pandora2d.common import dataset_disp_maps
 from . import refinement, fo_cython
+
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 @refinement.AbstractRefinement.register_subclass("optical_flow")
