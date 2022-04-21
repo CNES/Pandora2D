@@ -44,11 +44,11 @@ class TestRefinement(unittest.TestCase):
         """
         data_left = np.array([[1056, 1064, 1073],
                               [1064, 1060, 1074],
-                              [1060, 1063, 1084]])
+                              [1060, 1063, 1084]], dtype=np.float32)
 
         data_right = np.array([[1061, 1082, 1115],
                                [1064, 1094, 1137],
-                               [1065, 1095, 1131]])
+                               [1065, 1095, 1131]], dtype=np.float32)
 
         mask = np.array(([0, 0, 0], [0, 0, 0], [0, 0, 0]),
                         dtype=np.int16)
@@ -228,11 +228,12 @@ class TestRefinement(unittest.TestCase):
         test optical flow
         """
 
-        dataset_disp_map = common.dataset_disp_maps(np.zeros((3, 3)), np.zeros((3, 3)))
+        dataset_disp_map = common.dataset_disp_maps(np.zeros((3, 3), dtype=np.float32),
+                                                    np.zeros((3, 3),dtype=np.float32))
         dataset_disp_map.attrs["invalid_disparity"] = np.nan
 
-        disparity_range_col = np.arange(-2, 2 + 1)
-        disparity_range_row = np.arange(-2, 2 + 1)
+        disparity_range_col = np.arange(-2, 2 + 1, dtype=np.float32)
+        disparity_range_row = np.arange(-2, 2 + 1, dtype=np.float32)
 
         cost_volumes = xr.Dataset(coords={"disp_col": disparity_range_col, "disp_row": disparity_range_row})
         cost_volumes.attrs["window_size"] = 3
