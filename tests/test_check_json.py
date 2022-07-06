@@ -48,11 +48,11 @@ class TestCheckJson(unittest.TestCase):
         Test function for checking user input section
         """
 
-        assert check_json.check_input_section(common.correct_input)
+        assert check_json.check_input_section(common.correct_input, False)
 
         with pytest.raises(BaseException):
-            check_json.check_input_section(common.false_input_disp)
-            check_json.check_input_section(common.false_input_path_image)
+            check_json.check_input_section(common.false_input_disp, False)
+            check_json.check_input_section(common.false_input_path_image, False)
 
     @staticmethod
     def test_check_pipeline_section() -> None:
