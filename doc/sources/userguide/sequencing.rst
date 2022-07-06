@@ -5,12 +5,14 @@ Sequencing
 Pandora2D will check if the requested steps sequencing is correct following the permitted
 transition defined by the Pandora2D Machine (`transitions <https://github.com/pytransitions/transitions>`_)
 
-Pandora2D Machine defines 3 possible states:
+Pandora2D Machine defines 4 possible states:
  - begin
+ - a_priori
  - cost_volumes
  - disparity_maps
 
-and 3 transitions, each one corresponding to a step described in :ref:`step_by_step` chapter:
+and 4 transitions, each one corresponding to a step described in :ref:`step_by_step` chapter:
+ - estimation (:ref:`estimation`)
  - matching_cost (:ref:`matching_cost`)
  - disparity (:ref:`disparity`)
  - refinement (:ref:`refinement`)
