@@ -65,7 +65,7 @@ Pandora2D provides a full python API which can be used to compute disparity maps
 
     # trigger all the steps of the machine at ones
     dataset = pandora2d.run(
-        pandora2d_machine, img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row, pipeline_cfg
+        pandora2d_machine, img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row, pipeline_cfg['pipeline']
     )
 
     # save dataset
