@@ -70,7 +70,20 @@ class Interpolation(refinement.AbstractRefinement):
         return cfg
 
     @staticmethod
-    def compute_cost_matrix(p_args) -> Tuple[float, float]:
+    def wrapper_interp2d(params: np.array, func: interp2d) -> np.array:
+        """
+        Unpack tuple of arguments from minimize to fit in interp2d
+        :param params: points coordinates
+        :type params: np.array
+        :param func: interp2d scipy function
+        :type func: scipy.interpolate.interpolate.interp2d
+        :return: minimum of interp2d functions at points
+        :rtype: np.array
+        """
+        x, y = params
+        return func(x,y)
+
+    def compute_cost_matrix(self, p_args) -> Tuple[float, float]:
         """
         Process the interpolation and minimize of a cost_matrix
         :param cost_volumes: Dataset with 4D datas
@@ -115,21 +128,19 @@ class Interpolation(refinement.AbstractRefinement):
             # interp nans values
             matrix_cost[nans] = np.interp(np.nonzero(nans)[0], np.nonzero(~nans)[0], matrix_cost[~nans])
             # interp matrix_cost
-            fonction_interpolation = interp2d(
+            interpolation2d_function = interp2d(
                 cost_volumes["disp_col"].data, cost_volumes["disp_row"].data, matrix_cost, "cubic"
             )
-            wrap = lambda f: fonction_interpolation(*f)
             # looking for min
-            res = minimize(wrap, x_0, bounds=bounds).x
+            res = minimize(self.wrapper_interp2d, args=(interpolation2d_function,), x0=x_0, bounds=bounds).x
         # if cost matrix full of values
         else:
             # interp matrix_cost
-            fonction_interpolation = interp2d(
+            interpolation2d_function = interp2d(
                 cost_volumes["disp_col"].data, cost_volumes["disp_row"].data, matrix_cost, kind="cubic"
             )
             # looking for min
-            wrap = lambda f: fonction_interpolation(*f)
-            res = minimize(wrap, x_0, bounds=bounds).x
+            res = minimize(self.wrapper_interp2d, args=(interpolation2d_function,), x0=x_0, bounds=bounds).x
 
         return res
 
