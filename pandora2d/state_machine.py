@@ -171,7 +171,7 @@ class Pandora2DMachine(Machine):
                 self.trigger(input_step, cfg, input_step)
         except (MachineError, KeyError, AttributeError):
             logging.error(
-                "Problem occurs during Pandora2D running %s. " "Be sure of your sequencement step", input_step
+                "Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step
             )
             raise
 
@@ -201,7 +201,7 @@ class Pandora2DMachine(Machine):
                 self.trigger(input_step, cfg, input_step)
             except (MachineError, KeyError, AttributeError):
                 logging.error(
-                    "Problem occurs during Pandora2D running %s." " Be sure of your sequencement step", input_step
+                    "Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step
                 )
                 raise
 
