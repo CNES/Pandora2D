@@ -27,7 +27,7 @@ This module contains functions associated to raster images.
 import xarray as xr
 import numpy as np
 
-from scipy.ndimage.interpolation import shift
+from scipy.ndimage import shift
 
 
 def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
