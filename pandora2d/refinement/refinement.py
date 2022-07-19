@@ -49,6 +49,7 @@ class AbstractRefinement:
         :param cfg: configuration {'refinement_method': value}
         :type cfg: dictionary
         """
+
         if cls is AbstractRefinement:
             if isinstance(cfg["refinement_method"], str):
                 try:
@@ -97,14 +98,27 @@ class AbstractRefinement:
         return decorator
 
     @abstractmethod
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.array, np.array]:
+    def refinement_method(
+        self,
+        cost_volumes: xr.Dataset,
+        pixel_maps: xr.Dataset,
+        img_left: xr.Dataset = None,
+        img_right: xr.Dataset = None,
+    ) -> Tuple[np.array, np.array]:
         """
-        Return the subpixel disparity maps
-
-        :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.dataset
-        :param pixel_maps: pixels disparity maps
-        :type pixel_maps: xarray.dataset
-        :return: the refined disparity maps
+        Compute refine disparity maps
+        :param cost_volumes: Cost_volumes has (row, col, disp_col, disp_row) dimensions
+        :type cost_volumes: xr.Dataset
+        :param pixel_maps: dataset of pixel disparity maps
+        :type pixel_maps: xr.Dataset
+        :param img_left: xarray.Dataset containing :
+        - im : 2D (row, col) xarray.DataArray
+        - msk : 2D (row, col) xarray.DataArray
+        :type img_left: xarray.dataset
+        :param img_right: xarray.Dataset containing :
+        - im : 2D (row, col) xarray.DataArray
+        - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xarray.dataset
+        :return: delta_col, delta_row: subpixel disparity maps
         :rtype: Tuple[np.array, np.array]
         """

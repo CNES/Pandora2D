@@ -23,5 +23,5 @@
 Init file for refinement module
 """
 
-from . import interpolation
+from . import interpolation, optical_flow
 from .refinement import AbstractRefinement

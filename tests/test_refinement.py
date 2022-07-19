@@ -28,6 +28,7 @@ import unittest
 import numpy as np
 import xarray as xr
 import pytest
+from rasterio import Affine
 
 from pandora2d import refinement, common
 
@@ -37,16 +38,56 @@ class TestRefinement(unittest.TestCase):
     TestRefinement class allows to test the refinement module
     """
 
+    def setUp(self) -> None:
+        """
+        Method called to prepare the test fixture
+        """
+        data_left = np.array([[1056, 1064, 1073],
+                              [1064, 1060, 1074],
+                              [1060, 1063, 1084]])
+
+        data_right = np.array([[1061, 1082, 1115],
+                               [1064, 1094, 1137],
+                               [1065, 1095, 1131]])
+
+        mask = np.array(([0, 0, 0], [0, 0, 0], [0, 0, 0]),
+                        dtype=np.int16)
+
+        self.left = xr.Dataset(
+            {"im": (["row", "col"], data_left), "msk": (["row", "col"], mask)},
+            coords={"row": np.arange(data_left.shape[0]), "col": np.arange(data_left.shape[1])},
+        )
+        self.left.attrs = {
+            "no_data_img": -9999,
+            "valid_pixels": 0,
+            "no_data_mask": 1,
+            "crs": None,
+            "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+        }
+
+        self.right = xr.Dataset(
+            {"im": (["row", "col"], data_right), "msk": (["row", "col"], mask)},
+            coords={"row": np.arange(data_right.shape[0]), "col": np.arange(data_right.shape[1])},
+        )
+        self.right.attrs = {
+            "no_data_img": -9999,
+            "valid_pixels": 0,
+            "no_data_mask": 1,
+            "crs": None,
+            "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+        }
+
     @staticmethod
     def test_check_conf():
         """
-        Test the interpolation method
+        Test the refinements methods
         """
 
-        refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
+        refinement.AbstractRefinement(**{"refinement_method": "interpolation"})   # type: ignore
+        refinement.AbstractRefinement(**{"refinement_method": "optical_flow"})  # type: ignore
 
         with pytest.raises(KeyError):
-            refinement.AbstractRefinement(**{"refinement_method": "wta"}) # type: ignore
+            refinement.AbstractRefinement(**{"refinement_method": "wta"})   # type: ignore
 
     @staticmethod
     def test_refinement_method_subpixel():
@@ -120,20 +161,87 @@ class TestRefinement(unittest.TestCase):
         cost_volumes_test.attrs["window_size"] = 1
         cost_volumes_test.attrs["type_measure"] = "max"
 
-        gt_delta_y = np.array(
+        gt_delta_row = np.array(
             ([[-1, -1, -1], [-1, -1, -1], [-1, -1, -1]]),
             dtype=np.float64,
         )
 
-        gt_delta_x = np.array(
+        gt_delta_col = np.array(
             ([[1, 1, 1], [1, 1, 1], [1, 1, 1]]),
             dtype=np.float64,
         )
 
-        dataset_disp_map = common.dataset_disp_maps(gt_delta_y, gt_delta_x)
+        dataset_disp_map = common.dataset_disp_maps(gt_delta_row, gt_delta_col)
 
         test = refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
         delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map)
 
-        np.testing.assert_allclose(gt_delta_y, delta_y, rtol=1e-06)
-        np.testing.assert_allclose(gt_delta_x, delta_x, rtol=1e-06)
+        np.testing.assert_allclose(gt_delta_row, delta_y, rtol=1e-06)
+        np.testing.assert_allclose(gt_delta_col, delta_x, rtol=1e-06)
+
+    @staticmethod
+    def test_warped_image():
+        """
+        test warped image
+        """
+
+        ground_truth = np.array(
+            [
+                [13, 14, -10000, -10000, -10000],
+                [18, 19, -10000, -10000, -10000],
+                [23, 24, -10000, -10000, -10000],
+                [-10000, -10000, -10000, -10000, -10000],
+                [-10000, -10000, -10000, -10000, -10000],
+            ]
+        )
+
+        data = np.arange(25).reshape(5, 5)
+        mask = np.array(
+            ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
+        )
+        img = xr.Dataset(
+            {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        )
+        img.attrs = {
+            "no_data_img": -9999,
+            "valid_pixels": 0,
+            "no_data_mask": 1,
+            "crs": None,
+            "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+        }
+
+        # all pixels are shift by 2 in row
+        gt_delta_row = 2 * np.ones((5, 5))
+        # all pixels are shift by 3 in column
+        gt_delta_col = 3 * np.ones((5, 5))
+        dataset_disp_map = common.dataset_disp_maps(gt_delta_row, gt_delta_col)
+
+        test = refinement.AbstractRefinement(**{"refinement_method": "optical_flow"})  # type: ignore
+        test_img_shift = test.warped_img(img, dataset_disp_map)
+
+        # check that the generated image is equal to ground truth
+        np.testing.assert_allclose(test_img_shift, ground_truth, atol=1e-06)
+
+    def test_optical_flow_refinement(self):
+        """
+        test optical flow
+        """
+
+        dataset_disp_map = common.dataset_disp_maps(np.zeros((3, 3)), np.zeros((3, 3)))
+        dataset_disp_map.attrs["invalid_disparity"] = np.nan
+
+        disparity_range_col = np.arange(-2, 2 + 1)
+        disparity_range_row = np.arange(-2, 2 + 1)
+
+        cost_volumes = xr.Dataset(coords={"disp_col": disparity_range_col, "disp_row": disparity_range_row})
+        cost_volumes.attrs["window_size"] = 3
+
+        test = refinement.AbstractRefinement(**{"refinement_method": "optical_flow"})  # type: ignore
+        map_col, map_row = test.refinement_method(cost_volumes, dataset_disp_map, self.left, self.right)
+
+        ground_truth_row = np.array([[0, 0, 0], [0, 0.68201902, 0], [0, 0, 0]])
+        ground_truth_col = np.array([[0, 0, 0], [0, np.nan, 0], [0, 0, 0]])
+
+        np.testing.assert_allclose(ground_truth_row, map_row, atol=1e-06)
+        np.testing.assert_allclose(ground_truth_col, map_col, atol=1e-06)

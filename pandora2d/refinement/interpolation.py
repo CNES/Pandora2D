@@ -43,6 +43,14 @@ class Interpolation(refinement.AbstractRefinement):
 
     def __init__(self, **cfg: str) -> None:
         """
+        :param img_left: xr.Dataset containing :
+        - im : 2D (row, col) xr.DataArray
+        - msk : 2D (row, col) xr.DataArray
+        :type img_left: xr.Dataset
+        :param img_right: xr.Dataset containing :
+        - im : 2D (row, col) xr.DataArray
+        - msk : 2D (row, col) xr.DataArray
+        :type img_right: xr.Dataset
         :param cfg: optional configuration, {}
         :type cfg: dict
         :return: None
@@ -144,17 +152,32 @@ class Interpolation(refinement.AbstractRefinement):
 
         return res
 
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.array, np.array]:
+    def refinement_method(
+        self,
+        cost_volumes: xr.Dataset,
+        pixel_maps: xr.Dataset,
+        img_left: xr.Dataset = None,
+        img_right: xr.Dataset = None
+    ) -> Tuple[np.array, np.array]:
         """
         Compute refine disparity maps
         :param cost_volumes: Cost_volumes has (row, col, disp_col, disp_row) dimensions
         :type cost_volumes: xr.Dataset
         :param pixel_maps: dataset of pixel disparity maps
         :type pixel_maps: xr.Dataset
+        :param img_left: xarray.Dataset containing :
+        - im : 2D (row, col) xarray.DataArray
+        - msk : 2D (row, col) xarray.DataArray
+        :type img_left: xarray.dataset
+        :param img_right: xarray.Dataset containing :
+        - im : 2D (row, col) xarray.DataArray
+        - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xarray.dataset
         :return: delta_col, delta_row: subpixel disparity maps
         :rtype: Tuple[np.array, np.array]
         """
-        #cost_columes data
+
+        #cost_volumes data
         data = cost_volumes["cost_volumes"].data
 
         # transform 4D row, col, dcol, drow into drow, dcol, row * col
