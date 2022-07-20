@@ -24,6 +24,7 @@ This module contains functions associated to the SURF method used in the estimat
 """
 
 from math import ceil, floor
+import logging
 from typing import Dict, Tuple
 from json_checker import And, Checker
 import xarray as xr
@@ -124,6 +125,8 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
         max_col = -shifted[1] + int(self._range_col / 2)  # type: ignore
         min_row = -shifted[0] - int(self._range_row / 2)  # type: ignore
         max_row = -shifted[0] + int(self._range_row / 2)  # type: ignore
+
+        logging.info("Estimation result is %s in columns and %s in row", -shifted[1], -shifted[0])
 
         outputs = (self.ceil_or_floor(min_col),
                    self.ceil_or_floor(max_col),

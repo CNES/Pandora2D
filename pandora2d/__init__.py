@@ -121,4 +121,9 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     # save dataset
     common.save_dataset(dataset_disp_maps, path_output)
     #save config
+    user_cfg["input"]["disp_min_col"] = pandora2d_machine.disp_min_col
+    user_cfg["input"]["disp_max_col"] = pandora2d_machine.disp_max_col
+    user_cfg["input"]["disp_min_row"] = pandora2d_machine.disp_min_row
+    user_cfg["input"]["disp_max_row"] = pandora2d_machine.disp_max_row
+
     save_config(path_output, user_cfg)
