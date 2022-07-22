@@ -14,6 +14,13 @@ The following interactive diagram highlights all steps available in Pandora2D.
 .. image:: ../Images/img_pipeline/arrow.png
     :align: center
 
+.. image:: ../Images/img_pipeline/estimation_step.png
+    :align: center
+    :target: step_by_step/estimation.html
+
+.. image:: ../Images/img_pipeline/arrow.png
+    :align: center
+
 .. image:: ../Images/img_pipeline/mc_step.png
     :align: center
     :target: step_by_step/matching_cost.html

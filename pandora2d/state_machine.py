@@ -36,24 +36,28 @@ except ImportError:
     from transitions import Machine
 from transitions import MachineError
 
-from pandora2d import matching_cost, disparity, refinement, common
+from pandora2d import matching_cost, disparity, refinement, common, estimation
 
 
 class Pandora2DMachine(Machine):
     """
-    Pandora2DMacine class to create and use a state machine
+    Pandora2DMachine class to create and use a state machine
     """
 
     _transitions_run = [
         {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "after": "matching_cost_run"},
+        {"trigger": "matching_cost", "source": "a_priori", "dest": "cost_volumes", "after": "matching_cost_run"},
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "after": "disp_maps_run"},
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_run"},
+        {"trigger": "estimation", "source": "begin", "dest": "a_priori", "after": "estimation_run"},
     ]
 
     _transitions_check = [
         {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "after": "matching_cost_check_conf"},
+        {"trigger": "matching_cost", "source": "a_priori", "dest": "cost_volumes", "after": "matching_cost_check_conf"},
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "after": "disparity_check_conf"},
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_check_conf"},
+        {"trigger": "estimation", "source": "begin", "dest": "a_priori", "after": "estimation_check_conf"},
     ]
 
     def __init__(
@@ -99,7 +103,7 @@ class Pandora2DMachine(Machine):
         self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
         # Define avalaible states
-        states_ = ["begin", "cost_volumes", "disp_maps"]
+        states_ = ["begin", "cost_volumes", "disp_maps", "a_priori"]
 
         # Initialize a machine without any transition
         Machine.__init__(
@@ -241,6 +245,20 @@ class Pandora2DMachine(Machine):
         matching_cost_ = matching_cost.MatchingCost(**cfg[input_step])
         self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
 
+    def estimation_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the estimation computation configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        estimation_ = estimation.AbstractEstimation(**cfg[input_step])  # type: ignore
+        self.pipeline_cfg["pipeline"][input_step] = estimation_.cfg
+
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the disparity computation configuration
@@ -268,6 +286,27 @@ class Pandora2DMachine(Machine):
 
         refinement_ = refinement.AbstractRefinement(**cfg[input_step])  # type: ignore
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
+
+    def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Shift's estimation step
+
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :param input_step: step to trigger
+        :type input_step: str
+        :return: None
+        """
+
+        logging.info("Estimation computation...")
+        estimation_run = estimation.AbstractEstimation(**cfg[input_step])  # type: ignore
+
+        range = estimation_run.estimation_method(self.left_img, self.right_img)
+
+        self.disp_min_col = range[0]
+        self.disp_max_col = range[1]
+        self.disp_min_row = range[2]
+        self.disp_max_row = range[3]
 
     def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """

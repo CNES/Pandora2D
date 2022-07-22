@@ -23,10 +23,13 @@
 This module contains functions allowing to check the configuration given to Pandora pipeline.
 """
 import sys
+from operator import xor
 from typing import Dict
 import logging
+import json_checker
 from json_checker import Checker, Or, And
 import numpy as np
+
 
 from pandora.check_json import check_disparities, check_images, get_config_input
 from pandora.check_json import get_config_pipeline, concat_conf, update_conf, rasterio_can_open_mandatory
@@ -35,21 +38,26 @@ from pandora.check_json import get_config_pipeline, concat_conf, update_conf, ra
 from pandora2d.state_machine import Pandora2DMachine
 
 
-def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+def check_input_section(user_cfg: Dict[str, dict], flag_estim: bool) -> Dict[str, dict]:
     """
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
     :type user_cfg: dict
+    :param flag_estim: True if estimation set
+    :type flag_estim: bool
     :return: cfg: global configuration
     :rtype: cfg: dict
     """
 
     # Add missing steps and inputs defaults values in user_cfg
     cfg = update_conf(default_short_configuration_input, user_cfg)
-
     # check schema
-    configuration_schema = {"input": input_configuration_schema}
+    if flag_estim:
+        configuration_schema = {"input": estim_input_configuration_schema}
+    else:
+        configuration_schema = {"input": input_configuration_schema}
+
     checker = Checker(configuration_schema)
     checker.validate(cfg)
 
@@ -71,8 +79,8 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
 
     :param user_cfg: pipeline user configuration
     :type user_cfg: dict
-    :param pandora_machine: instance of PandoraMachine
-    :type pandora_machine: PandoraMachine object
+    :param pandora2d_machine: instance of Pandora2DMachine
+    :type pandora2d_machine: Pandora2DMachine object
     :return: cfg: pipeline configuration
     :rtype: cfg: dict
     """
@@ -96,19 +104,25 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
 
     :param user_cfg: user configuration
     :type user_cfg: dict
-    :param pandora_machine: instance of PandoraMachine
-    :type pandora_machine: PandoraMachine
+    :param pandora2d_machine: instance of Pandora2DMachine
+    :type pandora2d_machine: Pandora2DMachine
     :return: cfg: global configuration
     :rtype: cfg: dict
     """
 
-    # check input
-    user_cfg_input = get_config_input(user_cfg)
-    cfg_input = check_input_section(user_cfg_input)
+    # check estimation step and disparities compatibility
+    flag_estim = 'estimation' in user_cfg['pipeline']
+    if not xor(flag_estim, {'disp_min_col', 'disp_max_col', 'disp_min_row', 'disp_max_row'}.issubset(user_cfg["input"])):
+        logging.error("Disparities can't be set in config file with estimation step (and vice versa)")
+        sys.exit(1)
 
     # check pipeline
     user_cfg_pipeline = get_config_pipeline(user_cfg)
     cfg_pipeline = check_pipeline_section(user_cfg_pipeline, pandora2d_machine)
+
+    # check input
+    user_cfg_input = get_config_input(user_cfg)
+    cfg_input = check_input_section(user_cfg_input, flag_estim)
 
     if isinstance(cfg_input["input"]["nodata_right"], float) and cfg_pipeline["pipeline"]["matching_cost"][
         "matching_cost_method"
@@ -132,9 +146,24 @@ input_configuration_schema = {
     "disp_max_row": int,
 }
 
+estim_input_configuration_schema = {
+    "img_left": And(str, rasterio_can_open_mandatory),
+    "img_right": And(str, rasterio_can_open_mandatory),
+    "nodata_left": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+    "nodata_right": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+    "disp_min_col": lambda input: np.isnan(input),
+    "disp_max_col": lambda input: np.isnan(input),
+    "disp_min_row": lambda input: np.isnan(input),
+    "disp_max_row": lambda input: np.isnan(input),
+}
+
 default_short_configuration_input = {
     "input": {
         "nodata_left": -9999,
         "nodata_right": -9999,
+        "disp_min_col": np.nan,
+        "disp_max_col": np.nan,
+        "disp_min_row": np.nan,
+        "disp_max_row": np.nan,
     }
 }
