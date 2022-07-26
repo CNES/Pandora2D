@@ -103,3 +103,23 @@ It is possible to run only pylint tool to check code modifications:
 
 Pylint messages can be avoided (in particular cases !) adding "#pylint: disable=error-message-name" in the file or line.
 Look at examples in code.
+
+
+Coding with cython
+------------------
+
+Optical flow refinement step improves processing times through `cython <https://cython.org/>`__.
+If you need to work with it please make sure to execute
+
+.. code-block:: bash
+
+    python setup.py build_ext --inplace
+
+command after each
+
+.. code-block:: bash
+
+    pip install .
+
+or work from a different folder than pandora2d/pandora2d.
+
