@@ -36,6 +36,13 @@ try:
 except ImportError:
     print("WARNING: sphinx not available. Doc cannot be built")
 
+# Use Cython if available.
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    raise SystemExit(
+        "ERROR: Cython.Build.cythonize not found. "
+        "Cython is required to build pandora2d.")
 
 def readme():
     with copen("README.md", "r", "utf-8") as fstream:
@@ -52,4 +59,5 @@ setup(
             "warning_is_error": ("setup.py", True),
         }
     },
+    ext_modules=cythonize("./pandora2d/refinement/fo_cython.pyx")
 )

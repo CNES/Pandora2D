@@ -24,7 +24,6 @@ This module contains functions associated to the optical flow method used in the
 """
 
 from typing import Dict, Tuple
-import itertools
 from json_checker import And, Or, Checker
 
 import numpy as np
@@ -32,7 +31,10 @@ import xarray as xr
 from scipy.ndimage import map_coordinates
 
 from pandora2d.common import dataset_disp_maps
-from . import refinement
+from . import refinement, fo_cython
+
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 @refinement.AbstractRefinement.register_subclass("optical_flow")
@@ -112,6 +114,7 @@ class OpticalFlow(refinement.AbstractRefinement):
 
         dec_row = pixel_maps["row_map"].data
         dec_col = pixel_maps["col_map"].data
+        invalid_disparity = pixel_maps.attrs["invalid_disparity"]
 
         # gradients measure
         grad_x = np.gradient(left, axis=1)
@@ -121,32 +124,15 @@ class OpticalFlow(refinement.AbstractRefinement):
         # marge measure
         w = int(window_size / 2)
 
-        for i, j in itertools.product(range(w, left.shape[0] - w), range(w, left.shape[1] - w)):
-
-            # Select pixel and neighbourhoods
-            Ix = grad_x[i - w : i + w + 1, j - w : j + w + 1]
-            Iy = grad_y[i - w : i + w + 1, j - w : j + w + 1]
-            It = grad_t[i - w : i + w + 1, j - w : j + w + 1]
-
-            # Create A et B matrix for Lucas Kanade
-            A = np.vstack((Ix.flatten(), Iy.flatten())).T
-            B = np.reshape(It, len(It) ** 2)[np.newaxis].T
-
-            # v = (A^T.A)^-1.A^T.B
-            try:
-                motion = np.matmul(np.linalg.inv(np.matmul(A.T, A)), np.matmul(A.T, B))
-            # if matrix is full of NaN or 0
-            except np.linalg.LinAlgError:
-                motion = [pixel_maps.attrs["invalid_disparity"], pixel_maps.attrs["invalid_disparity"]]
-
-            dec_row[i, j] = dec_row[i, j] + motion[1]
-            dec_col[i, j] = dec_col[i, j] + motion[0]
+        dec_row, dec_col = fo_cython.optical_flow(
+            grad_x, grad_y, grad_t, w, left, invalid_disparity, dec_row, dec_col
+        )
 
         # replace values outside user's range
-        dec_col[dec_col < disp_range[0]] = pixel_maps.attrs["invalid_disparity"]
-        dec_col[dec_col > disp_range[1]] = pixel_maps.attrs["invalid_disparity"]
-        dec_row[dec_row < disp_range[2]] = pixel_maps.attrs["invalid_disparity"]
-        dec_row[dec_row > disp_range[3]] = pixel_maps.attrs["invalid_disparity"]
+        dec_col[dec_col < disp_range[0]] = invalid_disparity
+        dec_col[dec_col > disp_range[1]] = invalid_disparity
+        dec_row[dec_row < disp_range[2]] = invalid_disparity
+        dec_row[dec_row > disp_range[3]] = invalid_disparity
 
         return dec_row, dec_col
 
