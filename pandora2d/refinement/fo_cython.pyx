@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf8
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2022 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
