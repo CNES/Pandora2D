@@ -154,7 +154,7 @@ class Interpolation(refinement.AbstractRefinement):
         :return: delta_col, delta_row: subpixel disparity maps
         :rtype: Tuple[np.array, np.array]
         """
-        #cost_columes data
+        # cost_columes data
         data = cost_volumes["cost_volumes"].data
 
         # transform 4D row, col, dcol, drow into drow, dcol, row * col
