@@ -140,16 +140,18 @@ class Disparity:
     @staticmethod
     def argmax_split(max_maps: np.array, axis: int) -> np.ndarray:
         """
-        Find the indices of the minimum values for a 3D DataArray, along axis 2.
+        Find the indices of the maximum values for a 3D DataArray, along axis.
         Memory consumption is reduced by splitting the 3D Array.
 
-        :param cost_volume: the cost volume dataset
-        :type cost_volume: xarray.Dataset
+        :param max_maps: maps with maximum
+        :type max_maps: xarray.Dataset
+        :param axis: axis
+        :type axis: int
         :return: the disparities for which the cost volume values are the smallest
         :rtype: np.ndarray
         """
-        ncol, nrow, ndsp = max_maps.shape  # pylint: disable=unused-variable
-        disp = np.zeros((ncol, nrow), dtype=np.int)
+        ncol, nrow, _ = max_maps.shape
+        disp = np.zeros((ncol, nrow), dtype=np.int64)
 
         # Numpy argmin is making a copy of the cost volume.
         # To reduce memory, numpy argmin is applied on a small part of the cost volume.
@@ -178,13 +180,15 @@ class Disparity:
         Find the indices of the minimum values for a 3D DataArray, along axis 2.
         Memory consumption is reduced by splitting the 3D Array.
 
-        :param cost_volume: the cost volume dataset
-        :type cost_volume: xarray.Dataset
+        :param min_maps: maps with minimum
+        :type min_maps: xarray.Dataset
+        :param axis: axis
+        :type axis: int
         :return: the disparities for which the cost volume values are the smallest
         :rtype: np.ndarray
         """
-        ncol, nrow, ndsp = min_maps.shape  # pylint: disable=unused-variable
-        disp = np.zeros((ncol, nrow), dtype=np.int)
+        ncol, nrow, _ = min_maps.shape
+        disp = np.zeros((ncol, nrow), dtype=np.int64)
 
         # Numpy argmin is making a copy of the cost volume.
         # To reduce memory, numpy argmin is applied on a small part of the cost volume.
@@ -193,7 +197,7 @@ class Disparity:
 
         row_begin = 0
 
-        for col, cv_row in enumerate(cv_chunked_row):  # pylint: disable=unused-variable
+        for _, cv_row in enumerate(cv_chunked_row):
             # To reduce memory, the cost volume is split (along the col axis) into
             # multiple sub-arrays with a step of 100
             cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)

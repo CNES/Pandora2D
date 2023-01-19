@@ -71,8 +71,8 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
 
     :param user_cfg: pipeline user configuration
     :type user_cfg: dict
-    :param pandora_machine: instance of PandoraMachine
-    :type pandora_machine: PandoraMachine object
+    :param pandora2d_machine: instance of PandoraMachine
+    :type pandora2d_machine: PandoraMachine object
     :return: cfg: pipeline configuration
     :rtype: cfg: dict
     """
@@ -96,8 +96,8 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
 
     :param user_cfg: user configuration
     :type user_cfg: dict
-    :param pandora_machine: instance of PandoraMachine
-    :type pandora_machine: PandoraMachine
+    :param pandora2d_machine: instance of PandoraMachine
+    :type pandora2d_machine: PandoraMachine
     :return: cfg: global configuration
     :rtype: cfg: dict
     """
