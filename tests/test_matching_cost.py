@@ -300,6 +300,7 @@ class TestMatchingCost(unittest.TestCase):
         cost_volumes_test.attrs["cmax"] = 1
         cost_volumes_test.attrs["crs"] = None
         cost_volumes_test.attrs["transform"] = Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        cost_volumes_test.attrs["band_correl"] = None
 
         # data by function compute_cost_volume
         cfg = {"matching_cost_method": "zncc", "window_size": 3}
