@@ -74,7 +74,7 @@ def run(
 
     pandora2d_machine.run_prepare(img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row)
 
-    for e in list(cfg_pipeline):
+    for e in list(cfg_pipeline["pipeline"]):
         pandora2d_machine.run(e, cfg_pipeline)
 
     pandora2d_machine.run_exit()
@@ -107,7 +107,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     img_left = read_img(cfg["input"]["img_left"], cfg["input"]["nodata_left"])
     img_right = read_img(cfg["input"]["img_right"], cfg["input"]["nodata_right"])
 
-    ## read disparities values
+    # read disparities values
     disp_min_col = cfg["input"]["disp_min_col"]
     disp_max_col = cfg["input"]["disp_max_col"]
     disp_min_row = cfg["input"]["disp_min_row"]
@@ -115,10 +115,10 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     # run pandora 2D and store disp maps in a dataset
     dataset_disp_maps = run(
-        pandora2d_machine, img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row, cfg["pipeline"]
+        pandora2d_machine, img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row, cfg
     )
 
     # save dataset
     common.save_dataset(dataset_disp_maps, path_output)
-    #save config
+    # save config
     save_config(path_output, user_cfg)
