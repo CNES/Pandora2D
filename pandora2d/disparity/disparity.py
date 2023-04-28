@@ -51,6 +51,8 @@ class Disparity:
         # Give the default value if the required element is not in the configuration
         if "invalid_disparity" not in cfg:
             cfg["invalid_disparity"] = self._INVALID_DISPARITY  # type: ignore
+        elif cfg["invalid_disparity"] == "NaN":
+            cfg["invalid_disparity"] = np.nan
 
         schema = {
             "disparity_method": And(str, lambda x: x in ["wta"]),

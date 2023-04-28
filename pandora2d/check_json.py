@@ -29,7 +29,7 @@ from json_checker import Checker, Or, And
 import numpy as np
 
 from pandora.check_json import check_disparities, check_images, get_config_input
-from pandora.check_json import get_config_pipeline, concat_conf, update_conf, rasterio_can_open_mandatory
+from pandora.check_json import concat_conf, update_conf, rasterio_can_open_mandatory
 
 
 from pandora2d.state_machine import Pandora2DMachine
@@ -78,16 +78,20 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     """
 
     cfg = update_conf({}, user_cfg)
-    pandora2d_machine.check_conf(cfg["pipeline"])
+    pandora2d_machine.check_conf(cfg)
 
     cfg = update_conf(cfg, pandora2d_machine.pipeline_cfg)
 
     configuration_schema = {"pipeline": dict}
 
     checker = Checker(configuration_schema)
-    checker.validate(cfg)
 
-    return cfg
+    # We select only the pipeline section for the checker
+    pipeline_cfg = {"pipeline": cfg["pipeline"]}
+
+    checker.validate(pipeline_cfg)
+
+    return pipeline_cfg
 
 
 def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> dict:
@@ -107,8 +111,7 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
     cfg_input = check_input_section(user_cfg_input)
 
     # check pipeline
-    user_cfg_pipeline = get_config_pipeline(user_cfg)
-    cfg_pipeline = check_pipeline_section(user_cfg_pipeline, pandora2d_machine)
+    cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
 
     if isinstance(cfg_input["input"]["nodata_right"], float) and cfg_pipeline["pipeline"]["matching_cost"][
         "matching_cost_method"
