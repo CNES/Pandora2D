@@ -29,7 +29,7 @@ import xarray as xr
 from pandora import read_config_file, read_img, setup_logging
 from pandora.common import save_config
 
-from pandora2d import check_json, common
+from pandora2d import check_configuration, common
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -83,7 +83,6 @@ def run(
 
 
 def main(cfg_path: str, path_output: str, verbose: bool) -> None:
-
     """
     Check config file and run pandora 2D framework accordingly
 
@@ -99,7 +98,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     pandora2d_machine = Pandora2DMachine()
 
-    cfg = check_json.check_conf(user_cfg, pandora2d_machine)
+    cfg = check_configuration.check_conf(user_cfg, pandora2d_machine)
 
     setup_logging(verbose)
 

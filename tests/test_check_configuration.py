@@ -26,7 +26,7 @@ Test configuration
 import unittest
 import pytest
 
-from pandora2d import check_json
+from pandora2d import check_configuration
 from pandora2d.state_machine import Pandora2DMachine
 from tests import common
 
@@ -48,11 +48,11 @@ class TestCheckJson(unittest.TestCase):
         Test function for checking user input section
         """
 
-        assert check_json.check_input_section(common.correct_input)
+        assert check_configuration.check_input_section(common.correct_input)
 
         with pytest.raises(BaseException):
-            check_json.check_input_section(common.false_input_disp)
-            check_json.check_input_section(common.false_input_path_image)
+            check_configuration.check_input_section(common.false_input_disp)
+            check_configuration.check_input_section(common.false_input_path_image)
 
     @staticmethod
     def test_check_pipeline_section() -> None:
@@ -62,8 +62,8 @@ class TestCheckJson(unittest.TestCase):
 
         pandora2d_machine = Pandora2DMachine()
 
-        assert check_json.check_pipeline_section(common.correct_pipeline_dict, pandora2d_machine)
+        assert check_configuration.check_pipeline_section(common.correct_pipeline_dict, pandora2d_machine)
 
         with pytest.raises(BaseException):
-            check_json.check_pipeline_section(common.false_pipeline_mc_dict, pandora2d_machine)
-            check_json.check_pipeline_section(common.false_pipeline_disp_dict, pandora2d_machine)
+            check_configuration.check_pipeline_section(common.false_pipeline_mc_dict, pandora2d_machine)
+            check_configuration.check_pipeline_section(common.false_pipeline_disp_dict, pandora2d_machine)
