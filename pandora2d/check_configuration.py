@@ -28,8 +28,8 @@ import logging
 from json_checker import Checker, Or, And
 import numpy as np
 
-from pandora.check_json import check_disparities, check_images, get_config_input
-from pandora.check_json import concat_conf, update_conf, rasterio_can_open_mandatory
+from pandora.check_configuration import check_disparities, check_images, get_config_input
+from pandora.check_configuration import concat_conf, update_conf, rasterio_can_open_mandatory
 
 
 from pandora2d.state_machine import Pandora2DMachine

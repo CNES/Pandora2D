@@ -13,7 +13,7 @@ Pandora2D provides a full python API which can be used to compute disparity maps
 
     import pandora2d
     from pandora2d.state_machine import Pandora2DMachine
-    from pandora2d import check_json, common
+    from pandora2d import check_configuration, common
 
     # path to save disparity maps
     path_ouput = "./res"
@@ -58,7 +58,7 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     disp_max_col = 2
 
     # check the configurations and sequences steps
-    pipeline_cfg = check_json.check_pipeline_section(user_pipeline_cfg, pandora2d_machine)
+    pipeline_cfg = check_configuration.check_pipeline_section(user_pipeline_cfg, pandora2d_machine)
 
     # prepare the machine
     pandora2d_machine.run_prepare(img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row)
