@@ -103,3 +103,27 @@ false_pipeline_disp_dict = {
         "refinement": {"refinement_method": "interpolation"},
         }
 }
+
+correct_ROI_sensor = {
+    "ROI":
+    {
+        "col": {"first": 10, "last": 100},
+        "row": {"first": 10, "last": 100}
+    }
+}
+
+false_ROI_sensor_negative = {
+    "ROI":
+    {
+        "col": {"first": -10, "last": 100},
+        "row": {"first": 10, "last": 100}
+    }
+}
+
+false_ROI_sensor_first_superior_to_last = {
+    "ROI":
+    {
+        "col": {"first": 110, "last": 100},
+        "row": {"first": 10, "last": 100}
+    }
+}

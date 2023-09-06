@@ -52,6 +52,7 @@ class TestCheckJson(unittest.TestCase):
 
         with pytest.raises(BaseException):
             check_configuration.check_input_section(common.false_input_disp)
+        with pytest.raises(BaseException):
             check_configuration.check_input_section(common.false_input_path_image)
 
     @staticmethod
@@ -66,4 +67,43 @@ class TestCheckJson(unittest.TestCase):
 
         with pytest.raises(BaseException):
             check_configuration.check_pipeline_section(common.false_pipeline_mc_dict, pandora2d_machine)
+        with pytest.raises(BaseException):
             check_configuration.check_pipeline_section(common.false_pipeline_disp_dict, pandora2d_machine)
+
+    @staticmethod
+    def test_check_roi_section() -> None:
+        """
+        Test function for checking user ROI section
+        """
+
+        # with a correct ROI check_roi_section should return nothing
+        assert check_configuration.check_roi_section(common.correct_ROI_sensor)
+
+        # if a dimension < 0 check_roi_section should raise BaseException error
+        with pytest.raises(BaseException):
+            check_configuration.check_roi_section(common.false_ROI_sensor_negative)
+        # if a dimension first > last check_roi_section should raise BaseException error
+        with pytest.raises(BaseException):
+            check_configuration.check_roi_section(common.false_ROI_sensor_first_superior_to_last)
+
+    @staticmethod
+    def test_get_roi_pipeline() -> None:
+        """
+        Test get_roi_pipeline function
+        """
+
+        assert common.correct_ROI_sensor == check_configuration.get_roi_config(common.correct_ROI_sensor)
+
+    @staticmethod
+    def test_check_roi_coherence() -> None:
+        """
+        Test check_roi_coherence function
+        """
+
+        # if first < last check_roi_coherence should return None
+        assert check_configuration.check_roi_coherence(common.correct_ROI_sensor["ROI"]["col"]) is None
+
+        # if first > last check_roi_coherence should raise SystemExit error
+        with pytest.raises(SystemExit):
+            check_configuration.check_roi_coherence(common.false_ROI_sensor_first_superior_to_last["ROI"]["col"])
+
