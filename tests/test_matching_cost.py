@@ -85,13 +85,37 @@ class TestMatchingCost(unittest.TestCase):
         """
         test check_conf of matching cost pipeline
         """
-        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5}) # type: ignore
+        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5})
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "census", "window_size": 5}) # type: ignore
+            matching_cost.MatchingCost(**{"matching_cost_method": "census", "window_size": 5})
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": -1}) # type: ignore
+            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": -1})
+
+    @staticmethod
+    def test_step_configuration():
+        """
+        Test step in matching_cost configuration
+        """
+
+        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3]})
+
+        # Test with a negative step : test should fail
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": [-2, 3]})
+
+        # Test with a one size list step : test should fail
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": [2]})
+
+        # Test with a three elements list step : test should fail
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3, 4]})
+
+        # Test with a str elements list step : test should fail
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": ["2", 3]})
 
     def test_compute_cv_ssd(self):
         """
