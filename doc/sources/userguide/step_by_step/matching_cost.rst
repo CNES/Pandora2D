@@ -23,14 +23,40 @@ Different measures of similarity are available in Pandora2D :
 
 Configuration and parameters
 ----------------------------
-+------------------------+------------------------------------+--------+---------------+----------------------------------------+----------+
-| Name                   | Description                        | Type   | Default value | Available value                        | Required |
-+========================+====================================+========+===============+========================================+==========+
-| *matching_cost_method* | Similarity measure                 | string |               | "ssd" , "sad", "zncc"                  | Yes      |
-+------------------------+------------------------------------+--------+---------------+----------------------------------------+----------+
-| *window_size*          | Window size for similarity measure | int    | 5             | > 0                                    | No       |
-+------------------------+------------------------------------+--------+---------------+----------------------------------------+----------+
 
+.. list-table:: Available parameters
+   :widths: 19 19 19 19 19 19
+   :header-rows: 1
+
+
+   * - Name
+     - Description
+     - Type
+     - Default value
+     - Available value
+     - Required
+   * - matching_cost_method
+     - Similarity measure
+     - str
+     -
+     - "ssd" , "sad", "zncc"
+     - Yes.
+   * - window_size
+     - Window size for similarity measure
+     - int
+     - 5
+     - > 0
+     - No
+   * - step
+     - Step [row, col] for computing similarity coefficient
+     - list[int, int]
+     - [1, 1]
+     - list[int >0, int >0]
+     - No
+
+
+.. note::
+    The order of steps should be [row, col].
 
 **Example**
 
@@ -48,6 +74,7 @@ Configuration and parameters
             {
                 "matching_cost_method": "ssd",
                 "window_size": 7,
+                "step" : [5, 5]
             }
             ...
         }
