@@ -65,13 +65,17 @@ Pandora2D works with JSON formatted data with the following nested structures.
         {
             ...
         },
+        "ROI":
+        {
+            ...
+        },
         "pipeline" :
         {
             ...
         }
     }
 
-All configuration parameters are described in :ref:`inputs` and :ref:`step_by_step` chapters.
+All configuration parameters are described in :ref:`inputs`, :ref:`roi` and :ref:`step_by_step` chapters.
 
 Example
 *******

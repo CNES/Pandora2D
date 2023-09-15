@@ -63,6 +63,33 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     return cfg
 
 
+def check_roi_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+    """
+    Complete and check if the dictionary is correct
+
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :return: cfg: global configuration
+    :rtype: cfg: dict
+    """
+    if not user_cfg:
+        return {}
+
+    # Add missing roi defaults values in user_cfg
+    cfg = update_conf({}, user_cfg)
+
+    # check schema
+    configuration_schema = {"ROI": roi_configuration_schema}
+    checker = Checker(configuration_schema)
+    checker.validate(cfg)
+
+    # check ROI configuration coherence
+    check_roi_coherence(cfg["ROI"]["col"])
+    check_roi_coherence(cfg["ROI"]["row"])
+
+    return cfg
+
+
 def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> Dict[str, dict]:
     """
     Check if the pipeline is correct by
@@ -110,6 +137,9 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
     user_cfg_input = get_config_input(user_cfg)
     cfg_input = check_input_section(user_cfg_input)
 
+    user_cfg_roi = get_roi_config(user_cfg)
+    cfg_roi = check_roi_section(user_cfg_roi)
+
     # check pipeline
     cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
 
@@ -119,7 +149,40 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
         logging.error("nodata_right must be int type with sad or ssd matching_cost_method (ex: 9999)")
         sys.exit(1)
 
-    cfg = concat_conf([cfg_input, cfg_pipeline])
+    cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline])
+
+    return cfg
+
+
+def check_roi_coherence(roi_cfg: dict) -> None:
+    """
+    Check that the first ROI coords are lower than the last.
+
+    :param roi_cfg: user configuration for ROI
+    :type roi_cfg: dict
+    :param dim: dimension row or col
+    :type dim: str
+    :rtype: None
+    """
+    if roi_cfg["first"] > roi_cfg["last"]:
+        logging.error("In ROI \"first\" should be lower than \"last\" in sensor ROI")
+        sys.exit(1)
+
+
+def get_roi_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+    """
+    Get the ROI configuration
+
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :return cfg: partial configuration
+    :rtype cfg: dict
+    """
+
+    cfg = {}
+
+    if "ROI" in user_cfg:
+        cfg["ROI"] = user_cfg["ROI"]
 
     return cfg
 
@@ -140,4 +203,9 @@ default_short_configuration_input = {
         "nodata_left": -9999,
         "nodata_right": -9999,
     }
+}
+
+roi_configuration_schema = {
+    "row": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},
+    "col": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},
 }
