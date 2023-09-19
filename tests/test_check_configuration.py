@@ -25,6 +25,7 @@ Test configuration
 """
 import unittest
 import pytest
+from json_checker import DictCheckerError
 
 from pandora2d import check_configuration
 from pandora2d.state_machine import Pandora2DMachine
@@ -107,3 +108,42 @@ class TestCheckJson(unittest.TestCase):
         with pytest.raises(SystemExit):
             check_configuration.check_roi_coherence(common.false_ROI_sensor_first_superior_to_last["ROI"]["col"])
 
+    def test_check_step(self) -> None:
+        """"
+        Test step configuration with user configuration dictionary
+        """
+        pandora2d_machine = Pandora2DMachine()
+
+        pipeline_cfg = common.correct_pipeline_dict
+
+        # Add correct step
+        pipeline_cfg["pipeline"]["matching_cost"]["step"] = [1, 1]
+        assert check_configuration.check_pipeline_section(pipeline_cfg, pandora2d_machine)
+
+        pandora2d_machine = Pandora2DMachine()
+
+        # Test with a one size list step : test should fail
+        pipeline_cfg["pipeline"]["matching_cost"]["step"] = [1]
+        with pytest.raises(DictCheckerError):
+            check_configuration.check_pipeline_section(pipeline_cfg, pandora2d_machine)
+
+        pandora2d_machine = Pandora2DMachine()
+
+        # Test with a negative step : test should fail
+        pipeline_cfg["pipeline"]["matching_cost"]["step"] = [-1, 1]
+        with pytest.raises(DictCheckerError):
+            check_configuration.check_pipeline_section(pipeline_cfg, pandora2d_machine)
+
+        pandora2d_machine = Pandora2DMachine()
+
+        # Test with a three elements list step : test should fail
+        pipeline_cfg["pipeline"]["matching_cost"]["step"] = [1, 1, 1]
+        with pytest.raises(DictCheckerError):
+            check_configuration.check_pipeline_section(pipeline_cfg, pandora2d_machine)
+
+        pandora2d_machine = Pandora2DMachine()
+
+        # Test with a str elements list step : test should fail
+        pipeline_cfg["pipeline"]["matching_cost"]["step"] = [1, "1"]
+        with pytest.raises(DictCheckerError):
+            check_configuration.check_pipeline_section(pipeline_cfg, pandora2d_machine)
