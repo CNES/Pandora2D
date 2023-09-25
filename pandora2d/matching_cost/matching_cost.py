@@ -23,7 +23,7 @@
 This module contains functions associated to the matching cost computation step.
 """
 import copy
-from typing import Dict
+from typing import Dict, List
 from json_checker import And, Checker
 
 import xarray as xr
@@ -55,6 +55,7 @@ class MatchingCost:
         self._matching_cost_method = self.cfg["matching_cost_method"]
         self._step_row = self.cfg["step"][0]
         self._step_col = self.cfg["step"][1]
+        self.cfg["margins"] = self.get_margins()
 
     def check_conf(self, **cfg: str) -> Dict[str, str]:
         """
@@ -80,6 +81,13 @@ class MatchingCost:
         checker.validate(cfg)
 
         return cfg
+
+    def get_margins(self) -> List[int]:
+        """
+        :return: a list with margins ["left", "up", "right", "down"]
+        :rtype: list
+        """
+        return [int((self._window_size - 1) / 2)] * 4
 
     @staticmethod
     def allocate_cost_volumes(
@@ -175,7 +183,9 @@ class MatchingCost:
         copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]  # type: ignore
 
         # Initialize Pandora matching cost
-        pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
+        pandora_matching_cost_ = matching_cost.AbstractMatchingCost(
+            **copy_matching_cost_cfg_with_step
+        )
         # Array with all y disparities
         disps_row = range(min_row, max_row + 1)
         for idx, disp_row in enumerate(disps_row):
