@@ -102,6 +102,10 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     setup_logging(verbose)
 
+    # get margins
+    if "ROI" in cfg:
+        cfg["ROI"]["margins"] = pandora2d_machine.get_global_margins()
+
     # read images
     img_left = read_img(cfg["input"]["img_left"], cfg["input"]["nodata_left"])
     img_right = read_img(cfg["input"]["img_right"], cfg["input"]["nodata_right"])

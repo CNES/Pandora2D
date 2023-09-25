@@ -55,7 +55,6 @@ class MatchingCost:
         self._matching_cost_method = self.cfg["matching_cost_method"]
         self._step_row = self.cfg["step"][0]
         self._step_col = self.cfg["step"][1]
-        self.cfg["margins"] = self.get_margins()
 
     def check_conf(self, **cfg: str) -> Dict[str, str]:
         """

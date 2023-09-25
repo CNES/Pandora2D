@@ -48,7 +48,6 @@ class Interpolation(refinement.AbstractRefinement):
         :return: None
         """
         self.cfg = self.check_conf(**cfg)
-        self.cfg["margins"] = self.get_margins()
 
     @staticmethod
     def check_conf(**cfg: str) -> Dict[str, str]:

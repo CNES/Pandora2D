@@ -56,6 +56,12 @@ class Pandora2DMachine(Machine):
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_check_conf"},
     ]
 
+    _transitions_margins = {
+        "matching_cost": {"type": "aggregate", "margins" : []},
+        "disparity": {"type": "aggregate", "margins" : []},
+        "refinement": {"type": "aggregate", "margins" : []}
+    }
+
     def __init__(
         self,
         img_left: xr.Dataset = None,
@@ -228,6 +234,23 @@ class Pandora2DMachine(Machine):
                 self.remove_transition(trans["trigger"])  # type: ignore
                 deleted_triggers.append(trans["trigger"])  # type: ignore
 
+    def get_global_margins(self):
+        """
+        Aggregation margins
+        """
+        aggregate_margins = [0, 0, 0, 0]
+        max_margins = [0, 0, 0, 0]
+        for _, cfg in self._transitions_margins.items():
+            step_margins = cfg["margins"]
+            type_margin = cfg["type"]
+            if type_margin == "aggregate":
+                aggregate_margins = [x + y for x, y in zip(aggregate_margins, step_margins)]
+            else:
+                max_margins = [max(x,y) for x, y in zip(max_margins, step_margins)]
+
+        return [max(x,y) for x, y in zip(max_margins, aggregate_margins)]
+
+
     def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the disparity computation configuration
@@ -241,6 +264,7 @@ class Pandora2DMachine(Machine):
 
         matching_cost_ = matching_cost.MatchingCost(**cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
+        self._transitions_margins["matching_cost"]["margins"] = matching_cost_.get_margins()
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -255,6 +279,7 @@ class Pandora2DMachine(Machine):
 
         disparity_ = disparity.Disparity(**cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
+        self._transitions_margins["disparity"]["margins"] = disparity_.get_margins()
 
     def refinement_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -269,6 +294,7 @@ class Pandora2DMachine(Machine):
 
         refinement_ = refinement.AbstractRefinement(**cfg["pipeline"][input_step])  # type: ignore
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
+        self._transitions_margins["refinement"]["margins"] = refinement_.get_margins()
 
     def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """

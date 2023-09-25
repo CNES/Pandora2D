@@ -40,7 +40,6 @@ class Disparity:
     def __init__(self, **cfg: str) -> None:
         self.cfg = self.check_conf(**cfg)
         self._invalid_disparity = self.cfg["invalid_disparity"]
-        self.cfg["margins"] = self.get_margins()
 
     def check_conf(self, **cfg: str) -> Dict[str, str]:
         """
