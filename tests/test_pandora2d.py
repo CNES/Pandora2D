@@ -83,4 +83,19 @@ class TestPandora2D(unittest.TestCase):
         assert pandora2d_machine.disp_min_col == -2
         assert pandora2d_machine.disp_max_col == 2
 
+    @staticmethod
+    def test_get_global_margins() -> None:
+        """
+        Test get_global_margins function
+        """
+
+        pandora2d_machine = state_machine.Pandora2DMachine()
+
+        pipeline_cfg = copy.deepcopy(common.correct_pipeline)
+        pandora2d_machine.check_conf(pipeline_cfg)
+        global_margin = pandora2d_machine.get_global_margins()
+
+        correct_global_margin = [2, 2, 2, 2]
+
+        assert global_margin == correct_global_margin
 
