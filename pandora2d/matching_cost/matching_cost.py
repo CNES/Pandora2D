@@ -73,7 +73,7 @@ class MatchingCost:
         schema = {
             "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc"]),
             "window_size": And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0),
-            "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y))
+            "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y)),
         }
 
         checker = Checker(schema)
@@ -90,14 +90,14 @@ class MatchingCost:
 
     @staticmethod
     def allocate_cost_volumes(
-            cost_volume_attr: dict,
-            row: np.array,
-            col: np.array,
-            disp_min_col: int,
-            disp_max_col: int,
-            disp_min_row: int,
-            disp_max_row: int,
-            np_data: np.ndarray = None,
+        cost_volume_attr: dict,
+        row: np.array,
+        col: np.array,
+        disp_min_col: int,
+        disp_max_col: int,
+        disp_min_row: int,
+        disp_max_row: int,
+        np_data: np.ndarray = None,
     ) -> xr.Dataset:
         """
         Allocate the cost volumes
@@ -140,14 +140,14 @@ class MatchingCost:
         return cost_volumes
 
     def compute_cost_volumes(
-            self,
-            img_left: xr.Dataset,
-            img_right: xr.Dataset,
-            min_col: int,
-            max_col: int,
-            min_row: int,
-            max_row: int,
-            **cfg: Dict[str, dict]
+        self,
+        img_left: xr.Dataset,
+        img_right: xr.Dataset,
+        min_col: int,
+        max_col: int,
+        min_row: int,
+        max_row: int,
+        **cfg: Dict[str, dict]
     ) -> xr.Dataset:
         """
 
@@ -182,9 +182,7 @@ class MatchingCost:
         copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]  # type: ignore
 
         # Initialize Pandora matching cost
-        pandora_matching_cost_ = matching_cost.AbstractMatchingCost(
-            **copy_matching_cost_cfg_with_step
-        )
+        pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
         # Array with all y disparities
         disps_row = range(min_row, max_row + 1)
         for idx, disp_row in enumerate(disps_row):

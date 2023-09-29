@@ -109,7 +109,7 @@ class TestCheckJson(unittest.TestCase):
             check_configuration.check_roi_coherence(common.false_ROI_sensor_first_superior_to_last["ROI"]["col"])
 
     def test_check_step(self) -> None:
-        """"
+        """
         Test step configuration with user configuration dictionary
         """
         pandora2d_machine = Pandora2DMachine()

@@ -69,12 +69,14 @@ def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
 
     return img_right_shift
 
+
 def get_roi_processing(
-    roi : dict,
+    roi: dict,
     disp_min_col: int,
     disp_max_col: int,
     disp_min_row: int,
-    disp_max_row: int) -> dict:
+    disp_max_row: int,
+) -> dict:
     """
     Return a roi which takes disparities into account
 

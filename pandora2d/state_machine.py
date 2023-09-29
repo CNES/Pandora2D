@@ -57,16 +57,15 @@ class Pandora2DMachine(Machine):
     ]
 
     _transitions_margins = {
-        "matching_cost": {"type": "aggregate", "margins" : []},
-        "disparity": {"type": "aggregate", "margins" : []},
-        "refinement": {"type": "maximum", "margins" : []}
+        "matching_cost": {"type": "aggregate", "margins": []},
+        "disparity": {"type": "aggregate", "margins": []},
+        "refinement": {"type": "maximum", "margins": []},
     }
 
     def __init__(
         self,
         img_left: xr.Dataset = None,
         img_right: xr.Dataset = None,
-
         disp_min_col: int = None,
         disp_max_col: int = None,
         disp_min_row: int = None,
@@ -176,9 +175,7 @@ class Pandora2DMachine(Machine):
             else:
                 self.trigger(input_step, cfg, input_step)
         except (MachineError, KeyError, AttributeError):
-            logging.error(
-                "Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step
-            )
+            logging.error("Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step)
             raise
 
     def run_exit(self) -> None:
@@ -248,8 +245,7 @@ class Pandora2DMachine(Machine):
             else:
                 max_margins = list(map(max, aggregate_margins, step_margins))
 
-        return [max(x,y) for x, y in zip(max_margins, aggregate_margins)]
-
+        return [max(x, y) for x, y in zip(max_margins, aggregate_margins)]
 
     def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """

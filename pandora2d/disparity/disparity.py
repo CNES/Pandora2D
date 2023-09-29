@@ -101,8 +101,9 @@ class Disparity:
             cv_chunked_col = np.array_split(cv_row, np.arange(100, cv_dims[0], 100), axis=1)
             col_begin = 0
             for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disps_min[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = \
-                    np.min(cv_col, axis=axis)
+                disps_min[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = np.min(
+                    cv_col, axis=axis
+                )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]
@@ -138,8 +139,9 @@ class Disparity:
             cv_chunked_col = np.array_split(cv_row, np.arange(100, cv_dims[0], 100), axis=1)
             col_begin = 0
             for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disps_max[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = \
-                    np.max(cv_col, axis=axis)
+                disps_max[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = np.max(
+                    cv_col, axis=axis
+                )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]
@@ -175,8 +177,9 @@ class Disparity:
             cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)
             col_begin = 0
             for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = \
-                    np.argmax(cv_col, axis=axis)
+                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = np.argmax(
+                    cv_col, axis=axis
+                )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]
@@ -212,8 +215,9 @@ class Disparity:
             cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)
             col_begin = 0
             for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = \
-                    np.argmin(cv_col, axis=axis)
+                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = np.argmin(
+                    cv_col, axis=axis
+                )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]

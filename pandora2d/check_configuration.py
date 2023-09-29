@@ -165,7 +165,7 @@ def check_roi_coherence(roi_cfg: dict) -> None:
     :rtype: None
     """
     if roi_cfg["first"] > roi_cfg["last"]:
-        logging.error("In ROI \"first\" should be lower than \"last\" in sensor ROI")
+        logging.error('In ROI "first" should be lower than "last" in sensor ROI')
         sys.exit(1)
 
 

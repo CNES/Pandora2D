@@ -64,21 +64,21 @@ correct_pipeline = {
     "pipeline": {
         "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
         "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-        "refinement": {"refinement_method": "interpolation"}
+        "refinement": {"refinement_method": "interpolation"},
     }
 }
 
 false_pipeline_mc = {
     "pipeline": {
         "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-        "refinement": {"refinement_method": "interpolation"}
+        "refinement": {"refinement_method": "interpolation"},
     }
 }
 
 false_pipeline_disp = {
     "pipeline": {
         "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
-        "refinement": {"refinement_method": "interpolation"}
+        "refinement": {"refinement_method": "interpolation"},
     }
 }
 
@@ -87,43 +87,40 @@ correct_pipeline_dict = {
         "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
         "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         "refinement": {"refinement_method": "interpolation"},
-        }
+    }
 }
 
 false_pipeline_mc_dict = {
     "pipeline": {
         "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         "refinement": {"refinement_method": "interpolation"},
-        }
+    }
 }
 
 false_pipeline_disp_dict = {
     "pipeline": {
         "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
         "refinement": {"refinement_method": "interpolation"},
-        }
+    }
 }
 
 correct_ROI_sensor = {
-    "ROI":
-    {
+    "ROI": {
         "col": {"first": 10, "last": 100},
-        "row": {"first": 10, "last": 100}
+        "row": {"first": 10, "last": 100},
     }
 }
 
 false_ROI_sensor_negative = {
-    "ROI":
-    {
+    "ROI": {
         "col": {"first": -10, "last": 100},
-        "row": {"first": 10, "last": 100}
+        "row": {"first": 10, "last": 100},
     }
 }
 
 false_ROI_sensor_first_superior_to_last = {
-    "ROI":
-    {
+    "ROI": {
         "col": {"first": 110, "last": 100},
-        "row": {"first": 10, "last": 100}
+        "row": {"first": 10, "last": 100},
     }
 }

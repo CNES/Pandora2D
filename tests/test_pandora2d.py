@@ -56,7 +56,7 @@ class TestPandora2D(unittest.TestCase):
         pandora2d_machine = state_machine.Pandora2DMachine()
 
         correct_cfg = copy.deepcopy(common.correct_pipeline)
-        pandora2d_machine.check_conf(correct_cfg) # type: ignore
+        pandora2d_machine.check_conf(correct_cfg)  # type: ignore
 
         false_cfg_mc = copy.deepcopy(common.false_pipeline_mc)
         false_cfg_disp = copy.deepcopy(common.false_pipeline_disp)
@@ -71,8 +71,10 @@ class TestPandora2D(unittest.TestCase):
         """
         pandora2d_machine = state_machine.Pandora2DMachine()
 
-        input_config = {"left": {"img": "./tests/data/left.png", "nodata": -9999},
-                        "right": {"img": "./tests/data/right.png", "nodata": -9999}}
+        input_config = {
+            "left": {"img": "./tests/data/left.png", "nodata": -9999},
+            "right": {"img": "./tests/data/right.png", "nodata": -9999},
+        }
         img_left = create_dataset_from_inputs(input_config=input_config["left"])
         img_right = create_dataset_from_inputs(input_config=input_config["right"])
 
@@ -100,4 +102,3 @@ class TestPandora2D(unittest.TestCase):
         correct_global_margin = [3, 3, 3, 3]
 
         assert global_margin == correct_global_margin
-
