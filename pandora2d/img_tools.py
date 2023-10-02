@@ -26,6 +26,7 @@ This module contains functions associated to raster images.
 
 import xarray as xr
 import numpy as np
+import copy
 
 from scipy.ndimage import shift
 
@@ -67,3 +68,38 @@ def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     img_right_shift["msk"].data[no_data_pixels] = int(img_right_shift.attrs["no_data_mask"])
 
     return img_right_shift
+
+def get_roi_processing(
+    roi : dict,
+    disp_min_col: int,
+    disp_max_col: int,
+    disp_min_row: int,
+    disp_max_row: int) -> dict:
+    """
+    Return a roi which takes disparities into account
+
+    :param roi: roi in config file
+
+        "col": {"first": <value - int>, "last": <value - int>},
+        "row": {"first": <value - int>, "last": <value - int>},
+        "margins": [<value - int>, <value - int>, <value - int>, <value - int>]
+        with margins : left, up, right, down
+
+    :type roi: Dict
+    :param disp_min_col: minimal disparity for columns
+    :type disp_min_col: int
+    :param disp_max_col: maximal disparity for columns
+    :type disp_max_col: int
+    :param disp_min_row: minimal disparity for lines
+    :type disp_min_row: int
+    :param disp_max_row: maximal disparity for lines
+    :type disp_max_row: int
+    """
+    new_roi = copy.deepcopy(roi)
+    
+    new_roi["margins"][0] = max(abs(disp_min_col), roi["margins"][0])
+    new_roi["margins"][1] = max(abs(disp_min_row), roi["margins"][1])
+    new_roi["margins"][2] = max(abs(disp_max_col), roi["margins"][2])
+    new_roi["margins"][3] = max(abs(disp_max_row), roi["margins"][3])
+
+    return new_roi

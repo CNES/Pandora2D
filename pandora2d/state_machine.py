@@ -240,7 +240,7 @@ class Pandora2DMachine(Machine):
         """
         aggregate_margins = [0, 0, 0, 0]
         max_margins = [0, 0, 0, 0]
-        for _, cfg in self._transitions_margins.items():
+        for cfg in self._transitions_margins.values():
             step_margins = cfg["margins"]
             type_margin = cfg["type"]
             if type_margin == "aggregate":

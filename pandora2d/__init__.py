@@ -26,10 +26,11 @@ This module contains functions to run Pandora pipeline.
 from typing import Dict
 import xarray as xr
 
-from pandora import read_config_file, read_img, setup_logging
-from pandora.common import save_config
+from pandora import read_config_file, create_dataset_from_inputs, setup_logging
+from pandora.common import save_config, split_inputs
 
 from pandora2d import check_configuration, common
+from pandora2d.img_tools import get_roi_processing
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -102,19 +103,22 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     setup_logging(verbose)
 
-    # get margins
-    if "ROI" in cfg:
-        cfg["ROI"]["margins"] = pandora2d_machine.get_global_margins()
-
-    # read images
-    img_left = read_img(cfg["input"]["img_left"], cfg["input"]["nodata_left"])
-    img_right = read_img(cfg["input"]["img_right"], cfg["input"]["nodata_right"])
-
     # read disparities values
     disp_min_col = cfg["input"]["disp_min_col"]
     disp_max_col = cfg["input"]["disp_max_col"]
     disp_min_row = cfg["input"]["disp_min_row"]
     disp_max_row = cfg["input"]["disp_max_row"]
+
+    # check roi in user configuration
+    roi = None
+    if "ROI" in cfg:
+        cfg["ROI"]["margins"] = pandora2d_machine.get_global_margins()
+        roi = get_roi_processing(cfg["ROI"], disp_min_col, disp_max_col, disp_min_row, disp_max_row)
+
+    # read images
+    input_config = split_inputs(cfg["input"])
+    img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=roi)
+    img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=roi)
 
     # run pandora 2D and store disp maps in a dataset
     dataset_disp_maps = run(
