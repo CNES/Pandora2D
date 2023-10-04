@@ -271,7 +271,7 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-        matching_cost_ = matching_cost.MatchingCost(**cfg["pipeline"][input_step])
+        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
         self._transitions_margins["matching_cost"]["margins"] = matching_cost_.get_margins()
 
@@ -286,7 +286,7 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-        disparity_ = disparity.Disparity(**cfg["pipeline"][input_step])
+        disparity_ = disparity.Disparity(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
         self._transitions_margins["disparity"]["margins"] = disparity_.get_margins()
 
@@ -301,7 +301,7 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-        refinement_ = refinement.AbstractRefinement(**cfg["pipeline"][input_step])  # type: ignore
+        refinement_ = refinement.AbstractRefinement(cfg["pipeline"][input_step])  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
         self._transitions_margins["refinement"]["margins"] = refinement_.get_margins()
 
@@ -317,7 +317,7 @@ class Pandora2DMachine(Machine):
         """
 
         logging.info("Matching cost computation...")
-        matching_cost_run = matching_cost.MatchingCost(**cfg["pipeline"][input_step])
+        matching_cost_run = matching_cost.MatchingCost(cfg["pipeline"][input_step])
 
         self.cost_volumes = matching_cost_run.compute_cost_volumes(
             self.left_img,
@@ -326,7 +326,7 @@ class Pandora2DMachine(Machine):
             self.disp_max_col,
             self.disp_min_row,
             self.disp_max_row,
-            **cfg["pipeline"][input_step]
+            cfg["pipeline"][input_step],
         )
 
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:
@@ -341,7 +341,7 @@ class Pandora2DMachine(Machine):
         """
 
         logging.info("Disparity computation...")
-        disparity_run = disparity.Disparity(**cfg["pipeline"][input_step])
+        disparity_run = disparity.Disparity(cfg["pipeline"][input_step])
 
         map_col, map_row = disparity_run.compute_disp_maps(self.cost_volumes)
         self.dataset_disp_maps = common.dataset_disp_maps(map_row, map_col)
@@ -358,7 +358,7 @@ class Pandora2DMachine(Machine):
         """
 
         logging.info("Refinement computation...")
-        refinement_run = refinement.AbstractRefinement(**cfg["pipeline"][input_step])  # type: ignore
+        refinement_run = refinement.AbstractRefinement(cfg["pipeline"][input_step])  # type: ignore[abstract]
 
         refine_map_col, refine_map_row = refinement_run.refinement_method(self.cost_volumes, self.dataset_disp_maps)
         self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col)

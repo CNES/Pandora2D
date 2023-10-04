@@ -37,11 +37,11 @@ class Disparity:
 
     _INVALID_DISPARITY = -9999
 
-    def __init__(self, **cfg: Dict) -> None:
-        self.cfg = self.check_conf(**cfg)
+    def __init__(self, cfg: Dict) -> None:
+        self.cfg = self.check_conf(cfg)
         self._invalid_disparity = self.cfg["invalid_disparity"]
 
-    def check_conf(self, **cfg: Dict) -> Dict:
+    def check_conf(self, cfg: Dict) -> Dict:
         """
         Check the disparity configuration
 
@@ -50,7 +50,7 @@ class Disparity:
         """
         # Give the default value if the required element is not in the configuration
         if "invalid_disparity" not in cfg:
-            cfg["invalid_disparity"] = self._INVALID_DISPARITY  # type: ignore
+            cfg["invalid_disparity"] = self._INVALID_DISPARITY
         elif cfg["invalid_disparity"] == "NaN":
             cfg["invalid_disparity"] = np.nan
 

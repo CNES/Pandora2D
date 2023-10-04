@@ -22,7 +22,7 @@
 """
 This module contains functions associated to the refinement computation step.
 """
-
+from __future__ import annotations
 import logging
 from typing import Dict, Tuple, List
 from abc import abstractmethod, ABCMeta
@@ -42,7 +42,9 @@ class AbstractRefinement:
     _refinement_method = None
     cfg = None
 
-    def __new__(cls, **cfg: Dict):
+    # If we don't make cfg optional, we got this error when we use subprocesses in refinement_method :
+    # AbstractRefinement.__new__() missing 1 required positional argument: 'cfg'
+    def __new__(cls, cfg: dict | None = None):
         """
         Return the plugin associated with the refinement_method given in the configuration
 

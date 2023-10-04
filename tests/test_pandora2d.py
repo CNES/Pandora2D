@@ -56,13 +56,13 @@ class TestPandora2D(unittest.TestCase):
         pandora2d_machine = state_machine.Pandora2DMachine()
 
         correct_cfg = copy.deepcopy(common.correct_pipeline)
-        pandora2d_machine.check_conf(correct_cfg)  # type: ignore
+        pandora2d_machine.check_conf(correct_cfg)
 
         false_cfg_mc = copy.deepcopy(common.false_pipeline_mc)
         false_cfg_disp = copy.deepcopy(common.false_pipeline_disp)
         with pytest.raises(MachineError):
-            pandora2d_machine.check_conf(false_cfg_mc)  # type: ignore
-            pandora2d_machine.check_conf(false_cfg_disp)  # type: ignore
+            pandora2d_machine.check_conf(false_cfg_mc)
+            pandora2d_machine.check_conf(false_cfg_disp)
 
     @staticmethod
     def test_run_prepare() -> None:

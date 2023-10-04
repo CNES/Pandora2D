@@ -42,7 +42,7 @@ class MatchingCost:
     _WINDOW_SIZE = 5
     _STEP = [1, 1]
 
-    def __init__(self, **cfg: Dict) -> None:
+    def __init__(self, cfg: Dict) -> None:
         """
         Initialisation of matching_cost class
 
@@ -50,13 +50,13 @@ class MatchingCost:
         :type cfg: dict
         :return: None
         """
-        self.cfg = self.check_conf(**cfg)
+        self.cfg = self.check_conf(cfg)
         self._window_size = int(self.cfg["window_size"])
         self._matching_cost_method = self.cfg["matching_cost_method"]
         self._step_row = self.cfg["step"][0]
         self._step_col = self.cfg["step"][1]
 
-    def check_conf(self, **cfg: Dict) -> Dict[str, str]:
+    def check_conf(self, cfg: Dict) -> Dict[str, str]:
         """
         Check the matching cost configuration
 
@@ -66,9 +66,9 @@ class MatchingCost:
         :rtype: cfg: dict
         """
         if "window_size" not in cfg:
-            cfg["window_size"] = self._WINDOW_SIZE  # type: ignore
+            cfg["window_size"] = self._WINDOW_SIZE
         if "step" not in cfg:
-            cfg["step"] = self._STEP  # type: ignore
+            cfg["step"] = self._STEP
 
         schema = {
             "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc"]),
@@ -147,7 +147,7 @@ class MatchingCost:
         max_col: int,
         min_row: int,
         max_row: int,
-        **cfg: Dict
+        cfg: Dict,
     ) -> xr.Dataset:
         """
 
@@ -179,7 +179,7 @@ class MatchingCost:
 
         # Adapt Pandora matching cost configuration
         copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
-        copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]  # type: ignore
+        copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]
 
         # Initialize Pandora matching cost
         pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)

@@ -41,16 +41,16 @@ class Interpolation(refinement.AbstractRefinement):
     Interpolation class allows to perform the subpixel cost refinement step
     """
 
-    def __init__(self, **cfg: Dict) -> None:
+    def __init__(self, cfg: Dict) -> None:
         """
         :param cfg: optional configuration, {}
         :type cfg: dict
         :return: None
         """
-        self.cfg = self.check_conf(**cfg)
+        self.cfg = self.check_conf(cfg)
 
     @staticmethod
-    def check_conf(**cfg: Dict) -> Dict:
+    def check_conf(cfg: Dict) -> Dict:
         """
         Check the refinement configuration
 
