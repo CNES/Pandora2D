@@ -24,6 +24,8 @@
 Test configuration
 """
 import unittest
+from typing import Any, Dict
+
 import pytest
 from json_checker import DictCheckerError
 
@@ -114,7 +116,7 @@ class TestCheckJson(unittest.TestCase):
         """
         pandora2d_machine = Pandora2DMachine()
 
-        pipeline_cfg = common.correct_pipeline_dict
+        pipeline_cfg: Dict[str, Dict[str, Any]] = common.correct_pipeline_dict
 
         # Add correct step
         pipeline_cfg["pipeline"]["matching_cost"]["step"] = [1, 1]

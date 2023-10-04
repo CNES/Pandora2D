@@ -23,20 +23,33 @@
 This module contains class associated to the pandora state machine
 """
 
-
-from typing import Dict
+from typing import Dict, TYPE_CHECKING, List, TypedDict
 import logging
 from operator import add
 import xarray as xr
 
 try:
     import graphviz  # pylint: disable=unused-import
-    from transitions.extensions import GraphMachine as Machine
+
+    # In order de avoid this message from Mypy:
+    # Incompatible import of "Machine" \
+    # (imported name has type "type[Machine]", local name has type "type[GraphMachine]")
+    if TYPE_CHECKING:  # Mypy sees this:
+        from transitions import Machine
+    else:  # But we actually do this:
+        from transitions.extensions import GraphMachine as Machine
 except ImportError:
     from transitions import Machine
 from transitions import MachineError
 
 from pandora2d import matching_cost, disparity, refinement, common
+
+
+class MarginsProperties(TypedDict):
+    """Properties of Margins used in Margins transitions."""
+
+    type: str
+    margins: List[int]
 
 
 class Pandora2DMachine(Machine):
@@ -56,7 +69,7 @@ class Pandora2DMachine(Machine):
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_check_conf"},
     ]
 
-    _transitions_margins = {
+    _transitions_margins: Dict[str, MarginsProperties] = {
         "matching_cost": {"type": "aggregate", "margins": []},
         "disparity": {"type": "aggregate", "margins": []},
         "refinement": {"type": "maximum", "margins": []},

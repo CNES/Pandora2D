@@ -41,7 +41,7 @@ class Interpolation(refinement.AbstractRefinement):
     Interpolation class allows to perform the subpixel cost refinement step
     """
 
-    def __init__(self, **cfg: str) -> None:
+    def __init__(self, **cfg: Dict) -> None:
         """
         :param cfg: optional configuration, {}
         :type cfg: dict
@@ -50,7 +50,7 @@ class Interpolation(refinement.AbstractRefinement):
         self.cfg = self.check_conf(**cfg)
 
     @staticmethod
-    def check_conf(**cfg: str) -> Dict[str, str]:
+    def check_conf(**cfg: Dict) -> Dict:
         """
         Check the refinement configuration
 
@@ -82,7 +82,7 @@ class Interpolation(refinement.AbstractRefinement):
         return [int(k)] * 4
 
     @staticmethod
-    def wrapper_interp2d(params: np.array, func: interp2d) -> np.array:
+    def wrapper_interp2d(params: np.ndarray, func: interp2d) -> np.ndarray:
         """
         Unpack tuple of arguments from minimize to fit in interp2d
         :param params: points coordinates
@@ -156,7 +156,7 @@ class Interpolation(refinement.AbstractRefinement):
 
         return res
 
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.array, np.array]:
+    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute refine disparity maps
         :param cost_volumes: Cost_volumes has (row, col, disp_col, disp_row) dimensions

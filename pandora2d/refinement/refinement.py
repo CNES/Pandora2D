@@ -42,7 +42,7 @@ class AbstractRefinement:
     _refinement_method = None
     cfg = None
 
-    def __new__(cls, **cfg: dict):
+    def __new__(cls, **cfg: Dict):
         """
         Return the plugin associated with the refinement_method given in the configuration
 
@@ -104,7 +104,7 @@ class AbstractRefinement:
         return decorator
 
     @abstractmethod
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.array, np.array]:
+    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 
@@ -113,5 +113,5 @@ class AbstractRefinement:
         :param pixel_maps: pixels disparity maps
         :type pixel_maps: xarray.dataset
         :return: the refined disparity maps
-        :rtype: Tuple[np.array, np.array]
+        :rtype: Tuple[np.ndarray, np.ndarray]
         """

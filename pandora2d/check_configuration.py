@@ -154,7 +154,7 @@ def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -
     return cfg
 
 
-def check_roi_coherence(roi_cfg: dict) -> None:
+def check_roi_coherence(roi_cfg: dict):
     """
     Check that the first ROI coords are lower than the last.
 
@@ -162,7 +162,6 @@ def check_roi_coherence(roi_cfg: dict) -> None:
     :type roi_cfg: dict
     :param dim: dimension row or col
     :type dim: str
-    :rtype: None
     """
     if roi_cfg["first"] > roi_cfg["last"]:
         logging.error('In ROI "first" should be lower than "last" in sensor ROI')

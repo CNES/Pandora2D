@@ -42,7 +42,7 @@ class MatchingCost:
     _WINDOW_SIZE = 5
     _STEP = [1, 1]
 
-    def __init__(self, **cfg: str) -> None:
+    def __init__(self, **cfg: Dict) -> None:
         """
         Initialisation of matching_cost class
 
@@ -51,12 +51,12 @@ class MatchingCost:
         :return: None
         """
         self.cfg = self.check_conf(**cfg)
-        self._window_size = self.cfg["window_size"]
+        self._window_size = int(self.cfg["window_size"])
         self._matching_cost_method = self.cfg["matching_cost_method"]
         self._step_row = self.cfg["step"][0]
         self._step_col = self.cfg["step"][1]
 
-    def check_conf(self, **cfg: str) -> Dict[str, str]:
+    def check_conf(self, **cfg: Dict) -> Dict[str, str]:
         """
         Check the matching cost configuration
 
@@ -91,8 +91,8 @@ class MatchingCost:
     @staticmethod
     def allocate_cost_volumes(
         cost_volume_attr: dict,
-        row: np.array,
-        col: np.array,
+        row: np.ndarray,
+        col: np.ndarray,
         disp_min_col: int,
         disp_max_col: int,
         disp_min_row: int,
@@ -105,9 +105,9 @@ class MatchingCost:
         :param cost_volume_attr: the cost_volume's attributs product by Pandora
         :type cost_volume: xr.Dataset
         :param row: dimension of the image (row)
-        :type row: np.array
+        :type row: np.ndarray
         :param col: dimension of the image (columns)
-        :type col: np.array
+        :type col: np.ndarray
         :param disp_min_col: minimum disparity in columns
         :type disp_min_col: int
         :param disp_max_col: maximum disparity in columns
@@ -116,7 +116,7 @@ class MatchingCost:
         :type disp_min_row: int
         :param disp_max_row: maximum disparity in lines
         :type disp_max_row: int
-        :param np_data: 4D numpy.array og cost_volumes. Defaults to None.
+        :param np_data: 4D numpy.ndarray og cost_volumes. Defaults to None.
         :type np_data: np.ndarray
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
@@ -147,7 +147,7 @@ class MatchingCost:
         max_col: int,
         min_row: int,
         max_row: int,
-        **cfg: Dict[str, dict]
+        **cfg: Dict
     ) -> xr.Dataset:
         """
 
