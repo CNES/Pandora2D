@@ -31,8 +31,11 @@ import xarray as xr
 import pytest
 import json_checker
 from rasterio import Affine
+from skimage.io import imsave
 
 from pandora2d import matching_cost
+from pandora.common import split_inputs
+from pandora.img_tools import create_dataset_from_inputs
 
 
 class TestMatchingCost(unittest.TestCase):
@@ -350,3 +353,82 @@ class TestMatchingCost(unittest.TestCase):
         # check that the generated xarray dataset is equal to the ground truth
         np.testing.assert_array_equal(cost_volumes_fun["cost_volumes"].data, cost_volumes_test["cost_volumes"].data)
         assert cost_volumes_fun.attrs == cost_volumes_test.attrs
+
+
+class TestMatchingCostWithRoi:
+    """Test using roi in pandora2d processing"""
+
+    @pytest.fixture()
+    def left_image(self, tmp_path):
+        """
+        Create a fake image to test roi configuration
+        """
+        image_path = tmp_path / "left_img.png"
+        data = np.array(
+            ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1]]),
+            dtype=np.uint8,
+        )
+        imsave(image_path, data)
+        
+        return image_path
+
+    @pytest.fixture()
+    def right_image(self, tmp_path):
+        """
+        Create a fake image to test roi configuration
+        """
+        image_path = tmp_path / "right_img.png"
+        data = np.array(
+            ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
+            dtype=np.uint8,
+        )
+        imsave(image_path, data)
+        
+        return image_path
+    
+    @staticmethod
+    def test_roi_inside_and_margins_inside(left_image, right_image):
+        """"
+        Test the pandora2d matching cost with roi inside the image
+        """
+        # input configuration
+        input_cfg = {
+            "input": {
+                "img_left": left_image,
+                "img_right": right_image,
+                "nodata_left": -9999,
+                "nodata_right": -9999,
+                "disp_min_col": 0,
+                "disp_max_col": 1,
+                "disp_min_row": -1,
+                "disp_max_row": 0,
+            }
+        }
+        # read images
+        input_config = split_inputs(input_cfg["input"])
+        img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=None)
+        img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=None)
+
+        # Matching cost configuration
+        cfg = {"matching_cost_method": "zncc", "window_size": 3}
+        # initialise matching cost
+        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
+
+        # compute cost volumes
+        zncc = matching_cost_matcher.compute_cost_volumes(
+            img_left=img_left, img_right=img_right, min_col=0, max_col=1, min_row=-1, max_row=0, **cfg
+        ) # type: ignore
+
+        # crop image with roi
+        roi = {"col": {"first": 2, "last": 3}, "row": {"first": 2, "last": 3}, "margins": [1, 2, 1, 1]}
+        img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=roi)
+        img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=roi)
+
+        # compute cost volumes with roi
+        zncc_roi = matching_cost_matcher.compute_cost_volumes(
+            img_left=img_left, img_right=img_right, min_col=0, max_col=1, min_row=-1, max_row=0, **cfg
+        ) # type: ignore
+
+        assert zncc["cost_volumes"].data.shape == (5, 5, 2, 2)
+        assert zncc_roi["cost_volumes"].data.shape == (5, 4, 2, 2)
+        np.testing.assert_array_equal(zncc["cost_volumes"].data[2:4,2:4,:,:], zncc_roi["cost_volumes"].data[2:4,1:3,:,:])
