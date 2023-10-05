@@ -30,7 +30,7 @@ import pytest
 
 
 from transitions.core import MachineError
-from pandora import read_img
+from pandora import create_dataset_from_inputs
 
 from tests import common
 from pandora2d import state_machine
@@ -71,8 +71,10 @@ class TestPandora2D(unittest.TestCase):
         """
         pandora2d_machine = state_machine.Pandora2DMachine()
 
-        img_left = read_img("./tests/data/left.png", -9999)
-        img_right = read_img("./tests/data/right.png", -9999)
+        input_config = {"left": {"img": "./tests/data/left.png", "nodata": -9999},
+                        "right": {"img": "./tests/data/right.png", "nodata": -9999}}
+        img_left = create_dataset_from_inputs(input_config=input_config["left"])
+        img_right = create_dataset_from_inputs(input_config=input_config["right"])
 
         pandora2d_machine.run_prepare(img_left, img_right, -2, 2, -2, 2)
 
