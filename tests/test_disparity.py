@@ -24,6 +24,9 @@
 Test Disparity class
 """
 
+# Remove this with use of fixtures
+# pylint: disable=duplicate-code
+
 import unittest
 import pytest
 import numpy as np

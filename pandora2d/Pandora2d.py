@@ -23,6 +23,10 @@
 This module contains the general function to run Pandora 2D pipeline.
 """
 
+# Disable following error:
+# Module name "Pandora2d" doesn't conform to snake_case naming style
+# pylint: disable=invalid-name
+
 import argparse
 
 import pandora2d

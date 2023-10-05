@@ -24,6 +24,9 @@
 Test Matching cost class
 """
 
+# Remove this with use of fixtures
+# pylint: disable=duplicate-code
+
 import unittest
 
 import numpy as np
@@ -33,9 +36,9 @@ import json_checker
 from rasterio import Affine
 from skimage.io import imsave
 
-from pandora2d import matching_cost
 from pandora.common import split_inputs
 from pandora.img_tools import create_dataset_from_inputs
+from pandora2d import matching_cost
 
 
 class TestMatchingCost(unittest.TestCase):
