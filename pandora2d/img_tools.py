@@ -24,9 +24,9 @@ This module contains functions associated to raster images.
 """
 
 
+import copy
 import xarray as xr
 import numpy as np
-import copy
 
 from scipy.ndimage import shift
 
@@ -96,7 +96,7 @@ def get_roi_processing(
     :type disp_max_row: int
     """
     new_roi = copy.deepcopy(roi)
-    
+
     new_roi["margins"][0] = max(abs(disp_min_col), roi["margins"][0])
     new_roi["margins"][1] = max(abs(disp_min_row), roi["margins"][1])
     new_roi["margins"][2] = max(abs(disp_max_col), roi["margins"][2])

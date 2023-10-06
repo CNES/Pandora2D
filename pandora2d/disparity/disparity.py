@@ -69,7 +69,7 @@ class Disparity:
         :return: a list with margins ["left", "up", "right", "down"]
         :rtype: list
         """
-        return [int(0)] * 4
+        return [0] * 4
 
     @staticmethod
     def min_split(cost_volumes: xr.Dataset, axis: int) -> np.ndarray:

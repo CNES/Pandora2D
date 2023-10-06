@@ -75,10 +75,11 @@ class Interpolation(refinement.AbstractRefinement):
         :rtype: list
         """
 
-        # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html#scipy.interpolate.interp2d
-        # The minimum number of data points required along the interpolation axis is (k+1)**2, 
+        # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html#scipy.
+        # interpolate.interp2d
+        # The minimum number of data points required along the interpolation axis is (k+1)**2,
         # with k=1 for linear, k=3 for cubic and k=5 for quintic interpolation.
-        k = 3 # cubic kernel 
+        k = 3 # cubic kernel
         return [int(k)] * 4
 
     @staticmethod

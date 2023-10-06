@@ -26,7 +26,7 @@ This module contains class associated to the pandora state machine
 
 from typing import Dict
 import logging
-
+from operator import add
 import xarray as xr
 
 try:
@@ -244,9 +244,9 @@ class Pandora2DMachine(Machine):
             step_margins = cfg["margins"]
             type_margin = cfg["type"]
             if type_margin == "aggregate":
-                aggregate_margins = [x + y for x, y in zip(aggregate_margins, step_margins)]
+                aggregate_margins = list(map(add, aggregate_margins, step_margins))
             else:
-                max_margins = [max(x,y) for x, y in zip(max_margins, step_margins)]
+                max_margins = list(map(max, aggregate_margins, step_margins))
 
         return [max(x,y) for x, y in zip(max_margins, aggregate_margins)]
 
