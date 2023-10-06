@@ -134,13 +134,13 @@ class TestDisparity(unittest.TestCase):
         """
         test get_margins of matching cost pipeline
         """
+        gt = [0, 0, 0, 0]
         _disparity = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999})
 
-        gt = [0, 0, 0, 0]
         d_margins = _disparity.get_margins()
         
         assert len(d_margins) == len(gt)
-        assert all([a == b for a, b in zip(d_margins, gt)])
+        assert all(a == b for a, b in zip(d_margins, gt))
 
     def test_min_split(self):
         """

@@ -53,13 +53,13 @@ class TestRefinement(unittest.TestCase):
         """
         test get_margins of matching cost pipeline
         """
+        gt = [3, 3, 3, 3] # cubic kernel
         _refinement = refinement.AbstractRefinement(**{"refinement_method": "interpolation"})
 
-        gt = [3, 3, 3, 3] # cubic kernel
         r_margins = _refinement.get_margins()
         
         assert len(r_margins) == len(gt)
-        assert all([a == b for a, b in zip(r_margins, gt)])
+        assert all(a == b for a, b in zip(r_margins, gt))
 
     @staticmethod
     def test_refinement_method_subpixel():

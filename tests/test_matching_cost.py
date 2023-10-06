@@ -98,13 +98,13 @@ class TestMatchingCost(unittest.TestCase):
         """
         test get_margins of matching cost pipeline
         """
+        gt = [2, 2, 2, 2]
         _matching_cost = matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5})
 
-        gt = [2, 2, 2, 2]
         mc_margins = _matching_cost.get_margins()
         
         assert len(mc_margins) == len(gt)
-        assert all([a == b for a, b in zip(mc_margins, gt)])
+        assert all(a == b for a, b in zip(mc_margins, gt))
 
     @staticmethod
     def test_step_configuration():
