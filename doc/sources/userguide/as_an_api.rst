@@ -9,7 +9,8 @@ Pandora2D provides a full python API which can be used to compute disparity maps
 .. sourcecode:: python
 
     import pandora
-    from pandora.img_tools import read_img
+    from pandora.img_tools import create_dataset_from_inputs
+    from pandora.common import split_inputs
 
     import pandora2d
     from pandora2d.state_machine import Pandora2DMachine
@@ -23,11 +24,19 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     img_right_path = "data/right.tif"
 
     # image configuration
-    image_cfg = {'image': {'no_data_left': np.nan, 'no_data_right': np.nan}}
+    image_cfg = {
+        'input': {
+            'img_left': img_left_path,
+            'img_right': img_right_path,
+            'nodata_left': np.nan,
+            'nodata_right': np.nan
+        }
+    }
 
     # read images
-    img_left = read_img(img_left_path, no_data=image_cfg['image']['no_data_left'])
-    img_right = read_img(img_right_path, no_data=image_cfg['image']['no_data_right'])
+    input_config = split_inputs(image_cfg["input"])
+    img_left = create_dataset_from_inputs(input_config=input_config["left"])
+    img_right = create_dataset_from_inputs(input_config=input_config["right"])
 
     # instanciate Pandora2D Machine
     pandora2d_machine = Pandora2DMachine()
