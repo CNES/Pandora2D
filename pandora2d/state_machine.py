@@ -59,7 +59,7 @@ class Pandora2DMachine(Machine):
     _transitions_margins = {
         "matching_cost": {"type": "aggregate", "margins" : []},
         "disparity": {"type": "aggregate", "margins" : []},
-        "refinement": {"type": "aggregate", "margins" : []}
+        "refinement": {"type": "maximum", "margins" : []}
     }
 
     def __init__(

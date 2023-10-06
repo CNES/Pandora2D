@@ -97,7 +97,7 @@ class TestPandora2D(unittest.TestCase):
         pandora2d_machine.check_conf(pipeline_cfg)
         global_margin = pandora2d_machine.get_global_margins()
 
-        correct_global_margin = [2, 2, 2, 2]
+        correct_global_margin = [3, 3, 3, 3]
 
         assert global_margin == correct_global_margin
 
