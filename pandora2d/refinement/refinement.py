@@ -24,7 +24,7 @@ This module contains functions associated to the refinement computation step.
 """
 
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 from abc import abstractmethod, ABCMeta
 
 import xarray as xr
@@ -74,6 +74,13 @@ class AbstractRefinement:
         else:
             return super(AbstractRefinement, cls).__new__(cls)
         return None
+
+    @abstractmethod
+    def get_margins(self) -> List[int]:
+        """
+        :return: a list with margins ["left", "up", "right", "down"]
+        :rtype: list
+        """
 
     @classmethod
     def register_subclass(cls, short_name: str):

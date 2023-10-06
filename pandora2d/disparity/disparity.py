@@ -23,7 +23,7 @@
 This module contains functions associated to the disparity map computation step.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 from json_checker import Or, And, Checker
 
 import numpy as np
@@ -63,6 +63,13 @@ class Disparity:
         checker.validate(cfg)
 
         return cfg
+
+    def get_margins(self) -> List[int]:
+        """
+        :return: a list with margins ["left", "up", "right", "down"]
+        :rtype: list
+        """
+        return [int(0)] * 4
 
     @staticmethod
     def min_split(cost_volumes: xr.Dataset, axis: int) -> np.ndarray:

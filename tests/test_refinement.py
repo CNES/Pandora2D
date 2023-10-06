@@ -49,6 +49,19 @@ class TestRefinement(unittest.TestCase):
             refinement.AbstractRefinement(**{"refinement_method": "wta"}) # type: ignore
 
     @staticmethod
+    def test_get_margins():
+        """
+        test get_margins of matching cost pipeline
+        """
+        gt = [3, 3, 3, 3] # cubic kernel
+        _refinement = refinement.AbstractRefinement(**{"refinement_method": "interpolation"})
+
+        r_margins = _refinement.get_margins()
+        
+        assert len(r_margins) == len(gt)
+        assert all(a == b for a, b in zip(r_margins, gt))
+
+    @staticmethod
     def test_refinement_method_subpixel():
         """
         test refinement

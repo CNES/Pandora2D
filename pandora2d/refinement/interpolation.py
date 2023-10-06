@@ -24,7 +24,7 @@ This module contains functions associated to the interpolation method used in th
 """
 
 import multiprocessing
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 from json_checker import And, Checker
 
 from scipy.interpolate import interp2d
@@ -68,6 +68,18 @@ class Interpolation(refinement.AbstractRefinement):
         checker.validate(cfg)
 
         return cfg
+
+    def get_margins(self) -> List[int]:
+        """
+        :return: a list with margins ["left", "up", "right", "down"]
+        :rtype: list
+        """
+
+        # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html#scipy.interpolate.interp2d
+        # The minimum number of data points required along the interpolation axis is (k+1)**2, 
+        # with k=1 for linear, k=3 for cubic and k=5 for quintic interpolation.
+        k = 3 # cubic kernel 
+        return [int(k)] * 4
 
     @staticmethod
     def wrapper_interp2d(params: np.array, func: interp2d) -> np.array:
