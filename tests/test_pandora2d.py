@@ -78,14 +78,12 @@ class TestPandora2D(unittest.TestCase):
         img_left = create_dataset_from_inputs(input_config=input_config["left"])
         img_right = create_dataset_from_inputs(input_config=input_config["right"])
 
-        pandora2d_machine.run_prepare(img_left, img_right, -2, 2, -2, 2)
+        pandora2d_machine.run_prepare(img_left, img_right, col_disparity=[-2, 2], row_disparity=[-2, 2])
 
         assert pandora2d_machine.left_img == img_left
         assert pandora2d_machine.right_img == img_right
-        assert pandora2d_machine.disp_min_row == -2
-        assert pandora2d_machine.disp_max_row == 2
-        assert pandora2d_machine.disp_min_col == -2
-        assert pandora2d_machine.disp_max_col == 2
+        assert pandora2d_machine.col_disparity == [-2, 2]
+        assert pandora2d_machine.row_disparity == [-2, 2]
 
     @staticmethod
     def test_get_global_margins() -> None:

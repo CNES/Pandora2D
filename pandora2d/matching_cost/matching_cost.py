@@ -93,10 +93,8 @@ class MatchingCost:
         cost_volume_attr: dict,
         row: np.ndarray,
         col: np.ndarray,
-        disp_min_col: int,
-        disp_max_col: int,
-        disp_min_row: int,
-        disp_max_row: int,
+        col_disparity: List[int],
+        row_disparity: List[int],
         np_data: np.ndarray = None,
     ) -> xr.Dataset:
         """
@@ -108,19 +106,17 @@ class MatchingCost:
         :type row: np.ndarray
         :param col: dimension of the image (columns)
         :type col: np.ndarray
-        :param disp_min_col: minimum disparity in columns
-        :type disp_min_col: int
-        :param disp_max_col: maximum disparity in columns
-        :type disp_max_col: int
-        :param disp_min_row: minimum disparity in lines
-        :type disp_min_row: int
-        :param disp_max_row: maximum disparity in lines
-        :type disp_max_row: int
+        :param col_disparity: min and max disparities for columns.
+        :type col_disparity: List[int]
+        :param row_disparity: min and max disparities for rows.
+        :type row_disparity: List[int]
         :param np_data: 4D numpy.ndarray og cost_volumes. Defaults to None.
         :type np_data: np.ndarray
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
+        disp_min_col, disp_max_col = col_disparity
+        disp_min_row, disp_max_row = row_disparity
         disparity_range_col = np.arange(disp_min_col, disp_max_col + 1)
         disparity_range_row = np.arange(disp_min_row, disp_max_row + 1)
 
@@ -143,10 +139,8 @@ class MatchingCost:
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        min_col: int,
-        max_col: int,
-        min_row: int,
-        max_row: int,
+        col_disparity: List[int],
+        row_disparity: List[int],
         cfg: Dict,
     ) -> xr.Dataset:
         """
@@ -161,20 +155,18 @@ class MatchingCost:
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_right: xr.Dataset
-        :param min_col: minimum disparity in columns
-        :type min_col: int
-        :param max_col: maximum disparity in columns
-        :type max_col: int
-        :param min_row: minimum disparity in lines
-        :type min_row: int
-        :param max_row: maximum disparity in lines
-        :type max_row: int
+        :param col_disparity: min and max disparities for columns.
+        :type col_disparity: List[int]
+        :param row_disparity: min and max disparities for rows.
+        :type row_disparity: List[int]
         :param cfg: matching_cost computation configuration
-        :type max_row: dict
+        :type cfg: Dict
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
 
+        min_col, max_col = col_disparity
+        min_row, max_row = row_disparity
         cost_volumes = xr.Dataset()
 
         # Adapt Pandora matching cost configuration
@@ -208,7 +200,7 @@ class MatchingCost:
                 col = np.arange(c_col[0], c_col[-1] + 1)
 
                 cost_volumes = self.allocate_cost_volumes(
-                    cost_volume.attrs, row, col, min_col, max_col, min_row, max_row, None
+                    cost_volume.attrs, row, col, col_disparity, row_disparity, None
                 )
             # Add current cost volume to the cost_volumes dataset
             cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data
