@@ -4,10 +4,8 @@
     "nodata_left": -9999,
     "img_right": "./maricopa/right.tif",
     "nodata_right": -9999,
-    "disp_min_col": -2,
-    "disp_max_col": 2,
-    "disp_min_row": -2,
-    "disp_max_row": 2
+    "col_disparity": [-2, 2],
+    "row_disparity": [-2, 2]
   },
   "pipeline": {
     "matching_cost": {

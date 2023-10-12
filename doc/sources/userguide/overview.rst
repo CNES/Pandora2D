@@ -96,11 +96,8 @@ Example
         "nodata_left": -9999,
         "img_right": "./data/right.tif",
         "nodata_right": -9999,
-
-        "disp_min_col": -3,
-        "disp_max_col": 3,
-        "disp_min_row": -3,
-        "disp_max_row": 3
+        "col_disparity": [-2, 2],
+        "row_disparity": [-2, 2]
       },
       "pipeline": {
         "matching_cost": {

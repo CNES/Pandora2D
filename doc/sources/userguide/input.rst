@@ -21,13 +21,9 @@ Configuration and parameters
 +------------------+-----------------------------------------------------------+--------------------+---------------+----------+
 | *nodata_right*   | Nodata value for the right image                          | int, "NaN" or "inf"| -9999         | No       |
 +------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *disp_min_col*   | Minimal disparity for columns                             | int                |               | Yes      |
+| *col_disparity*  | Minimal and Maximal disparities for columns               | [int, int]         |               | Yes      |
 +------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *disp_max_col*   | Maximal disparity for columns                             | int                |               | Yes      |
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *disp_min_row*   | Minimal disparity for row                                 | int                |               | Yes      |
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *disp_max_row*   | Maximal disparity for row                                 | int                |               | Yes      |
+| *row_disparity*  | Minimal and Maximal disparities for rows                  | [int, int]         |               | Yes      |
 +------------------+-----------------------------------------------------------+--------------------+---------------+----------+
 
 **Example**
@@ -41,10 +37,8 @@ Configuration and parameters
             "nodata_left": -9999,
             "img_right": "/data/right.tif",
             "nodata_right": -9999,
-            "disp_min_col": -3,
-            "disp_max_col": 3,
-            "disp_min_row": -3,
-            "disp_max_row": 3
+            "col_disparity": [-3, 3],
+            "row_disparity": [-3, 3]
         }
         ,
         "pipeline" :

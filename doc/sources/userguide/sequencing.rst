@@ -41,10 +41,8 @@ interpolation method.
         {
             "img_left": "img_left.png",
             "img_right": "img_left.png",
-            "disp_min_col": -2,
-            "disp_max_col": 2,
-            "disp_min_row": -2,
-            "disp_max_row": 2
+            "col_disparity": [-2, 2],
+            "row_disparity": [-2, 2]
         },
         "pipeline":
         {
