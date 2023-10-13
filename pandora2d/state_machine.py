@@ -23,7 +23,7 @@
 This module contains class associated to the pandora state machine
 """
 
-from typing import Dict, TYPE_CHECKING, List, TypedDict
+from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal, Annotated
 import logging
 from operator import add
 import xarray as xr
@@ -48,8 +48,8 @@ from pandora2d import matching_cost, disparity, refinement, common
 class MarginsProperties(TypedDict):
     """Properties of Margins used in Margins transitions."""
 
-    type: str
-    margins: List[int]
+    type: Literal["aggregate", "maximum"]
+    margins: Annotated[List[int], '["left, "up", "right", "down"]']
 
 
 class Pandora2DMachine(Machine):
