@@ -23,10 +23,11 @@
 This module contains class associated to the pandora state machine
 """
 
-from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal, Annotated
+from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal
 import logging
 from operator import add
 import xarray as xr
+from typing_extensions import Annotated
 
 try:
     import graphviz  # pylint: disable=unused-import
