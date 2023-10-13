@@ -92,10 +92,14 @@ Example
 
     {
       "input": {
-        "img_left": "./data/left.tif",
-        "nodata_left": -9999,
-        "img_right": "./data/right.tif",
-        "nodata_right": -9999,
+        "left": {
+            "img": "./data/left.tif",
+            "nodata": -9999
+        },
+        "right": {
+            "img": "./data/right.tif",
+            "nodata": -9999
+        },
         "col_disparity": [-2, 2],
         "row_disparity": [-2, 2]
       },

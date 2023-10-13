@@ -39,8 +39,12 @@ interpolation method.
     {
         "input":
         {
-            "img_left": "img_left.png",
-            "img_right": "img_left.png",
+            "left": {
+                "img": "img_left.png"
+            },
+            "right": {
+                "img": "img_left.png"
+            },
             "col_disparity": [-2, 2],
             "row_disparity": [-2, 2]
         },

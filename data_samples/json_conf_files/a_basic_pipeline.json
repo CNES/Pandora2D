@@ -1,9 +1,13 @@
 {
   "input": {
-    "img_left": "./maricopa/left.tif",
-    "nodata_left": -9999,
-    "img_right": "./maricopa/right.tif",
-    "nodata_right": -9999,
+    "left": {
+      "img": "./maricopa/left.tif",
+      "nodata": -9999
+    },
+    "right": {
+      "img": "./maricopa/right.tif",
+      "nodata": -9999
+    },
     "col_disparity": [-2, 2],
     "row_disparity": [-2, 2]
   },
