@@ -26,9 +26,13 @@ This module contains common functions present in Pandora2D's tests.
 
 correct_input = {
     "input": {
-        "img_left": "./tests/data/left.png",
-        "img_right": "./tests/data/right.png",
-        "nodata_left": "NaN",
+        "left": {
+            "img": "./tests/data/left.png",
+            "nodata": "NaN",
+        },
+        "right": {
+            "img": "./tests/data/right.png",
+        },
         "col_disparity": [-2, 2],
         "row_disparity": [-2, 2],
     }
@@ -37,9 +41,13 @@ correct_input = {
 
 false_input_path_image = {
     "input": {
-        "img_left": "./tests/data/lt.png",
-        "img_right": "./tests/data/right.png",
-        "nodata_left": "NaN",
+        "left": {
+            "img": "./tests/data/lt.png",
+            "nodata": "NaN",
+        },
+        "right": {
+            "img": "./tests/data/right.png",
+        },
         "col_disparity": [-2, 2],
         "row_disparity": [-2, 2],
     }
@@ -47,8 +55,12 @@ false_input_path_image = {
 
 false_input_disp = {
     "input": {
-        "img_left": "./tests/data/left.png",
-        "img_right": "./tests/data/right.png",
+        "left": {
+            "img": "./tests/data/left.png",
+        },
+        "right": {
+            "img": "./tests/data/right.png",
+        },
         "col_disparity": [7, 2],
         "row_disparity": [-2, 2],
     }

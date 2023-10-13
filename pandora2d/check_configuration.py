@@ -54,7 +54,7 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     checker.validate(cfg)
 
     # test images
-    check_images(cfg["input"]["img_left"], cfg["input"]["img_right"], None, None)
+    check_images(cfg["input"]["left"]["img"], cfg["input"]["right"]["img"], None, None)
 
     # test disparities
     check_disparities(cfg["input"]["col_disparity"], None)
@@ -187,18 +187,26 @@ def get_roi_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
 
 
 input_configuration_schema = {
-    "img_left": And(str, rasterio_can_open_mandatory),
-    "img_right": And(str, rasterio_can_open_mandatory),
-    "nodata_left": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
-    "nodata_right": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+    "left": {
+        "img": And(str, rasterio_can_open_mandatory),
+        "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+    },
+    "right": {
+        "img": And(str, rasterio_can_open_mandatory),
+        "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+    },
     "col_disparity": [int, int],
     "row_disparity": [int, int],
 }
 
 default_short_configuration_input = {
     "input": {
-        "nodata_left": -9999,
-        "nodata_right": -9999,
+        "left": {
+            "nodata": -9999,
+        },
+        "right": {
+            "nodata": -9999,
+        },
     }
 }
 
