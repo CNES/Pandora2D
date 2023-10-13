@@ -42,7 +42,7 @@ class MatchingCost:
     _WINDOW_SIZE = 5
     _STEP = [1, 1]
 
-    def __init__(self, **cfg: str) -> None:
+    def __init__(self, cfg: Dict) -> None:
         """
         Initialisation of matching_cost class
 
@@ -50,13 +50,13 @@ class MatchingCost:
         :type cfg: dict
         :return: None
         """
-        self.cfg = self.check_conf(**cfg)
-        self._window_size = self.cfg["window_size"]
+        self.cfg = self.check_conf(cfg)
+        self._window_size = int(self.cfg["window_size"])
         self._matching_cost_method = self.cfg["matching_cost_method"]
         self._step_row = self.cfg["step"][0]
         self._step_col = self.cfg["step"][1]
 
-    def check_conf(self, **cfg: str) -> Dict[str, str]:
+    def check_conf(self, cfg: Dict) -> Dict[str, str]:
         """
         Check the matching cost configuration
 
@@ -66,14 +66,14 @@ class MatchingCost:
         :rtype: cfg: dict
         """
         if "window_size" not in cfg:
-            cfg["window_size"] = self._WINDOW_SIZE  # type: ignore
+            cfg["window_size"] = self._WINDOW_SIZE
         if "step" not in cfg:
-            cfg["step"] = self._STEP  # type: ignore
+            cfg["step"] = self._STEP
 
         schema = {
             "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc"]),
             "window_size": And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0),
-            "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y))
+            "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y)),
         }
 
         checker = Checker(schema)
@@ -90,14 +90,14 @@ class MatchingCost:
 
     @staticmethod
     def allocate_cost_volumes(
-            cost_volume_attr: dict,
-            row: np.array,
-            col: np.array,
-            disp_min_col: int,
-            disp_max_col: int,
-            disp_min_row: int,
-            disp_max_row: int,
-            np_data: np.ndarray = None,
+        cost_volume_attr: dict,
+        row: np.ndarray,
+        col: np.ndarray,
+        disp_min_col: int,
+        disp_max_col: int,
+        disp_min_row: int,
+        disp_max_row: int,
+        np_data: np.ndarray = None,
     ) -> xr.Dataset:
         """
         Allocate the cost volumes
@@ -105,9 +105,9 @@ class MatchingCost:
         :param cost_volume_attr: the cost_volume's attributs product by Pandora
         :type cost_volume: xr.Dataset
         :param row: dimension of the image (row)
-        :type row: np.array
+        :type row: np.ndarray
         :param col: dimension of the image (columns)
-        :type col: np.array
+        :type col: np.ndarray
         :param disp_min_col: minimum disparity in columns
         :type disp_min_col: int
         :param disp_max_col: maximum disparity in columns
@@ -116,7 +116,7 @@ class MatchingCost:
         :type disp_min_row: int
         :param disp_max_row: maximum disparity in lines
         :type disp_max_row: int
-        :param np_data: 4D numpy.array og cost_volumes. Defaults to None.
+        :param np_data: 4D numpy.ndarray og cost_volumes. Defaults to None.
         :type np_data: np.ndarray
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
@@ -140,14 +140,14 @@ class MatchingCost:
         return cost_volumes
 
     def compute_cost_volumes(
-            self,
-            img_left: xr.Dataset,
-            img_right: xr.Dataset,
-            min_col: int,
-            max_col: int,
-            min_row: int,
-            max_row: int,
-            **cfg: Dict[str, dict]
+        self,
+        img_left: xr.Dataset,
+        img_right: xr.Dataset,
+        min_col: int,
+        max_col: int,
+        min_row: int,
+        max_row: int,
+        cfg: Dict,
     ) -> xr.Dataset:
         """
 
@@ -179,12 +179,10 @@ class MatchingCost:
 
         # Adapt Pandora matching cost configuration
         copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
-        copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]  # type: ignore
+        copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]
 
         # Initialize Pandora matching cost
-        pandora_matching_cost_ = matching_cost.AbstractMatchingCost(
-            **copy_matching_cost_cfg_with_step
-        )
+        pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
         # Array with all y disparities
         disps_row = range(min_row, max_row + 1)
         for idx, disp_row in enumerate(disps_row):

@@ -37,20 +37,20 @@ class Disparity:
 
     _INVALID_DISPARITY = -9999
 
-    def __init__(self, **cfg: str) -> None:
-        self.cfg = self.check_conf(**cfg)
+    def __init__(self, cfg: Dict) -> None:
+        self.cfg = self.check_conf(cfg)
         self._invalid_disparity = self.cfg["invalid_disparity"]
 
-    def check_conf(self, **cfg: str) -> Dict[str, str]:
+    def check_conf(self, cfg: Dict) -> Dict:
         """
         Check the disparity configuration
 
         Returns:
-            Dict[str, Union[str, int]]: disparity configuration
+            Dict[str, Union[str, int, float]]: disparity configuration
         """
         # Give the default value if the required element is not in the configuration
         if "invalid_disparity" not in cfg:
-            cfg["invalid_disparity"] = self._INVALID_DISPARITY  # type: ignore
+            cfg["invalid_disparity"] = self._INVALID_DISPARITY
         elif cfg["invalid_disparity"] == "NaN":
             cfg["invalid_disparity"] = np.nan
 
@@ -101,8 +101,9 @@ class Disparity:
             cv_chunked_col = np.array_split(cv_row, np.arange(100, cv_dims[0], 100), axis=1)
             col_begin = 0
             for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disps_min[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = \
-                    np.min(cv_col, axis=axis)
+                disps_min[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = np.min(
+                    cv_col, axis=axis
+                )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]
@@ -138,8 +139,9 @@ class Disparity:
             cv_chunked_col = np.array_split(cv_row, np.arange(100, cv_dims[0], 100), axis=1)
             col_begin = 0
             for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disps_max[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = \
-                    np.max(cv_col, axis=axis)
+                disps_max[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = np.max(
+                    cv_col, axis=axis
+                )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]
@@ -147,13 +149,13 @@ class Disparity:
         return disps_max
 
     @staticmethod
-    def argmax_split(max_maps: np.array, axis: int) -> np.ndarray:
+    def argmax_split(max_maps: np.ndarray, axis: int) -> np.ndarray:
         """
         Find the indices of the maximum values for a 3D DataArray, along axis.
         Memory consumption is reduced by splitting the 3D Array.
 
         :param max_maps: maps with maximum
-        :type max_maps: xarray.Dataset
+        :type max_maps: np.ndarray
         :param axis: axis
         :type axis: int
         :return: the disparities for which the cost volume values are the smallest
@@ -175,8 +177,9 @@ class Disparity:
             cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)
             col_begin = 0
             for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = \
-                    np.argmax(cv_col, axis=axis)
+                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = np.argmax(
+                    cv_col, axis=axis
+                )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]
@@ -184,13 +187,13 @@ class Disparity:
         return disp
 
     @staticmethod
-    def argmin_split(min_maps: np.array, axis: int) -> np.ndarray:
+    def argmin_split(min_maps: np.ndarray, axis: int) -> np.ndarray:
         """
         Find the indices of the minimum values for a 3D DataArray, along axis 2.
         Memory consumption is reduced by splitting the 3D Array.
 
         :param min_maps: maps with minimum
-        :type min_maps: xarray.Dataset
+        :type min_maps: np.ndarray
         :param axis: axis
         :type axis: int
         :return: the disparities for which the cost volume values are the smallest
@@ -212,15 +215,16 @@ class Disparity:
             cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)
             col_begin = 0
             for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = \
-                    np.argmin(cv_col, axis=axis)
+                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = np.argmin(
+                    cv_col, axis=axis
+                )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]
 
         return disp
 
-    def compute_disp_maps(self, cost_volumes: xr.Dataset) -> Tuple[np.array, np.array]:
+    def compute_disp_maps(self, cost_volumes: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
         """
         Disparity computation by applying the Winner Takes All strategy
 
@@ -231,7 +235,7 @@ class Disparity:
 
                 - disp_map_col : disparity map for columns
                 - disp_map_row : disparity map for row
-        :rtype: tuple (numpy.array, numpy.array)
+        :rtype: tuple (numpy.ndarray, numpy.ndarray)
         """
 
         indices_nan = np.isnan(cost_volumes["cost_volumes"].data)

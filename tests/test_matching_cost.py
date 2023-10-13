@@ -24,6 +24,9 @@
 Test Matching cost class
 """
 
+# Remove this with use of fixtures
+# pylint: disable=duplicate-code
+
 import unittest
 
 import numpy as np
@@ -33,9 +36,9 @@ import json_checker
 from rasterio import Affine
 from skimage.io import imsave
 
-from pandora2d import matching_cost
 from pandora.common import split_inputs
 from pandora.img_tools import create_dataset_from_inputs
+from pandora2d import matching_cost
 
 
 class TestMatchingCost(unittest.TestCase):
@@ -88,13 +91,13 @@ class TestMatchingCost(unittest.TestCase):
         """
         test check_conf of matching cost pipeline
         """
-        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5})
+        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "census", "window_size": 5})
+            matching_cost.MatchingCost({"matching_cost_method": "census", "window_size": 5})
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": -1})
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
 
     @staticmethod
     def test_get_margins():
@@ -102,10 +105,10 @@ class TestMatchingCost(unittest.TestCase):
         test get_margins of matching cost pipeline
         """
         gt = [2, 2, 2, 2]
-        _matching_cost = matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5})
+        _matching_cost = matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
 
         mc_margins = _matching_cost.get_margins()
-        
+
         assert len(mc_margins) == len(gt)
         assert all(a == b for a, b in zip(mc_margins, gt))
 
@@ -115,23 +118,23 @@ class TestMatchingCost(unittest.TestCase):
         Test step in matching_cost configuration
         """
 
-        matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3]})
+        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3]})
 
         # Test with a negative step : test should fail
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": [-2, 3]})
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [-2, 3]})
 
         # Test with a one size list step : test should fail
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": [2]})
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2]})
 
         # Test with a three elements list step : test should fail
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3, 4]})
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3, 4]})
 
         # Test with a str elements list step : test should fail
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost(**{"matching_cost_method": "zncc", "window_size": 5, "step": ["2", 3]})
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": ["2", 3]})
 
     def test_compute_cv_ssd(self):
         """
@@ -163,12 +166,12 @@ class TestMatchingCost(unittest.TestCase):
         # disp_x = 0, disp_y = -1
         ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_matcher = matching_cost.MatchingCost(cfg)
 
         # compute cost volumes
         ssd = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_col=-1, max_col=0, min_row=-1, max_row=0, **cfg
-        ) # type: ignore
+            img_left=self.left, img_right=self.right, min_col=-1, max_col=0, min_row=-1, max_row=0, cfg=cfg
+        )
 
         # check that the generated cost_volumes is equal to ground truth
         np.testing.assert_allclose(ssd["cost_volumes"].data, ad_ground_truth, atol=1e-06)
@@ -205,11 +208,11 @@ class TestMatchingCost(unittest.TestCase):
         ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
 
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_matcher = matching_cost.MatchingCost(cfg)
         # compute cost volumes
         sad = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_col=-1, max_col=0, min_row=-1, max_row=0, **cfg
-        ) # type: ignore
+            img_left=self.left, img_right=self.right, min_col=-1, max_col=0, min_row=-1, max_row=0, cfg=cfg
+        )
         # check that the generated cost_volumes is equal to ground truth
         np.testing.assert_allclose(sad["cost_volumes"].data, ad_ground_truth, atol=1e-06)
 
@@ -290,11 +293,11 @@ class TestMatchingCost(unittest.TestCase):
         ) / (np.std(left[1:4, 1:4]) * np.std(right_shift[1:4, 1:4]))
 
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_matcher = matching_cost.MatchingCost(cfg)
         # compute cost volumes
         zncc = matching_cost_matcher.compute_cost_volumes(
-            img_left=left_zncc, img_right=right_zncc, min_col=0, max_col=1, min_row=-1, max_row=0, **cfg
-        ) # type: ignore
+            img_left=left_zncc, img_right=right_zncc, min_col=0, max_col=1, min_row=-1, max_row=0, cfg=cfg
+        )
         # check that the generated cost_volumes is equal to ground truth
 
         np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_0, rtol=1e-06)
@@ -344,11 +347,11 @@ class TestMatchingCost(unittest.TestCase):
 
         # data by function compute_cost_volume
         cfg = {"matching_cost_method": "zncc", "window_size": 3}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_matcher = matching_cost.MatchingCost(cfg)
 
         cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_col=-1, max_col=1, min_row=-1, max_row=1, **cfg
-        ) # type: ignore
+            img_left=self.left, img_right=self.right, min_col=-1, max_col=1, min_row=-1, max_row=1, cfg=cfg
+        )
 
         # check that the generated xarray dataset is equal to the ground truth
         np.testing.assert_array_equal(cost_volumes_fun["cost_volumes"].data, cost_volumes_test["cost_volumes"].data)
@@ -369,7 +372,7 @@ class TestMatchingCostWithRoi:
             dtype=np.uint8,
         )
         imsave(image_path, data)
-        
+
         return image_path
 
     @pytest.fixture()
@@ -383,12 +386,12 @@ class TestMatchingCostWithRoi:
             dtype=np.uint8,
         )
         imsave(image_path, data)
-        
+
         return image_path
-    
+
     @staticmethod
     def test_roi_inside_and_margins_inside(left_image, right_image):
-        """"
+        """
         Test the pandora2d matching cost with roi inside the image
         """
         # input configuration
@@ -412,12 +415,12 @@ class TestMatchingCostWithRoi:
         # Matching cost configuration
         cfg = {"matching_cost_method": "zncc", "window_size": 3}
         # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_matcher = matching_cost.MatchingCost(cfg)
 
         # compute cost volumes
         zncc = matching_cost_matcher.compute_cost_volumes(
-            img_left=img_left, img_right=img_right, min_col=0, max_col=1, min_row=-1, max_row=0, **cfg
-        ) # type: ignore
+            img_left=img_left, img_right=img_right, min_col=0, max_col=1, min_row=-1, max_row=0, cfg=cfg
+        )
 
         # crop image with roi
         roi = {"col": {"first": 2, "last": 3}, "row": {"first": 2, "last": 3}, "margins": [1, 2, 1, 1]}
@@ -426,9 +429,11 @@ class TestMatchingCostWithRoi:
 
         # compute cost volumes with roi
         zncc_roi = matching_cost_matcher.compute_cost_volumes(
-            img_left=img_left, img_right=img_right, min_col=0, max_col=1, min_row=-1, max_row=0, **cfg
-        ) # type: ignore
+            img_left=img_left, img_right=img_right, min_col=0, max_col=1, min_row=-1, max_row=0, cfg=cfg
+        )
 
         assert zncc["cost_volumes"].data.shape == (5, 5, 2, 2)
         assert zncc_roi["cost_volumes"].data.shape == (5, 4, 2, 2)
-        np.testing.assert_array_equal(zncc["cost_volumes"].data[2:4,2:4,:,:], zncc_roi["cost_volumes"].data[2:4,1:3,:,:])
+        np.testing.assert_array_equal(
+            zncc["cost_volumes"].data[2:4, 2:4, :, :], zncc_roi["cost_volumes"].data[2:4, 1:3, :, :]
+        )

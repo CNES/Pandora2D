@@ -43,21 +43,21 @@ class TestRefinement(unittest.TestCase):
         Test the interpolation method
         """
 
-        refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
+        refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
 
         with pytest.raises(KeyError):
-            refinement.AbstractRefinement(**{"refinement_method": "wta"}) # type: ignore
+            refinement.AbstractRefinement({"refinement_method": "wta"})  # type: ignore[abstract]
 
     @staticmethod
     def test_get_margins():
         """
         test get_margins of matching cost pipeline
         """
-        gt = [3, 3, 3, 3] # cubic kernel
-        _refinement = refinement.AbstractRefinement(**{"refinement_method": "interpolation"})
+        gt = [3, 3, 3, 3]  # cubic kernel
+        _refinement = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
 
         r_margins = _refinement.get_margins()
-        
+
         assert len(r_margins) == len(gt)
         assert all(a == b for a, b in zip(r_margins, gt))
 
@@ -99,7 +99,7 @@ class TestRefinement(unittest.TestCase):
 
         dataset_disp_map = common.dataset_disp_maps(data, data)
 
-        test = refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
+        test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
         delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map)
 
         np.testing.assert_allclose(data, delta_y, rtol=1e-06)
@@ -145,7 +145,7 @@ class TestRefinement(unittest.TestCase):
 
         dataset_disp_map = common.dataset_disp_maps(gt_delta_y, gt_delta_x)
 
-        test = refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
+        test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
         delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map)
 
         np.testing.assert_allclose(gt_delta_y, delta_y, rtol=1e-06)
