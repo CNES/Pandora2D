@@ -27,6 +27,7 @@ import unittest
 from typing import Any, Dict
 
 import pytest
+import transitions
 from json_checker import DictCheckerError
 
 from pandora2d import check_configuration
@@ -53,9 +54,9 @@ class TestCheckJson(unittest.TestCase):
 
         assert check_configuration.check_input_section(common.correct_input)
 
-        with pytest.raises(BaseException):
+        with pytest.raises(SystemExit):
             check_configuration.check_input_section(common.false_input_disp)
-        with pytest.raises(BaseException):
+        with pytest.raises(DictCheckerError):
             check_configuration.check_input_section(common.false_input_path_image)
 
     @staticmethod
@@ -68,9 +69,9 @@ class TestCheckJson(unittest.TestCase):
 
         assert check_configuration.check_pipeline_section(common.correct_pipeline_dict, pandora2d_machine)
 
-        with pytest.raises(BaseException):
+        with pytest.raises(transitions.core.MachineError):
             check_configuration.check_pipeline_section(common.false_pipeline_mc_dict, pandora2d_machine)
-        with pytest.raises(BaseException):
+        with pytest.raises(transitions.core.MachineError):
             check_configuration.check_pipeline_section(common.false_pipeline_disp_dict, pandora2d_machine)
 
     @staticmethod
