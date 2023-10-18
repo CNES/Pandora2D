@@ -121,7 +121,7 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     return pipeline_cfg
 
 
-def check_conf(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> dict:
+def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     """
     Complete and check if the dictionary is correct
 

@@ -130,3 +130,59 @@ class TestCheckStep:
         pipeline_config["pipeline"]["matching_cost"]["step"] = step
         with pytest.raises(DictCheckerError):
             check_configuration.check_pipeline_section(pipeline_config, pandora2d_machine)
+
+
+class TestCheckConfMatchingCostNodataCondition:
+    """Test check conf for right image’s nodata."""
+
+    @pytest.fixture()
+    def build_configuration(self):
+        """Return a builder for configuration."""
+
+        def function(right_nodata, matching_cost_method):
+            return {
+                "input": {
+                    "left": {
+                        "img": "./tests/data/left.png",
+                        "nodata": "NaN",
+                    },
+                    "right": {
+                        "img": "./tests/data/right.png",
+                        "nodata": right_nodata,
+                    },
+                    "col_disparity": [-2, 2],
+                    "row_disparity": [-2, 2],
+                },
+                "pipeline": {
+                    "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 1},
+                },
+            }
+
+        return function
+
+    @pytest.mark.parametrize("right_nodata", ["NaN", 0.1, "inf", None])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd"])
+    def test_sad_or_ssd_fail_with(self, pandora2d_machine, build_configuration, matching_cost_method, right_nodata):
+        """Right nodata must be an integer with sad or ssd matching_cost_method."""
+        configuration = build_configuration(right_nodata, matching_cost_method)
+        with pytest.raises((SystemExit, DictCheckerError)):
+            check_configuration.check_conf(configuration, pandora2d_machine)
+
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
+    def test_passes_with_int(self, pandora2d_machine, build_configuration, matching_cost_method):
+        """Right nodata must be an integer."""
+        configuration = build_configuration(432, matching_cost_method)
+        check_configuration.check_conf(configuration, pandora2d_machine)
+
+    @pytest.mark.parametrize("right_nodata", ["NaN", "inf"])
+    def test_zncc_passes_with(self, pandora2d_machine, build_configuration, right_nodata):
+        """Right nodata can be inf or nan with zncc matching_cost_method."""
+        configuration = build_configuration(right_nodata, "zncc")
+        check_configuration.check_conf(configuration, pandora2d_machine)
+
+    @pytest.mark.parametrize("right_nodata", [0.2, None])
+    def test_zncc_fails_with(self, pandora2d_machine, build_configuration, right_nodata):
+        """Right nodata must can not be float or nan with zncc matching_cost_method."""
+        configuration = build_configuration(right_nodata, "zncc")
+        with pytest.raises((SystemExit, DictCheckerError)):
+            check_configuration.check_conf(configuration, pandora2d_machine)
