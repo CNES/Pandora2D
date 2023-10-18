@@ -56,15 +56,15 @@ class TestCheckPipelineSection:
         """
         Test function for checking user pipeline section
         """
-        assert check_configuration.check_pipeline_section(common.correct_pipeline_dict, pandora2d_machine)
+        assert check_configuration.check_pipeline_section(common.correct_pipeline, pandora2d_machine)
 
     def test_false_mc_dict_should_raise_error(self, pandora2d_machine):
         with pytest.raises(transitions.core.MachineError):
-            check_configuration.check_pipeline_section(common.false_pipeline_mc_dict, pandora2d_machine)
+            check_configuration.check_pipeline_section(common.false_pipeline_mc, pandora2d_machine)
 
     def test_false_disp_dict_should_raise_error(self, pandora2d_machine):
         with pytest.raises(transitions.core.MachineError):
-            check_configuration.check_pipeline_section(common.false_pipeline_disp_dict, pandora2d_machine)
+            check_configuration.check_pipeline_section(common.false_pipeline_disp, pandora2d_machine)
 
 
 class TestCheckRoiSection:
