@@ -181,6 +181,10 @@ class MatchingCost:
         copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
         copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]
 
+        # Adapt Pandora matching for disparity grids
+        min_col_grid = np.full((img_left.dims["row"], img_left.dims["col"]), min_col)
+        max_col_grid = np.full((img_left.dims["row"], img_left.dims["col"]), max_col)
+
         # Initialize Pandora matching cost
         pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
         # Array with all y disparities
@@ -189,9 +193,11 @@ class MatchingCost:
             # Shift image in the y axis
             img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_row)
             # Compute cost volume
-            cost_volume = pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, min_col, max_col)
+            cost_volume = pandora_matching_cost_.compute_cost_volume(
+                img_left, img_right_shift, min_col_grid, max_col_grid
+            )
             # Mask cost volume
-            pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, min_col, max_col)
+            pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, min_col_grid, max_col_grid)
             # If first iteration, initialize cost_volumes dataset
             if idx == 0:
                 c_row = cost_volume["cost_volume"].coords["row"]
