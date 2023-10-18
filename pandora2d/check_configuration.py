@@ -143,15 +143,26 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     # check pipeline
     cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
 
-    if isinstance(cfg_input["input"]["nodata_right"], float) and cfg_pipeline["pipeline"]["matching_cost"][
-        "matching_cost_method"
-    ] in ["sad", "ssd"]:
-        logging.error("nodata_right must be int type with sad or ssd matching_cost_method (ex: 9999)")
-        sys.exit(1)
+    check_right_nodata_condition(cfg_input, cfg_pipeline)
 
     cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline])
 
     return cfg
+
+
+def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict):
+    """
+    Check that only int is accepted for nodata of right image when matching_cost_method is sad or ssd.
+    :param cfg_input: inputs section of configuration
+    :type cfg_input: Dict
+    :param cfg_pipeline: pipeline section of configuration
+    :type cfg_pipeline: Dict
+    """
+    if not isinstance(cfg_input["input"]["right"]["nodata"], int) and cfg_pipeline["pipeline"]["matching_cost"][
+        "matching_cost_method"
+    ] in ["sad", "ssd"]:
+        logging.error("nodata of right image must be of type integer with sad or ssd matching_cost_method (ex: 9999)")
+        sys.exit(1)
 
 
 def check_roi_coherence(roi_cfg: dict):
