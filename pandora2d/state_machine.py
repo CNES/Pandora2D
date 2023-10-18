@@ -78,33 +78,20 @@ class Pandora2DMachine(Machine):
 
     def __init__(
         self,
-        img_left: xr.Dataset = None,
-        img_right: xr.Dataset = None,
-        col_disparity: Optional[List[int]] = None,
-        row_disparity: Optional[List[int]] = None,
     ) -> None:
         """
         Initialize Pandora2D Machine
 
-        :param img_left: left image
-        :type img_left: xarray.Dataset
-        :param img_right: right image
-        :type img_right: xarray.Dataset
-        :param row_disparity: min and max disparities for columns.
-        :type row_disparity: List[int]
-        :param col_disparity: min and max disparities for rows.
-        :type col_disparity: List[int]
-        :return: None
         """
 
         # Left image
-        self.left_img: xr.Dataset = img_left
+        self.left_img: Optional[xr.Dataset] = None
         # Right image
-        self.right_img: xr.Dataset = img_right
+        self.right_img: Optional[xr.Dataset] = None
         # Column's min, max disparities
-        self.col_disparity: List[int] = col_disparity
+        self.col_disparity: Optional[List[int]] = None
         # Row's min, max disparities
-        self.row_disparity: List[int] = row_disparity
+        self.row_disparity: Optional[List[int]] = None
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
         self.cost_volumes: xr.Dataset = xr.Dataset()
