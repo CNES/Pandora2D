@@ -97,7 +97,7 @@ class TestCheckRoiCoherence:
     """Test check_roi_coherence."""
 
     def test_first_lt_last_is_ok(self) -> None:
-        assert check_configuration.check_roi_coherence(common.correct_ROI_sensor["ROI"]["col"]) is None
+        check_configuration.check_roi_coherence(common.correct_ROI_sensor["ROI"]["col"])
 
     def test_first_gt_last_raises_error(self):
         with pytest.raises(SystemExit):

@@ -150,7 +150,7 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     return cfg
 
 
-def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict):
+def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
     """
     Check that only int is accepted for nodata of right image when matching_cost_method is sad or ssd.
     :param cfg_input: inputs section of configuration
@@ -165,7 +165,7 @@ def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict):
         sys.exit(1)
 
 
-def check_roi_coherence(roi_cfg: dict):
+def check_roi_coherence(roi_cfg: dict) -> None:
     """
     Check that the first ROI coords are lower than the last.
 
