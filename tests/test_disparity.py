@@ -154,7 +154,9 @@ class TestDisparity(unittest.TestCase):
         cfg = {"matching_cost_method": "sad", "window_size": 1}
         matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, cfg=cfg)
+        col_disparity = [0, 1]
+        row_disparity = [-1, 0]
+        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, col_disparity, row_disparity, cfg=cfg)
 
         ad_ground_truth = np.zeros((3, 3, 2))
         ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
@@ -176,7 +178,9 @@ class TestDisparity(unittest.TestCase):
         cfg = {"matching_cost_method": "sad", "window_size": 1}
         matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, cfg=cfg)
+        col_disparity = [0, 1]
+        row_disparity = [-1, 0]
+        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, col_disparity, row_disparity, cfg=cfg)
 
         ad_ground_truth = np.zeros((3, 3, 2))
         ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [2, 3, 4], [2, 3, 4]])
@@ -198,7 +202,11 @@ class TestDisparity(unittest.TestCase):
         cfg = {"matching_cost_method": "sad", "window_size": 3}
         matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, cfg=cfg)
+        col_disparity = [0, 1]
+        row_disparity = [-1, 0]
+        cvs = matching_cost_test.compute_cost_volumes(
+            self.left_arg, self.right_arg, col_disparity, row_disparity, cfg=cfg
+        )
 
         ad_ground_truth = np.array(
             [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
@@ -220,7 +228,11 @@ class TestDisparity(unittest.TestCase):
         cfg = {"matching_cost_method": "sad", "window_size": 3}
         matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, cfg=cfg)
+        col_disparity = [0, 1]
+        row_disparity = [-1, 0]
+        cvs = matching_cost_test.compute_cost_volumes(
+            self.left_arg, self.right_arg, col_disparity, row_disparity, cfg=cfg
+        )
 
         ad_ground_truth = np.array(
             [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
@@ -283,9 +295,9 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(cfg_disp)
 
-        cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_col=-2, max_col=2, min_row=-2, max_row=2, cfg=cfg_mc
-        )
+        col_disparity = [-2, 2]
+        row_disparity = [-2, 2]
+        cvs = matching_cost_matcher.compute_cost_volumes(left, right, col_disparity, row_disparity, cfg=cfg_mc)
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
@@ -342,9 +354,9 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(cfg_disp)
 
-        cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_col=-3, max_col=3, min_row=-3, max_row=3, cfg=cfg_mc
-        )
+        col_disparity = [-3, 3]
+        row_disparity = [-3, 3]
+        cvs = matching_cost_matcher.compute_cost_volumes(left, right, col_disparity, row_disparity, cfg=cfg_mc)
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
@@ -401,9 +413,9 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(cfg_disp)
 
-        cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_col=-3, max_col=3, min_row=-3, max_row=3, cfg=cfg_mc
-        )
+        col_disparity = [-3, 3]
+        row_disparity = [-3, 3]
+        cvs = matching_cost_matcher.compute_cost_volumes(left, right, col_disparity, row_disparity, cfg=cfg_mc)
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 

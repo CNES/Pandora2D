@@ -29,10 +29,8 @@ correct_input = {
         "img_left": "./tests/data/left.png",
         "img_right": "./tests/data/right.png",
         "nodata_left": "NaN",
-        "disp_min_col": -2,
-        "disp_max_col": 2,
-        "disp_min_row": -2,
-        "disp_max_row": 2,
+        "col_disparity": [-2, 2],
+        "row_disparity": [-2, 2],
     }
 }
 
@@ -42,10 +40,8 @@ false_input_path_image = {
         "img_left": "./tests/data/lt.png",
         "img_right": "./tests/data/right.png",
         "nodata_left": "NaN",
-        "disp_min_col": -2,
-        "disp_max_col": 2,
-        "disp_min_row": -2,
-        "disp_max_row": 2,
+        "col_disparity": [-2, 2],
+        "row_disparity": [-2, 2],
     }
 }
 
@@ -53,10 +49,8 @@ false_input_disp = {
     "input": {
         "img_left": "./tests/data/left.png",
         "img_right": "./tests/data/right.png",
-        "disp_min_col": 7,
-        "disp_max_col": 2,
-        "disp_min_row": -2,
-        "disp_max_row": 2,
+        "col_disparity": [7, 2],
+        "row_disparity": [-2, 2],
     }
 }
 

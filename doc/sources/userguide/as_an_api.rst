@@ -59,23 +59,19 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     }
 
     # disparity interval use for row
-    disp_min_row = -2
-    disp_max_row = 2
+    row_disparity = [-2, 2]
 
     # disparity interval use for column
-    disp_min_col = -2
-    disp_max_col = 2
+    col_disparity = [-2, 2]
 
     # check the configurations and sequences steps
     pipeline_cfg = check_configuration.check_pipeline_section(user_pipeline_cfg, pandora2d_machine)
 
     # prepare the machine
-    pandora2d_machine.run_prepare(img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row)
+    pandora2d_machine.run_prepare(img_left, img_right, col_disparity, row_disparity)
 
     # trigger all the steps of the machine at ones
-    dataset = pandora2d.run(
-        pandora2d_machine, img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row, pipeline_cfg
-    )
+    dataset = pandora2d.run(pandora2d_machine, img_left, img_right, col_disparity, row_disparity, pipeline_cfg)
 
     # save dataset
     common.save_dataset(dataset, path_output)

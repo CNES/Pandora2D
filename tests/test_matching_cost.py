@@ -170,7 +170,11 @@ class TestMatchingCost(unittest.TestCase):
 
         # compute cost volumes
         ssd = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_col=-1, max_col=0, min_row=-1, max_row=0, cfg=cfg
+            img_left=self.left,
+            img_right=self.right,
+            col_disparity=[-1, 0],
+            row_disparity=[-1, 0],
+            cfg=cfg,
         )
 
         # check that the generated cost_volumes is equal to ground truth
@@ -211,7 +215,11 @@ class TestMatchingCost(unittest.TestCase):
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
         # compute cost volumes
         sad = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_col=-1, max_col=0, min_row=-1, max_row=0, cfg=cfg
+            img_left=self.left,
+            img_right=self.right,
+            col_disparity=[-1, 0],
+            row_disparity=[-1, 0],
+            cfg=cfg,
         )
         # check that the generated cost_volumes is equal to ground truth
         np.testing.assert_allclose(sad["cost_volumes"].data, ad_ground_truth, atol=1e-06)
@@ -296,7 +304,11 @@ class TestMatchingCost(unittest.TestCase):
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
         # compute cost volumes
         zncc = matching_cost_matcher.compute_cost_volumes(
-            img_left=left_zncc, img_right=right_zncc, min_col=0, max_col=1, min_row=-1, max_row=0, cfg=cfg
+            img_left=left_zncc,
+            img_right=right_zncc,
+            col_disparity=[0, 1],
+            row_disparity=[-1, 0],
+            cfg=cfg,
         )
         # check that the generated cost_volumes is equal to ground truth
 
@@ -350,7 +362,11 @@ class TestMatchingCost(unittest.TestCase):
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
 
         cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
-            img_left=self.left, img_right=self.right, min_col=-1, max_col=1, min_row=-1, max_row=1, cfg=cfg
+            img_left=self.left,
+            img_right=self.right,
+            col_disparity=[-1, 1],
+            row_disparity=[-1, 1],
+            cfg=cfg,
         )
 
         # check that the generated xarray dataset is equal to the ground truth
@@ -401,10 +417,8 @@ class TestMatchingCostWithRoi:
                 "img_right": right_image,
                 "nodata_left": -9999,
                 "nodata_right": -9999,
-                "disp_min_col": 0,
-                "disp_max_col": 1,
-                "disp_min_row": -1,
-                "disp_max_row": 0,
+                "col_disparity": [0, 1],
+                "row_disparity": [-1, 1],
             }
         }
         # read images
@@ -419,7 +433,11 @@ class TestMatchingCostWithRoi:
 
         # compute cost volumes
         zncc = matching_cost_matcher.compute_cost_volumes(
-            img_left=img_left, img_right=img_right, min_col=0, max_col=1, min_row=-1, max_row=0, cfg=cfg
+            img_left=img_left,
+            img_right=img_right,
+            col_disparity=[0, 1],
+            row_disparity=[-1, 0],
+            cfg=cfg,
         )
 
         # crop image with roi
@@ -429,7 +447,11 @@ class TestMatchingCostWithRoi:
 
         # compute cost volumes with roi
         zncc_roi = matching_cost_matcher.compute_cost_volumes(
-            img_left=img_left, img_right=img_right, min_col=0, max_col=1, min_row=-1, max_row=0, cfg=cfg
+            img_left=img_left,
+            img_right=img_right,
+            col_disparity=[0, 1],
+            row_disparity=[-1, 0],
+            cfg=cfg,
         )
 
         assert zncc["cost_volumes"].data.shape == (5, 5, 2, 2)

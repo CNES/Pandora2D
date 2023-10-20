@@ -23,7 +23,7 @@
 This module contains class associated to the pandora state machine
 """
 
-from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal
+from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal, Optional
 import logging
 from operator import add
 import xarray as xr
@@ -78,41 +78,20 @@ class Pandora2DMachine(Machine):
 
     def __init__(
         self,
-        img_left: xr.Dataset = None,
-        img_right: xr.Dataset = None,
-        disp_min_col: int = None,
-        disp_max_col: int = None,
-        disp_min_row: int = None,
-        disp_max_row: int = None,
     ) -> None:
         """
         Initialize Pandora2D Machine
 
-        :param img_left: left image
-        :type img_left: xarray.Dataset
-        :param img_right: right image
-        :type img_right: xarray.Dataset
-        :param disp_min_col: minimal disparity for columns
-        :type disp_min_col: int
-        :param disp_max_col: maximal disparity for columns
-        :type disp_max_col: int
-        :param disp_min_row: minimal disparity for lines
-        :type disp_min_row: int
-        :param disp_max_row: maximal disparity for lines
-        :type disp_max_row: int
-        :return: None
         """
 
         # Left image
-        self.left_img: xr.Dataset = img_left
+        self.left_img: Optional[xr.Dataset] = None
         # Right image
-        self.right_img: xr.Dataset = img_right
-        # Minimum disparity
-        self.disp_min_col: int = disp_min_col
-        self.disp_min_row: int = disp_min_row
-        # Maximum disparity
-        self.disp_max_col: int = disp_max_col
-        self.disp_max_row: int = disp_max_row
+        self.right_img: Optional[xr.Dataset] = None
+        # Column's min, max disparities
+        self.col_disparity: Optional[List[int]] = None
+        # Row's min, max disparities
+        self.row_disparity: Optional[List[int]] = None
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
         self.cost_volumes: xr.Dataset = xr.Dataset()
@@ -136,14 +115,16 @@ class Pandora2DMachine(Machine):
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        disp_min_col: int,
-        disp_max_col: int,
-        disp_min_row: int,
-        disp_max_row: int,
+        col_disparity: List[int],
+        row_disparity: List[int],
     ) -> None:
         """
         Prepare the machine before running
 
+        :param row_disparity: min and max disparities for columns.
+        :type row_disparity: List[int]
+        :param col_disparity: min and max disparities for rows.
+        :type col_disparity: List[int]
         :param img_left: left Dataset image containing :
 
                 - im : 2D (row, col) xarray.DataArray
@@ -154,22 +135,14 @@ class Pandora2DMachine(Machine):
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_right: xarray.Dataset
-        :param disp_min_col: minimal disparity for columns
-        :type disp_min_col: int
-        :param disp_max_col: maximal disparity for columns
-        :type disp_max_col: int
-        :param disp_min_row: minimal disparity for lines
-        :type disp_min_row: int
-        :param disp_max_row: maximal disparity for lines
-        :type disp_max_row: int
         """
 
         self.left_img = img_left
         self.right_img = img_right
-        self.disp_min_col = disp_min_col
-        self.disp_max_col = disp_max_col
-        self.disp_min_row = disp_min_row
-        self.disp_max_row = disp_max_row
+        # Column's min, max disparities
+        self.col_disparity = col_disparity
+        # Row's min, max disparities
+        self.row_disparity = row_disparity
 
         self.add_transitions(self._transitions_run)
 
@@ -323,10 +296,8 @@ class Pandora2DMachine(Machine):
         self.cost_volumes = matching_cost_run.compute_cost_volumes(
             self.left_img,
             self.right_img,
-            self.disp_min_col,
-            self.disp_max_col,
-            self.disp_min_row,
-            self.disp_max_row,
+            self.col_disparity,
+            self.row_disparity,
             cfg["pipeline"][input_step],
         )
 

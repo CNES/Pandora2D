@@ -113,23 +113,19 @@ class TestGetRoiProcessing:
         }
 
     @pytest.mark.parametrize(
-        ["disp_min_col", "disp_max_col", "disp_min_row", "disp_max_row", "expected"],
+        ["col_disparity", "row_disparity", "expected"],
         [
-            pytest.param(-60, 0, 0, 2, [60, 2, 2, 2], id="Negative disparitie for columns"),
-            pytest.param(0, 2, -60, 0, [2, 60, 2, 2], id="Negative disparitie for rows"),
-            pytest.param(-60, 0, -60, 0, [60, 60, 2, 2], id="Negative disparitie for columns and rows"),
-            pytest.param(0, 60, 0, 60, [2, 2, 60, 60], id="Negative disparitie for columns and rows"),
+            pytest.param([-60, 0], [0, 2], [60, 2, 2, 2], id="Negative disparitie for columns"),
+            pytest.param([0, 2], [-60, 0], [2, 60, 2, 2], id="Negative disparitie for rows"),
+            pytest.param([-60, 0], [-60, 0], [60, 60, 2, 2], id="Negative disparitie for columns and rows"),
+            pytest.param([0, 60], [0, 60], [2, 2, 60, 60], id="Negative disparitie for columns and rows"),
         ],
     )
-    def test_roi_with_negative_and_positive_disparities(
-        self, default_roi, disp_min_col, disp_max_col, disp_min_row, disp_max_row, expected
-    ):
+    def test_roi_with_negative_and_positive_disparities(self, default_roi, col_disparity, row_disparity, expected):
         """
         Test the get_roi_processing method with negative disparities
         """
-        test_roi_column = img_tools.get_roi_processing(
-            default_roi, disp_min_col, disp_max_col, disp_min_row, disp_max_row
-        )
+        test_roi_column = img_tools.get_roi_processing(default_roi, col_disparity, row_disparity)
         default_roi["margins"] = expected
 
         assert test_roi_column == default_roi
