@@ -28,13 +28,14 @@ If you want to understand in more details how Pandora2D machine works, please co
 Examples
 ********
 
-SSD measurment with refinement step disparity maps
+SSD measurement with refinement step disparity maps
 ###################################################
 
 Configuration to produce a disparity map, computed by the SSD method, and refined by the
 interpolation method.
 
-.. sourcecode:: text
+.. code:: json
+    :name: Sequencing example
 
     {
         "input":

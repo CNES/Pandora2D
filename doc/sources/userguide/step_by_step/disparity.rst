@@ -33,21 +33,22 @@ Configuration and parameters
 
 **Example**
 
-.. sourcecode:: text
+.. code:: json
+    :name: Disparity example
 
     {
         "input" :
         {
-            ...
+            // input content
         },
         "pipeline" :
         {
-            ...
+            // ...
             "disparity":
             {
                 "disparity _method": "wta",
                 "invalid_disparity": "NaN"
-            }
-            ...
+            },
+            // ...
         }
     }

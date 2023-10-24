@@ -58,20 +58,20 @@ run according to the parameters chosen by the user.
 
 Pandora2D works with JSON formatted data with the following nested structures.
 
-.. sourcecode:: text
+.. code:: json
 
     {
         "input" :
         {
-            ...
+            // input content
         },
         "ROI":
         {
-            ...
+            // ROI content
         },
         "pipeline" :
         {
-            ...
+            // pipeline content
         }
     }
 
@@ -88,7 +88,8 @@ Example
 
 2. Create a configuration file
 
-.. sourcecode:: text
+.. code:: json
+    :name: Overview example
 
     {
       "input": {

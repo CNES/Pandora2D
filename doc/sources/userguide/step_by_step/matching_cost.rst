@@ -60,22 +60,23 @@ Configuration and parameters
 
 **Example**
 
-.. sourcecode:: text
+.. sourcecode:: json
+    :name: matching_cost example
 
     {
         "input" :
         {
-            ...
+            // input content
         },
         "pipeline" :
         {
-            ...
+            //...
             "matching_cost":
             {
                 "matching_cost_method": "ssd",
                 "window_size": 7,
                 "step" : [5, 5]
-            }
-            ...
+            },
+            //...
         }
     }

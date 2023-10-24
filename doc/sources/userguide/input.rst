@@ -66,7 +66,8 @@ Left and Right properties are composed of the following keys:
 
 **Example**
 
-.. sourcecode:: text
+.. code:: json
+    :name: Input example
 
     {
         "input":
@@ -85,7 +86,7 @@ Left and Right properties are composed of the following keys:
         ,
         "pipeline" :
         {
-            ...
+            // pipeline content
         }
     }
 
