@@ -65,12 +65,13 @@ Row and col parameters contain dictionaries, each is different depending on the 
 
 **Example**
 
-.. sourcecode:: text
+.. code:: json
+    :name: ROI example
 
     {
         "input":
         {
-            ...
+            // input content
         },
         "ROI":
         {
@@ -79,7 +80,7 @@ Row and col parameters contain dictionaries, each is different depending on the 
         },
         "pipeline" :
         {
-            ...
+            // pipeline content
         }
     }
 

@@ -36,7 +36,6 @@ import json_checker
 from rasterio import Affine
 from skimage.io import imsave
 
-from pandora.common import split_inputs
 from pandora.img_tools import create_dataset_from_inputs
 from pandora2d import matching_cost
 
@@ -413,16 +412,20 @@ class TestMatchingCostWithRoi:
         # input configuration
         input_cfg = {
             "input": {
-                "img_left": left_image,
-                "img_right": right_image,
-                "nodata_left": -9999,
-                "nodata_right": -9999,
+                "left": {
+                    "img": left_image,
+                    "nodata": -9999,
+                },
+                "right": {
+                    "img": right_image,
+                    "nodata": -9999,
+                },
                 "col_disparity": [0, 1],
                 "row_disparity": [-1, 1],
             }
         }
+        input_config = input_cfg["input"]
         # read images
-        input_config = split_inputs(input_cfg["input"])
         img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=None)
         img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=None)
 

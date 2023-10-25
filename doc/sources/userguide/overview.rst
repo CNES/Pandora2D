@@ -58,20 +58,20 @@ run according to the parameters chosen by the user.
 
 Pandora2D works with JSON formatted data with the following nested structures.
 
-.. sourcecode:: text
+.. code:: json
 
     {
         "input" :
         {
-            ...
+            // input content
         },
         "ROI":
         {
-            ...
+            // ROI content
         },
         "pipeline" :
         {
-            ...
+            // pipeline content
         }
     }
 
@@ -88,14 +88,19 @@ Example
 
 2. Create a configuration file
 
-.. sourcecode:: text
+.. code:: json
+    :name: Overview example
 
     {
       "input": {
-        "img_left": "./data/left.tif",
-        "nodata_left": -9999,
-        "img_right": "./data/right.tif",
-        "nodata_right": -9999,
+        "left": {
+            "img": "./data/left.tif",
+            "nodata": -9999
+        },
+        "right": {
+            "img": "./data/right.tif",
+            "nodata": -9999
+        },
         "col_disparity": [-2, 2],
         "row_disparity": [-2, 2]
       },

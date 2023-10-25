@@ -27,7 +27,7 @@ from typing import Dict, List
 import xarray as xr
 
 from pandora import read_config_file, create_dataset_from_inputs, setup_logging
-from pandora.common import save_config, split_inputs
+from pandora.common import save_config
 
 from pandora2d import check_configuration, common
 from pandora2d.img_tools import get_roi_processing
@@ -108,9 +108,8 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
         roi = get_roi_processing(cfg["ROI"], col_disparity, col_disparity)
 
     # read images
-    input_config = split_inputs(cfg["input"])
-    img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=roi)
-    img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=roi)
+    img_left = create_dataset_from_inputs(input_config=cfg["input"]["left"], roi=roi)
+    img_right = create_dataset_from_inputs(input_config=cfg["input"]["right"], roi=roi)
 
     # run pandora 2D and store disp maps in a dataset
     dataset_disp_maps = run(pandora2d_machine, img_left, img_right, col_disparity, row_disparity, cfg)

@@ -9,41 +9,84 @@ the no_data's images and range disparities.
 Configuration and parameters
 ****************************
 
+Input section is composed of the following keys:
 
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| Name             | Description                                               | Type               | Default value | Required |
-+==================+===========================================================+====================+===============+==========+
-| *img_left*       | Path to the left image                                    | string             |               | Yes      |
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *nodata_left*    | Nodata value for the left image                           | int, "NaN" or "inf"| -9999         | No       |
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *img_right*      | Path to the right image                                   | string             |               | Yes      |
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *nodata_right*   | Nodata value for the right image                          | int, "NaN" or "inf"| -9999         | No       |
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *col_disparity*  | Minimal and Maximal disparities for columns               | [int, int]         |               | Yes      |
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
-| *row_disparity*  | Minimal and Maximal disparities for rows                  | [int, int]         |               | Yes      |
-+------------------+-----------------------------------------------------------+--------------------+---------------+----------+
+.. list-table:: Input section
+    :header-rows: 1
+
+    * - Name
+      - Description
+      - Type
+      - Default value
+      - Required
+    * - *left*
+      - Left image properties (see description below)
+      - dict
+      -
+      - Yes
+    * - *right*
+      - Right image properties (see description below)
+      - dict
+      -
+      - Yes
+    * - *col_disparity*
+      - Minimal and Maximal disparities for columns
+      - [int, int]
+      -
+      - Yes
+    * - *row_disparity*
+      - Minimal and Maximal disparities for rows
+      - [int, int]
+      -
+      - Yes
+
+Left and Right properties are composed of the following keys:
+
+.. list-table:: Left and Right properties
+    :header-rows: 1
+
+    * - Name
+      - Description
+      - Type
+      - Default value
+      - Required
+    * - *img*
+      - Path to the image
+      - string
+      -
+      - Yes
+    * - *nodata*
+      - Nodata value of the image
+      - int, "NaN" or "inf"
+      - -9999
+      - No
+
+.. warning::
+    With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`) , `nodata` only accepts `int` type.
 
 **Example**
 
-.. sourcecode:: text
+.. code:: json
+    :name: Input example
 
     {
         "input":
         {
-            "img_left": "./data/left.tif",
-            "nodata_left": -9999,
-            "img_right": "/data/right.tif",
-            "nodata_right": -9999,
+            "left": {
+                "img": "./data/left.tif",
+                "nodata": -9999
+            },
+            "right": {
+                "img": "/data/right.tif",
+                "nodata": -9999
+            },
             "col_disparity": [-3, 3],
             "row_disparity": [-3, 3]
         }
         ,
         "pipeline" :
         {
-            ...
+            // pipeline content
         }
     }
 

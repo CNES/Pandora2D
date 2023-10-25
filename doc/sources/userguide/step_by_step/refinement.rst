@@ -25,21 +25,22 @@ Configuration and parameters
 
 **Example**
 
-.. sourcecode:: text
+.. code:: json
+    :name: Refinement example
 
     {
         "input" :
         {
-            ...
+            // input content
         },
         "pipeline" :
         {
-            ...
+            // ...
             "refinement":
             {
                "refinement_method": "interpolation"
-            }
-            ...
+            },
+            // ...
         }
     }
 
