@@ -54,7 +54,7 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     checker.validate(cfg)
 
     # test images
-    check_images(cfg["input"]["left"]["img"], cfg["input"]["right"]["img"], None, None)
+    check_images(cfg["input"])
 
     # test disparities
     check_disparities(cfg["input"]["col_disparity"], None)
