@@ -8,15 +8,16 @@ Pandora2D provides a full python API which can be used to compute disparity maps
 
 .. sourcecode:: python
 
+    import numpy as np
     import pandora
-    from pandora.img_tools import create_dataset_from_inputs
-
     import pandora2d
+
     from pandora2d.state_machine import Pandora2DMachine
     from pandora2d import check_configuration, common
+    from pandora2d.img_tools import create_datasets_from_inputs
 
     # path to save disparity maps
-    path_ouput = "./res"
+    path_output = "./res"
 
     # Paths to left and right images
     img_left_path = "data/left.tif"
@@ -32,15 +33,16 @@ Pandora2D provides a full python API which can be used to compute disparity maps
             'right': {
                 'img': img_right_path,
                 'nodata': np.nan,
-            }
+            },
+            "col_disparity": [-2, 2],
+            "row_disparity": [-2, 2],
         }
     }
 
     # read images
-    img_left = create_dataset_from_inputs(input_config=input_cfg["input"]["left"])
-    img_right = create_dataset_from_inputs(input_config=input_cfg["input"]["right"])
+    image_datasets = create_datasets_from_inputs(input_config=image_cfg["input"])
 
-    # instanciate Pandora2D Machine
+    # instantiate Pandora2D Machine
     pandora2d_machine = Pandora2DMachine()
 
     # define pipeline configuration
@@ -60,23 +62,30 @@ Pandora2D provides a full python API which can be used to compute disparity maps
         }
     }
 
-    # disparity interval use for row
-    row_disparity = [-2, 2]
-
-    # disparity interval use for column
-    col_disparity = [-2, 2]
-
     # check the configurations and sequences steps
     pipeline_cfg = check_configuration.check_pipeline_section(user_pipeline_cfg, pandora2d_machine)
 
     # prepare the machine
-    pandora2d_machine.run_prepare(img_left, img_right, col_disparity, row_disparity)
+    pandora2d_machine.run_prepare(
+        image_datasets.left,
+        image_datasets.right,
+        image_cfg["input"]["col_disparity"],
+        image_cfg["input"]["row_disparity"]
+        )
 
     # trigger all the steps of the machine at ones
-    dataset = pandora2d.run(pandora2d_machine, img_left, img_right, col_disparity, row_disparity, pipeline_cfg)
+    dataset = pandora2d.run(
+        pandora2d_machine,
+        image_datasets.left,
+        image_datasets.right,
+        image_cfg["input"]["col_disparity"],
+        image_cfg["input"]["row_disparity"],
+        pipeline_cfg
+        )
 
     # save dataset
     common.save_dataset(dataset, path_output)
+
 
 Pandora2D's data
 ****************
@@ -90,20 +99,24 @@ image which contain the data's image, data's mask and additionnal information.
 Example of an image dataset
 
 ::
-
     Dimensions:  (col: 450, row: 375)
     Coordinates:
       * col      (col) int64 0 1 2 3 4 5 6 7 8 ... 442 443 444 445 446 447 448 449
       * row      (row) int64 0 1 2 3 4 5 6 7 8 ... 367 368 369 370 371 372 373 374
+      * band_disp               (band_disp) <U3 'min' 'max'
     Data variables:
         im       (row, col) float32 88.0 85.0 84.0 83.0 ... 176.0 180.0 165.0 172.0
         msk      (row, col) int16 0 0 0 0 0 0 0 0 0 0 0 0 ... 0 0 0 0 0 0 0 0 0 0 0
+        col_disparity (band_disp, row, col) int64 -2 -2 -2 -2 ... 2 2 2 2
+        row_disparity (band_disp, row, col) int64 -2 -2 -2 -2 ... 2 2 2 2
     Attributes:
         no_data_img:   0
         crs:           None
         transform:     | 1.00, 0.00, 0.00|| 0.00, 1.00, 0.00|| 0.00, 0.00, 1.00|
         valid_pixels:  0
         no_data_mask:  1
+        col_disparity_source:  [-2, 2]
+        row_disparity_source:  [-2, 2]
 
     Two data variables are created in this dataset:
 
