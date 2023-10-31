@@ -105,7 +105,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     roi = None
     if "ROI" in cfg:
         cfg["ROI"]["margins"] = pandora2d_machine.get_global_margins()
-        roi = get_roi_processing(cfg["ROI"], col_disparity, col_disparity)
+        roi = get_roi_processing(cfg["ROI"], col_disparity, row_disparity)
 
     # read images
     img_left = create_dataset_from_inputs(input_config=cfg["input"]["left"], roi=roi)
