@@ -28,7 +28,7 @@ import logging
 from json_checker import Checker, Or, And
 import numpy as np
 
-from pandora.check_configuration import check_disparities, check_images, get_config_input
+from pandora.check_configuration import check_disparities_from_input, check_images, get_config_input
 from pandora.check_configuration import concat_conf, update_conf, rasterio_can_open_mandatory
 
 
@@ -57,8 +57,8 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     check_images(cfg["input"])
 
     # test disparities
-    check_disparities(cfg["input"]["col_disparity"], None)
-    check_disparities(cfg["input"]["row_disparity"], None)
+    check_disparities_from_input(cfg["input"]["col_disparity"], None)
+    check_disparities_from_input(cfg["input"]["row_disparity"], None)
 
     return cfg
 
