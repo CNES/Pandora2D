@@ -70,8 +70,12 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None) -> Dataset
     """
     check_disparities(input_config)
     return Datasets(
-        pandora_img_tools.create_dataset_from_inputs(input_config["left"], roi).pipe(add_disparity, input_config),
-        pandora_img_tools.create_dataset_from_inputs(input_config["right"], roi).pipe(add_disparity, input_config),
+        pandora_img_tools.create_dataset_from_inputs(input_config["left"], roi).pipe(
+            add_left_disparity_grid, input_config
+        ),
+        pandora_img_tools.create_dataset_from_inputs(input_config["right"], roi).pipe(
+            add_right_disparity_grid, input_config
+        ),
     )
 
 
@@ -137,25 +141,60 @@ def check_min_max_disparity(disparity: List[int]) -> None:
         raise ValueError(f"Min disparity ({disparity[0]}) should be lower than Max disparity ({disparity[1]})")
 
 
-def add_disparity(dataset: xr.Dataset, configuration: Dict) -> xr.Dataset:
+def add_left_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Dataset:
+    """
+    Add left disparity to dataset.
+
+    :param dataset: dataset to add disparity grid to
+    :type dataset: xr.Dataset
+    :param configuration: configuration with information about disparity
+    :type configuration: Dict
+    :return: dataset : updated dataset
+    :rtype: xr.Dataset
+    """
+    col_disparity = configuration["col_disparity"]
+    row_disparity = configuration["row_disparity"]
+    return add_disparity_grid(dataset, col_disparity, row_disparity)
+
+
+def add_right_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Dataset:
+    """
+    Add right disparity to dataset.
+
+    :param dataset: dataset to add disparity grid to
+    :type dataset: xr.Dataset
+    :param configuration: configuration with information about disparity
+    :type configuration: Dict
+    :return: dataset : updated dataset
+    :rtype: xr.Dataset
+    """
+    col_disparity = sorted(-1 * value for value in configuration["col_disparity"])
+    row_disparity = sorted(-1 * value for value in configuration["row_disparity"])
+    return add_disparity_grid(dataset, col_disparity, row_disparity)
+
+
+def add_disparity_grid(dataset: xr.Dataset, col_disparity: List[int], row_disparity: List[int]) -> xr.Dataset:
     """
     Add disparity to dataset
 
     :param dataset: xarray dataset
     :type dataset: xr.Dataset
-    :param configuration: configuration
+    :param col_disparity: Disparity interval for columns
+    :type col_disparity: List of ints
+    :param row_disparity: Disparity interval for rows
+    :type row_disparity: List of ints
 
     :return: dataset : updated dataset
     :rtype: xr.Dataset
     """
     shape = (dataset.dims["row"], dataset.dims["col"])
-    for key in ["col_disparity", "row_disparity"]:
+    for key, disparity_interval in zip(["col_disparity", "row_disparity"], [col_disparity, row_disparity]):
         dataset[key] = xr.DataArray(
-            np.array([np.full(shape, disparity) for disparity in configuration[key]]),
+            np.array([np.full(shape, disparity) for disparity in disparity_interval]),
             dims=["band_disp", "row", "col"],
             coords={"band_disp": ["min", "max"]},
         )
-        dataset.attrs[f"{key}_source"] = configuration[key]
+        dataset.attrs[f"{key}_source"] = disparity_interval
     return dataset
 
 

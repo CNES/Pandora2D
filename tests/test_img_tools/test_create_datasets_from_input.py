@@ -99,20 +99,22 @@ class TestReturnedValue:
         assert result.left.attrs["col_disparity_source"] == [-2, 2]
         assert result.left.attrs["row_disparity_source"] == [-3, 4]
         assert result.right.attrs["col_disparity_source"] == [-2, 2]
-        assert result.right.attrs["row_disparity_source"] == [-3, 4]
+        assert result.right.attrs["row_disparity_source"] == [-4, 3]
 
     def test_resulting_disparity_grids(self, result):
         """
         Test the method create_dataset_from_inputs with the disparity
 
         """
-        expected_col_disparity = np.array([np.full((375, 450), -2), np.full((375, 450), 2)])
-        expected_row_disparity = np.array([np.full((375, 450), -3), np.full((375, 450), 4)])
+        expected_left_col_disparity = np.array([np.full((375, 450), -2), np.full((375, 450), 2)])
+        expected_left_row_disparity = np.array([np.full((375, 450), -3), np.full((375, 450), 4)])
+        expected_right_col_disparity = np.array([np.full((375, 450), -2), np.full((375, 450), 2)])
+        expected_right_row_disparity = np.array([np.full((375, 450), -4), np.full((375, 450), 3)])
 
-        np.testing.assert_array_equal(result.left["col_disparity"], expected_col_disparity)
-        np.testing.assert_array_equal(result.left["row_disparity"], expected_row_disparity)
-        np.testing.assert_array_equal(result.right["col_disparity"], expected_col_disparity)
-        np.testing.assert_array_equal(result.right["row_disparity"], expected_row_disparity)
+        np.testing.assert_array_equal(result.left["col_disparity"], expected_left_col_disparity)
+        np.testing.assert_array_equal(result.left["row_disparity"], expected_left_row_disparity)
+        np.testing.assert_array_equal(result.right["col_disparity"], expected_right_col_disparity)
+        np.testing.assert_array_equal(result.right["row_disparity"], expected_right_row_disparity)
 
 
 class TestDisparityChecking:
