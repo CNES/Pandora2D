@@ -94,7 +94,7 @@ lint/mypy: ## check linting with mypy
 .PHONY: lint/pylint
 lint/pylint: ## check linting with pylint
 	@echo "+ $@"
-	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
+	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d "tests/*" --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
 
 ## Documentation section
 

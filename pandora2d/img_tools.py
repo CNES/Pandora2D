@@ -25,12 +25,177 @@ This module contains functions associated to raster images.
 
 
 import copy
-from typing import List
+import logging
+import sys
+from collections.abc import Sequence
+from typing import List, Dict, NamedTuple, Any
 
 import xarray as xr
 import numpy as np
 
+import pandora.img_tools as pandora_img_tools
 from scipy.ndimage import shift
+
+
+class Datasets(NamedTuple):
+    """NamedTuple to store left and right datasets."""
+
+    left: xr.Dataset
+    right: xr.Dataset
+
+
+def create_datasets_from_inputs(input_config: Dict, roi: Dict = None) -> Datasets:
+    """
+    Read image and return the corresponding xarray.DataSet
+
+    :param input_config: configuration used to create dataset.
+    :type input_config: dict
+    :param roi: dictionary with a roi
+
+            "col": {"first": <value - int>, "last": <value - int>},
+            "row": {"first": <value - int>, "last": <value - int>},
+            "margins": [<value - int>, <value - int>, <value - int>, <value - int>]
+
+            with margins : left, up, right, down
+    :type roi: dict
+    :return: Datasets
+            NamedTuple with two attributes `left` and `right` each containing a
+            xarray.DataSet containing the variables :
+
+            - im: 2D (row, col) or 3D (band_im, row, col) xarray.DataArray float32
+            - col_disparity: 3D (disp, row, col) xarray.DataArray float32
+            - row_disparity: 3D (disp, row, col) xarray.DataArray float32
+
+    :rtype: Datasets
+    """
+    check_disparities(input_config)
+    return Datasets(
+        pandora_img_tools.create_dataset_from_inputs(input_config["left"], roi).pipe(
+            add_left_disparity_grid, input_config
+        ),
+        pandora_img_tools.create_dataset_from_inputs(input_config["right"], roi).pipe(
+            add_right_disparity_grid, input_config
+        ),
+    )
+
+
+def check_disparities(input_config: Dict) -> None:
+    """
+    Do various check against disparities properties.
+
+    :param input_config: configuration used to create dataset.
+    :type input_config:
+
+    :raises SystemExit: If any check fails.
+    """
+    check_disparity_presence(input_config)
+    for disparity in [input_config["col_disparity"], input_config["row_disparity"]]:
+        try:
+            check_disparity_types(disparity)
+            check_min_max_disparity(disparity)
+        except ValueError as error:
+            logging.error(error)
+            sys.exit(1)
+
+
+def check_disparity_presence(input_config):
+    """
+    Check that disparity keys are not missing from input_config.
+
+    :param input_config: configuration used to create dataset.
+    :type input_config:
+
+    :raises SystemExit: if one or both keys are missing
+    """
+    missing = {"col_disparity", "row_disparity"} - set(input_config)
+    if len(missing) == 1:
+        logging.error("`%s` is mandatory.", missing.pop())
+        sys.exit(1)
+    if len(missing) == 2:
+        logging.error("`col_disparity` and `row_disparity` are mandatory.")
+        sys.exit(1)
+
+
+def check_disparity_types(disparity: Any) -> None:
+    """
+    Check that disparity is a Sequence of length 2.
+    :param disparity: disparity to check
+    :type disparity: Any
+
+    :raises SystemExit: if it does not meet requirements
+    """
+    if disparity is None or not isinstance(disparity, Sequence) or len(disparity) != 2:
+        raise ValueError("Disparity should be iterable of length 2", disparity)
+
+
+def check_min_max_disparity(disparity: List[int]) -> None:
+    """
+    Check that min disparity is lower than max disparity.
+
+    :param disparity: disparity to check
+    :type disparity: List[int]
+
+    :raises SystemExit: if min > max
+    """
+    if disparity[0] > disparity[1]:
+        raise ValueError(f"Min disparity ({disparity[0]}) should be lower than Max disparity ({disparity[1]})")
+
+
+def add_left_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Dataset:
+    """
+    Add left disparity to dataset.
+
+    :param dataset: dataset to add disparity grid to
+    :type dataset: xr.Dataset
+    :param configuration: configuration with information about disparity
+    :type configuration: Dict
+    :return: dataset : updated dataset
+    :rtype: xr.Dataset
+    """
+    col_disparity = configuration["col_disparity"]
+    row_disparity = configuration["row_disparity"]
+    return add_disparity_grid(dataset, col_disparity, row_disparity)
+
+
+def add_right_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Dataset:
+    """
+    Add right disparity to dataset.
+
+    :param dataset: dataset to add disparity grid to
+    :type dataset: xr.Dataset
+    :param configuration: configuration with information about disparity
+    :type configuration: Dict
+    :return: dataset : updated dataset
+    :rtype: xr.Dataset
+    """
+    col_disparity = sorted(-1 * value for value in configuration["col_disparity"])
+    row_disparity = sorted(-1 * value for value in configuration["row_disparity"])
+    return add_disparity_grid(dataset, col_disparity, row_disparity)
+
+
+def add_disparity_grid(dataset: xr.Dataset, col_disparity: List[int], row_disparity: List[int]) -> xr.Dataset:
+    """
+    Add disparity to dataset
+
+    :param dataset: xarray dataset
+    :type dataset: xr.Dataset
+    :param col_disparity: Disparity interval for columns
+    :type col_disparity: List of ints
+    :param row_disparity: Disparity interval for rows
+    :type row_disparity: List of ints
+
+    :return: dataset : updated dataset
+    :rtype: xr.Dataset
+    """
+    shape = (dataset.dims["row"], dataset.dims["col"])
+    for key, disparity_interval in zip(["col_disparity", "row_disparity"], [col_disparity, row_disparity]):
+        dataset[key] = xr.DataArray(
+            np.array([np.full(shape, disparity) for disparity in disparity_interval]),
+            dims=["band_disp", "row", "col"],
+            coords={"band_disp": ["min", "max"]},
+        )
+        dataset.attrs[f"{key}_source"] = disparity_interval
+    return dataset
 
 
 def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:

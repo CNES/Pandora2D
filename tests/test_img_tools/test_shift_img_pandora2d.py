@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
-#
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
@@ -24,7 +21,6 @@
 Test configuration
 """
 import unittest
-import pytest
 import xarray as xr
 import numpy as np
 
@@ -32,9 +28,9 @@ import numpy as np
 from pandora2d import img_tools
 
 
-class TestImgTools(unittest.TestCase):
+class TestShiftImgPandora2D(unittest.TestCase):
     """
-    TestImgTools class allows to test all the methods in the img_tools function
+    test shift_img_pandora2D function.
     """
 
     def setUp(self) -> None:
@@ -96,36 +92,3 @@ class TestImgTools(unittest.TestCase):
         """
         my_data_down = img_tools.shift_img_pandora2d(self.data, 1)
         assert my_data_down.equals(self.data_down)
-
-
-class TestGetRoiProcessing:
-    """Test get_roi_processing"""
-
-    @pytest.fixture()
-    def default_roi(self):
-        """
-        Create a roi to test the get_roi_processing method
-        """
-        return {
-            "col": {"first": 2, "last": 5},
-            "row": {"first": 2, "last": 5},
-            "margins": [2, 2, 2, 2],
-        }
-
-    @pytest.mark.parametrize(
-        ["col_disparity", "row_disparity", "expected"],
-        [
-            pytest.param([-60, 0], [0, 2], [60, 2, 2, 2], id="Negative disparitie for columns"),
-            pytest.param([0, 2], [-60, 0], [2, 60, 2, 2], id="Negative disparitie for rows"),
-            pytest.param([-60, 0], [-60, 0], [60, 60, 2, 2], id="Negative disparitie for columns and rows"),
-            pytest.param([0, 60], [0, 60], [2, 2, 60, 60], id="Negative disparitie for columns and rows"),
-        ],
-    )
-    def test_roi_with_negative_and_positive_disparities(self, default_roi, col_disparity, row_disparity, expected):
-        """
-        Test the get_roi_processing method with negative disparities
-        """
-        test_roi_column = img_tools.get_roi_processing(default_roi, col_disparity, row_disparity)
-        default_roi["margins"] = expected
-
-        assert test_roi_column == default_roi
