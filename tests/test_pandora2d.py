@@ -25,15 +25,16 @@ Test state_machine
 """
 import unittest
 import copy
+import numpy as np
 
 import pytest
 
 
 from transitions.core import MachineError
-from pandora import create_dataset_from_inputs
 
 from tests import common
 from pandora2d import state_machine
+from pandora2d.img_tools import create_datasets_from_inputs
 
 
 class TestPandora2D(unittest.TestCase):
@@ -74,16 +75,27 @@ class TestPandora2D(unittest.TestCase):
         input_config = {
             "left": {"img": "./tests/data/left.png", "nodata": -9999},
             "right": {"img": "./tests/data/right.png", "nodata": -9999},
+            "col_disparity": [-2, 2],
+            "row_disparity": [-2, 2],
         }
-        img_left = create_dataset_from_inputs(input_config=input_config["left"])
-        img_right = create_dataset_from_inputs(input_config=input_config["right"])
+        img_left, img_right = create_datasets_from_inputs(input_config=input_config)
 
-        pandora2d_machine.run_prepare(img_left, img_right, col_disparity=[-2, 2], row_disparity=[-2, 2])
+        pandora2d_machine.run_prepare(img_left, img_right)
 
         assert pandora2d_machine.left_img == img_left
         assert pandora2d_machine.right_img == img_right
-        assert pandora2d_machine.col_disparity == [-2, 2]
-        assert pandora2d_machine.row_disparity == [-2, 2]
+        np.testing.assert_array_equal(
+            pandora2d_machine.disp_min_col, np.full((img_left.dims["row"], img_left.dims["col"]), -2)
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.disp_max_col, np.full((img_left.dims["row"], img_left.dims["col"]), 2)
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.disp_min_row, np.full((img_left.dims["row"], img_left.dims["col"]), -2)
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.disp_max_row, np.full((img_left.dims["row"], img_left.dims["col"]), 2)
+        )
 
     @staticmethod
     def test_get_global_margins() -> None:

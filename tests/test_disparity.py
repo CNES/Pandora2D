@@ -154,9 +154,13 @@ class TestDisparity(unittest.TestCase):
         cfg = {"matching_cost_method": "sad", "window_size": 1}
         matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        col_disparity = [0, 1]
-        row_disparity = [-1, 0]
-        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, col_disparity, row_disparity, cfg=cfg)
+        grid_min_col = np.full((3, 3), 0)
+        grid_max_col = np.full((3, 3), 1)
+        grid_min_row = np.full((3, 3), -1)
+        grid_max_row = np.full((3, 3), 0)
+        cvs = matching_cost_test.compute_cost_volumes(
+            self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg
+        )
 
         ad_ground_truth = np.zeros((3, 3, 2))
         ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
@@ -178,9 +182,13 @@ class TestDisparity(unittest.TestCase):
         cfg = {"matching_cost_method": "sad", "window_size": 1}
         matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        col_disparity = [0, 1]
-        row_disparity = [-1, 0]
-        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, col_disparity, row_disparity, cfg=cfg)
+        grid_min_col = np.full((3, 3), 0)
+        grid_max_col = np.full((3, 3), 1)
+        grid_min_row = np.full((3, 3), -1)
+        grid_max_row = np.full((3, 3), 0)
+        cvs = matching_cost_test.compute_cost_volumes(
+            self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg
+        )
 
         ad_ground_truth = np.zeros((3, 3, 2))
         ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [2, 3, 4], [2, 3, 4]])
@@ -202,10 +210,12 @@ class TestDisparity(unittest.TestCase):
         cfg = {"matching_cost_method": "sad", "window_size": 3}
         matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        col_disparity = [0, 1]
-        row_disparity = [-1, 0]
+        grid_min_col = np.full((3, 3), 0)
+        grid_max_col = np.full((3, 3), 1)
+        grid_min_row = np.full((3, 3), -1)
+        grid_max_row = np.full((3, 3), 0)
         cvs = matching_cost_test.compute_cost_volumes(
-            self.left_arg, self.right_arg, col_disparity, row_disparity, cfg=cfg
+            self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg
         )
 
         ad_ground_truth = np.array(
@@ -228,10 +238,12 @@ class TestDisparity(unittest.TestCase):
         cfg = {"matching_cost_method": "sad", "window_size": 3}
         matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        col_disparity = [0, 1]
-        row_disparity = [-1, 0]
+        grid_min_col = np.full((3, 3), 0)
+        grid_max_col = np.full((3, 3), 1)
+        grid_min_row = np.full((3, 3), -1)
+        grid_max_row = np.full((3, 3), 0)
         cvs = matching_cost_test.compute_cost_volumes(
-            self.left_arg, self.right_arg, col_disparity, row_disparity, cfg=cfg
+            self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg
         )
 
         ad_ground_truth = np.array(
@@ -295,9 +307,13 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(cfg_disp)
 
-        col_disparity = [-2, 2]
-        row_disparity = [-2, 2]
-        cvs = matching_cost_matcher.compute_cost_volumes(left, right, col_disparity, row_disparity, cfg=cfg_mc)
+        grid_min_col = np.full((3, 3), -2)
+        grid_max_col = np.full((3, 3), 2)
+        grid_min_row = np.full((3, 3), -2)
+        grid_max_row = np.full((3, 3), 2)
+        cvs = matching_cost_matcher.compute_cost_volumes(
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg_mc
+        )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
@@ -354,9 +370,13 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(cfg_disp)
 
-        col_disparity = [-3, 3]
-        row_disparity = [-3, 3]
-        cvs = matching_cost_matcher.compute_cost_volumes(left, right, col_disparity, row_disparity, cfg=cfg_mc)
+        grid_min_col = np.full((3, 3), -3)
+        grid_max_col = np.full((3, 3), 3)
+        grid_min_row = np.full((3, 3), -3)
+        grid_max_row = np.full((3, 3), 3)
+        cvs = matching_cost_matcher.compute_cost_volumes(
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg_mc
+        )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
@@ -413,9 +433,13 @@ class TestDisparity(unittest.TestCase):
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
         disparity_matcher = disparity.Disparity(cfg_disp)
 
-        col_disparity = [-3, 3]
-        row_disparity = [-3, 3]
-        cvs = matching_cost_matcher.compute_cost_volumes(left, right, col_disparity, row_disparity, cfg=cfg_mc)
+        grid_min_col = np.full((3, 3), -3)
+        grid_max_col = np.full((3, 3), 3)
+        grid_min_row = np.full((3, 3), -3)
+        grid_max_row = np.full((3, 3), 3)
+        cvs = matching_cost_matcher.compute_cost_volumes(
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg_mc
+        )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
