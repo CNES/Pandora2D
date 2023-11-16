@@ -26,10 +26,86 @@ Test configuration
 
 import pytest
 import transitions
+import numpy as np
+import xarray as xr
 from json_checker import DictCheckerError
 
+from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 from pandora2d import check_configuration
 from tests import common
+
+
+class TestCheckDatasets:
+    """Test check_datasets function."""
+
+    @pytest.fixture()
+    def datasets(self):
+        """Build dataset."""
+        input_cfg = {
+            "left": {"img": "./tests/data/left.png", "nodata": -9999},
+            "right": {"img": "./tests/data/right.png", "nodata": -9999},
+            "col_disparity": [-2, 2],
+            "row_disparity": [-3, 3],
+        }
+        return create_datasets_from_inputs(input_cfg)
+
+    def test_nominal(self, datasets):
+        """
+        Test the nominal case with image dataset
+        """
+        dataset_left, dataset_right = datasets
+        check_configuration.check_datasets(dataset_left, dataset_right)
+
+    def test_fails_with_wrong_dimension(self):
+        """
+        Test with wrong image shapes
+        """
+        data_left = np.full((3, 3), 2)
+        data_right = np.full((4, 4), 2)
+
+        attributs = {
+            "no_data_img": 0,
+            "valid_pixels": 0,
+            "no_data_mask": 1,
+            "crs": None,
+            "transform": None,
+        }
+
+        dataset_left = xr.Dataset(
+            {"im": (["row", "col"], data_left)},
+            coords={"row": np.arange(data_left.shape[0]), "col": np.arange(data_left.shape[1])},
+            attrs=attributs,
+        ).pipe(add_disparity_grid, [0, 1], [-1, 0])
+
+        dataset_right = xr.Dataset(
+            {"im": (["row", "col"], data_right)},
+            coords={"row": np.arange(data_right.shape[0]), "col": np.arange(data_right.shape[1])},
+            attrs=attributs,
+        ).pipe(add_disparity_grid, [-2, 2], [-3, 3])
+
+        with pytest.raises(SystemExit):
+            check_configuration.check_datasets(dataset_left, dataset_right)
+
+    @pytest.mark.parametrize(
+        ["col_disparity", "row_disparity"],
+        [
+            pytest.param(True, False, id="Remove col_disparity"),
+            pytest.param(False, True, id="Remove row_disparity"),
+            pytest.param(True, True, id="Remove col & row disparity"),
+        ],
+    )
+    def test_fails_without_disparity(self, datasets, col_disparity, row_disparity):
+        """
+        Test with missing disparities
+        """
+        dataset_left, dataset_right = datasets
+        if col_disparity:
+            dataset_left = dataset_left.drop_vars("col_disparity")
+        if row_disparity:
+            dataset_left = dataset_left.drop_vars("row_disparity")
+
+        with pytest.raises(SystemExit):
+            check_configuration.check_datasets(dataset_left, dataset_right)
 
 
 class TestCheckInputSection:
