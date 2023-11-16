@@ -25,14 +25,41 @@ This module contains functions allowing to check the configuration given to Pand
 import sys
 from typing import Dict
 import logging
+import xarray as xr
 from json_checker import Checker, Or, And
 import numpy as np
 
-from pandora.check_configuration import check_disparities_from_input, check_images, get_config_input
+from pandora.check_configuration import check_disparities_from_input, check_images, get_config_input, check_dataset
 from pandora.check_configuration import concat_conf, update_conf, rasterio_can_open_mandatory
 
 
 from pandora2d.state_machine import Pandora2DMachine
+
+
+def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
+    """
+    Check that left and right datasets are correct
+
+    :param left: dataset
+    :type dataset: xr.Dataset
+    :param right: dataset
+    :type dataset: xr.Dataset
+    """
+
+    # Check the dataset content
+    check_dataset(left)
+    check_dataset(right)
+
+    # Check disparities at least on the left
+    if not "col_disparity" in left or not "row_disparity" in left:
+        logging.error("left dataset must have column and row disparities DataArrays")
+        sys.exit(1)
+
+    # Check shape
+    # check only the rows and columns, the last two elements of the shape
+    if left["im"].data.shape[-2:] != right["im"].data.shape[-2:]:
+        logging.error("left and right datasets must have the same shape")
+        sys.exit(1)
 
 
 def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
