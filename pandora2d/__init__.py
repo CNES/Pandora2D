@@ -26,11 +26,11 @@ This module contains functions to run Pandora pipeline.
 from typing import Dict, List
 import xarray as xr
 
-from pandora import read_config_file, create_dataset_from_inputs, setup_logging
+from pandora import read_config_file, setup_logging
 from pandora.common import save_config
 
 from pandora2d import check_configuration, common
-from pandora2d.img_tools import get_roi_processing
+from pandora2d.img_tools import get_roi_processing, create_datasets_from_inputs
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -38,8 +38,6 @@ def run(
     pandora2d_machine: Pandora2DMachine,
     img_left: xr.Dataset,
     img_right: xr.Dataset,
-    col_disparity: List[int],
-    row_disparity: List[int],
     cfg_pipeline: Dict[str, dict],
 ):
     """
@@ -57,17 +55,13 @@ def run(
             - im : 2D (row, col) xarray.DataArray
             - msk (optional): 2D (row, col) xarray.DataArray
     :type img_right: xarray.Dataset
-    :param row_disparity: min and max disparities for columns.
-    :type row_disparity: List[int]
-    :param col_disparity: min and max disparities for rows.
-    :type col_disparity: List[int]
     :param cfg_pipeline: pipeline configuration
     :type cfg_pipeline: Dict[str, dict]
 
     :return: None
     """
 
-    pandora2d_machine.run_prepare(img_left, img_right, col_disparity, row_disparity)
+    pandora2d_machine.run_prepare(img_left, img_right)
 
     for e in list(cfg_pipeline["pipeline"]):
         pandora2d_machine.run(e, cfg_pipeline)
@@ -108,11 +102,10 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
         roi = get_roi_processing(cfg["ROI"], col_disparity, row_disparity)
 
     # read images
-    img_left = create_dataset_from_inputs(input_config=cfg["input"]["left"], roi=roi)
-    img_right = create_dataset_from_inputs(input_config=cfg["input"]["right"], roi=roi)
+    image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
 
     # run pandora 2D and store disp maps in a dataset
-    dataset_disp_maps = run(pandora2d_machine, img_left, img_right, col_disparity, row_disparity, cfg)
+    dataset_disp_maps = run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
 
     # save dataset
     common.save_dataset(dataset_disp_maps, path_output)

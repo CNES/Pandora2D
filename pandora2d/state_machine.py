@@ -26,6 +26,7 @@ This module contains class associated to the pandora state machine
 from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal, Optional
 import logging
 from operator import add
+import numpy as np
 import xarray as xr
 from typing_extensions import Annotated
 
@@ -89,9 +90,11 @@ class Pandora2DMachine(Machine):
         # Right image
         self.right_img: Optional[xr.Dataset] = None
         # Column's min, max disparities
-        self.col_disparity: Optional[List[int]] = None
+        self.disp_min_col: np.ndarray = None
+        self.disp_max_col: np.ndarray = None
         # Row's min, max disparities
-        self.row_disparity: Optional[List[int]] = None
+        self.disp_min_row: np.ndarray = None
+        self.disp_max_row: np.ndarray = None
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
         self.cost_volumes: xr.Dataset = xr.Dataset()
@@ -115,16 +118,10 @@ class Pandora2DMachine(Machine):
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        col_disparity: List[int],
-        row_disparity: List[int],
     ) -> None:
         """
         Prepare the machine before running
 
-        :param row_disparity: min and max disparities for columns.
-        :type row_disparity: List[int]
-        :param col_disparity: min and max disparities for rows.
-        :type col_disparity: List[int]
         :param img_left: left Dataset image containing :
 
                 - im : 2D (row, col) xarray.DataArray
@@ -140,9 +137,11 @@ class Pandora2DMachine(Machine):
         self.left_img = img_left
         self.right_img = img_right
         # Column's min, max disparities
-        self.col_disparity = col_disparity
+        self.disp_min_col = img_left["col_disparity"].sel(band_disp="min").data
+        self.disp_max_col = img_left["col_disparity"].sel(band_disp="max").data
         # Row's min, max disparities
-        self.row_disparity = row_disparity
+        self.disp_min_row = img_left["row_disparity"].sel(band_disp="min").data
+        self.disp_max_row = img_left["row_disparity"].sel(band_disp="max").data
 
         self.add_transitions(self._transitions_run)
 
@@ -296,8 +295,10 @@ class Pandora2DMachine(Machine):
         self.cost_volumes = matching_cost_run.compute_cost_volumes(
             self.left_img,
             self.right_img,
-            self.col_disparity,
-            self.row_disparity,
+            self.disp_min_col,
+            self.disp_max_col,
+            self.disp_min_row,
+            self.disp_max_row,
             cfg["pipeline"][input_step],
         )
 

@@ -36,7 +36,7 @@ import json_checker
 from rasterio import Affine
 from skimage.io import imsave
 
-from pandora.img_tools import create_dataset_from_inputs
+from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d import matching_cost
 
 
@@ -171,8 +171,10 @@ class TestMatchingCost(unittest.TestCase):
         ssd = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left,
             img_right=self.right,
-            col_disparity=[-1, 0],
-            row_disparity=[-1, 0],
+            grid_min_col=np.full((3, 3), -1),
+            grid_max_col=np.full((3, 3), 0),
+            grid_min_row=np.full((3, 3), -1),
+            grid_max_row=np.full((3, 3), 0),
             cfg=cfg,
         )
 
@@ -216,8 +218,10 @@ class TestMatchingCost(unittest.TestCase):
         sad = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left,
             img_right=self.right,
-            col_disparity=[-1, 0],
-            row_disparity=[-1, 0],
+            grid_min_col=np.full((3, 3), -1),
+            grid_max_col=np.full((3, 3), 0),
+            grid_min_row=np.full((3, 3), -1),
+            grid_max_row=np.full((3, 3), 0),
             cfg=cfg,
         )
         # check that the generated cost_volumes is equal to ground truth
@@ -305,8 +309,10 @@ class TestMatchingCost(unittest.TestCase):
         zncc = matching_cost_matcher.compute_cost_volumes(
             img_left=left_zncc,
             img_right=right_zncc,
-            col_disparity=[0, 1],
-            row_disparity=[-1, 0],
+            grid_min_col=np.full((3, 3), 0),
+            grid_max_col=np.full((3, 3), 1),
+            grid_min_row=np.full((3, 3), -1),
+            grid_max_row=np.full((3, 3), 0),
             cfg=cfg,
         )
         # check that the generated cost_volumes is equal to ground truth
@@ -363,8 +369,10 @@ class TestMatchingCost(unittest.TestCase):
         cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left,
             img_right=self.right,
-            col_disparity=[-1, 1],
-            row_disparity=[-1, 1],
+            grid_min_col=np.full((3, 3), -1),
+            grid_max_col=np.full((3, 3), 1),
+            grid_min_row=np.full((3, 3), -1),
+            grid_max_row=np.full((3, 3), 1),
             cfg=cfg,
         )
 
@@ -426,8 +434,7 @@ class TestMatchingCostWithRoi:
         }
         input_config = input_cfg["input"]
         # read images
-        img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=None)
-        img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=None)
+        img_left, img_right = create_datasets_from_inputs(input_config, roi=None)
 
         # Matching cost configuration
         cfg = {"matching_cost_method": "zncc", "window_size": 3}
@@ -438,22 +445,25 @@ class TestMatchingCostWithRoi:
         zncc = matching_cost_matcher.compute_cost_volumes(
             img_left=img_left,
             img_right=img_right,
-            col_disparity=[0, 1],
-            row_disparity=[-1, 0],
+            grid_min_col=np.full((3, 3), 0),
+            grid_max_col=np.full((3, 3), 1),
+            grid_min_row=np.full((3, 3), -1),
+            grid_max_row=np.full((3, 3), 0),
             cfg=cfg,
         )
 
         # crop image with roi
         roi = {"col": {"first": 2, "last": 3}, "row": {"first": 2, "last": 3}, "margins": [1, 2, 1, 1]}
-        img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=roi)
-        img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=roi)
+        img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
         # compute cost volumes with roi
         zncc_roi = matching_cost_matcher.compute_cost_volumes(
             img_left=img_left,
             img_right=img_right,
-            col_disparity=[0, 1],
-            row_disparity=[-1, 0],
+            grid_min_col=np.full((3, 3), 0),
+            grid_max_col=np.full((3, 3), 1),
+            grid_min_row=np.full((3, 3), -1),
+            grid_max_row=np.full((3, 3), 0),
             cfg=cfg,
         )
 

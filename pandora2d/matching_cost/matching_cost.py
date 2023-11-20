@@ -115,8 +115,10 @@ class MatchingCost:
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
+
         disp_min_col, disp_max_col = col_disparity
         disp_min_row, disp_max_row = row_disparity
+
         disparity_range_col = np.arange(disp_min_col, disp_max_col + 1)
         disparity_range_row = np.arange(disp_min_row, disp_max_row + 1)
 
@@ -139,8 +141,10 @@ class MatchingCost:
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        col_disparity: List[int],
-        row_disparity: List[int],
+        grid_min_col: np.ndarray,
+        grid_max_col: np.ndarray,
+        grid_min_row: np.ndarray,
+        grid_max_row: np.ndarray,
         cfg: Dict,
     ) -> xr.Dataset:
         """
@@ -155,30 +159,33 @@ class MatchingCost:
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_right: xr.Dataset
-        :param col_disparity: min and max disparities for columns.
-        :type col_disparity: List[int]
-        :param row_disparity: min and max disparities for rows.
-        :type row_disparity: List[int]
+        :param grid_min_col: grid containing min disparities for columns.
+        :type grid_min_col: np.ndarray
+        :param grid_max_col: grid containing max disparities for columns.
+        :type grid_max_col: np.ndarray
+        :param grid_min_row: grid containing min disparities for rows.
+        :type grid_min_row: np.ndarray
+        :param grid_max_row: grid containing max disparities for rows.
+        :type grid_max_row: np.ndarray
         :param cfg: matching_cost computation configuration
         :type cfg: Dict
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
 
-        min_col, max_col = col_disparity
-        min_row, max_row = row_disparity
         cost_volumes = xr.Dataset()
 
         # Adapt Pandora matching cost configuration
         copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
         copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]
 
-        # Adapt Pandora matching for disparity grids
-        min_col_grid = np.full((img_left.dims["row"], img_left.dims["col"]), min_col)
-        max_col_grid = np.full((img_left.dims["row"], img_left.dims["col"]), max_col)
-
         # Initialize Pandora matching cost
         pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
+
+        # Obtain absolute min and max disparities
+        min_row, max_row = pandora_matching_cost_.get_min_max_from_grid(grid_min_row, grid_max_row)
+        min_col, max_col = pandora_matching_cost_.get_min_max_from_grid(grid_min_col, grid_max_col)
+
         # Array with all y disparities
         disps_row = range(min_row, max_row + 1)
         for idx, disp_row in enumerate(disps_row):
@@ -186,10 +193,10 @@ class MatchingCost:
             img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_row)
             # Compute cost volume
             cost_volume = pandora_matching_cost_.compute_cost_volume(
-                img_left, img_right_shift, min_col_grid, max_col_grid
+                img_left, img_right_shift, grid_min_col, grid_max_col
             )
             # Mask cost volume
-            pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, min_col_grid, max_col_grid)
+            pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, grid_min_col, grid_max_col)
             # If first iteration, initialize cost_volumes dataset
             if idx == 0:
                 c_row = cost_volume["cost_volume"].coords["row"]
@@ -200,8 +207,9 @@ class MatchingCost:
                 col = np.arange(c_col[0], c_col[-1] + 1)
 
                 cost_volumes = self.allocate_cost_volumes(
-                    cost_volume.attrs, row, col, col_disparity, row_disparity, None
+                    cost_volume.attrs, row, col, [min_col, max_col], [min_row, max_row], None
                 )
+
             # Add current cost volume to the cost_volumes dataset
             cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data
 
