@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
@@ -33,15 +33,15 @@ import pandora
 from pandora2d import img_tools
 
 
-def _make_input_section():
+def _make_input_section(left_img_path, right_img_path):
     """This is not a fixture because we want to use it with different scopes."""
     return {
         "left": {
-            "img": "./tests/data/left.png",
+            "img": left_img_path,
             "nodata": -9999,
         },
         "right": {
-            "img": "./tests/data/right.png",
+            "img": right_img_path,
             "nodata": -9999,
         },
         "col_disparity": [-2, 2],
@@ -50,16 +50,16 @@ def _make_input_section():
 
 
 @pytest.fixture()
-def input_section():
-    return _make_input_section()
+def input_section(left_img_path, right_img_path):
+    return _make_input_section(left_img_path, right_img_path)
 
 
 class TestReturnedValue:
     """Test expected properties of returned value of create_datasets_from_inputs."""
 
-    @pytest.fixture(scope="class")
-    def result(self):
-        return img_tools.create_datasets_from_inputs(_make_input_section())
+    @pytest.fixture()
+    def result(self, left_img_path, right_img_path):
+        return img_tools.create_datasets_from_inputs(_make_input_section(left_img_path, right_img_path))
 
     def test_use_function_from_pandora(self, mocker, input_section):
         """Test we use `create_datset_from_inputs` from pandora.
@@ -78,17 +78,17 @@ class TestReturnedValue:
             any_order=True,
         )
 
-    def test_returns_left_and_right_datasets(self, result):
+    def test_returns_left_and_right_datasets(self, result, left_img_path, right_img_path):
         """Test left and right datasets are returned as namedtuple."""
         assert len(result) == 2
         assert all(isinstance(element, xr.Dataset) for element in result)
         np.testing.assert_equal(
             result.left["im"].data,
-            pandora.img_tools.rasterio_open("./tests/data/left.png").read(1, out_dtype=np.float32),
+            pandora.img_tools.rasterio_open(left_img_path).read(1, out_dtype=np.float32),
         )
         np.testing.assert_equal(
             result.right["im"].data,
-            pandora.img_tools.rasterio_open("./tests/data/right.png").read(1, out_dtype=np.float32),
+            pandora.img_tools.rasterio_open(right_img_path).read(1, out_dtype=np.float32),
         )
 
     def test_disp_band_coordinates(self, result):

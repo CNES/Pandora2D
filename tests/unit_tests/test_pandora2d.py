@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf8
 #
-# Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
@@ -33,7 +33,6 @@ import pytest
 from transitions.core import MachineError
 
 from pandora.margins import Margins
-from tests import common
 from pandora2d import state_machine
 from pandora2d.img_tools import create_datasets_from_inputs
 
@@ -44,32 +43,32 @@ class TestPandora2D:
     """
 
     @staticmethod
-    def test_run_pandora() -> None:
+    def test_run_pandora(correct_pipeline, false_pipeline_mc, false_pipeline_disp) -> None:
         """
         Test function for checking user input section
         """
 
         pandora2d_machine = state_machine.Pandora2DMachine()
 
-        correct_cfg = copy.deepcopy(common.correct_pipeline)
+        correct_cfg = copy.deepcopy(correct_pipeline)
         pandora2d_machine.check_conf(correct_cfg)
 
-        false_cfg_mc = copy.deepcopy(common.false_pipeline_mc)
-        false_cfg_disp = copy.deepcopy(common.false_pipeline_disp)
+        false_cfg_mc = copy.deepcopy(false_pipeline_mc)
+        false_cfg_disp = copy.deepcopy(false_pipeline_disp)
         with pytest.raises(MachineError):
             pandora2d_machine.check_conf(false_cfg_mc)
             pandora2d_machine.check_conf(false_cfg_disp)
 
     @staticmethod
-    def test_run_prepare() -> None:
+    def test_run_prepare(left_img_path, right_img_path) -> None:
         """
         Test run_prepare function
         """
         pandora2d_machine = state_machine.Pandora2DMachine()
 
         input_config = {
-            "left": {"img": "./tests/data/left.png", "nodata": -9999},
-            "right": {"img": "./tests/data/right.png", "nodata": -9999},
+            "left": {"img": left_img_path, "nodata": -9999},
+            "right": {"img": right_img_path, "nodata": -9999},
             "col_disparity": [-2, 2],
             "row_disparity": [-2, 2],
         }
