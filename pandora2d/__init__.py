@@ -29,7 +29,8 @@ import xarray as xr
 from pandora import read_config_file, setup_logging
 from pandora.common import save_config
 
-from pandora2d import check_configuration, common
+from pandora2d import common
+from pandora2d.check_configuration import check_conf, check_datasets
 from pandora2d.img_tools import get_roi_processing, create_datasets_from_inputs
 from pandora2d.state_machine import Pandora2DMachine
 
@@ -87,7 +88,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     pandora2d_machine = Pandora2DMachine()
 
-    cfg = check_configuration.check_conf(user_cfg, pandora2d_machine)
+    cfg = check_conf(user_cfg, pandora2d_machine)
 
     setup_logging(verbose)
 
@@ -103,6 +104,9 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     # read images
     image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+
+    # check datasets: shape, format and content
+    check_datasets(image_datasets.left, image_datasets.right)
 
     # run pandora 2D and store disp maps in a dataset
     dataset_disp_maps = run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
