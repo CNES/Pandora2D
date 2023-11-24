@@ -380,6 +380,99 @@ class TestMatchingCost(unittest.TestCase):
         np.testing.assert_array_equal(cost_volumes_fun["cost_volumes"].data, cost_volumes_test["cost_volumes"].data)
         assert cost_volumes_fun.attrs == cost_volumes_test.attrs
 
+def test_step():
+    """We expect step to work."""
+
+    data = np.array(
+        ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
+        dtype=np.float64,
+    )
+    mask = np.array(
+        ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
+    )
+    left_zncc = xr.Dataset(
+        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
+        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+    )
+    left_zncc.attrs = {
+        "no_data_img": -9999,
+        "valid_pixels": 0,
+        "no_data_mask": 1,
+        "crs": None,
+        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+    }
+
+    data = np.array(
+        ([[1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
+        dtype=np.float64,
+    )
+    mask = np.array(
+        ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
+    )
+    right_zncc = xr.Dataset(
+        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
+        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+    )
+    right_zncc.attrs = {
+        "no_data_img": -9999,
+        "valid_pixels": 0,
+        "no_data_mask": 1,
+        "crs": None,
+        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+    }
+
+    # sum of squared difference images self.left, self.right, window_size=3
+    cfg = {"matching_cost_method": "zncc", "window_size": 3, "step":[1,2]}
+    # sum of absolute difference ground truth for the images self.left, self.right, window_size=1
+
+    left = left_zncc["im"].data
+    right = right_zncc["im"].data
+    right_shift = np.array(
+        [
+            [np.nan, np.nan, np.nan, np.nan, np.nan],
+            [1, 1, 1, 1, 1],
+            [3, 4, 5, 6, 7],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+        ]
+    )
+
+    # row = 1, col = 1, disp_x = 0, disp_y = 0, ground truth equal -0,45
+    ad_ground_truth_1_1_0_0 = (
+                                      np.mean(left[0:3, 0:3] * right[0:3, 0:3]) - (np.mean(left[0:3, 0:3]) * np.mean(right[0:3, 0:3]))
+                              ) / (np.std(left[0:3, 0:3]) * np.std(right[0:3, 0:3]))
+    # row = 1, col = 1, disp_x = 0, disp_y = -1, , ground truth equal NaN
+    ad_ground_truth_1_1_0_1 = (
+                                      np.mean(left[0:3, 0:3] * right_shift[0:3, 0:3]) - (np.mean(left[0:3, 0:3]) * np.mean(right_shift[0:3, 0:3]))
+                              ) / (np.std(left[0:3, 0:3]) * np.std(right_shift[0:3, 0:3]))
+    # row = 2, col = 2, disp_x = 0, disp_y = 0, , ground truth equal -0,47
+    ad_ground_truth_2_2_0_0 = (
+                                      np.mean(left[1:4, 1:4] * right[1:4, 1:4]) - (np.mean(left[1:4, 1:4]) * np.mean(right[1:4, 1:4]))
+                              ) / (np.std(left[1:4, 1:4]) * np.std(right[1:4, 1:4]))
+    # row = 2, col = 2, disp_x = 0, disp_y = -1, ground truth equal 1
+    ad_ground_truth_2_2_0_1 = (
+                                      np.mean(left[1:4, 1:4] * right_shift[1:4, 1:4]) - (np.mean(left[1:4, 1:4]) * np.mean(right_shift[1:4, 1:4]))
+                              ) / (np.std(left[1:4, 1:4]) * np.std(right_shift[1:4, 1:4]))
+
+    # initialise matching cost
+    matching_cost_matcher = matching_cost.MatchingCost(cfg)
+    # compute cost volumes
+    zncc = matching_cost_matcher.compute_cost_volumes(
+        img_left=left_zncc,
+        img_right=right_zncc,
+        grid_min_col=np.full((3, 3), 0),
+        grid_max_col=np.full((3, 3), 1),
+        grid_min_row=np.full((3, 3), -1),
+        grid_max_row=np.full((3, 3), 0),
+        cfg=cfg,
+    )
+    # check that the generated cost_volumes is equal to ground truth
+
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 0], ad_ground_truth_1_1_0_1, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 1], ad_ground_truth_2_2_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 0], ad_ground_truth_2_2_0_1, rtol=1e-06)
+
 
 class TestMatchingCostWithRoi:
     """Test using roi in pandora2d processing"""
