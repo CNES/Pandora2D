@@ -28,6 +28,7 @@ Test Matching cost class
 # pylint: disable=duplicate-code
 
 import unittest
+from typing import NamedTuple
 
 import numpy as np
 import xarray as xr
@@ -380,98 +381,355 @@ class TestMatchingCost(unittest.TestCase):
         np.testing.assert_array_equal(cost_volumes_fun["cost_volumes"].data, cost_volumes_test["cost_volumes"].data)
         assert cost_volumes_fun.attrs == cost_volumes_test.attrs
 
-def test_step():
-    """We expect step to work."""
 
-    data = np.array(
-        ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
-        dtype=np.float64,
-    )
-    mask = np.array(
-        ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
-    )
-    left_zncc = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    left_zncc.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-    }
+class DisparityGrids(NamedTuple):
+    """NamedTuple used to group disparity grids together in tests."""
 
-    data = np.array(
-        ([[1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
-        dtype=np.float64,
-    )
-    mask = np.array(
-        ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
-    )
-    right_zncc = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    right_zncc.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-    }
+    col_min: np.ndarray
+    col_max: np.ndarray
+    row_min: np.ndarray
+    row_max: np.ndarray
 
-    # sum of squared difference images self.left, self.right, window_size=3
-    cfg = {"matching_cost_method": "zncc", "window_size": 3, "step":[1,2]}
-    # sum of absolute difference ground truth for the images self.left, self.right, window_size=1
 
-    left = left_zncc["im"].data
-    right = right_zncc["im"].data
-    right_shift = np.array(
+class StepData(NamedTuple):
+    """NamedTuple used to group data related to Step together."""
+
+    left: xr.Dataset
+    right: xr.Dataset
+    full_matching_cost: np.ndarray
+    disparity_grids: DisparityGrids
+
+
+class TestStep:
+    """Test step is taken into account with matching cost computing."""
+
+    @pytest.fixture()
+    def create_image(self):
+        """Create an image with mask full of zeros."""
+
+        def create(data):
+            return xr.Dataset(
+                {"im": (["row", "col"], data), "msk": (["row", "col"], np.zeros_like(data))},
+                coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+                attrs={
+                    "no_data_img": -9999,
+                    "valid_pixels": 0,
+                    "no_data_mask": 1,
+                    "crs": None,
+                    "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+                },
+            )
+
+        return create
+
+    @pytest.fixture()
+    def left_zncc(self, create_image):
+        """Left image for Znnc."""
+        data = np.array(
+            [
+                [1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1],
+                [3, 4, 5, 6, 7],
+                [1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1],
+            ],
+            dtype=np.float64,
+        )
+        return create_image(data)
+
+    @pytest.fixture()
+    def right_zncc(self, create_image):
+        """Right image for Znnc."""
+        data = np.array(
+            (
+                [
+                    [1, 1, 1, 1, 1],
+                    [3, 4, 5, 6, 7],
+                    [1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1],
+                ]
+            ),
+            dtype=np.float64,
+        )
+        return create_image(data)
+
+    @pytest.fixture()
+    def null_disparity_grid(self):
+        return np.zeros((3, 3))
+
+    @pytest.fixture()
+    def positive_disparity_grid(self):
+        return np.full((3, 3), 1)
+
+    @pytest.fixture()
+    def negative_disparity_grid(self):
+        return np.full((3, 3), -1)
+
+    @pytest.fixture()
+    def data_with_null_disparity(self, left_zncc, right_zncc, null_disparity_grid):
+        """Coherent Data for test_step."""
+        disparity_grids = DisparityGrids(
+            col_min=null_disparity_grid,
+            col_max=null_disparity_grid,
+            row_min=null_disparity_grid,
+            row_max=null_disparity_grid,
+        )
+        full_matching_cost = np.array(
+            [
+                [[[np.nan]], [[np.nan]], [[np.nan]], [[np.nan]], [[np.nan]]],
+                [[[np.nan]], [[-0.45]], [[-0.47058824]], [[-0.48076922]], [[np.nan]]],
+                [[[np.nan]], [[-0.45]], [[-0.47058824]], [[-0.48076922]], [[np.nan]]],
+                [[[np.nan]], [[0.0]], [[0.0]], [[0.0]], [[np.nan]]],
+                [[[np.nan]], [[np.nan]], [[np.nan]], [[np.nan]], [[np.nan]]],
+            ],
+            dtype=np.float32,
+        )
+        return StepData(
+            left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
+        )
+
+    @pytest.fixture()
+    def data_with_positive_disparity_in_col(self, left_zncc, right_zncc, null_disparity_grid, positive_disparity_grid):
+        """Coherent Data for test_step."""
+        disparity_grids = DisparityGrids(
+            col_min=null_disparity_grid,
+            col_max=positive_disparity_grid,
+            row_min=null_disparity_grid,
+            row_max=null_disparity_grid,
+        )
+        full_matching_cost = np.array(
+            [
+                [
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                ],
+                [
+                    [[np.nan], [np.nan]],
+                    [[-0.45], [-0.460179]],
+                    [[-0.47058824], [-0.4756515]],
+                    [[-0.48076922], [np.nan]],
+                    [[np.nan], [np.nan]],
+                ],
+                [
+                    [[np.nan], [np.nan]],
+                    [[-0.45], [-0.460179]],
+                    [[-0.47058824], [-0.4756515]],
+                    [[-0.48076922], [np.nan]],
+                    [[np.nan], [np.nan]],
+                ],
+                [[[np.nan], [np.nan]], [[0.0], [0.0]], [[0.0], [0.0]], [[0.0], [np.nan]], [[np.nan], [np.nan]]],
+                [
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                ],
+            ],
+            dtype=np.float32,
+        )
+        return StepData(
+            left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
+        )
+
+    @pytest.fixture()
+    def data_with_positive_disparity_in_row(self, left_zncc, right_zncc, null_disparity_grid, positive_disparity_grid):
+        """Coherent Data for test_step."""
+        disparity_grids = DisparityGrids(
+            col_min=null_disparity_grid,
+            col_max=null_disparity_grid,
+            row_min=null_disparity_grid,
+            row_max=positive_disparity_grid,
+        )
+        full_matching_cost = np.array(
+            [
+                [[[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]]],
+                [
+                    [[np.nan, np.nan]],
+                    [[-0.45, -0.45]],
+                    [[-0.47058824, -0.47058824]],
+                    [[-0.48076922, -0.48076922]],
+                    [[np.nan, np.nan]],
+                ],
+                [[[np.nan, np.nan]], [[-0.45, 0.0]], [[-0.47058824, 0.0]], [[-0.48076922, 0.0]], [[np.nan, np.nan]]],
+                [[[np.nan, np.nan]], [[0.0, np.nan]], [[0.0, np.nan]], [[0.0, np.nan]], [[np.nan, np.nan]]],
+                [[[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]]],
+            ],
+            dtype=np.float32,
+        )
+        return StepData(
+            left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
+        )
+
+    @pytest.fixture()
+    def data_with_negative_disparity_in_col(self, left_zncc, right_zncc, null_disparity_grid, negative_disparity_grid):
+        """Coherent Data for test_step."""
+        disparity_grids = DisparityGrids(
+            col_min=negative_disparity_grid,
+            col_max=null_disparity_grid,
+            row_min=null_disparity_grid,
+            row_max=null_disparity_grid,
+        )
+        full_matching_cost = np.array(
+            [
+                [
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                ],
+                [
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [-0.45]],
+                    [[-0.460179], [-0.47058824]],
+                    [[-0.4756515], [-0.48076922]],
+                    [[np.nan], [np.nan]],
+                ],
+                [
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [-0.45]],
+                    [[-0.460179], [-0.47058824]],
+                    [[-0.4756515], [-0.48076922]],
+                    [[np.nan], [np.nan]],
+                ],
+                [[[np.nan], [np.nan]], [[np.nan], [0.0]], [[0.0], [0.0]], [[0.0], [0.0]], [[np.nan], [np.nan]]],
+                [
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                    [[np.nan], [np.nan]],
+                ],
+            ],
+            dtype=np.float32,
+        )
+        return StepData(
+            left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
+        )
+
+    @pytest.fixture()
+    def data_with_negative_disparity_in_row(self, left_zncc, right_zncc, null_disparity_grid, negative_disparity_grid):
+        """Coherent Data for test_step."""
+        disparity_grids = DisparityGrids(
+            col_min=null_disparity_grid,
+            col_max=null_disparity_grid,
+            row_min=negative_disparity_grid,
+            row_max=null_disparity_grid,
+        )
+        full_matching_cost = np.array(
+            [
+                [[[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]]],
+                [
+                    [[np.nan, np.nan]],
+                    [[np.nan, -0.45]],
+                    [[np.nan, -0.47058824]],
+                    [[np.nan, -0.48076922]],
+                    [[np.nan, np.nan]],
+                ],
+                [[[np.nan, np.nan]], [[1.0, -0.45]], [[1.0, -0.47058824]], [[1.0, -0.48076922]], [[np.nan, np.nan]]],
+                [[[np.nan, np.nan]], [[1.0, 0.0]], [[1.0, 0.0]], [[1.0, 0.0]], [[np.nan, np.nan]]],
+                [[[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]]],
+            ],
+            dtype=np.float32,
+        )
+        return StepData(
+            left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
+        )
+
+    @pytest.fixture()
+    def data_with_disparity_negative_in_row_and_positive_in_col(
+        self, left_zncc, right_zncc, null_disparity_grid, positive_disparity_grid, negative_disparity_grid
+    ):
+        """Coherent Data for test_step."""
+        disparity_grids = DisparityGrids(
+            col_min=null_disparity_grid,
+            col_max=positive_disparity_grid,
+            row_min=negative_disparity_grid,
+            row_max=null_disparity_grid,
+        )
+        full_matching_cost = np.array(
+            [
+                [
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                ],
+                [
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, -0.45], [np.nan, -0.460179]],
+                    [[np.nan, -0.47058824], [np.nan, -0.4756515]],
+                    [[np.nan, -0.48076922], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                ],
+                [
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[1.0, -0.45], [0.99705446, -0.460179]],
+                    [[1.0, -0.47058824], [0.99886817, -0.4756515]],
+                    [[1.0, -0.48076922], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                ],
+                [
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[1.0, 0.0], [0.99705446, 0.0]],
+                    [[1.0, 0.0], [0.99886817, 0.0]],
+                    [[1.0, 0.0], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                ],
+                [
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                    [[np.nan, np.nan], [np.nan, np.nan]],
+                ],
+            ],
+            dtype=np.float32,
+        )
+        return StepData(
+            left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
+        )
+
+    @pytest.mark.parametrize(
+        "data_fixture_name",
         [
-            [np.nan, np.nan, np.nan, np.nan, np.nan],
-            [1, 1, 1, 1, 1],
-            [3, 4, 5, 6, 7],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-        ]
+            "data_with_null_disparity",
+            "data_with_positive_disparity_in_col",
+            "data_with_positive_disparity_in_row",
+            "data_with_negative_disparity_in_col",
+            "data_with_negative_disparity_in_row",
+            "data_with_disparity_negative_in_row_and_positive_in_col",
+        ],
     )
+    @pytest.mark.parametrize("col_step", [1, 2, pytest.param(5, id="Step gt image")])
+    @pytest.mark.parametrize("row_step", [1, 2, pytest.param(5, id="Step gt image")])
+    def test_steps(self, request, data_fixture_name, col_step, row_step):
+        """We expect step to work."""
+        data = request.getfixturevalue(data_fixture_name)
 
-    # row = 1, col = 1, disp_x = 0, disp_y = 0, ground truth equal -0,45
-    ad_ground_truth_1_1_0_0 = (
-                                      np.mean(left[0:3, 0:3] * right[0:3, 0:3]) - (np.mean(left[0:3, 0:3]) * np.mean(right[0:3, 0:3]))
-                              ) / (np.std(left[0:3, 0:3]) * np.std(right[0:3, 0:3]))
-    # row = 1, col = 1, disp_x = 0, disp_y = -1, , ground truth equal NaN
-    ad_ground_truth_1_1_0_1 = (
-                                      np.mean(left[0:3, 0:3] * right_shift[0:3, 0:3]) - (np.mean(left[0:3, 0:3]) * np.mean(right_shift[0:3, 0:3]))
-                              ) / (np.std(left[0:3, 0:3]) * np.std(right_shift[0:3, 0:3]))
-    # row = 2, col = 2, disp_x = 0, disp_y = 0, , ground truth equal -0,47
-    ad_ground_truth_2_2_0_0 = (
-                                      np.mean(left[1:4, 1:4] * right[1:4, 1:4]) - (np.mean(left[1:4, 1:4]) * np.mean(right[1:4, 1:4]))
-                              ) / (np.std(left[1:4, 1:4]) * np.std(right[1:4, 1:4]))
-    # row = 2, col = 2, disp_x = 0, disp_y = -1, ground truth equal 1
-    ad_ground_truth_2_2_0_1 = (
-                                      np.mean(left[1:4, 1:4] * right_shift[1:4, 1:4]) - (np.mean(left[1:4, 1:4]) * np.mean(right_shift[1:4, 1:4]))
-                              ) / (np.std(left[1:4, 1:4]) * np.std(right_shift[1:4, 1:4]))
+        # sum of squared difference images self.left, self.right, window_size=3
+        cfg = {"matching_cost_method": "zncc", "window_size": 3, "step": [row_step, col_step]}
+        # initialise matching cost
+        matching_cost_matcher = matching_cost.MatchingCost(cfg)
+        # compute cost volumes
+        zncc = matching_cost_matcher.compute_cost_volumes(
+            img_left=data.left,
+            img_right=data.right,
+            grid_min_col=data.disparity_grids.col_min,
+            grid_max_col=data.disparity_grids.col_max,
+            grid_min_row=data.disparity_grids.row_min,
+            grid_max_row=data.disparity_grids.row_max,
+            cfg=cfg,
+        )
 
-    # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg)
-    # compute cost volumes
-    zncc = matching_cost_matcher.compute_cost_volumes(
-        img_left=left_zncc,
-        img_right=right_zncc,
-        grid_min_col=np.full((3, 3), 0),
-        grid_max_col=np.full((3, 3), 1),
-        grid_min_row=np.full((3, 3), -1),
-        grid_max_row=np.full((3, 3), 0),
-        cfg=cfg,
-    )
-    # check that the generated cost_volumes is equal to ground truth
-
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 0], ad_ground_truth_1_1_0_1, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 1], ad_ground_truth_2_2_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 0], ad_ground_truth_2_2_0_1, rtol=1e-06)
+        # indexes are : row, col, disp_x, disp_y
+        np.testing.assert_equal(zncc["cost_volumes"].data, data.full_matching_cost[::row_step, ::col_step, :, :])
 
 
 class TestMatchingCostWithRoi:
