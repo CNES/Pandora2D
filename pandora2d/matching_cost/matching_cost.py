@@ -23,7 +23,7 @@
 This module contains functions associated to the matching cost computation step.
 """
 import copy
-from typing import Dict, List
+from typing import Dict, List, cast
 from json_checker import And, Checker
 
 import xarray as xr
@@ -53,8 +53,9 @@ class MatchingCost:
         self.cfg = self.check_conf(cfg)
         self._window_size = int(self.cfg["window_size"])
         self._matching_cost_method = self.cfg["matching_cost_method"]
-        self._step_row = self.cfg["step"][0]
-        self._step_col = self.cfg["step"][1]
+        # Cast to int in order to help mypy because self.cfg is a Dict and it can not know the type of step.
+        self._step_row = cast(int, self.cfg["step"][0])
+        self._step_col = cast(int, self.cfg["step"][1])
 
     def check_conf(self, cfg: Dict) -> Dict[str, str]:
         """
