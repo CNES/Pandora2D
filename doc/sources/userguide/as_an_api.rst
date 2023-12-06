@@ -95,6 +95,7 @@ image which contain the data's image, data's mask and additionnal information.
 Example of an image dataset
 
 ::
+
     Dimensions:  (col: 450, row: 375)
     Coordinates:
       * col      (col) int64 0 1 2 3 4 5 6 7 8 ... 442 443 444 445 446 447 448 449
