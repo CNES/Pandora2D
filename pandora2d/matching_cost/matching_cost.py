@@ -23,7 +23,7 @@
 This module contains functions associated to the matching cost computation step.
 """
 import copy
-from typing import Dict, List
+from typing import Dict, List, cast
 from json_checker import And, Checker
 
 import xarray as xr
@@ -53,8 +53,9 @@ class MatchingCost:
         self.cfg = self.check_conf(cfg)
         self._window_size = int(self.cfg["window_size"])
         self._matching_cost_method = self.cfg["matching_cost_method"]
-        self._step_row = self.cfg["step"][0]
-        self._step_col = self.cfg["step"][1]
+        # Cast to int in order to help mypy because self.cfg is a Dict and it can not know the type of step.
+        self._step_row = cast(int, self.cfg["step"][0])
+        self._step_col = cast(int, self.cfg["step"][1])
 
     def check_conf(self, cfg: Dict) -> Dict[str, str]:
         """
@@ -177,7 +178,7 @@ class MatchingCost:
 
         # Adapt Pandora matching cost configuration
         copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
-        copy_matching_cost_cfg_with_step["step"] = self.cfg["step"][1]
+        copy_matching_cost_cfg_with_step["step"] = self._step_col
 
         # Initialize Pandora matching cost
         pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
@@ -188,6 +189,7 @@ class MatchingCost:
 
         # Array with all y disparities
         disps_row = range(min_row, max_row + 1)
+        row_step = None
         for idx, disp_row in enumerate(disps_row):
             # Shift image in the y axis
             img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_row)
@@ -203,14 +205,18 @@ class MatchingCost:
                 c_col = cost_volume["cost_volume"].coords["col"]
 
                 # First pixel in the image that is fully computable (aggregation windows are complete)
-                row = np.arange(c_row[0], c_row[-1] + 1)
-                col = np.arange(c_col[0], c_col[-1] + 1)
+                row = np.arange(c_row[0], c_row[-1] + 1, self._step_row)
+                col = np.arange(c_col[0], c_col[-1] + 1, self._step_col)
 
                 cost_volumes = self.allocate_cost_volumes(
                     cost_volume.attrs, row, col, [min_col, max_col], [min_row, max_row], None
                 )
 
+                # Number of line to be taken as a function of the step.
+                # Note that the row vector may not start at zero.
+                row_step = np.arange(0, c_row[-1] + 1 - c_row[0], self._step_row)
+
             # Add current cost volume to the cost_volumes dataset
-            cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data
+            cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data[row_step, :, :]
 
         return cost_volumes
