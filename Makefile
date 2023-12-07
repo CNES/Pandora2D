@@ -100,8 +100,8 @@ lint/pylint: ## check linting with pylint
 
 .PHONY: docs
 docs: install ## build sphinx documentation (source venv before)
-	@${PANDORA2D_VENV}/bin/sphinx-build -M clean doc/sources/ docs/build
-	@${PANDORA2D_VENV}/bin/sphinx-build -M html doc/sources/ docs/build -W --keep-going
+	@${PANDORA2D_VENV}/bin/sphinx-build -M clean doc/sources/ doc/build
+	@${PANDORA2D_VENV}/bin/sphinx-build -M html doc/sources/ doc/build -W --keep-going
 
 ## Notebook section
 .PHONY: notebook
