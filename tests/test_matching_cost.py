@@ -67,6 +67,8 @@ class TestMatchingCost(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [-1, 0],
+            "row_disparity_source": [-1, 0],
         }
 
         data = np.array(
@@ -250,6 +252,8 @@ class TestMatchingCost(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [0, 1],
+            "row_disparity_source": [-1, 0],
         }
 
         data = np.array(
@@ -329,7 +333,7 @@ class TestMatchingCost(unittest.TestCase):
         """
 
         # generated data for the test
-        np_data = np.empty((3, 3, 3, 3))
+        np_data = np.empty((3, 3, 2, 2))
         np_data.fill(np.nan)
 
         c_row = [0, 1, 2]
@@ -339,8 +343,8 @@ class TestMatchingCost(unittest.TestCase):
         row = np.arange(c_row[0], c_row[-1] + 1)
         col = np.arange(c_col[0], c_col[-1] + 1)
 
-        disparity_range_col = np.arange(-1, 1 + 1)
-        disparity_range_row = np.arange(-1, 1 + 1)
+        disparity_range_col = np.arange(-1, 0 + 1)
+        disparity_range_row = np.arange(-1, 0 + 1)
 
         # Create the cost volume
         if np_data is None:
@@ -362,6 +366,8 @@ class TestMatchingCost(unittest.TestCase):
         cost_volumes_test.attrs["crs"] = None
         cost_volumes_test.attrs["transform"] = Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         cost_volumes_test.attrs["band_correl"] = None
+        cost_volumes_test.attrs["col_disparity_source"] = [-1, 0]
+        cost_volumes_test.attrs["row_disparity_source"] = [-1, 0]
 
         # data by function compute_cost_volume
         cfg = {"matching_cost_method": "zncc", "window_size": 3}
@@ -371,9 +377,9 @@ class TestMatchingCost(unittest.TestCase):
             img_left=self.left,
             img_right=self.right,
             grid_min_col=np.full((3, 3), -1),
-            grid_max_col=np.full((3, 3), 1),
+            grid_max_col=np.full((3, 3), 0),
             grid_min_row=np.full((3, 3), -1),
-            grid_max_row=np.full((3, 3), 1),
+            grid_max_row=np.full((3, 3), 0),
             cfg=cfg,
         )
 
@@ -485,6 +491,8 @@ class TestStep:
             ],
             dtype=np.float32,
         )
+        left_zncc.attrs["col_disparity_source"] = [0, 0]
+        left_zncc.attrs["row_disparity_source"] = [0, 0]
         return StepData(
             left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
         )
@@ -532,6 +540,8 @@ class TestStep:
             ],
             dtype=np.float32,
         )
+        left_zncc.attrs["col_disparity_source"] = [0, 1]
+        left_zncc.attrs["row_disparity_source"] = [0, 0]
         return StepData(
             left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
         )
@@ -561,6 +571,8 @@ class TestStep:
             ],
             dtype=np.float32,
         )
+        left_zncc.attrs["col_disparity_source"] = [0, 0]
+        left_zncc.attrs["row_disparity_source"] = [0, 1]
         return StepData(
             left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
         )
@@ -608,6 +620,8 @@ class TestStep:
             ],
             dtype=np.float32,
         )
+        left_zncc.attrs["col_disparity_source"] = [-1, 0]
+        left_zncc.attrs["row_disparity_source"] = [0, 0]
         return StepData(
             left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
         )
@@ -637,6 +651,8 @@ class TestStep:
             ],
             dtype=np.float32,
         )
+        left_zncc.attrs["col_disparity_source"] = [0, 0]
+        left_zncc.attrs["row_disparity_source"] = [-1, 0]
         return StepData(
             left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
         )
@@ -692,6 +708,8 @@ class TestStep:
             ],
             dtype=np.float32,
         )
+        left_zncc.attrs["col_disparity_source"] = [0, 1]
+        left_zncc.attrs["row_disparity_source"] = [-1, 0]
         return StepData(
             left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
         )
