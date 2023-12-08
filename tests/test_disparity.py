@@ -63,6 +63,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [0, 1],
+            "row_disparity_source": [-1, 0],
         }
 
         data = np.array(
@@ -98,6 +100,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [0, 1],
+            "row_disparity_source": [-1, 0],
         }
 
         data = np.array(
@@ -277,6 +281,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [-2, 2],
+            "row_disparity_source": [-2, 2],
         }
 
         data = np.array(
@@ -340,6 +346,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [-3, 3],
+            "row_disparity_source": [-3, 3],
         }
 
         data = np.array(
@@ -403,6 +411,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [-3, 3],
+            "row_disparity_source": [-3, 3],
         }
 
         data = np.array(

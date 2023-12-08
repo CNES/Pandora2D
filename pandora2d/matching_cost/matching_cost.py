@@ -179,6 +179,7 @@ class MatchingCost:
         # Adapt Pandora matching cost configuration
         copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
         copy_matching_cost_cfg_with_step["step"] = self._step_col
+        img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
 
         # Initialize Pandora matching cost
         pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
@@ -218,5 +219,10 @@ class MatchingCost:
 
             # Add current cost volume to the cost_volumes dataset
             cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data[row_step, :, :]
+
+        # Add disparity source
+        del cost_volumes.attrs["disparity_source"]
+        cost_volumes.attrs["col_disparity_source"] = img_left.attrs["col_disparity_source"]
+        cost_volumes.attrs["row_disparity_source"] = img_left.attrs["row_disparity_source"]
 
         return cost_volumes
