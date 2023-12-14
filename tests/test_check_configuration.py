@@ -117,7 +117,7 @@ class TestCheckInputSection:
         assert check_configuration.check_input_section(common.correct_input)
 
     def test_false_input_disp_should_exit(self):
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError, match="disp_max must be bigger than disp_min"):
             check_configuration.check_input_section(common.false_input_disp)
 
     def test_false_input_path_image_should_raise_error(self):
