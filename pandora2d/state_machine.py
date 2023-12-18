@@ -23,7 +23,7 @@
 This module contains class associated to the pandora state machine
 """
 
-from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal, Optional
+from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal, Optional, Union
 import logging
 from operator import add
 import numpy as np
@@ -60,7 +60,13 @@ class Pandora2DMachine(Machine):
     """
 
     _transitions_run = [
-        {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "after": "matching_cost_run"},
+        {
+            "trigger": "matching_cost",
+            "source": "begin",
+            "dest": "cost_volumes",
+            "prepare": "matching_cost_prepare",
+            "after": "matching_cost_run",
+        },
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "after": "disp_maps_run"},
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_run"},
     ]
@@ -102,6 +108,9 @@ class Pandora2DMachine(Machine):
 
         # Define avalaible states
         states_ = ["begin", "cost_volumes", "disp_maps"]
+
+        # Instance matching_cost
+        self.matching_cost_: Union[matching_cost.MatchingCost, None] = None
 
         # Initialize a machine without any transition
         Machine.__init__(
@@ -278,7 +287,20 @@ class Pandora2DMachine(Machine):
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
         self._transitions_margins["refinement"]["margins"] = refinement_.get_margins()
 
-    def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Matching cost prepare
+
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :param input_step: step to trigger
+        :type input_step: str
+        :return: None
+        """
+        self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
+        self.matching_cost_.allocate_cost_volume_pandora(self.left_img, self.disp_min_col, self.disp_max_col, cfg)
+
+    def matching_cost_run(self, _: Dict[str, dict], __: str) -> None:
         """
         Matching cost computation
 
@@ -290,16 +312,14 @@ class Pandora2DMachine(Machine):
         """
 
         logging.info("Matching cost computation...")
-        matching_cost_run = matching_cost.MatchingCost(cfg["pipeline"][input_step])
 
-        self.cost_volumes = matching_cost_run.compute_cost_volumes(
+        self.cost_volumes = self.matching_cost_.compute_cost_volumes(
             self.left_img,
             self.right_img,
             self.disp_min_col,
             self.disp_max_col,
             self.disp_min_row,
             self.disp_max_row,
-            cfg["pipeline"][input_step],
         )
 
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:

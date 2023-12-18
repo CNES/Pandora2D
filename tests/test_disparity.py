@@ -162,8 +162,11 @@ class TestDisparity(unittest.TestCase):
         grid_max_col = np.full((3, 3), 1)
         grid_min_row = np.full((3, 3), -1)
         grid_max_row = np.full((3, 3), 0)
+        matching_cost_test.allocate_cost_volume_pandora(
+            img_left=self.left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+        )
         cvs = matching_cost_test.compute_cost_volumes(
-            self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg
+            self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
         )
 
         ad_ground_truth = np.zeros((3, 3, 2))
@@ -190,8 +193,11 @@ class TestDisparity(unittest.TestCase):
         grid_max_col = np.full((3, 3), 1)
         grid_min_row = np.full((3, 3), -1)
         grid_max_row = np.full((3, 3), 0)
+        matching_cost_test.allocate_cost_volume_pandora(
+            img_left=self.left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+        )
         cvs = matching_cost_test.compute_cost_volumes(
-            self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg
+            self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
         )
 
         ad_ground_truth = np.zeros((3, 3, 2))
@@ -218,8 +224,11 @@ class TestDisparity(unittest.TestCase):
         grid_max_col = np.full((3, 3), 1)
         grid_min_row = np.full((3, 3), -1)
         grid_max_row = np.full((3, 3), 0)
+        matching_cost_test.allocate_cost_volume_pandora(
+            img_left=self.left_arg, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+        )
         cvs = matching_cost_test.compute_cost_volumes(
-            self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg
+            self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row
         )
 
         ad_ground_truth = np.array(
@@ -246,8 +255,11 @@ class TestDisparity(unittest.TestCase):
         grid_max_col = np.full((3, 3), 1)
         grid_min_row = np.full((3, 3), -1)
         grid_max_row = np.full((3, 3), 0)
+        matching_cost_test.allocate_cost_volume_pandora(
+            img_left=self.left_arg, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+        )
         cvs = matching_cost_test.compute_cost_volumes(
-            self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg
+            self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row
         )
 
         ad_ground_truth = np.array(
@@ -317,8 +329,11 @@ class TestDisparity(unittest.TestCase):
         grid_max_col = np.full((3, 3), 2)
         grid_min_row = np.full((3, 3), -2)
         grid_max_row = np.full((3, 3), 2)
+        matching_cost_matcher.allocate_cost_volume_pandora(
+            img_left=left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        )
         cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg_mc
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
         )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
@@ -382,8 +397,11 @@ class TestDisparity(unittest.TestCase):
         grid_max_col = np.full((3, 3), 3)
         grid_min_row = np.full((3, 3), -3)
         grid_max_row = np.full((3, 3), 3)
+        matching_cost_matcher.allocate_cost_volume_pandora(
+            img_left=left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        )
         cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg_mc
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
         )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
@@ -447,8 +465,11 @@ class TestDisparity(unittest.TestCase):
         grid_max_col = np.full((3, 3), 3)
         grid_min_row = np.full((3, 3), -3)
         grid_max_row = np.full((3, 3), 3)
+        matching_cost_matcher.allocate_cost_volume_pandora(
+            img_left=left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        )
         cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, cfg=cfg_mc
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
         )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)

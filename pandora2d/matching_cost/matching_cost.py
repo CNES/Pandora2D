@@ -23,7 +23,7 @@
 This module contains functions associated to the matching cost computation step.
 """
 import copy
-from typing import Dict, List, cast
+from typing import Dict, List, cast, Union
 from json_checker import And, Checker
 
 import xarray as xr
@@ -56,6 +56,10 @@ class MatchingCost:
         # Cast to int in order to help mypy because self.cfg is a Dict and it can not know the type of step.
         self._step_row = cast(int, self.cfg["step"][0])
         self._step_col = cast(int, self.cfg["step"][1])
+
+        # Init pandora items
+        self.pandora_matching_cost_: Union[matching_cost.AbstractMatchingCost, None] = None
+        self.grid_: xr.Dataset = None
 
     def check_conf(self, cfg: Dict) -> Dict[str, str]:
         """
@@ -136,7 +140,41 @@ class MatchingCost:
 
         cost_volumes.attrs = cost_volume_attr
 
+        # del pandora attributes
+        del cost_volumes.attrs["col_to_compute"]
+        del cost_volumes.attrs["sampling_interval"]
+
         return cost_volumes
+
+    def allocate_cost_volume_pandora(
+        self, img_left: xr.Dataset, grid_min_col: np.ndarray, grid_max_col: np.ndarray, cfg: Dict
+    ) -> None:
+        """
+
+        Allocate the cost volume for pandora
+
+        :param img_left: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_left: xr.Dataset
+        :param grid_min_col: grid containing min disparities for columns.
+        :type grid_min_col: np.ndarray
+        :param grid_max_col: grid containing max disparities for columns.
+        :type grid_max_col: np.ndarray
+        :param cfg: matching_cost computation configuration
+        :type cfg: Dict
+        :return: None
+        """
+        # Adapt Pandora matching cost configuration
+        copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
+        copy_matching_cost_cfg_with_step["step"] = self._step_col
+        img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
+
+        # Initialize Pandora matching cost
+        self.pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
+
+        # Initialize pandora an empty grid for cost volume
+        self.grid_ = self.pandora_matching_cost_.allocate_cost_volume(img_left, (grid_min_col, grid_max_col), cfg)
 
     def compute_cost_volumes(
         self,
@@ -146,7 +184,6 @@ class MatchingCost:
         grid_max_col: np.ndarray,
         grid_min_row: np.ndarray,
         grid_max_row: np.ndarray,
-        cfg: Dict,
     ) -> xr.Dataset:
         """
 
@@ -168,8 +205,6 @@ class MatchingCost:
         :type grid_min_row: np.ndarray
         :param grid_max_row: grid containing max disparities for rows.
         :type grid_max_row: np.ndarray
-        :param cfg: matching_cost computation configuration
-        :type cfg: Dict
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
@@ -177,16 +212,11 @@ class MatchingCost:
         cost_volumes = xr.Dataset()
 
         # Adapt Pandora matching cost configuration
-        copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
-        copy_matching_cost_cfg_with_step["step"] = self._step_col
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
 
-        # Initialize Pandora matching cost
-        pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
-
         # Obtain absolute min and max disparities
-        min_row, max_row = pandora_matching_cost_.get_min_max_from_grid(grid_min_row, grid_max_row)
-        min_col, max_col = pandora_matching_cost_.get_min_max_from_grid(grid_min_col, grid_max_col)
+        min_row, max_row = self.pandora_matching_cost_.get_min_max_from_grid(grid_min_row, grid_max_row)
+        min_col, max_col = self.pandora_matching_cost_.get_min_max_from_grid(grid_min_col, grid_max_col)
 
         # Array with all y disparities
         disps_row = range(min_row, max_row + 1)
@@ -195,11 +225,9 @@ class MatchingCost:
             # Shift image in the y axis
             img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_row)
             # Compute cost volume
-            cost_volume = pandora_matching_cost_.compute_cost_volume(
-                img_left, img_right_shift, grid_min_col, grid_max_col
-            )
+            cost_volume = self.pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, self.grid_)
             # Mask cost volume
-            pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, grid_min_col, grid_max_col)
+            self.pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, grid_min_col, grid_max_col)
             # If first iteration, initialize cost_volumes dataset
             if idx == 0:
                 c_row = cost_volume["cost_volume"].coords["row"]
@@ -218,7 +246,7 @@ class MatchingCost:
                 row_step = np.arange(0, c_row[-1] + 1 - c_row[0], self._step_row)
 
             # Add current cost volume to the cost_volumes dataset
-            cost_volumes["cost_volumes"][:, :, :, idx] = cost_volume["cost_volume"].data[row_step, :, :]
+            cost_volumes["cost_volumes"].data[:, :, :, idx] = cost_volume["cost_volume"].data[row_step, :, :]
 
         # Add disparity source
         del cost_volumes.attrs["disparity_source"]
