@@ -1,11 +1,11 @@
 {
   "input": {
     "left": {
-      "img": "./tests/resource_tests/data/left.png",
+      "img": "./tests/data/images/cones/left.png",
       "nodata": "NaN"
     },
     "right": {
-      "img": "./tests/resource_tests/data/right.png"
+      "img": "./tests/data/images/cones/right.png"
     },
     "col_disparity": [-2, 2],
     "row_disparity": [-2, 2]
