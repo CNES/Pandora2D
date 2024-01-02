@@ -187,7 +187,7 @@ def add_disparity_grid(dataset: xr.Dataset, col_disparity: List[int], row_dispar
     :return: dataset : updated dataset
     :rtype: xr.Dataset
     """
-    shape = (dataset.dims["row"], dataset.dims["col"])
+    shape = (dataset.sizes["row"], dataset.sizes["col"])
     for key, disparity_interval in zip(["col_disparity", "row_disparity"], [col_disparity, row_disparity]):
         dataset[key] = xr.DataArray(
             np.array([np.full(shape, disparity) for disparity in disparity_interval]),

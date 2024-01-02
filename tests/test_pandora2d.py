@@ -85,16 +85,16 @@ class TestPandora2D(unittest.TestCase):
         assert pandora2d_machine.left_img == img_left
         assert pandora2d_machine.right_img == img_right
         np.testing.assert_array_equal(
-            pandora2d_machine.disp_min_col, np.full((img_left.dims["row"], img_left.dims["col"]), -2)
+            pandora2d_machine.disp_min_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
         )
         np.testing.assert_array_equal(
-            pandora2d_machine.disp_max_col, np.full((img_left.dims["row"], img_left.dims["col"]), 2)
+            pandora2d_machine.disp_max_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
         )
         np.testing.assert_array_equal(
-            pandora2d_machine.disp_min_row, np.full((img_left.dims["row"], img_left.dims["col"]), -2)
+            pandora2d_machine.disp_min_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
         )
         np.testing.assert_array_equal(
-            pandora2d_machine.disp_max_row, np.full((img_left.dims["row"], img_left.dims["col"]), 2)
+            pandora2d_machine.disp_max_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
         )
 
     @staticmethod
