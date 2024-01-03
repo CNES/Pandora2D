@@ -2,6 +2,7 @@
 # coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -68,6 +69,7 @@ false_input_disp = {
 
 correct_pipeline = {
     "pipeline": {
+        "estimation": {"estimation_method": "phase_cross_correlation"},
         "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
         "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         "refinement": {"refinement_method": "interpolation"},

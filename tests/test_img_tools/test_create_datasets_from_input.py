@@ -165,3 +165,21 @@ class TestDisparityChecking:
         with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(input_section)
         assert exc_info.value.args[0] == "Min disparity (8) should be lower than Max disparity (-10)"
+
+    def test_create_dataset_from_inputs_with_estimation_step(self, input_section):
+        """
+        test dataset_from_inputs with an estimation step and no disparity range
+        """
+
+        configuration_with_estimation = {"input": input_section}
+        del configuration_with_estimation["input"]["row_disparity"]
+        del configuration_with_estimation["input"]["col_disparity"]
+        configuration_with_estimation["pipeline"] = {"estimation": {"estimation_method": "phase_cross_correlation"}}
+        result = img_tools.create_datasets_from_inputs(
+            input_section, estimation_cfg=configuration_with_estimation["pipeline"].get("estimation")
+        )
+
+        assert result.left.attrs["col_disparity_source"] == [-9999, -9999]
+        assert result.left.attrs["row_disparity_source"] == [-9999, -9999]
+        assert result.right.attrs["col_disparity_source"] == [9999, 9999]
+        assert result.right.attrs["row_disparity_source"] == [9999, 9999]
