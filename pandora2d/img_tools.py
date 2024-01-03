@@ -42,7 +42,7 @@ class Datasets(NamedTuple):
     right: xr.Dataset
 
 
-def create_datasets_from_inputs(input_config: Dict, roi: Dict = None) -> Datasets:
+def create_datasets_from_inputs(input_config: Dict, roi: Dict = None, estimation_cfg: Dict = None) -> Datasets:
     """
     Read image and return the corresponding xarray.DataSet
 
@@ -56,6 +56,8 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None) -> Dataset
 
             with margins : left, up, right, down
     :type roi: dict
+    :param estimation_cfg: dictionary containing estimation configuration
+    :type estimation_cfg: dict
     :return: Datasets
             NamedTuple with two attributes `left` and `right` each containing a
             xarray.DataSet containing the variables :
@@ -66,7 +68,12 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None) -> Dataset
 
     :rtype: Datasets
     """
-    check_disparities(input_config)
+    if estimation_cfg is None:
+        check_disparities(input_config)
+    else:
+        input_config["col_disparity"] = [-9999, -9999]
+        input_config["row_disparity"] = [-9999, -9999]
+
     return Datasets(
         pandora_img_tools.create_dataset_from_inputs(input_config["left"], roi).pipe(
             add_left_disparity_grid, input_config

@@ -2,6 +2,7 @@
 # coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -22,14 +23,21 @@
 """
 This module contains functions allowing to check the configuration given to Pandora pipeline.
 """
+
 from typing import Dict
-import xarray as xr
-from json_checker import Checker, Or, And
+
 import numpy as np
-
-from pandora.check_configuration import check_disparities_from_input, check_images, get_config_input, check_dataset
-from pandora.check_configuration import concat_conf, update_conf, rasterio_can_open_mandatory
-
+import xarray as xr
+from json_checker import And, Checker, Or
+from pandora.check_configuration import (
+    check_dataset,
+    check_disparities_from_input,
+    check_images,
+    concat_conf,
+    get_config_input,
+    rasterio_can_open_mandatory,
+    update_conf,
+)
 
 from pandora2d.state_machine import Pandora2DMachine
 
@@ -58,18 +66,28 @@ def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
         raise ValueError("left and right datasets must have the same shape")
 
 
-def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = None) -> Dict[str, dict]:
     """
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
     :type user_cfg: dict
+    :param estimation_config: get estimation config if in user_config
+    :type estimation_config: dict
     :return: cfg: global configuration
     :rtype: cfg: dict
     """
 
     # Add missing steps and inputs defaults values in user_cfg
     cfg = update_conf(default_short_configuration_input, user_cfg)
+
+    # test disparities
+    if estimation_config is None:
+        check_disparities_from_input(cfg["input"]["col_disparity"], None)
+        check_disparities_from_input(cfg["input"]["row_disparity"], None)
+    else:
+        # add wrong disparity for checking only
+        cfg = update_conf(default_configuration_disp, user_cfg)
 
     # check schema
     configuration_schema = {"input": input_configuration_schema}
@@ -78,10 +96,6 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
 
     # test images
     check_images(cfg["input"])
-
-    # test disparities
-    check_disparities_from_input(cfg["input"]["col_disparity"], None)
-    check_disparities_from_input(cfg["input"]["row_disparity"], None)
 
     return cfg
 
@@ -158,7 +172,7 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
 
     # check input
     user_cfg_input = get_config_input(user_cfg)
-    cfg_input = check_input_section(user_cfg_input)
+    cfg_input = check_input_section(user_cfg_input, user_cfg["pipeline"].get("estimation"))
 
     user_cfg_roi = get_roi_config(user_cfg)
     cfg_roi = check_roi_section(user_cfg_roi)
@@ -166,7 +180,9 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     # check pipeline
     cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
 
-    check_right_nodata_condition(cfg_input, cfg_pipeline)
+    # The estimation step can be utilized independently.
+    if "matching_cost" in cfg_pipeline["pipeline"]:
+        check_right_nodata_condition(cfg_input, cfg_pipeline)
 
     cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline])
 
@@ -181,6 +197,7 @@ def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
     :param cfg_pipeline: pipeline section of configuration
     :type cfg_pipeline: Dict
     """
+
     if not isinstance(cfg_input["input"]["right"]["nodata"], int) and cfg_pipeline["pipeline"]["matching_cost"][
         "matching_cost_method"
     ] in ["sad", "ssd"]:
@@ -243,6 +260,8 @@ default_short_configuration_input = {
         },
     }
 }
+
+default_configuration_disp = {"input": {"col_disparity": [-9999, -9999], "row_disparity": [-9999, -9999]}}
 
 roi_configuration_schema = {
     "row": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},

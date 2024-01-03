@@ -2,6 +2,7 @@
 # coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -23,9 +24,10 @@
 This module contains class associated to the pandora state machine
 """
 
-from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal, Optional, Union
 import logging
 from operator import add
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, TypedDict, Union
+
 import numpy as np
 import xarray as xr
 from typing_extensions import Annotated
@@ -42,10 +44,11 @@ try:
         from transitions.extensions import GraphMachine as Machine
 except ImportError:
     from transitions import Machine
+
 from transitions import MachineError
 
 from pandora.margins import GlobalMargins
-from pandora2d import matching_cost, disparity, refinement, common
+from pandora2d import common, disparity, estimation, matching_cost, refinement, img_tools
 
 
 class MarginsProperties(TypedDict):
@@ -57,13 +60,21 @@ class MarginsProperties(TypedDict):
 
 class Pandora2DMachine(Machine):
     """
-    Pandora2DMacine class to create and use a state machine
+    Pandora2DMachine class to create and use a state machine
     """
 
     _transitions_run = [
+        {"trigger": "estimation", "source": "begin", "dest": "assumption", "after": "estimation_run"},
         {
             "trigger": "matching_cost",
             "source": "begin",
+            "dest": "cost_volumes",
+            "prepare": "matching_cost_prepare",
+            "after": "matching_cost_run",
+        },
+        {
+            "trigger": "matching_cost",
+            "source": "assumption",
             "dest": "cost_volumes",
             "prepare": "matching_cost_prepare",
             "after": "matching_cost_run",
@@ -73,7 +84,14 @@ class Pandora2DMachine(Machine):
     ]
 
     _transitions_check = [
+        {"trigger": "estimation", "source": "begin", "dest": "assumption", "after": "estimation_check_conf"},
         {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "after": "matching_cost_check_conf"},
+        {
+            "trigger": "matching_cost",
+            "source": "assumption",
+            "dest": "cost_volumes",
+            "after": "matching_cost_check_conf",
+        },
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "after": "disparity_check_conf"},
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_check_conf"},
     ]
@@ -100,11 +118,12 @@ class Pandora2DMachine(Machine):
         self.disp_max_row: np.ndarray = None
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
+        self.completed_cfg: Dict = {}
         self.cost_volumes: xr.Dataset = xr.Dataset()
         self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
-        # Define avalaible states
-        states_ = ["begin", "cost_volumes", "disp_maps"]
+        # Define available states
+        states_ = ["begin", "assumption", "cost_volumes", "disp_maps"]
 
         # Instance matching_cost
         self.matching_cost_: Union[matching_cost.MatchingCost, None] = None
@@ -239,6 +258,20 @@ class Pandora2DMachine(Machine):
 
         return [max(x, y) for x, y in zip(max_margins, aggregate_margins)]
 
+    def estimation_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the estimation computation configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        estimation_ = estimation.AbstractEstimation(cfg["pipeline"][input_step])  # type: ignore[abstract]
+        self.pipeline_cfg["pipeline"][input_step] = estimation_.cfg
+
     def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the disparity computation configuration
@@ -297,6 +330,34 @@ class Pandora2DMachine(Machine):
         self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
         self.matching_cost_.allocate_cost_volume_pandora(
             self.left_img, self.right_img, self.disp_min_col, self.disp_max_col, cfg["pipeline"][input_step]
+        )
+
+    def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Shift's estimation step
+
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :param input_step: step to trigger
+        :type input_step: str
+        :return: None
+        """
+
+        logging.info("Estimation computation...")
+        estimation_ = estimation.AbstractEstimation(cfg["pipeline"][input_step])  # type: ignore[abstract]
+
+        row_disparity, col_disparity, shifts, extra_dict = estimation_.compute_estimation(self.left_img, self.right_img)
+
+        self.left_img = img_tools.add_disparity_grid(self.left_img, col_disparity, row_disparity)
+        # Column's min, max disparities
+        self.disp_min_col = self.left_img["col_disparity"].sel(band_disp="min").data
+        self.disp_max_col = self.left_img["col_disparity"].sel(band_disp="max").data
+        # Row's min, max disparities
+        self.disp_min_row = self.left_img["row_disparity"].sel(band_disp="min").data
+        self.disp_max_row = self.left_img["row_disparity"].sel(band_disp="max").data
+
+        self.completed_cfg = estimation_.update_cfg_with_estimation(
+            cfg, col_disparity, row_disparity, shifts, extra_dict
         )
 
     def matching_cost_run(self, _, __) -> None:
