@@ -83,8 +83,9 @@ class TestCheckDatasets:
             attrs=attributs,
         ).pipe(add_disparity_grid, [-2, 2], [-3, 3])
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError) as exc_info:
             check_configuration.check_datasets(dataset_left, dataset_right)
+        assert str(exc_info.value) == "left and right datasets must have the same shape"
 
     @pytest.mark.parametrize(
         ["col_disparity", "row_disparity"],
@@ -104,8 +105,9 @@ class TestCheckDatasets:
         if row_disparity:
             dataset_left = dataset_left.drop_vars("row_disparity")
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError) as exc_info:
             check_configuration.check_datasets(dataset_left, dataset_right)
+        assert str(exc_info.value) == "left dataset must have column and row disparities DataArrays"
 
 
 class TestCheckInputSection:
@@ -176,8 +178,9 @@ class TestCheckRoiCoherence:
         check_configuration.check_roi_coherence(common.correct_ROI_sensor["ROI"]["col"])
 
     def test_first_gt_last_raises_error(self):
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError) as exc_info:
             check_configuration.check_roi_coherence(common.false_ROI_sensor_first_superior_to_last["ROI"]["col"])
+        assert str(exc_info.value) == 'In ROI "first" should be lower than "last" in sensor ROI'
 
 
 class TestCheckStep:
@@ -241,7 +244,7 @@ class TestCheckConfMatchingCostNodataCondition:
     def test_sad_or_ssd_fail_with(self, pandora2d_machine, build_configuration, matching_cost_method, right_nodata):
         """Right nodata must be an integer with sad or ssd matching_cost_method."""
         configuration = build_configuration(right_nodata, matching_cost_method)
-        with pytest.raises((SystemExit, DictCheckerError)):
+        with pytest.raises((ValueError, DictCheckerError)):
             check_configuration.check_conf(configuration, pandora2d_machine)
 
     @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
@@ -260,5 +263,5 @@ class TestCheckConfMatchingCostNodataCondition:
     def test_zncc_fails_with(self, pandora2d_machine, build_configuration, right_nodata):
         """Right nodata must can not be float or nan with zncc matching_cost_method."""
         configuration = build_configuration(right_nodata, "zncc")
-        with pytest.raises((SystemExit, DictCheckerError)):
+        with pytest.raises((ValueError, DictCheckerError)):
             check_configuration.check_conf(configuration, pandora2d_machine)
