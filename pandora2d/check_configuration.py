@@ -22,9 +22,7 @@
 """
 This module contains functions allowing to check the configuration given to Pandora pipeline.
 """
-import sys
 from typing import Dict
-import logging
 import xarray as xr
 from json_checker import Checker, Or, And
 import numpy as np
@@ -51,15 +49,13 @@ def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
     check_dataset(right)
 
     # Check disparities at least on the left
-    if not "col_disparity" in left or not "row_disparity" in left:
-        logging.error("left dataset must have column and row disparities DataArrays")
-        sys.exit(1)
+    if "col_disparity" not in left or "row_disparity" not in left:
+        raise ValueError("left dataset must have column and row disparities DataArrays")
 
     # Check shape
     # check only the rows and columns, the last two elements of the shape
     if left["im"].data.shape[-2:] != right["im"].data.shape[-2:]:
-        logging.error("left and right datasets must have the same shape")
-        sys.exit(1)
+        raise ValueError("left and right datasets must have the same shape")
 
 
 def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
@@ -188,8 +184,9 @@ def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
     if not isinstance(cfg_input["input"]["right"]["nodata"], int) and cfg_pipeline["pipeline"]["matching_cost"][
         "matching_cost_method"
     ] in ["sad", "ssd"]:
-        logging.error("nodata of right image must be of type integer with sad or ssd matching_cost_method (ex: 9999)")
-        sys.exit(1)
+        raise ValueError(
+            "nodata of right image must be of type integer with sad or ssd matching_cost_method (ex: 9999)"
+        )
 
 
 def check_roi_coherence(roi_cfg: dict) -> None:
@@ -202,8 +199,7 @@ def check_roi_coherence(roi_cfg: dict) -> None:
     :type dim: str
     """
     if roi_cfg["first"] > roi_cfg["last"]:
-        logging.error('In ROI "first" should be lower than "last" in sensor ROI')
-        sys.exit(1)
+        raise ValueError('In ROI "first" should be lower than "last" in sensor ROI')
 
 
 def get_roi_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:

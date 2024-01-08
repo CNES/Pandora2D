@@ -25,8 +25,6 @@ This module contains functions associated to raster images.
 
 
 import copy
-import logging
-import sys
 from collections.abc import Sequence
 from typing import List, Dict, NamedTuple, Any
 
@@ -90,12 +88,8 @@ def check_disparities(input_config: Dict) -> None:
     """
     check_disparity_presence(input_config)
     for disparity in [input_config["col_disparity"], input_config["row_disparity"]]:
-        try:
-            check_disparity_types(disparity)
-            check_min_max_disparity(disparity)
-        except ValueError as error:
-            logging.error(error)
-            sys.exit(1)
+        check_disparity_types(disparity)
+        check_min_max_disparity(disparity)
 
 
 def check_disparity_presence(input_config):
@@ -109,11 +103,9 @@ def check_disparity_presence(input_config):
     """
     missing = {"col_disparity", "row_disparity"} - set(input_config)
     if len(missing) == 1:
-        logging.error("`%s` is mandatory.", missing.pop())
-        sys.exit(1)
+        raise KeyError(f"`{missing.pop()}` is mandatory.")
     if len(missing) == 2:
-        logging.error("`col_disparity` and `row_disparity` are mandatory.")
-        sys.exit(1)
+        raise KeyError("`col_disparity` and `row_disparity` are mandatory.")
 
 
 def check_disparity_types(disparity: Any) -> None:

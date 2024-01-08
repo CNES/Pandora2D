@@ -130,14 +130,13 @@ class TestDisparityChecking:
             ),
         ],
     )
-    def test_fails_when_disparity_is_missing(self, caplog, input_section, missing, message):
+    def test_fails_when_disparity_is_missing(self, input_section, missing, message):
         """Test when disparity is not provided."""
         for key in missing:
             del input_section[key]
-        with pytest.raises(SystemExit):
+        with pytest.raises(KeyError) as exc_info:
             img_tools.create_datasets_from_inputs(input_section)
-
-        assert message in caplog.messages
+        assert exc_info.value.args[0] == message
 
     @pytest.mark.parametrize("disparity", [None, 1, 3.14, "grid_path"])
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
@@ -145,8 +144,9 @@ class TestDisparityChecking:
         """Test."""
         input_section[disparity_key] = disparity
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(input_section)
+        assert exc_info.value.args[0] == "Disparity should be iterable of length 2"
 
     @pytest.mark.parametrize("disparity", [None, np.nan, np.inf, float("nan"), float("inf")])
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
@@ -154,13 +154,14 @@ class TestDisparityChecking:
         """Test."""
         input_section[disparity_key] = disparity
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(input_section)
+        assert exc_info.value.args[0] == "Disparity should be iterable of length 2"
 
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
-    def test_fails_when_disparity_max_lt_disparity_min(self, caplog, input_section, disparity_key):
+    def test_fails_when_disparity_max_lt_disparity_min(self, input_section, disparity_key):
         """Test."""
         input_section[disparity_key] = [8, -10]
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(input_section)
-        assert "Min disparity (8) should be lower than Max disparity (-10)" in caplog.messages
+        assert exc_info.value.args[0] == "Min disparity (8) should be lower than Max disparity (-10)"
