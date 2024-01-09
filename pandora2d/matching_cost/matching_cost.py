@@ -2,6 +2,7 @@
 # coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -252,5 +253,6 @@ class MatchingCost:
         del cost_volumes.attrs["disparity_source"]
         cost_volumes.attrs["col_disparity_source"] = img_left.attrs["col_disparity_source"]
         cost_volumes.attrs["row_disparity_source"] = img_left.attrs["row_disparity_source"]
+        cost_volumes.attrs["step"] = self.cfg["step"]
 
         return cost_volumes

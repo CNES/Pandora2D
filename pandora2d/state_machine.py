@@ -58,7 +58,7 @@ class MarginsProperties(TypedDict):
     margins: Annotated[List[int], '["left, "up", "right", "down"]']
 
 
-class Pandora2DMachine(Machine):
+class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
     """
     Pandora2DMachine class to create and use a state machine
     """
@@ -121,6 +121,10 @@ class Pandora2DMachine(Machine):
         self.completed_cfg: Dict = {}
         self.cost_volumes: xr.Dataset = xr.Dataset()
         self.dataset_disp_maps: xr.Dataset = xr.Dataset()
+
+        # For communication between matching_cost and refinement steps
+        self.step: list = None
+        self.window_size: int = None
 
         # Define available states
         states_ = ["begin", "assumption", "cost_volumes", "disp_maps"]
@@ -284,6 +288,8 @@ class Pandora2DMachine(Machine):
 
         matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
+        self.step = list(matching_cost_.cfg["step"])
+        self.window_size = int(matching_cost_.cfg["window_size"])
         self.margins.add_cumulative(input_step, matching_cost_.margins)
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
@@ -312,7 +318,9 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-        refinement_ = refinement.AbstractRefinement(cfg["pipeline"][input_step])  # type: ignore[abstract]
+        refinement_ = refinement.AbstractRefinement(
+            cfg["pipeline"][input_step], self.step, self.window_size
+        )  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
         self.margins.add_non_cumulative(input_step, refinement_.margins)
 
@@ -392,7 +400,9 @@ class Pandora2DMachine(Machine):
         disparity_run = disparity.Disparity(cfg["pipeline"][input_step])
 
         map_col, map_row = disparity_run.compute_disp_maps(self.cost_volumes)
-        self.dataset_disp_maps = common.dataset_disp_maps(map_row, map_col)
+        self.dataset_disp_maps = common.dataset_disp_maps(
+            map_row, map_col, {"invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"]}
+        )
 
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -406,7 +416,11 @@ class Pandora2DMachine(Machine):
         """
 
         logging.info("Refinement computation...")
-        refinement_run = refinement.AbstractRefinement(cfg["pipeline"][input_step])  # type: ignore[abstract]
+        refinement_run = refinement.AbstractRefinement(
+            cfg["pipeline"][input_step], self.step, self.window_size
+        )  # type: ignore[abstract]
 
-        refine_map_col, refine_map_row = refinement_run.refinement_method(self.cost_volumes, self.dataset_disp_maps)
+        refine_map_col, refine_map_row = refinement_run.refinement_method(
+            self.cost_volumes, self.dataset_disp_maps, self.left_img, self.right_img
+        )
         self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col)

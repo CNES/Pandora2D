@@ -2,6 +2,7 @@
 # coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -50,13 +51,14 @@ class AbstractRefinement:
 
     # If we don't make cfg optional, we got this error when we use subprocesses in refinement_method :
     # AbstractRefinement.__new__() missing 1 required positional argument: 'cfg'
-    def __new__(cls, cfg: dict | None = None):
+    def __new__(cls, cfg: dict = None, _: list = None, __: int = 5):
         """
         Return the plugin associated with the refinement_method given in the configuration
 
         :param cfg: configuration {'refinement_method': value}
         :type cfg: dictionary
         """
+
         if cls is AbstractRefinement:
             if isinstance(cfg["refinement_method"], str):
                 try:
@@ -82,6 +84,13 @@ class AbstractRefinement:
         else:
             return super(AbstractRefinement, cls).__new__(cls)
         return None
+
+    def desc(self) -> None:
+        """
+        Describes the refinement method
+        :return: None
+        """
+        print(f"{self._refinement_method} refinement measure")
 
     @classmethod
     def register_subclass(cls, short_name: str):
@@ -128,14 +137,20 @@ class AbstractRefinement:
         return cfg
 
     @abstractmethod
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
+    def refinement_method(
+        self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.dataset
-        :param pixel_maps: pixels disparity maps
-        :type pixel_maps: xarray.dataset
+        :type cost_volumes: xarray.Dataset
+        :param disp_map: pixels disparity maps
+        :type disp_map: xarray.Dataset
+        :param img_left: left image dataset
+        :type img_left: xarray.Dataset
+        :param img_right: right image dataset
+        :type img_right: xarray.Dataset
         :return: the refined disparity maps
         :rtype: Tuple[np.ndarray, np.ndarray]
         """
