@@ -163,7 +163,7 @@ class TestDisparity(unittest.TestCase):
         grid_min_row = np.full((3, 3), -1)
         grid_max_row = np.full((3, 3), 0)
         matching_cost_test.allocate_cost_volume_pandora(
-            img_left=self.left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+            img_left=self.left, img_right=self.right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
         )
         cvs = matching_cost_test.compute_cost_volumes(
             self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
@@ -194,7 +194,7 @@ class TestDisparity(unittest.TestCase):
         grid_min_row = np.full((3, 3), -1)
         grid_max_row = np.full((3, 3), 0)
         matching_cost_test.allocate_cost_volume_pandora(
-            img_left=self.left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+            img_left=self.left, img_right=self.right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
         )
         cvs = matching_cost_test.compute_cost_volumes(
             self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
@@ -225,7 +225,11 @@ class TestDisparity(unittest.TestCase):
         grid_min_row = np.full((3, 3), -1)
         grid_max_row = np.full((3, 3), 0)
         matching_cost_test.allocate_cost_volume_pandora(
-            img_left=self.left_arg, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+            img_left=self.left_arg,
+            img_right=self.right_arg,
+            grid_min_col=grid_min_col,
+            grid_max_col=grid_max_col,
+            cfg=cfg,
         )
         cvs = matching_cost_test.compute_cost_volumes(
             self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row
@@ -256,7 +260,11 @@ class TestDisparity(unittest.TestCase):
         grid_min_row = np.full((3, 3), -1)
         grid_max_row = np.full((3, 3), 0)
         matching_cost_test.allocate_cost_volume_pandora(
-            img_left=self.left_arg, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+            img_left=self.left_arg,
+            img_right=self.right_arg,
+            grid_min_col=grid_min_col,
+            grid_max_col=grid_max_col,
+            cfg=cfg,
         )
         cvs = matching_cost_test.compute_cost_volumes(
             self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row
@@ -330,7 +338,7 @@ class TestDisparity(unittest.TestCase):
         grid_min_row = np.full((3, 3), -2)
         grid_max_row = np.full((3, 3), 2)
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+            img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
         )
         cvs = matching_cost_matcher.compute_cost_volumes(
             left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
@@ -398,7 +406,7 @@ class TestDisparity(unittest.TestCase):
         grid_min_row = np.full((3, 3), -3)
         grid_max_row = np.full((3, 3), 3)
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+            img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
         )
         cvs = matching_cost_matcher.compute_cost_volumes(
             left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
@@ -466,7 +474,7 @@ class TestDisparity(unittest.TestCase):
         grid_min_row = np.full((3, 3), -3)
         grid_max_row = np.full((3, 3), 3)
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=left, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+            img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
         )
         cvs = matching_cost_matcher.compute_cost_volumes(
             left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row

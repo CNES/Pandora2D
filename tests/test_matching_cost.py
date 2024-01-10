@@ -171,7 +171,11 @@ class TestMatchingCost(unittest.TestCase):
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
 
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=self.left, grid_min_col=np.full((3, 3), -1), grid_max_col=np.full((3, 3), 0), cfg=cfg
+            img_left=self.left,
+            img_right=self.right,
+            grid_min_col=np.full((3, 3), -1),
+            grid_max_col=np.full((3, 3), 0),
+            cfg=cfg,
         )
 
         # compute cost volumes
@@ -221,7 +225,11 @@ class TestMatchingCost(unittest.TestCase):
         # initialise matching cost
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=self.left, grid_min_col=np.full((3, 3), -1), grid_max_col=np.full((3, 3), 0), cfg=cfg
+            img_left=self.left,
+            img_right=self.right,
+            grid_min_col=np.full((3, 3), -1),
+            grid_max_col=np.full((3, 3), 0),
+            cfg=cfg,
         )
         # compute cost volumes
         sad = matching_cost_matcher.compute_cost_volumes(
@@ -316,7 +324,11 @@ class TestMatchingCost(unittest.TestCase):
         # initialise matching cost
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=left_zncc, grid_min_col=np.full((3, 3), 0), grid_max_col=np.full((3, 3), 1), cfg=cfg
+            img_left=left_zncc,
+            img_right=right_zncc,
+            grid_min_col=np.full((3, 3), 0),
+            grid_max_col=np.full((3, 3), 1),
+            cfg=cfg,
         )
         # compute cost volumes
         zncc = matching_cost_matcher.compute_cost_volumes(
@@ -384,7 +396,11 @@ class TestMatchingCost(unittest.TestCase):
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
 
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=self.left, grid_min_col=np.full((3, 3), -1), grid_max_col=np.full((3, 3), 0), cfg=cfg
+            img_left=self.left,
+            img_right=self.right,
+            grid_min_col=np.full((3, 3), -1),
+            grid_max_col=np.full((3, 3), 0),
+            cfg=cfg,
         )
         cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
             img_left=self.left,
@@ -423,11 +439,11 @@ class TestStep:
 
     @pytest.fixture()
     def create_image(self):
-        """Create an image with mask full of zeros."""
+        """Create an image."""
 
         def create(data):
             return xr.Dataset(
-                {"im": (["row", "col"], data), "msk": (["row", "col"], np.zeros_like(data))},
+                {"im": (["row", "col"], data)},
                 coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
                 attrs={
                     "no_data_img": -9999,
@@ -749,6 +765,7 @@ class TestStep:
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
         matching_cost_matcher.allocate_cost_volume_pandora(
             img_left=data.left,
+            img_right=data.right,
             grid_min_col=data.disparity_grids.col_min,
             grid_max_col=data.disparity_grids.col_max,
             cfg=cfg,
@@ -827,7 +844,11 @@ class TestMatchingCostWithRoi:
         # initialise matching cost
         matching_cost_matcher = matching_cost.MatchingCost(cfg)
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=img_left, grid_min_col=np.full((3, 3), 0), grid_max_col=np.full((3, 3), 1), cfg=cfg
+            img_left=img_left,
+            img_right=img_right,
+            grid_min_col=np.full((3, 3), 0),
+            grid_max_col=np.full((3, 3), 1),
+            cfg=cfg,
         )
 
         # compute cost volumes
@@ -845,7 +866,11 @@ class TestMatchingCostWithRoi:
         img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
         matching_cost_matcher.allocate_cost_volume_pandora(
-            img_left=img_left, grid_min_col=np.full((3, 3), 0), grid_max_col=np.full((3, 3), 1), cfg=cfg
+            img_left=img_left,
+            img_right=img_right,
+            grid_min_col=np.full((3, 3), 0),
+            grid_max_col=np.full((3, 3), 1),
+            cfg=cfg,
         )
         # compute cost volumes with roi
         zncc_roi = matching_cost_matcher.compute_cost_volumes(
