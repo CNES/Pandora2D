@@ -30,6 +30,8 @@ import xarray as xr
 import numpy as np
 
 from pandora import matching_cost
+from pandora.criteria import validity_mask
+
 
 from pandora2d import img_tools
 
@@ -147,7 +149,7 @@ class MatchingCost:
         return cost_volumes
 
     def allocate_cost_volume_pandora(
-        self, img_left: xr.Dataset, grid_min_col: np.ndarray, grid_max_col: np.ndarray, cfg: Dict
+        self, img_left: xr.Dataset, img_right: xr.Dataset, grid_min_col: np.ndarray, grid_max_col: np.ndarray, cfg: Dict
     ) -> None:
         """
 
@@ -175,6 +177,9 @@ class MatchingCost:
 
         # Initialize pandora an empty grid for cost volume
         self.grid_ = self.pandora_matching_cost_.allocate_cost_volume(img_left, (grid_min_col, grid_max_col), cfg)
+
+        # Compute validity mask to identify invalid points in cost volume
+        self.grid_ = validity_mask(img_left, img_right, self.grid_)
 
     def compute_cost_volumes(
         self,

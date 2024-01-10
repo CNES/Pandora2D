@@ -299,7 +299,7 @@ class Pandora2DMachine(Machine):
         """
         self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
         self.matching_cost_.allocate_cost_volume_pandora(
-            self.left_img, self.disp_min_col, self.disp_max_col, cfg["pipeline"][input_step]
+            self.left_img, self.right_img, self.disp_min_col, self.disp_max_col, cfg["pipeline"][input_step]
         )
 
     def matching_cost_run(self, _, __) -> None:
