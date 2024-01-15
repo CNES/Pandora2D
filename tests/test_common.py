@@ -23,75 +23,65 @@
 """
 Test common
 """
-import os
-import unittest
 
-import xarray as xr
+# pylint: disable=redefined-outer-name
+import os
+
 import numpy as np
+import pytest
+import xarray as xr
 
 from pandora2d import common
 
 
-class TestCommon(unittest.TestCase):
+@pytest.fixture
+def create_test_dataset():
     """
-    TestImgTools class allows to test all the methods in the img_tools function
+    Create a test dataset
+    """
+    row, col = np.ones((2, 2)), np.ones((2, 2))
+
+    dataset_y = xr.Dataset(
+        {"row_map": (["row", "col"], row)},
+        coords={"row": np.arange(row.shape[0]), "col": np.arange(row.shape[1])},
+    )
+
+    dataset_x = xr.Dataset(
+        {"col_map": (["row", "col"], col)},
+        coords={"row": np.arange(col.shape[0]), "col": np.arange(col.shape[1])},
+    )
+
+    dataset = dataset_y.merge(dataset_x, join="override", compat="override")
+
+    return dataset
+
+
+def test_save_dataset(create_test_dataset):
+    """
+    Function for testing the dataset_save function
     """
 
-    def setUp(self) -> None:
-        """
-        Method called to prepare the test fixture
+    common.save_dataset(create_test_dataset, "./tests/res_test/")
+    assert os.path.exists("./tests/res_test/")
 
-        """
-        self.row = np.ones((2, 2))
-        self.col = np.ones((2, 2))
+    assert os.path.exists("./tests/res_test/columns_disparity.tif")
+    assert os.path.exists("./tests/res_test/row_disparity.tif")
 
-    def test_save_dataset(self):
-        """
-        Function for testing the dataset_save function
-        """
-        dataset_y = xr.Dataset(
-            {"row_map": (["row", "col"], self.row)},
-            coords={"row": np.arange(self.row.shape[0]), "col": np.arange(self.row.shape[1])},
-        )
+    os.remove("./tests/res_test/columns_disparity.tif")
+    os.remove("./tests/res_test/row_disparity.tif")
+    os.rmdir("./tests/res_test")
 
-        dataset_x = xr.Dataset(
-            {"col_map": (["row", "col"], self.col)},
-            coords={"row": np.arange(self.col.shape[0]), "col": np.arange(self.col.shape[1])},
-        )
 
-        dataset = dataset_y.merge(dataset_x, join="override", compat="override")
+def test_dataset_disp_maps(create_test_dataset):
+    """
+    Test function for create a dataset
+    """
 
-        common.save_dataset(dataset, "./tests/res_test/")
-        assert os.path.exists("./tests/res_test/")
+    dataset_test = create_test_dataset
 
-        assert os.path.exists("./tests/res_test/columns_disparity.tif")
-        assert os.path.exists("./tests/res_test/row_disparity.tif")
+    dataset_test.attrs = {"invalid_disp": -9999}
 
-        os.remove("./tests/res_test/columns_disparity.tif")
-        os.remove("./tests/res_test/row_disparity.tif")
-        os.rmdir("./tests/res_test")
+    # create dataset with function
+    dataset_fun = common.dataset_disp_maps(np.ones((2, 2)), np.ones((2, 2)), {"invalid_disp": -9999})
 
-    @staticmethod
-    def test_dataset_disp_maps():
-        """
-        Test function for create a dataset
-        """
-
-        # create a test dataset for map row
-        data = np.zeros((2, 2))
-        dataset_y = xr.Dataset(
-            {"row_map": (["row", "col"], data)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-        )
-        # create a test dataset for map col
-        dataset_x = xr.Dataset(
-            {"col_map": (["row", "col"], data)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-        )
-        # merge two dataset into one
-        dataset_test = dataset_y.merge(dataset_x, join="override", compat="override")
-
-        # create dataset with function
-        dataset_fun = common.dataset_disp_maps(data, data)
-
-        assert dataset_fun.equals(dataset_test)
+    assert dataset_fun.equals(dataset_test)
