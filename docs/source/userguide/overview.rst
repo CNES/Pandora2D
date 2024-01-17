@@ -14,6 +14,13 @@ The following interactive diagram highlights all steps available in Pandora2D.
 .. image:: ../Images/img_pipeline/arrow.png
     :align: center
 
+.. image:: ../Images/img_pipeline/estimation_step.png
+    :align: center
+    :target: step_by_step/refinement.html
+
+.. image:: ../Images/img_pipeline/arrow.png
+    :align: center
+
 .. image:: ../Images/img_pipeline/mc_step.png
     :align: center
     :target: step_by_step/matching_cost.html
@@ -43,11 +50,6 @@ The following interactive diagram highlights all steps available in Pandora2D.
 .. raw:: html
 
     <font color="white">forced line break,</font>
-
-.. note::
-    - Dark red blocks represent mandatory steps.
-    - Pink blocks represent optional steps.
-
 
 
 Configuration file
@@ -114,7 +116,7 @@ Example
           "invalid_disparity": -999
         },
         "refinement": {
-          "refinement_method": "interpolation"
+          "refinement_method": "optical_flow"
         }
       }
     }

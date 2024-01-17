@@ -107,7 +107,7 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
         :return: row disparity: list
                 col disparity: list
                 Calculated shifts: np.ndarray
-               Extra information about estimation: dict
+                Extra information about estimation: dict
         :rtype: list, list, np.ndarray, dict
         """
 

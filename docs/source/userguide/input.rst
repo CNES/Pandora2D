@@ -33,12 +33,12 @@ Input section is composed of the following keys:
       - Minimal and Maximal disparities for columns
       - [int, int]
       -
-      - Yes
+      - If the estimation step is not present
     * - *row_disparity*
       - Minimal and Maximal disparities for rows
       - [int, int]
       -
-      - Yes
+      - If the estimation step is not present
 
 Left and Right properties are composed of the following keys:
 

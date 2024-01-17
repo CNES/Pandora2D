@@ -14,4 +14,4 @@ Saved images
 Saved configuration
 *******************
 
-- ./res/cfg/config.json : the config file used to run Pandora2D
+- ./res/cfg/config.json : the config file used to run Pandora2D and estimation information if computed
