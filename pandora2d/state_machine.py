@@ -23,7 +23,7 @@
 """
 This module contains class associated to the pandora state machine
 """
-
+import copy
 import logging
 from operator import add
 from typing import TYPE_CHECKING, Dict, List, Literal, Optional, TypedDict, Union
@@ -139,11 +139,7 @@ class Pandora2DMachine(Machine):
 
         logging.getLogger("transitions").setLevel(logging.WARNING)
 
-    def run_prepare(
-        self,
-        img_left: xr.Dataset,
-        img_right: xr.Dataset,
-    ) -> None:
+    def run_prepare(self, img_left: xr.Dataset, img_right: xr.Dataset, cfg: dict) -> None:
         """
         Prepare the machine before running
 
@@ -157,6 +153,8 @@ class Pandora2DMachine(Machine):
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_right: xarray.Dataset
+        :param cfg: configuration
+        :type cfg: Dict[str, dict]
         """
 
         self.left_img = img_left
@@ -167,6 +165,7 @@ class Pandora2DMachine(Machine):
         # Row's min, max disparities
         self.disp_min_row = img_left["row_disparity"].sel(band_disp="min").data
         self.disp_max_row = img_left["row_disparity"].sel(band_disp="max").data
+        self.completed_cfg = copy.copy(cfg)
 
         self.add_transitions(self._transitions_run)
 

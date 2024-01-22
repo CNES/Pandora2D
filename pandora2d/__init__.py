@@ -40,7 +40,7 @@ def run(
     pandora2d_machine: Pandora2DMachine,
     img_left: xr.Dataset,
     img_right: xr.Dataset,
-    cfg_pipeline: Dict[str, dict],
+    cfg: Dict[str, dict],
 ):
     """
     Run the Pandora 2D pipeline
@@ -57,16 +57,16 @@ def run(
             - im : 2D (row, col) xarray.DataArray
             - msk (optional): 2D (row, col) xarray.DataArray
     :type img_right: xarray.Dataset
-    :param cfg_pipeline: pipeline configuration
-    :type cfg_pipeline: Dict[str, dict]
+    :param cfg: configuration
+    :type cfg: Dict[str, dict]
 
     :return: None
     """
 
-    pandora2d_machine.run_prepare(img_left, img_right)
+    pandora2d_machine.run_prepare(img_left, img_right, cfg)
 
-    for e in list(cfg_pipeline["pipeline"]):
-        pandora2d_machine.run(e, cfg_pipeline)
+    for e in list(cfg["pipeline"]):
+        pandora2d_machine.run(e, cfg)
 
     pandora2d_machine.run_exit()
 
