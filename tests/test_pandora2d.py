@@ -74,10 +74,11 @@ class TestPandora2D:
         }
         img_left, img_right = create_datasets_from_inputs(input_config=input_config)
 
-        pandora2d_machine.run_prepare(img_left, img_right)
+        pandora2d_machine.run_prepare(img_left, img_right, input_config)
 
         assert pandora2d_machine.left_img == img_left
         assert pandora2d_machine.right_img == img_right
+        assert pandora2d_machine.completed_cfg == input_config
         np.testing.assert_array_equal(
             pandora2d_machine.disp_min_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
         )
