@@ -24,9 +24,10 @@ This module contains functions associated to the interpolation method used in th
 """
 
 import multiprocessing
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple
 from json_checker import And, Checker
 
+from pandora.margins.descriptors import UniformMargins
 from scipy.interpolate import interp2d
 from scipy.optimize import minimize
 import numpy as np
@@ -40,6 +41,12 @@ class Interpolation(refinement.AbstractRefinement):
     """
     Interpolation class allows to perform the subpixel cost refinement step
     """
+
+    # pylint: disable=line-too-long
+    # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html#scipy.interpolate.interp2d # NOSONAR
+    # The minimum number of data points required along the interpolation axis is (k+1)**2,
+    # with k=1 for linear, k=3 for cubic and k=5 for quintic interpolation.
+    margins = UniformMargins(3)  # cubic kernel
 
     def __init__(self, cfg: Dict) -> None:
         """
@@ -68,19 +75,6 @@ class Interpolation(refinement.AbstractRefinement):
         checker.validate(cfg)
 
         return cfg
-
-    def get_margins(self) -> List[int]:
-        """
-        :return: a list with margins ["left", "up", "right", "down"]
-        :rtype: list
-        """
-
-        # pylint: disable=line-too-long
-        # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html#scipy.interpolate.interp2d # NOSONAR
-        # The minimum number of data points required along the interpolation axis is (k+1)**2,
-        # with k=1 for linear, k=3 for cubic and k=5 for quintic interpolation.
-        k = 3  # cubic kernel
-        return [int(k)] * 4
 
     @staticmethod
     def wrapper_interp2d(params: np.ndarray, func: interp2d) -> np.ndarray:

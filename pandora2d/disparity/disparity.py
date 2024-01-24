@@ -23,8 +23,9 @@
 This module contains functions associated to the disparity map computation step.
 """
 
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple
 from json_checker import Or, And, Checker
+from pandora.margins.descriptors import NullMargins
 
 import numpy as np
 import xarray as xr
@@ -36,6 +37,7 @@ class Disparity:
     """
 
     _INVALID_DISPARITY = -9999
+    margins = NullMargins()
 
     def __init__(self, cfg: Dict) -> None:
         self.cfg = self.check_conf(cfg)
@@ -63,13 +65,6 @@ class Disparity:
         checker.validate(cfg)
 
         return cfg
-
-    def get_margins(self) -> List[int]:
-        """
-        :return: a list with margins ["left", "up", "right", "down"]
-        :rtype: list
-        """
-        return [0] * 4
 
     @staticmethod
     def min_split(cost_volumes: xr.Dataset, axis: int) -> np.ndarray:

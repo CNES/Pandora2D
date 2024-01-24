@@ -44,6 +44,7 @@ except ImportError:
     from transitions import Machine
 from transitions import MachineError
 
+from pandora.margins import GlobalMargins
 from pandora2d import matching_cost, disparity, refinement, common
 
 
@@ -77,11 +78,7 @@ class Pandora2DMachine(Machine):
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_check_conf"},
     ]
 
-    _transitions_margins: Dict[str, MarginsProperties] = {
-        "matching_cost": {"type": "aggregate", "margins": []},
-        "disparity": {"type": "aggregate", "margins": []},
-        "refinement": {"type": "maximum", "margins": []},
-    }
+    margins = GlobalMargins()
 
     def __init__(
         self,
@@ -255,7 +252,7 @@ class Pandora2DMachine(Machine):
 
         matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
-        self._transitions_margins["matching_cost"]["margins"] = matching_cost_.get_margins()
+        self.margins.add_cumulative(input_step, matching_cost_.margins)
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -270,7 +267,7 @@ class Pandora2DMachine(Machine):
 
         disparity_ = disparity.Disparity(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
-        self._transitions_margins["disparity"]["margins"] = disparity_.get_margins()
+        self.margins.add_cumulative(input_step, disparity_.margins)
 
     def refinement_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -285,7 +282,7 @@ class Pandora2DMachine(Machine):
 
         refinement_ = refinement.AbstractRefinement(cfg["pipeline"][input_step])  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
-        self._transitions_margins["refinement"]["margins"] = refinement_.get_margins()
+        self.margins.add_non_cumulative(input_step, refinement_.margins)
 
     def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
         """

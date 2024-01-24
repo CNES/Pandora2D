@@ -24,11 +24,13 @@ This module contains functions associated to the refinement computation step.
 """
 from __future__ import annotations
 import logging
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple
 from abc import abstractmethod, ABCMeta
 
 import xarray as xr
 import numpy as np
+
+from pandora.margins.descriptors import NullMargins
 
 
 class AbstractRefinement:
@@ -41,6 +43,7 @@ class AbstractRefinement:
     refinement_methods_avail: Dict = {}
     _refinement_method = None
     cfg = None
+    margins = NullMargins()
 
     # If we don't make cfg optional, we got this error when we use subprocesses in refinement_method :
     # AbstractRefinement.__new__() missing 1 required positional argument: 'cfg'
@@ -76,13 +79,6 @@ class AbstractRefinement:
         else:
             return super(AbstractRefinement, cls).__new__(cls)
         return None
-
-    @abstractmethod
-    def get_margins(self) -> List[int]:
-        """
-        :return: a list with margins ["left", "up", "right", "down"]
-        :rtype: list
-        """
 
     @classmethod
     def register_subclass(cls, short_name: str):

@@ -99,7 +99,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     # check roi in user configuration
     roi = None
     if "ROI" in cfg:
-        cfg["ROI"]["margins"] = pandora2d_machine.get_global_margins()
+        cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], col_disparity, row_disparity)
 
     # read images
