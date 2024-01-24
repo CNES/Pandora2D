@@ -77,7 +77,7 @@ It is possible to work on only one section of the image with an ROI. For this, t
 
 .. code:: ipython3
 
-    user_cfg["ROI"]["margins"] = pandora2d_machine.get_global_margins()
+    user_cfg["ROI"]["margins"] = pandora2d_machine.global_margins.astuple()
     roi = get_roi_processing(user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"])
 
 .. code:: ipython3

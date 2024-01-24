@@ -34,6 +34,7 @@ import xarray as xr
 from rasterio import Affine
 import json_checker
 
+from pandora.margins import Margins
 from pandora2d import matching_cost, disparity
 
 
@@ -137,17 +138,13 @@ class TestDisparity(unittest.TestCase):
             disparity.Disparity({"disparity_method": "WTN"})
 
     @staticmethod
-    def test_get_margins():
+    def test_margins():
         """
-        test get_margins of matching cost pipeline
+        test margins of matching cost pipeline
         """
-        gt = [0, 0, 0, 0]
         _disparity = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
 
-        d_margins = _disparity.get_margins()
-
-        assert len(d_margins) == len(gt)
-        assert all(a == b for a, b in zip(d_margins, gt))
+        assert _disparity.margins == Margins(0, 0, 0, 0)
 
     def test_min_split(self):
         """

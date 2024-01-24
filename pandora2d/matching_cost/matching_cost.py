@@ -31,6 +31,7 @@ import numpy as np
 
 from pandora import matching_cost
 from pandora.criteria import validity_mask
+from pandora.margins.descriptors import HalfWindowMargins
 
 
 from pandora2d import img_tools
@@ -43,6 +44,7 @@ class MatchingCost:
 
     _WINDOW_SIZE = 5
     _STEP = [1, 1]
+    margins = HalfWindowMargins()
 
     def __init__(self, cfg: Dict) -> None:
         """
@@ -87,13 +89,6 @@ class MatchingCost:
         checker.validate(cfg)
 
         return cfg
-
-    def get_margins(self) -> List[int]:
-        """
-        :return: a list with margins ["left", "up", "right", "down"]
-        :rtype: list
-        """
-        return [int((self._window_size - 1) / 2)] * 4
 
     @staticmethod
     def allocate_cost_volumes(
