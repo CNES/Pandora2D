@@ -23,7 +23,6 @@
 """
 Test state_machine
 """
-import unittest
 import copy
 import numpy as np
 
@@ -32,21 +31,16 @@ import pytest
 
 from transitions.core import MachineError
 
+from pandora.margins import Margins
 from tests import common
 from pandora2d import state_machine
 from pandora2d.img_tools import create_datasets_from_inputs
 
 
-class TestPandora2D(unittest.TestCase):
+class TestPandora2D:
     """
     TestCheckJson class allows to test all the methods in the class CheckJson
     """
-
-    def setUp(self) -> None:
-        """
-        Method called to prepare the test fixture
-
-        """
 
     @staticmethod
     def test_run_pandora() -> None:
@@ -98,17 +92,14 @@ class TestPandora2D(unittest.TestCase):
         )
 
     @staticmethod
-    def test_get_global_margins() -> None:
+    def test_global_margins() -> None:
         """
-        Test get_global_margins function
+        Test computed global margins is as expected.
         """
 
         pandora2d_machine = state_machine.Pandora2DMachine()
 
         pipeline_cfg = copy.deepcopy(common.correct_pipeline)
         pandora2d_machine.check_conf(pipeline_cfg)
-        global_margin = pandora2d_machine.get_global_margins()
 
-        correct_global_margin = [3, 3, 3, 3]
-
-        assert global_margin == correct_global_margin
+        assert pandora2d_machine.margins.global_margins == Margins(3, 3, 3, 3)

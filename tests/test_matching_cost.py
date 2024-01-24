@@ -37,6 +37,7 @@ import json_checker
 from rasterio import Affine
 from skimage.io import imsave
 
+from pandora.margins import Margins
 from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d import matching_cost
 
@@ -102,17 +103,13 @@ class TestMatchingCost(unittest.TestCase):
             matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
 
     @staticmethod
-    def test_get_margins():
+    def test_margins():
         """
-        test get_margins of matching cost pipeline
+        test margins of matching cost pipeline
         """
-        gt = [2, 2, 2, 2]
         _matching_cost = matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
 
-        mc_margins = _matching_cost.get_margins()
-
-        assert len(mc_margins) == len(gt)
-        assert all(a == b for a, b in zip(mc_margins, gt))
+        assert _matching_cost.margins == Margins(2, 2, 2, 2)
 
     @staticmethod
     def test_step_configuration():

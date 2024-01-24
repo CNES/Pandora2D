@@ -29,6 +29,7 @@ import numpy as np
 import xarray as xr
 import pytest
 
+from pandora.margins import Margins
 from pandora2d import refinement, common
 
 
@@ -49,17 +50,13 @@ class TestRefinement(unittest.TestCase):
             refinement.AbstractRefinement({"refinement_method": "wta"})  # type: ignore[abstract]
 
     @staticmethod
-    def test_get_margins():
+    def test_margins():
         """
-        test get_margins of matching cost pipeline
+        test margins of matching cost pipeline
         """
-        gt = [3, 3, 3, 3]  # cubic kernel
         _refinement = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
 
-        r_margins = _refinement.get_margins()
-
-        assert len(r_margins) == len(gt)
-        assert all(a == b for a, b in zip(r_margins, gt))
+        assert _refinement.margins == Margins(3, 3, 3, 3), "Not a cubic kernel Margins"
 
     @staticmethod
     def test_refinement_method_subpixel():
