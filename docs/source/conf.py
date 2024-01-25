@@ -97,6 +97,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 
 html_logo = "Images/logo/logo_pandora2d.png"
+html_favicon = "Images/logo/favicon.ico"
 
 html_theme_options = {
     "logo_only": True,
