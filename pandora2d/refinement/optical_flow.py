@@ -86,31 +86,38 @@ class OpticalFlow(refinement.AbstractRefinement):
         return cfg
 
     def reshape_to_matching_cost_window(
-        self, img: xr.Dataset, valid_dims: list, drow: np.ndarray = None, dcol: np.ndarray = None
+        self,
+        img: xr.Dataset,
+        cost_volumes: xr.Dataset,
+        disp_row: np.ndarray = None,
+        disp_col: np.ndarray = None,
     ):
         """
         Transform image from (nb_col, nb_row) to (window_size, window_size, nbcol*nbrow)
 
         :param img: image to reshape
         :type img: xr.Dataset
-        :param valid_dims: size of image without borders
-        :type valid_dims: list
-        :param drow: array dim [] containing all the row shift
-        :type drow: np.ndarray
-        :param dcol: array dim [] containing all the columns shift
-        :type dcol: np.ndarray
+        :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
+        :type cost_volumes: xarray.Dataset
+        :param disp_row: array dim [] containing all the row shift
+        :type disp_row: np.ndarray
+        :param disp_col: array dim [] containing all the columns shift
+        :type disp_col: np.ndarray
         :return: array containing reshaped image [window_size, window_size, nbcol*nbrow]
         :rtype: np.ndarray
         """
 
         # get numpy array datas for image
         img_data = img["im"].data
-        nb_row, nb_col = img_data.shape
 
-        # valid_dims[0]*valid_dims[1]
-        one_dim_size = np.prod(valid_dims)
+        offset = max(self.margins.astuple())
 
-        if drow is None and dcol is None:
+        computable_col = cost_volumes.col.data[offset:-offset]
+        computable_row = cost_volumes.row.data[offset:-offset]
+
+        one_dim_size = len(computable_row) * len(computable_col)
+
+        if disp_row is None and disp_col is None:
             patches = np.lib.stride_tricks.sliding_window_view(img_data, [self._window_size, self._window_size])
             patches = patches.reshape((one_dim_size, self._window_size, self._window_size)).transpose((1, 2, 0))
         else:
@@ -119,11 +126,15 @@ class OpticalFlow(refinement.AbstractRefinement):
             patches = np.ndarray((self._window_size, self._window_size, one_dim_size))
             idx = 0
 
-            for row in range(offset, nb_row - offset):
-                for col in range(offset, nb_col - offset):
+            for row in computable_row:
+                for col in computable_col:
 
-                    shift_col = 0 if np.isnan(dcol[idx]) or dcol[idx] == self._invalid_disp else int(dcol[idx])
-                    shift_row = 0 if np.isnan(drow[idx]) or drow[idx] == self._invalid_disp else int(drow[idx])
+                    shift_col = (
+                        0 if np.isnan(disp_col[idx]) or disp_col[idx] == self._invalid_disp else int(disp_col[idx])
+                    )
+                    shift_row = (
+                        0 if np.isnan(disp_row[idx]) or disp_row[idx] == self._invalid_disp else int(disp_row[idx])
+                    )
 
                     # get right pixel with his matching cost window
                     patch = img_data[
@@ -142,12 +153,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         return patches
 
     def warped_img(
-        self,
-        right_reshape: np.ndarray,
-        delta_row: np.ndarray,
-        delta_col: np.ndarray,
-        left_img: xr.Dataset,
-        index_to_compute: list,
+        self, right_reshape: np.ndarray, delta_row: np.ndarray, delta_col: np.ndarray, index_to_compute: list
     ):
         """
         Shifted matching_cost window with computed disparity
@@ -158,36 +164,20 @@ class OpticalFlow(refinement.AbstractRefinement):
         :type delta_row: np.ndarray
         :param delta_col: columns disparity map
         :type delta_col: np.ndarray
-        :param left_img: left image dataset
-        :type left_img: xarray.Dataset
         :param index_to_compute: list containing all valid pixel for computing optical flow
         :type index_to_compute: list
         :return: new array containing shifted matching_cost windows
         :rtype: np.ndarray
         """
 
-        if self._step == [1, 1]:
-            coords_range = index_to_compute
-        else:
-            nb_col = left_img.dims["col"]
-            nb_row = left_img.dims["row"]
-            step_row, step_col = self._step
-
-            coords_range = [
-                row * nb_col + col
-                for row in np.arange(0, nb_row, step_row)
-                for col in np.arange(0, nb_col, step_col)
-                if row * nb_col + col in index_to_compute
-            ]
-
         x, y = np.meshgrid(range(self._window_size), range(self._window_size))
 
         new_img = np.empty_like(right_reshape)
 
         # resample matching cost right windows
-        for idx in coords_range:
+        for idx in index_to_compute:
             shifted_img = map_coordinates(
-                right_reshape[:, :, idx], [y + delta_row[idx], x + delta_col[idx]], order=5, mode="reflect"
+                right_reshape[:, :, idx], [y - delta_row[idx], x - delta_col[idx]], order=5, mode="reflect"
             )
 
             new_img[:, :, idx] = shifted_img
@@ -207,7 +197,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         """
 
         grad_y, grad_x = np.gradient(left_data)
-        grad_t = left_data - right_data
+        grad_t = right_data - left_data
 
         # Create A (grad_matrix) et B (time_matrix) matrix for Lucas Kanade
         grad_matrix = np.vstack((grad_x.flatten(), grad_y.flatten())).T
@@ -295,11 +285,6 @@ class OpticalFlow(refinement.AbstractRefinement):
         # get offset
         offset = max(self.margins.astuple())
 
-        # get dimensions
-        nb_row, nb_col = img_left["im"].data.shape
-        nb_valid_points_row = nb_row - 2 * offset
-        nb_valid_points_col = nb_col - 2 * offset
-
         # get displacement map from disparity state
         initial_delta_row = disp_map["row_map"].data
         initial_delta_col = disp_map["col_map"].data
@@ -309,12 +294,12 @@ class OpticalFlow(refinement.AbstractRefinement):
 
         # reshape left and right datas
         # from (nbcol, nbrow) to (window_size, window_size, nbcol*nbrow)
-        reshaped_left = self.reshape_to_matching_cost_window(img_left, [nb_valid_points_col, nb_valid_points_row])
+        reshaped_left = self.reshape_to_matching_cost_window(img_left, cost_volumes)
         reshaped_right = self.reshape_to_matching_cost_window(
             img_right,
-            [nb_valid_points_col, nb_valid_points_row],
-            drow=delta_row,
-            dcol=delta_col,
+            cost_volumes,
+            delta_row,
+            delta_col,
         )
 
         idx_to_compute = np.arange(reshaped_left.shape[2]).tolist()
@@ -325,10 +310,17 @@ class OpticalFlow(refinement.AbstractRefinement):
                 reshaped_left, reshaped_right, idx_to_compute
             )
 
-            reshaped_right = self.warped_img(reshaped_right, computed_drow, computed_dcol, img_left, idx_to_compute)
+            reshaped_right = self.warped_img(reshaped_right, computed_drow, computed_dcol, idx_to_compute)
 
-            delta_col = delta_col + computed_dcol
-            delta_row = delta_row + computed_drow
+            # Pandora convention is left - d = right
+            # Lucas&Kanade convention is left + d = right
+            delta_col = delta_col - computed_dcol
+            delta_row = delta_row - computed_drow
+
+        # get finals disparity map dimensions
+        nb_row, nb_col = initial_delta_col.shape
+        nb_valid_points_row = nb_row - 2 * offset
+        nb_valid_points_col = nb_col - 2 * offset
 
         delta_col = delta_col.reshape([nb_valid_points_col, nb_valid_points_row])
         delta_row = delta_row.reshape([nb_valid_points_col, nb_valid_points_row])
