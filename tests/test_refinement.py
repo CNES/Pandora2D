@@ -41,7 +41,9 @@ from pandora2d import refinement, common
 
 @pytest.fixture()
 def cv_dataset():
-    """ " """
+    """
+    Create dataset cost volumes
+    """
 
     cv = np.zeros((3, 3, 5, 5))
     cv[:, :, 2, 2] = np.ones([3, 3])
@@ -49,8 +51,8 @@ def cv_dataset():
     cv[:, :, 3, 2] = np.ones([3, 3])
     cv[:, :, 3, 3] = np.ones([3, 3])
 
-    c_row = [0, 1, 2]
-    c_col = [0, 1, 2]
+    c_row = np.arange(cv.shape[0])
+    c_col = np.arange(cv.shape[1])
 
     # First pixel in the image that is fully computable (aggregation windows are complete)
     row = np.arange(c_row[0], c_row[-1] + 1)
@@ -192,18 +194,26 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
 
     img = dataset_image
 
-    offset = 1
-    nb_row = 6
-    nb_col = 5
-
-    nb_valid_points_row = nb_row - 2 * offset
-    nb_valid_points_col = nb_col - 2 * offset
-
     refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
     refinement_class._window_size = 3
 
+    cv = np.zeros((6, 5, 5, 5))
+
+    disparity_range_col = np.arange(-2, 2 + 1)
+    disparity_range_row = np.arange(-2, 2 + 1)
+
+    cost_volumes = xr.Dataset(
+        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},
+        coords={
+            "row": np.arange(0, 6),
+            "col": np.arange(0, 5),
+            "disp_col": disparity_range_col,
+            "disp_row": disparity_range_row,
+        },
+    )
+
     # for left image
-    reshaped_left = refinement_class.reshape_to_matching_cost_window(img, [nb_valid_points_col, nb_valid_points_row])
+    reshaped_left = refinement_class.reshape_to_matching_cost_window(img, cost_volumes)
 
     # test four matching_cost
     idx_1_1 = [[0, 1, 2], [5, 6, 7], [10, 11, 12]]
@@ -224,13 +234,6 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
 
     img = dataset_image
 
-    offset = 1
-    nb_row = 6
-    nb_col = 5
-
-    nb_valid_points_row = nb_row - 2 * offset
-    nb_valid_points_col = nb_col - 2 * offset
-
     refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
     refinement_class._window_size = 3
 
@@ -238,10 +241,23 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
     col_disp_map = [2, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0]
     row_disp_map = [2, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0]
 
-    # for right image
-    reshaped_right = refinement_class.reshape_to_matching_cost_window(
-        img, [nb_valid_points_col, nb_valid_points_row], row_disp_map, col_disp_map
+    cv = np.zeros((6, 5, 5, 5))
+
+    disparity_range_col = np.arange(-2, 2 + 1)
+    disparity_range_row = np.arange(-2, 2 + 1)
+
+    cost_volumes = xr.Dataset(
+        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},
+        coords={
+            "row": np.arange(0, 6),
+            "col": np.arange(0, 5),
+            "disp_col": disparity_range_col,
+            "disp_row": disparity_range_row,
+        },
     )
+
+    # for right image
+    reshaped_right = refinement_class.reshape_to_matching_cost_window(img, cost_volumes, row_disp_map, col_disp_map)
 
     # test four matching_cost
     idx_1_1 = [[12, 13, 14], [17, 18, 19], [22, 23, 24]]
@@ -258,7 +274,6 @@ def test_warped_image_without_step():
 
     refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
 
-    img = np.arange(30).reshape((5, 6))
     mc_1 = np.array(
         [[0, 1, 2, 3, 4], [6, 7, 8, 9, 10], [12, 13, 14, 15, 16], [18, 19, 20, 21, 22], [24, 25, 26, 27, 28]]
     )
@@ -266,16 +281,12 @@ def test_warped_image_without_step():
         [[1, 2, 3, 4, 5], [7, 8, 9, 10, 11], [13, 14, 15, 16, 17], [19, 20, 21, 22, 23], [25, 26, 27, 28, 29]]
     )
 
-    left_img = xr.Dataset(
-        {"im": (["row", "col"], img)}, coords={"row": np.arange(img.shape[0]), "col": np.arange(img.shape[1])}
-    )
-
     reshaped_right = np.stack((mc_1, mc_2)).transpose((1, 2, 0))
 
-    delta_row = 3 * np.ones(2)
-    delta_col = np.ones(2)
+    delta_row = -3 * np.ones(2)
+    delta_col = -np.ones(2)
 
-    test_img_shift = refinement_class.warped_img(reshaped_right, delta_row, delta_col, left_img, [0, 1])
+    test_img_shift = refinement_class.warped_img(reshaped_right, delta_row, delta_col, [0, 1])
 
     gt_mc_1 = np.array(
         [[19, 20, 21, 22, 22], [25, 26, 27, 28, 28], [25, 26, 27, 28, 28], [19, 20, 21, 22, 22], [13, 14, 15, 16, 16]]
