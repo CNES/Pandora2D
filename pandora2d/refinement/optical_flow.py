@@ -173,10 +173,12 @@ class OpticalFlow(refinement.AbstractRefinement):
             nb_row = left_img.dims["row"]
             step_row, step_col = self._step
 
-            coords_range = [row * nb_col + col
-                            for row in np.arange(0, nb_row, step_row)
-                            for col in np.arange(0, nb_col, step_col)
-                            if row * nb_col + col in index_to_compute]
+            coords_range = [
+                row * nb_col + col
+                for row in np.arange(0, nb_row, step_row)
+                for col in np.arange(0, nb_col, step_col)
+                if row * nb_col + col in index_to_compute
+            ]
 
         x, y = np.meshgrid(range(self._window_size), range(self._window_size))
 
@@ -204,19 +206,18 @@ class OpticalFlow(refinement.AbstractRefinement):
         :rtype: Tuple[float, float]
         """
 
-        grad_x = np.gradient(left_data, axis=1)
-        grad_y = np.gradient(left_data, axis=0)
+        grad_y, grad_x = np.gradient(left_data)
         grad_t = left_data - right_data
 
         # Create A (grad_matrix) et B (time_matrix) matrix for Lucas Kanade
         grad_matrix = np.vstack((grad_x.flatten(), grad_y.flatten())).T
-        time_matrix = np.reshape(grad_t, len(grad_t) ** 2)[np.newaxis].T
+        time_matrix = grad_t.flatten()
 
-        # v = (A^T.A)^-1.A^T.B
+        # Apply least-squares to solve the matrix equation AV= B where A is matrix containing partial derivate of (x,y)
+        # B the matrix of partial derivate of t and V the motion we want to find
+
         try:
-            motion = tuple(
-                np.matmul(np.linalg.inv(np.matmul(grad_matrix.T, grad_matrix)), np.matmul(grad_matrix.T, time_matrix))
-            )
+            motion = np.linalg.lstsq(grad_matrix, time_matrix, rcond=None)[0]
         # if matrix is full of NaN or 0
         except np.linalg.LinAlgError:
             motion = (self._invalid_disp, self._invalid_disp)
