@@ -56,11 +56,11 @@ class Interpolation(refinement.AbstractRefinement):
         """
         Unpack tuple of arguments from minimize to fit in interp2d
         :param params: points coordinates
-        :type params: np.array
+        :type params: np.ndarray
         :param func: interp2d scipy function
         :type func: scipy.interpolate.interpolate.interp2d
         :return: minimum of interp2d functions at points
-        :rtype: np.array
+        :rtype: np.ndarray
         """
         x, y = params
         return func(x, y)
@@ -71,11 +71,11 @@ class Interpolation(refinement.AbstractRefinement):
         :param cost_volumes: Dataset with 4D datas
         :type cost_volumes: xr.Dataset
         :param coords_pix_row: array from disp_min_row to disp_max_row
-        :type coords_pix_row: np.array
+        :type coords_pix_row: np.ndarray
         :param coords_pix_col: array from disp_min_col to disp_max_col
-        :type coords_pix_col: np.array
+        :type coords_pix_col: np.ndarray
         :param args_matrix_cost: 2D matrix with cost for one pixel (dim: dispy, dispx)
-        :type args_matrix_cost: np.array
+        :type args_matrix_cost: np.ndarray
         :return: res: min of args_matrix_cost in 2D
         :rtype: Tuple(float, float)
         """
@@ -150,13 +150,11 @@ class Interpolation(refinement.AbstractRefinement):
         cost_matrix = np.rollaxis(np.rollaxis(data, 3, 0), 3, 1).reshape((ndisprow, ndispcol, nrow * ncol))
 
         # flatten pixel maps for multiprocessing
-        liste_row = list(disp_map["row_map"].data.flatten().tolist())
-        liste_col = list(disp_map["col_map"].data.flatten().tolist())
+        list_row = list(disp_map["row_map"].data.flatten().tolist())
+        list_col = list(disp_map["col_map"].data.flatten().tolist())
 
         # args for multiprocessing
-        args = [
-            (cost_volumes, liste_col[i], liste_row[i], cost_matrix[:, :, i]) for i in range(0, cost_matrix.shape[2])
-        ]
+        args = [(cost_volumes, list_col[i], list_row[i], cost_matrix[:, :, i]) for i in range(0, cost_matrix.shape[2])]
         with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
             # liste([drow, dcol])
             map_carte = p.map(self.compute_cost_matrix, args)

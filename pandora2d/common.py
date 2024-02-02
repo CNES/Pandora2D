@@ -66,18 +66,25 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     # create output dir
     mkdir_p(output)
 
-    # save disp map for lines
+    # save disp map for row
     write_data_array(dataset["row_map"], os.path.join(output, "row_disparity.tif"))
 
     # save disp map for columns
     write_data_array(dataset["col_map"], os.path.join(output, "columns_disparity.tif"))
 
+    # save correlation score
+    write_data_array(dataset["correlation_score"], os.path.join(output, "correlation_score.tif"))
+
 
 def dataset_disp_maps(
-    delta_row: np.ndarray, delta_col: np.ndarray, coords: Coordinates, attributes: dict = None
+    delta_row: np.ndarray,
+    delta_col: np.ndarray,
+    coords: Coordinates,
+    correlation_score: np.ndarray,
+    attributes: dict = None,
 ) -> xr.Dataset:
     """
-    Create the dataset containing disparity maps
+    Create the dataset containing disparity maps and score maps
 
     :param delta_row: disparity map for row
     :type delta_row: np.ndarray
@@ -85,12 +92,15 @@ def dataset_disp_maps(
     :type delta_col: np.ndarray
     :param coords: disparity maps coordinates
     :type coords: xr.Coordinates
-    :param attributes: attributes containing invalid disparity values
+    :param correlation_score: score map
+    :type correlation_score: np.ndarray
+    :param attributes: disparity map for col
     :type attributes: dict
-    :return: dataset: Dataset with the disparity maps with the data variables :
+    :return: dataset: Dataset with the disparity maps and score with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)
             - col_map 2D xarray.DataArray (row, col)
+            - score 2D xarray.DataArray (row, col)
     :rtype: xarray.Dataset
     """
 
@@ -101,18 +111,18 @@ def dataset_disp_maps(
     if coords.get("row") is None:
         raise ValueError("The row coordinate does not exist")
 
-    # create a test dataset for map row
-    dataset_row = xr.Dataset(
-        {"row_map": (["row", "col"], delta_row)},
-        coords={"row": coords.get("row"), "col": coords.get("col")},
-    )
-    # create a test dataset for map col
-    dataset_col = xr.Dataset(
-        {"col_map": (["row", "col"], delta_col)},
-        coords={"row": coords.get("row"), "col": coords.get("col")},
-    )
-    # merge two dataset into one
-    dataset = dataset_row.merge(dataset_col, join="override", compat="override")
+    coords = {
+        "row": coords.get("row"),
+        "col": coords.get("col"),
+    }
+
+    dims = ("row", "col")
+
+    dataarray_row = xr.DataArray(delta_row, dims=dims, coords=coords)
+    dataarray_col = xr.DataArray(delta_col, dims=dims, coords=coords)
+    dataarray_score = xr.DataArray(correlation_score, dims=dims, coords=coords)
+
+    dataset = xr.Dataset({"row_map": dataarray_row, "col_map": dataarray_col, "correlation_score": dataarray_score})
 
     if attributes is not None:
         dataset.attrs = attributes
