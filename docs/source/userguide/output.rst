@@ -9,6 +9,7 @@ Saved images
 ************
 
 - *row_disparity.tif*, *columns_disparity.tif* : disparity maps for row and columns.
+- *correlation_score.tif* : correlation score map.
 
 
 Saved configuration

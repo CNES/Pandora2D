@@ -177,6 +177,9 @@ stored in a xarray.Dataset.
     Data variables:
         row_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         col_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
+        correlation_score  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
+    Attributes:
+        invalid_disp: nan
 
 Border management
 #################
