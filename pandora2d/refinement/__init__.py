@@ -24,4 +24,5 @@ Init file for refinement module
 """
 
 from . import interpolation
+from . import dichotomy
 from .refinement import AbstractRefinement
