@@ -134,7 +134,7 @@ def test_refinement_method_subpixel(cv_dataset):
 
     data = np.full((3, 3), 0.4833878)
 
-    dataset_disp_map = common.dataset_disp_maps(data, data, cost_volumes_test.coords)
+    dataset_disp_map = common.dataset_disp_maps(data, data, cost_volumes_test.coords, data)
 
     test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
     delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map, None, None)
@@ -165,7 +165,7 @@ def test_refinement_method_pixel(cv_dataset):
         dtype=np.float64,
     )
 
-    dataset_disp_map = common.dataset_disp_maps(gt_delta_y, gt_delta_x, cost_volumes_test.coords)
+    dataset_disp_map = common.dataset_disp_maps(gt_delta_y, gt_delta_x, cost_volumes_test.coords, gt_delta_x)
 
     test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
     delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map, None, None)

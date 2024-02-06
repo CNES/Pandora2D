@@ -29,7 +29,6 @@ Test Matching cost class
 import numpy as np
 import pytest
 import json_checker
-import xarray as xr
 from pandora2d import estimation
 
 
@@ -45,48 +44,6 @@ def estimation_class():
         }
     )
     return estimation_class
-
-
-@pytest.fixture()
-def stereo_object():
-    """Create a stereo object"""
-
-    # Create a stereo object
-    data = np.array(
-        ([-9999, -9999, -9999], [1, 1, 1], [3, 4, 5]),
-        dtype=np.float64,
-    )
-    mask = np.array(([1, 1, 1], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
-    left = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    left.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "col_disparity_source": [-1, 0],
-        "row_disparity_source": [-1, 0],
-    }
-
-    data = np.array(
-        ([1, 1, 1], [3, 4, 5], [1, 1, 1]),
-        dtype=np.float64,
-    )
-    mask = np.array(([0, 0, 0], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
-    right = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    right.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-    }
-
-    return left, right
 
 
 @pytest.mark.parametrize(
@@ -169,12 +126,13 @@ def test_update_cfg_with_estimation(estimation_class):
     assert gt_cfg == cfg
 
 
-def test_estimation_computation(stereo_object, estimation_class):
+def test_estimation_computation(left_stereo_object, right_stereo_object, estimation_class):
     """
     test estimation_computation with phase_cross_correlation
     """
 
-    left, right = stereo_object
+    left, right = left_stereo_object, right_stereo_object
+
     estimation_ = estimation_class
 
     row_disparity, col_disparity, shifts, extra_dict = estimation_.compute_estimation(left, right)
