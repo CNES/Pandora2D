@@ -21,6 +21,7 @@ Test the refinement.dichotomy module.
 import pytest
 import json_checker
 
+from pandora.margins import Margins
 from pytest_mock import MockerFixture
 
 from pandora2d import refinement
@@ -122,3 +123,15 @@ def test_refinement_method(config, caplog, mocker: MockerFixture):
     dichotomy_instance.refinement_method(mocker.ANY, mocker.ANY)
 
     assert "refinement_method of Dichotomy not yet implemented" in caplog.messages
+
+
+def test_margins():
+    """
+    Test margins of Dichotomy.
+    """
+
+    config = {"refinement_method": "dichotomy", "iterations": 2, "filter": "sinc"}
+
+    dichotomy_instance = refinement.dichotomy.Dichotomy(config)
+
+    assert dichotomy_instance.margins == Margins(2, 2, 2, 2)
