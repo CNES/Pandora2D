@@ -24,6 +24,9 @@
 Test Disparity class
 """
 
+# Remove this with use of fixtures
+# pylint: disable=duplicate-code
+
 import unittest
 import pytest
 import numpy as np
@@ -31,6 +34,7 @@ import xarray as xr
 from rasterio import Affine
 import json_checker
 
+from pandora.margins import Margins
 from pandora2d import matching_cost, disparity
 
 
@@ -60,6 +64,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [0, 1],
+            "row_disparity_source": [-1, 0],
         }
 
         data = np.array(
@@ -95,6 +101,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [0, 1],
+            "row_disparity_source": [-1, 0],
         }
 
         data = np.array(
@@ -121,13 +129,22 @@ class TestDisparity(unittest.TestCase):
         """
         test check_conf of matching cost pipeline
         """
-        disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
+        disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
 
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError):
-            disparity.Disparity(**{"invalid_disparity": "5"}) # type: ignore
+            disparity.Disparity({"invalid_disparity": "5"})
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            disparity.Disparity(**{"disparity_method": "WTN"}) # type: ignore
+            disparity.Disparity({"disparity_method": "WTN"})
+
+    @staticmethod
+    def test_margins():
+        """
+        test margins of matching cost pipeline
+        """
+        _disparity = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
+
+        assert _disparity.margins == Margins(0, 0, 0, 0)
 
     def test_min_split(self):
         """
@@ -136,15 +153,24 @@ class TestDisparity(unittest.TestCase):
 
         # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
         cfg = {"matching_cost_method": "sad", "window_size": 1}
-        matching_cost_test = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, **cfg) # type: ignore
+        grid_min_col = np.full((3, 3), 0)
+        grid_max_col = np.full((3, 3), 1)
+        grid_min_row = np.full((3, 3), -1)
+        grid_max_row = np.full((3, 3), 0)
+        matching_cost_test.allocate_cost_volume_pandora(
+            img_left=self.left, img_right=self.right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+        )
+        cvs = matching_cost_test.compute_cost_volumes(
+            self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        )
 
         ad_ground_truth = np.zeros((3, 3, 2))
         ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
         ad_ground_truth[:, :, 1] = np.array([[np.nan, np.nan, np.nan], [0, 0, np.nan], [1, 1, np.nan]])
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
+        disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
         # searching along dispy axis
         cvs_min = disparity_test.min_split(cvs, 3)
 
@@ -158,15 +184,24 @@ class TestDisparity(unittest.TestCase):
 
         # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
         cfg = {"matching_cost_method": "sad", "window_size": 1}
-        matching_cost_test = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left, self.right, 0, 1, -1, 0, **cfg) # type: ignore
+        grid_min_col = np.full((3, 3), 0)
+        grid_max_col = np.full((3, 3), 1)
+        grid_min_row = np.full((3, 3), -1)
+        grid_max_row = np.full((3, 3), 0)
+        matching_cost_test.allocate_cost_volume_pandora(
+            img_left=self.left, img_right=self.right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
+        )
+        cvs = matching_cost_test.compute_cost_volumes(
+            self.left, self.right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        )
 
         ad_ground_truth = np.zeros((3, 3, 2))
         ad_ground_truth[:, :, 0] = np.array([[np.nan, np.nan, np.nan], [2, 3, 4], [2, 3, 4]])
         ad_ground_truth[:, :, 1] = np.array([[np.nan, np.nan, np.nan], [3, 4, np.nan], [2, 3, np.nan]])
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
+        disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
         # searching along dispy axis
         cvs_max = disparity_test.max_split(cvs, 3)
 
@@ -180,15 +215,28 @@ class TestDisparity(unittest.TestCase):
 
         # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
         cfg = {"matching_cost_method": "sad", "window_size": 3}
-        matching_cost_test = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, **cfg) # type: ignore
+        grid_min_col = np.full((3, 3), 0)
+        grid_max_col = np.full((3, 3), 1)
+        grid_min_row = np.full((3, 3), -1)
+        grid_max_row = np.full((3, 3), 0)
+        matching_cost_test.allocate_cost_volume_pandora(
+            img_left=self.left_arg,
+            img_right=self.right_arg,
+            grid_min_col=grid_min_col,
+            grid_max_col=grid_max_col,
+            cfg=cfg,
+        )
+        cvs = matching_cost_test.compute_cost_volumes(
+            self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        )
 
         ad_ground_truth = np.array(
             [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
         )
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
+        disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
         # searching along dispy axis
         cvs_max = disparity_test.min_split(cvs, 3)
         min_tensor = disparity_test.argmin_split(cvs_max, 2)
@@ -202,15 +250,28 @@ class TestDisparity(unittest.TestCase):
 
         # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
         cfg = {"matching_cost_method": "sad", "window_size": 3}
-        matching_cost_test = matching_cost.MatchingCost(**cfg) # type: ignore
+        matching_cost_test = matching_cost.MatchingCost(cfg)
 
-        cvs = matching_cost_test.compute_cost_volumes(self.left_arg, self.right_arg, 0, 1, -1, 0, **cfg) # type: ignore
+        grid_min_col = np.full((3, 3), 0)
+        grid_max_col = np.full((3, 3), 1)
+        grid_min_row = np.full((3, 3), -1)
+        grid_max_row = np.full((3, 3), 0)
+        matching_cost_test.allocate_cost_volume_pandora(
+            img_left=self.left_arg,
+            img_right=self.right_arg,
+            grid_min_col=grid_min_col,
+            grid_max_col=grid_max_col,
+            cfg=cfg,
+        )
+        cvs = matching_cost_test.compute_cost_volumes(
+            self.left_arg, self.right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        )
 
         ad_ground_truth = np.array(
             [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
         )
 
-        disparity_test = disparity.Disparity(**{"disparity_method": "wta", "invalid_disparity": -9999}) # type: ignore
+        disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
         # searching along dispy axis
         cvs_max = disparity_test.max_split(cvs, 3)
         max_tensor = disparity_test.argmax_split(cvs_max, 2)
@@ -237,6 +298,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [-2, 2],
+            "row_disparity_source": [-2, 2],
         }
 
         data = np.array(
@@ -262,14 +325,21 @@ class TestDisparity(unittest.TestCase):
 
         # create matching_cost object with measure = ssd, window_size = 3
         cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc) # type: ignore
+        matching_cost_matcher = matching_cost.MatchingCost(cfg_mc)
         # create disparity object with WTA method
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
-        disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
+        disparity_matcher = disparity.Disparity(cfg_disp)
 
+        grid_min_col = np.full((3, 3), -2)
+        grid_max_col = np.full((3, 3), 2)
+        grid_min_row = np.full((3, 3), -2)
+        grid_max_row = np.full((3, 3), 2)
+        matching_cost_matcher.allocate_cost_volume_pandora(
+            img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        )
         cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_col=-2, max_col=2, min_row=-2, max_row=2, **cfg_mc
-        ) # type: ignore
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
@@ -296,6 +366,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [-3, 3],
+            "row_disparity_source": [-3, 3],
         }
 
         data = np.array(
@@ -321,14 +393,21 @@ class TestDisparity(unittest.TestCase):
 
         # create matching_cost object with measure = ssd, window_size = 3
         cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc) # type: ignore
+        matching_cost_matcher = matching_cost.MatchingCost(cfg_mc)
         # create disparity object with WTA method
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
-        disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
+        disparity_matcher = disparity.Disparity(cfg_disp)
 
+        grid_min_col = np.full((3, 3), -3)
+        grid_max_col = np.full((3, 3), 3)
+        grid_min_row = np.full((3, 3), -3)
+        grid_max_row = np.full((3, 3), 3)
+        matching_cost_matcher.allocate_cost_volume_pandora(
+            img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        )
         cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_col=-3, max_col=3, min_row=-3, max_row=3, **cfg_mc
-        ) # type: ignore
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
 
@@ -355,6 +434,8 @@ class TestDisparity(unittest.TestCase):
             "no_data_mask": 1,
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "col_disparity_source": [-3, 3],
+            "row_disparity_source": [-3, 3],
         }
 
         data = np.array(
@@ -380,13 +461,20 @@ class TestDisparity(unittest.TestCase):
 
         # create matching_cost object with measure = ssd, window_size = 3
         cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-        matching_cost_matcher = matching_cost.MatchingCost(**cfg_mc) # type: ignore
+        matching_cost_matcher = matching_cost.MatchingCost(cfg_mc)
         # create disparity object with WTA method
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
-        disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
+        disparity_matcher = disparity.Disparity(cfg_disp)
 
+        grid_min_col = np.full((3, 3), -3)
+        grid_max_col = np.full((3, 3), 3)
+        grid_min_row = np.full((3, 3), -3)
+        grid_max_row = np.full((3, 3), 3)
+        matching_cost_matcher.allocate_cost_volume_pandora(
+            img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        )
         cvs = matching_cost_matcher.compute_cost_volumes(
-            left, right, min_col=-3, max_col=3, min_row=-3, max_row=3, **cfg_mc
+            left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
         )
 
         delta_x, delta_y = disparity_matcher.compute_disp_maps(cvs)
@@ -438,7 +526,7 @@ class TestDisparity(unittest.TestCase):
         cost_volumes_dataset.attrs["type_measure"] = "max"
 
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -99}
-        disparity_matcher = disparity.Disparity(**cfg_disp) # type: ignore
+        disparity_matcher = disparity.Disparity(cfg_disp)
 
         ground_truth_col = np.array([[-99, -99, -99, -1, 0], [-99, 0, 0, 0, 0], [-1, -1, 0, 0, 0], [0, 0, 0, 0, -99]])
 

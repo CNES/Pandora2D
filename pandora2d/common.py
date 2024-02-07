@@ -53,14 +53,14 @@ def save_dataset(dataset: xr.Dataset, output: str) -> None:
     write_data_array(dataset["col_map"], os.path.join(output, "columns_disparity.tif"))
 
 
-def dataset_disp_maps(delta_row: np.array, delta_col: np.array) -> xr.Dataset:
+def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray) -> xr.Dataset:
     """
     Create the dataset containing disparity maps
 
     :param delta_row: disparity map for row
-    :type delta_row: np.array
+    :type delta_row: np.ndarray
     :param delta_col: disparity map for col
-    :type delta_col: np.array
+    :type delta_col: np.ndarray
     :return: dataset: Dataset with the disparity maps with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)

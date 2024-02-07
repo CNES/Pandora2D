@@ -71,6 +71,7 @@ Here are some rules to apply when developing a new functionality:
  - If major modifications of the user interface or of the tool's behaviour are done, update the user documentation (and the notebooks if necessary).
  - Do not add new dependencies unless it is absolutely necessary, and only if it has a permissive license.
  - Use the type hints provided by the *typing* python module.
+ - Don’t use `sys.exit` but raise an exception instead. Exceptions can be catch when Pandora2d is used as a library. `sys.exit` doesn't.
  - Correct project pylint errors (see below)
 
 

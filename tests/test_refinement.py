@@ -29,6 +29,7 @@ import numpy as np
 import xarray as xr
 import pytest
 
+from pandora.margins import Margins
 from pandora2d import refinement, common
 
 
@@ -43,10 +44,19 @@ class TestRefinement(unittest.TestCase):
         Test the interpolation method
         """
 
-        refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
+        refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
 
         with pytest.raises(KeyError):
-            refinement.AbstractRefinement(**{"refinement_method": "wta"}) # type: ignore
+            refinement.AbstractRefinement({"refinement_method": "wta"})  # type: ignore[abstract]
+
+    @staticmethod
+    def test_margins():
+        """
+        test margins of matching cost pipeline
+        """
+        _refinement = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
+
+        assert _refinement.margins == Margins(3, 3, 3, 3), "Not a cubic kernel Margins"
 
     @staticmethod
     def test_refinement_method_subpixel():
@@ -86,7 +96,7 @@ class TestRefinement(unittest.TestCase):
 
         dataset_disp_map = common.dataset_disp_maps(data, data)
 
-        test = refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
+        test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
         delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map)
 
         np.testing.assert_allclose(data, delta_y, rtol=1e-06)
@@ -132,7 +142,7 @@ class TestRefinement(unittest.TestCase):
 
         dataset_disp_map = common.dataset_disp_maps(gt_delta_y, gt_delta_x)
 
-        test = refinement.AbstractRefinement(**{"refinement_method": "interpolation"}) # type: ignore
+        test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
         delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map)
 
         np.testing.assert_allclose(gt_delta_y, delta_y, rtol=1e-06)

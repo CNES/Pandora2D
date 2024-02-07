@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
-#
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
@@ -31,9 +28,9 @@ import numpy as np
 from pandora2d import img_tools
 
 
-class TestImgTools(unittest.TestCase):
+class TestShiftImgPandora2D(unittest.TestCase):
     """
-    TestImgTools class allows to test all the methods in the img_tools function
+    test shift_img_pandora2D function.
     """
 
     def setUp(self) -> None:

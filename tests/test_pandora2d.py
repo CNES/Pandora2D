@@ -23,29 +23,24 @@
 """
 Test state_machine
 """
-import unittest
 import copy
+import numpy as np
 
 import pytest
 
 
 from transitions.core import MachineError
-from pandora import read_img
 
+from pandora.margins import Margins
 from tests import common
 from pandora2d import state_machine
+from pandora2d.img_tools import create_datasets_from_inputs
 
 
-class TestPandora2D(unittest.TestCase):
+class TestPandora2D:
     """
     TestCheckJson class allows to test all the methods in the class CheckJson
     """
-
-    def setUp(self) -> None:
-        """
-        Method called to prepare the test fixture
-
-        """
 
     @staticmethod
     def test_run_pandora() -> None:
@@ -56,13 +51,13 @@ class TestPandora2D(unittest.TestCase):
         pandora2d_machine = state_machine.Pandora2DMachine()
 
         correct_cfg = copy.deepcopy(common.correct_pipeline)
-        pandora2d_machine.check_conf(correct_cfg) # type: ignore
+        pandora2d_machine.check_conf(correct_cfg)
 
         false_cfg_mc = copy.deepcopy(common.false_pipeline_mc)
         false_cfg_disp = copy.deepcopy(common.false_pipeline_disp)
         with pytest.raises(MachineError):
-            pandora2d_machine.check_conf(false_cfg_mc)  # type: ignore
-            pandora2d_machine.check_conf(false_cfg_disp)  # type: ignore
+            pandora2d_machine.check_conf(false_cfg_mc)
+            pandora2d_machine.check_conf(false_cfg_disp)
 
     @staticmethod
     def test_run_prepare() -> None:
@@ -71,16 +66,40 @@ class TestPandora2D(unittest.TestCase):
         """
         pandora2d_machine = state_machine.Pandora2DMachine()
 
-        img_left = read_img("./tests/data/left.png", -9999)
-        img_right = read_img("./tests/data/right.png", -9999)
+        input_config = {
+            "left": {"img": "./tests/data/left.png", "nodata": -9999},
+            "right": {"img": "./tests/data/right.png", "nodata": -9999},
+            "col_disparity": [-2, 2],
+            "row_disparity": [-2, 2],
+        }
+        img_left, img_right = create_datasets_from_inputs(input_config=input_config)
 
-        pandora2d_machine.run_prepare(img_left, img_right, -2, 2, -2, 2)
+        pandora2d_machine.run_prepare(img_left, img_right)
 
         assert pandora2d_machine.left_img == img_left
         assert pandora2d_machine.right_img == img_right
-        assert pandora2d_machine.disp_min_row == -2
-        assert pandora2d_machine.disp_max_row == 2
-        assert pandora2d_machine.disp_min_col == -2
-        assert pandora2d_machine.disp_max_col == 2
+        np.testing.assert_array_equal(
+            pandora2d_machine.disp_min_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.disp_max_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.disp_min_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.disp_max_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
+        )
 
+    @staticmethod
+    def test_global_margins() -> None:
+        """
+        Test computed global margins is as expected.
+        """
 
+        pandora2d_machine = state_machine.Pandora2DMachine()
+
+        pipeline_cfg = copy.deepcopy(common.correct_pipeline)
+        pandora2d_machine.check_conf(pipeline_cfg)
+
+        assert pandora2d_machine.margins.global_margins == Margins(3, 3, 3, 3)

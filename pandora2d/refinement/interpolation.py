@@ -27,6 +27,7 @@ import multiprocessing
 from typing import Dict, Tuple
 from json_checker import And, Checker
 
+from pandora.margins.descriptors import UniformMargins
 from scipy.interpolate import interp2d
 from scipy.optimize import minimize
 import numpy as np
@@ -41,16 +42,22 @@ class Interpolation(refinement.AbstractRefinement):
     Interpolation class allows to perform the subpixel cost refinement step
     """
 
-    def __init__(self, **cfg: str) -> None:
+    # pylint: disable=line-too-long
+    # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html#scipy.interpolate.interp2d # NOSONAR
+    # The minimum number of data points required along the interpolation axis is (k+1)**2,
+    # with k=1 for linear, k=3 for cubic and k=5 for quintic interpolation.
+    margins = UniformMargins(3)  # cubic kernel
+
+    def __init__(self, cfg: Dict) -> None:
         """
         :param cfg: optional configuration, {}
         :type cfg: dict
         :return: None
         """
-        self.cfg = self.check_conf(**cfg)
+        self.cfg = self.check_conf(cfg)
 
     @staticmethod
-    def check_conf(**cfg: str) -> Dict[str, str]:
+    def check_conf(cfg: Dict) -> Dict:
         """
         Check the refinement configuration
 
@@ -70,7 +77,7 @@ class Interpolation(refinement.AbstractRefinement):
         return cfg
 
     @staticmethod
-    def wrapper_interp2d(params: np.array, func: interp2d) -> np.array:
+    def wrapper_interp2d(params: np.ndarray, func: interp2d) -> np.ndarray:
         """
         Unpack tuple of arguments from minimize to fit in interp2d
         :param params: points coordinates
@@ -81,7 +88,7 @@ class Interpolation(refinement.AbstractRefinement):
         :rtype: np.array
         """
         x, y = params
-        return func(x,y)
+        return func(x, y)
 
     def compute_cost_matrix(self, p_args) -> Tuple[float, float]:
         """
@@ -144,7 +151,7 @@ class Interpolation(refinement.AbstractRefinement):
 
         return res
 
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.array, np.array]:
+    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute refine disparity maps
         :param cost_volumes: Cost_volumes has (row, col, disp_col, disp_row) dimensions

@@ -23,13 +23,15 @@
 This module contains functions to run Pandora pipeline.
 """
 
-from typing import Dict
+from typing import Dict, List
 import xarray as xr
 
-from pandora import read_config_file, read_img, setup_logging
+from pandora import read_config_file, setup_logging
 from pandora.common import save_config
 
-from pandora2d import check_json, common
+from pandora2d import common
+from pandora2d.check_configuration import check_conf, check_datasets
+from pandora2d.img_tools import get_roi_processing, create_datasets_from_inputs
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -37,10 +39,6 @@ def run(
     pandora2d_machine: Pandora2DMachine,
     img_left: xr.Dataset,
     img_right: xr.Dataset,
-    disp_min_col: int,
-    disp_max_col: int,
-    disp_min_row: int,
-    disp_max_row: int,
     cfg_pipeline: Dict[str, dict],
 ):
     """
@@ -58,21 +56,13 @@ def run(
             - im : 2D (row, col) xarray.DataArray
             - msk (optional): 2D (row, col) xarray.DataArray
     :type img_right: xarray.Dataset
-    :param disp_min_col: minimal disparity for columns
-    :type disp_min_col: int
-    :param disp_max_col: maximal disparity for columns
-    :type disp_max_col: int
-    :param disp_min_row: minimal disparity for lines
-    :type disp_min_row: int
-    :param disp_max_row: maximal disparity for lines
-    :type disp_max_row: int
     :param cfg_pipeline: pipeline configuration
     :type cfg_pipeline: Dict[str, dict]
 
     :return: None
     """
 
-    pandora2d_machine.run_prepare(img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row)
+    pandora2d_machine.run_prepare(img_left, img_right)
 
     for e in list(cfg_pipeline["pipeline"]):
         pandora2d_machine.run(e, cfg_pipeline)
@@ -83,7 +73,6 @@ def run(
 
 
 def main(cfg_path: str, path_output: str, verbose: bool) -> None:
-
     """
     Check config file and run pandora 2D framework accordingly
 
@@ -99,24 +88,28 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     pandora2d_machine = Pandora2DMachine()
 
-    cfg = check_json.check_conf(user_cfg, pandora2d_machine)
+    cfg = check_conf(user_cfg, pandora2d_machine)
 
     setup_logging(verbose)
 
-    # read images
-    img_left = read_img(cfg["input"]["img_left"], cfg["input"]["nodata_left"])
-    img_right = read_img(cfg["input"]["img_right"], cfg["input"]["nodata_right"])
-
     # read disparities values
-    disp_min_col = cfg["input"]["disp_min_col"]
-    disp_max_col = cfg["input"]["disp_max_col"]
-    disp_min_row = cfg["input"]["disp_min_row"]
-    disp_max_row = cfg["input"]["disp_max_row"]
+    col_disparity = cfg["input"]["col_disparity"]
+    row_disparity = cfg["input"]["row_disparity"]
+
+    # check roi in user configuration
+    roi = None
+    if "ROI" in cfg:
+        cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
+        roi = get_roi_processing(cfg["ROI"], col_disparity, row_disparity)
+
+    # read images
+    image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+
+    # check datasets: shape, format and content
+    check_datasets(image_datasets.left, image_datasets.right)
 
     # run pandora 2D and store disp maps in a dataset
-    dataset_disp_maps = run(
-        pandora2d_machine, img_left, img_right, disp_min_col, disp_max_col, disp_min_row, disp_max_row, cfg
-    )
+    dataset_disp_maps = run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
 
     # save dataset
     common.save_dataset(dataset_disp_maps, path_output)

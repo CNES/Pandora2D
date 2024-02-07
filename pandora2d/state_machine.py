@@ -23,20 +23,36 @@
 This module contains class associated to the pandora state machine
 """
 
-
-from typing import Dict
+from typing import Dict, TYPE_CHECKING, List, TypedDict, Literal, Optional, Union
 import logging
-
+from operator import add
+import numpy as np
 import xarray as xr
+from typing_extensions import Annotated
 
 try:
     import graphviz  # pylint: disable=unused-import
-    from transitions.extensions import GraphMachine as Machine
+
+    # In order de avoid this message from Mypy:
+    # Incompatible import of "Machine" \
+    # (imported name has type "type[Machine]", local name has type "type[GraphMachine]")
+    if TYPE_CHECKING:  # Mypy sees this:
+        from transitions import Machine
+    else:  # But we actually do this:
+        from transitions.extensions import GraphMachine as Machine
 except ImportError:
     from transitions import Machine
 from transitions import MachineError
 
+from pandora.margins import GlobalMargins
 from pandora2d import matching_cost, disparity, refinement, common
+
+
+class MarginsProperties(TypedDict):
+    """Properties of Margins used in Margins transitions."""
+
+    type: Literal["aggregate", "maximum"]
+    margins: Annotated[List[int], '["left, "up", "right", "down"]']
 
 
 class Pandora2DMachine(Machine):
@@ -45,7 +61,13 @@ class Pandora2DMachine(Machine):
     """
 
     _transitions_run = [
-        {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "after": "matching_cost_run"},
+        {
+            "trigger": "matching_cost",
+            "source": "begin",
+            "dest": "cost_volumes",
+            "prepare": "matching_cost_prepare",
+            "after": "matching_cost_run",
+        },
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "after": "disp_maps_run"},
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_run"},
     ]
@@ -56,44 +78,26 @@ class Pandora2DMachine(Machine):
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_check_conf"},
     ]
 
+    margins = GlobalMargins()
+
     def __init__(
         self,
-        img_left: xr.Dataset = None,
-        img_right: xr.Dataset = None,
-
-        disp_min_col: int = None,
-        disp_max_col: int = None,
-        disp_min_row: int = None,
-        disp_max_row: int = None,
     ) -> None:
         """
         Initialize Pandora2D Machine
 
-        :param img_left: left image
-        :type img_left: xarray.Dataset
-        :param img_right: right image
-        :type img_right: xarray.Dataset
-        :param disp_min_col: minimal disparity for columns
-        :type disp_min_col: int
-        :param disp_max_col: maximal disparity for columns
-        :type disp_max_col: int
-        :param disp_min_row: minimal disparity for lines
-        :type disp_min_row: int
-        :param disp_max_row: maximal disparity for lines
-        :type disp_max_row: int
-        :return: None
         """
 
         # Left image
-        self.left_img: xr.Dataset = img_left
+        self.left_img: Optional[xr.Dataset] = None
         # Right image
-        self.right_img: xr.Dataset = img_right
-        # Minimum disparity
-        self.disp_min_col: int = disp_min_col
-        self.disp_min_row: int = disp_min_row
-        # Maximum disparity
-        self.disp_max_col: int = disp_max_col
-        self.disp_max_row: int = disp_max_row
+        self.right_img: Optional[xr.Dataset] = None
+        # Column's min, max disparities
+        self.disp_min_col: np.ndarray = None
+        self.disp_max_col: np.ndarray = None
+        # Row's min, max disparities
+        self.disp_min_row: np.ndarray = None
+        self.disp_max_row: np.ndarray = None
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
         self.cost_volumes: xr.Dataset = xr.Dataset()
@@ -101,6 +105,9 @@ class Pandora2DMachine(Machine):
 
         # Define avalaible states
         states_ = ["begin", "cost_volumes", "disp_maps"]
+
+        # Instance matching_cost
+        self.matching_cost_: Union[matching_cost.MatchingCost, None] = None
 
         # Initialize a machine without any transition
         Machine.__init__(
@@ -117,10 +124,6 @@ class Pandora2DMachine(Machine):
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        disp_min_col: int,
-        disp_max_col: int,
-        disp_min_row: int,
-        disp_max_row: int,
     ) -> None:
         """
         Prepare the machine before running
@@ -135,22 +138,16 @@ class Pandora2DMachine(Machine):
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_right: xarray.Dataset
-        :param disp_min_col: minimal disparity for columns
-        :type disp_min_col: int
-        :param disp_max_col: maximal disparity for columns
-        :type disp_max_col: int
-        :param disp_min_row: minimal disparity for lines
-        :type disp_min_row: int
-        :param disp_max_row: maximal disparity for lines
-        :type disp_max_row: int
         """
 
         self.left_img = img_left
         self.right_img = img_right
-        self.disp_min_col = disp_min_col
-        self.disp_max_col = disp_max_col
-        self.disp_min_row = disp_min_row
-        self.disp_max_row = disp_max_row
+        # Column's min, max disparities
+        self.disp_min_col = img_left["col_disparity"].sel(band_disp="min").data
+        self.disp_max_col = img_left["col_disparity"].sel(band_disp="max").data
+        # Row's min, max disparities
+        self.disp_min_row = img_left["row_disparity"].sel(band_disp="min").data
+        self.disp_max_row = img_left["row_disparity"].sel(band_disp="max").data
 
         self.add_transitions(self._transitions_run)
 
@@ -170,9 +167,7 @@ class Pandora2DMachine(Machine):
             else:
                 self.trigger(input_step, cfg, input_step)
         except (MachineError, KeyError, AttributeError):
-            logging.error(
-                "Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step
-            )
+            logging.error("Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step)
             raise
 
     def run_exit(self) -> None:
@@ -228,6 +223,22 @@ class Pandora2DMachine(Machine):
                 self.remove_transition(trans["trigger"])  # type: ignore
                 deleted_triggers.append(trans["trigger"])  # type: ignore
 
+    def get_global_margins(self):
+        """
+        Aggregation margins
+        """
+        aggregate_margins = [0, 0, 0, 0]
+        max_margins = [0, 0, 0, 0]
+        for cfg in self._transitions_margins.values():
+            step_margins = cfg["margins"]
+            type_margin = cfg["type"]
+            if type_margin == "aggregate":
+                aggregate_margins = list(map(add, aggregate_margins, step_margins))
+            else:
+                max_margins = list(map(max, aggregate_margins, step_margins))
+
+        return [max(x, y) for x, y in zip(max_margins, aggregate_margins)]
+
     def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the disparity computation configuration
@@ -239,8 +250,9 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-        matching_cost_ = matching_cost.MatchingCost(**cfg["pipeline"][input_step])
+        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
+        self.margins.add_cumulative(input_step, matching_cost_.margins)
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -253,8 +265,9 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-        disparity_ = disparity.Disparity(**cfg["pipeline"][input_step])
+        disparity_ = disparity.Disparity(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
+        self.margins.add_cumulative(input_step, disparity_.margins)
 
     def refinement_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -267,12 +280,13 @@ class Pandora2DMachine(Machine):
         :return: None
         """
 
-        refinement_ = refinement.AbstractRefinement(**cfg["pipeline"][input_step])  # type: ignore
+        refinement_ = refinement.AbstractRefinement(cfg["pipeline"][input_step])  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
+        self.margins.add_non_cumulative(input_step, refinement_.margins)
 
-    def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
-        Matching cost computation
+        Matching cost prepare
 
         :param cfg: pipeline configuration
         :type  cfg: dict
@@ -280,18 +294,27 @@ class Pandora2DMachine(Machine):
         :type input_step: str
         :return: None
         """
+        self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
+        self.matching_cost_.allocate_cost_volume_pandora(
+            self.left_img, self.right_img, self.disp_min_col, self.disp_max_col, cfg["pipeline"][input_step]
+        )
+
+    def matching_cost_run(self, _, __) -> None:
+        """
+        Matching cost computation
+
+        :return: None
+        """
 
         logging.info("Matching cost computation...")
-        matching_cost_run = matching_cost.MatchingCost(**cfg["pipeline"][input_step])
 
-        self.cost_volumes = matching_cost_run.compute_cost_volumes(
+        self.cost_volumes = self.matching_cost_.compute_cost_volumes(
             self.left_img,
             self.right_img,
             self.disp_min_col,
             self.disp_max_col,
             self.disp_min_row,
             self.disp_max_row,
-            **cfg["pipeline"][input_step]
         )
 
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:
@@ -306,7 +329,7 @@ class Pandora2DMachine(Machine):
         """
 
         logging.info("Disparity computation...")
-        disparity_run = disparity.Disparity(**cfg["pipeline"][input_step])
+        disparity_run = disparity.Disparity(cfg["pipeline"][input_step])
 
         map_col, map_row = disparity_run.compute_disp_maps(self.cost_volumes)
         self.dataset_disp_maps = common.dataset_disp_maps(map_row, map_col)
@@ -323,7 +346,7 @@ class Pandora2DMachine(Machine):
         """
 
         logging.info("Refinement computation...")
-        refinement_run = refinement.AbstractRefinement(**cfg["pipeline"][input_step])  # type: ignore
+        refinement_run = refinement.AbstractRefinement(cfg["pipeline"][input_step])  # type: ignore[abstract]
 
         refine_map_col, refine_map_row = refinement_run.refinement_method(self.cost_volumes, self.dataset_disp_maps)
         self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col)

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
+
 def plot_image(img, title=None, output_dir=None, cmap="viridis"):
     """
      Show images
@@ -23,7 +24,7 @@ def plot_image(img, title=None, output_dir=None, cmap="viridis"):
     plt.imshow(img, cmap=cmap)
     plt.colorbar()
     if output_dir is not None:
-        fig.savefig(os.path.join(output_dir,title + '.pdf'))
+        fig.savefig(os.path.join(output_dir, title + ".pdf"))
 
 
 def pandora_cmap():

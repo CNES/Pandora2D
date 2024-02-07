@@ -22,13 +22,15 @@
 """
 This module contains functions associated to the refinement computation step.
 """
-
+from __future__ import annotations
 import logging
 from typing import Dict, Tuple
 from abc import abstractmethod, ABCMeta
 
 import xarray as xr
 import numpy as np
+
+from pandora.margins.descriptors import NullMargins
 
 
 class AbstractRefinement:
@@ -41,8 +43,11 @@ class AbstractRefinement:
     refinement_methods_avail: Dict = {}
     _refinement_method = None
     cfg = None
+    margins = NullMargins()
 
-    def __new__(cls, **cfg: dict):
+    # If we don't make cfg optional, we got this error when we use subprocesses in refinement_method :
+    # AbstractRefinement.__new__() missing 1 required positional argument: 'cfg'
+    def __new__(cls, cfg: dict | None = None):
         """
         Return the plugin associated with the refinement_method given in the configuration
 
@@ -97,7 +102,7 @@ class AbstractRefinement:
         return decorator
 
     @abstractmethod
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.array, np.array]:
+    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 
@@ -106,5 +111,5 @@ class AbstractRefinement:
         :param pixel_maps: pixels disparity maps
         :type pixel_maps: xarray.dataset
         :return: the refined disparity maps
-        :rtype: Tuple[np.array, np.array]
+        :rtype: Tuple[np.ndarray, np.ndarray]
         """
