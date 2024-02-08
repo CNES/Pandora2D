@@ -18,9 +18,8 @@
 """
 Test the refinement.dichotomy module.
 """
-import pytest
 import json_checker
-
+import pytest
 from pandora.margins import Margins
 from pytest_mock import MockerFixture
 

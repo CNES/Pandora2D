@@ -46,19 +46,20 @@ class TestSaveDataset:
         """
         Create a test dataset
         """
-        row, col = np.full((2, 2), 1), np.full((2, 2), 1)
+        row, col, score = np.full((2, 2), 1), np.full((2, 2), 1), np.full((2, 2), 1)
 
-        dataset_y = xr.Dataset(
-            {"row_map": (["row", "col"], row)},
-            coords={"row": np.arange(row.shape[0]), "col": np.arange(row.shape[1])},
-        )
+        coords = {
+            "row": np.arange(row.shape[0]),
+            "col": np.arange(col.shape[1]),
+        }
 
-        dataset_x = xr.Dataset(
-            {"col_map": (["row", "col"], col)},
-            coords={"row": np.arange(col.shape[0]), "col": np.arange(col.shape[1])},
-        )
+        dims = ("row", "col")
 
-        dataset = dataset_y.merge(dataset_x, join="override", compat="override")
+        dataarray_row = xr.DataArray(row, dims=dims, coords=coords)
+        dataarray_col = xr.DataArray(col, dims=dims, coords=coords)
+        dataarray_score = xr.DataArray(score, dims=dims, coords=coords)
+
+        dataset = xr.Dataset({"row_map": dataarray_row, "col_map": dataarray_col, "correlation_score": dataarray_score})
 
         return dataset
 
@@ -72,18 +73,20 @@ class TestSaveDataset:
 
         assert os.path.exists("./tests/res_test/columns_disparity.tif")
         assert os.path.exists("./tests/res_test/row_disparity.tif")
+        assert os.path.exists("./tests/res_test/correlation_score.tif")
 
         os.remove("./tests/res_test/columns_disparity.tif")
         os.remove("./tests/res_test/row_disparity.tif")
+        os.remove("./tests/res_test/correlation_score.tif")
         os.rmdir("./tests/res_test")
 
 
-def create_dataset_coords(data_row, data_col, row, col):
+def create_dataset_coords(data_row, data_col, data_score, row, col):
     """
     Create xr.Dataset with data_row and data_col as data variables and row and col as coordinates
     """
 
-    data_variables = {"row_map": (("row", "col"), data_row), "col_map": (("row", "col"), data_col)}
+    data_variables = {"row_map": (("row", "col"), data_row), "col_map": (("row", "col"), data_col), "correlation_score": (("row", "col"), data_score)}
 
     coords = {"row": row, "col": col}
 
@@ -148,7 +151,7 @@ class TestDatasetDispMaps:
         """
 
         dataset_test = create_dataset_coords(
-            np.full((len(row), len(col)), 1), np.full((len(row), len(col)), 1), row, col
+            np.full((len(row), len(col)), 1), np.full((len(row), len(col)), 1), np.full((len(row), len(col)), 1), row, col
         )
 
         # create dataset with dataset_disp_maps function
@@ -156,6 +159,7 @@ class TestDatasetDispMaps:
             np.full((len(row), len(col)), 1),
             np.full((len(row), len(col)), 1),
             dataset_test.coords,
+            np.full((len(row), len(col)), 1),
             {"invalid_disp": -9999},
         )
 
@@ -199,6 +203,7 @@ class TestDatasetDispMaps:
                 np.full((len(coord_value)), 1),
                 np.full((len(coord_value)), 1),
                 dataset_test.coords,
+                np.full((len(coord_value)), 1),
                 {"invalid_disp": -9999},
             )
 
@@ -271,19 +276,21 @@ class TestDatasetDispMaps:
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -9999}
         disparity_matcher = disparity.Disparity(cfg_disp)
         # compute disparity maps
-        delta_row, delta_col = disparity_matcher.compute_disp_maps(cvs)
+        delta_row, delta_col, correlation_score = disparity_matcher.compute_disp_maps(cvs)
 
         # create dataset with dataset_disp_maps function
-        disparity_maps = common.dataset_disp_maps(delta_row, delta_col, cvs.coords, {"invalid_disp": -9999})
+        disparity_maps = common.dataset_disp_maps(delta_row, delta_col, cvs.coords, correlation_score, {"invalid_disp": -9999})
 
         interpolation = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
         # compute refined disparity maps
-        delta_x, delta_y = interpolation.refinement_method(cvs, disparity_maps, img_left, img_right)
+        delta_x, delta_y, correlation_score = interpolation.refinement_method(cvs, disparity_maps, img_left, img_right)
 
         # create dataset with dataset_disp_maps function
-        refined_disparity_maps = common.dataset_disp_maps(delta_x, delta_y, disparity_maps.coords)
+        disparity_maps["row_map"].data = delta_y
+        disparity_maps["col_map"].data = delta_x
+        disparity_maps["correlation_score"].data = correlation_score
 
         # create ground truth with create_dataset_coords method
-        dataset_ground_truth = create_dataset_coords(delta_x, delta_y, disparity_maps.row, disparity_maps.col)
+        dataset_ground_truth = create_dataset_coords(delta_x, delta_y, correlation_score, disparity_maps.row, disparity_maps.col)
 
-        assert refined_disparity_maps.equals(dataset_ground_truth)
+        assert disparity_maps.equals(dataset_ground_truth)
