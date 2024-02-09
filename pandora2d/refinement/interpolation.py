@@ -24,8 +24,8 @@ This module contains functions associated to the interpolation method used in th
 """
 
 import multiprocessing
-from typing import Dict, Tuple
-from json_checker import And, Checker
+from typing import Tuple
+from json_checker import And
 
 from pandora.margins.descriptors import UniformMargins
 from scipy.interpolate import interp2d
@@ -47,34 +47,9 @@ class Interpolation(refinement.AbstractRefinement):
     # The minimum number of data points required along the interpolation axis is (k+1)**2,
     # with k=1 for linear, k=3 for cubic and k=5 for quintic interpolation.
     margins = UniformMargins(3)  # cubic kernel
-
-    def __init__(self, cfg: Dict) -> None:
-        """
-        :param cfg: optional configuration, {}
-        :type cfg: dict
-        :return: None
-        """
-        self.cfg = self.check_conf(cfg)
-
-    @staticmethod
-    def check_conf(cfg: Dict) -> Dict:
-        """
-        Check the refinement configuration
-
-        :param cfg: user_config for refinement
-        :type cfg: dict
-        :return: cfg: global configuration
-        :rtype: cfg: dict
-        """
-
-        schema = {
-            "refinement_method": And(str, lambda x: x in ["interpolation"]),
-        }
-
-        checker = Checker(schema)
-        checker.validate(cfg)
-
-        return cfg
+    schema = {
+        "refinement_method": And(str, lambda x: x in ["interpolation"]),
+    }
 
     @staticmethod
     def wrapper_interp2d(params: np.ndarray, func: interp2d) -> np.ndarray:

@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, Tuple
 from abc import abstractmethod, ABCMeta
+from json_checker import Checker
 
 import xarray as xr
 import numpy as np
@@ -44,6 +45,8 @@ class AbstractRefinement:
     _refinement_method = None
     cfg = None
     margins = NullMargins()
+
+    schema: Dict  # This will raise an AttributeError if not override in subclasses
 
     # If we don't make cfg optional, we got this error when we use subprocesses in refinement_method :
     # AbstractRefinement.__new__() missing 1 required positional argument: 'cfg'
@@ -100,6 +103,29 @@ class AbstractRefinement:
             return subclass
 
         return decorator
+
+    def __init__(self, cfg: Dict) -> None:
+        """
+        :param cfg: optional configuration, {}
+        :type cfg: dict
+        :return: None
+        """
+        self.cfg = self.check_conf(cfg)
+
+    @classmethod
+    def check_conf(cls, cfg: Dict) -> Dict:
+        """
+        Check the refinement method configuration.
+
+        :param cfg: user_config for refinement method
+        :type cfg: dict
+        :return: cfg: global configuration
+        :rtype: cfg: dict
+        """
+        checker = Checker(cls.schema)
+        checker.validate(cfg)
+
+        return cfg
 
     @abstractmethod
     def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
