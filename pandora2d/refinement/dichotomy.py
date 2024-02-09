@@ -24,6 +24,8 @@ from typing import Dict
 import xarray as xr
 
 from json_checker import And
+
+from pandora.margins import Margins
 from . import refinement
 
 
@@ -59,6 +61,10 @@ class Dichotomy(refinement.AbstractRefinement):
             )
             cfg["iterations"] = cls.NB_MAX_ITER
         return cfg
+
+    @property
+    def margins(self):
+        return Margins(2, 2, 2, 2)
 
     def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> None:
         """

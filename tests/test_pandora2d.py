@@ -91,15 +91,32 @@ class TestPandora2D:
             pandora2d_machine.disp_max_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
         )
 
-    @staticmethod
-    def test_global_margins() -> None:
+    @pytest.mark.parametrize(
+        ["refinement_config", "expected"],
+        [
+            pytest.param({"refinement_method": "interpolation"}, Margins(3, 3, 3, 3), id="interpolation"),
+            pytest.param(
+                {"refinement_method": "dichotomy", "iterations": 3, "filter": "sinc"},
+                Margins(2, 2, 2, 2),
+                id="dichotomy with sinc filter",
+            ),
+        ],
+    )
+    def test_global_margins(self, refinement_config, expected) -> None:
         """
         Test computed global margins is as expected.
         """
 
+        pipeline_cfg = {
+            "pipeline": {
+                "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+                "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+                "refinement": refinement_config,
+            },
+        }
+
         pandora2d_machine = state_machine.Pandora2DMachine()
 
-        pipeline_cfg = copy.deepcopy(common.correct_pipeline)
         pandora2d_machine.check_conf(pipeline_cfg)
 
-        assert pandora2d_machine.margins.global_margins == Margins(3, 3, 3, 3)
+        assert pandora2d_machine.margins.global_margins == expected
