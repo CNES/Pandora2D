@@ -1,4 +1,5 @@
 # Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -66,14 +67,20 @@ class Dichotomy(refinement.AbstractRefinement):
     def margins(self):
         return Margins(2, 2, 2, 2)
 
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> None:
+    def refinement_method(
+        self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
+    ) -> None:
         """
         Return the subpixel disparity maps
 
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.dataset
-        :param pixel_maps: pixels disparity maps
-        :type pixel_maps: xarray.dataset
+        :type cost_volumes: xarray.Dataset
+        :param disp_map: pixel disparity maps
+        :type disp_map: xarray.Dataset
+        param img_left: left image dataset
+        :type img_left: xarray.Dataset
+        :param img_right: right image dataset
+        :type img_right: xarray.Dataset
         :return: the refined disparity maps
         :rtype: Tuple[np.ndarray, np.ndarray]
         """

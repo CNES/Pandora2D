@@ -112,10 +112,14 @@ class AbstractRefinement:
 
         return decorator
 
-    def __init__(self, cfg: Dict) -> None:
+    def __init__(self, cfg: Dict, _: list = None, __: int = 5) -> None:
         """
         :param cfg: optional configuration, {}
         :type cfg: dict
+        :param step: list containing row and col step
+        :type step: list
+        :param window_size: window size
+        :type window_size: int
         :return: None
         """
         self.cfg = self.check_conf(cfg)

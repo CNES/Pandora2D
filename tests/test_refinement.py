@@ -114,7 +114,7 @@ def test_check_conf_passes(refinement_method):
 
 
 @pytest.mark.parametrize(
-    "refinement_config", [{"refinement_method": "wta"}, {"refinement_method": "optical_flow", "nbr_iteration": 0}]
+    "refinement_config", [{"refinement_method": "wta"}, {"refinement_method": "optical_flow", "iterations": 0}]
 )
 def test_check_conf_fails(refinement_config):
     """

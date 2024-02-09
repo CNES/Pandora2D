@@ -25,7 +25,7 @@ from typing import Dict, Tuple
 
 import numpy as np
 import xarray as xr
-from json_checker import And, Checker
+from json_checker import And
 from scipy.ndimage import map_coordinates
 from pandora.margins import Margins
 
@@ -38,30 +38,32 @@ class OpticalFlow(refinement.AbstractRefinement):
     OpticalFLow class allows to perform the subpixel cost refinement step
     """
 
-    _nbr_iteration = None
+    _iterations = None
     _invalid_disp = None
 
-    _NBR_ITERATION = 4
+    _ITERATIONS = 4
+
+    schema = {"refinement_method": And(str, lambda x: x in ["optical_flow"]), "iterations": And(int, lambda it: it > 0)}
 
     def __init__(self, cfg: dict = None, step: list = None, window_size: int = 5) -> None:
         """
         :param cfg: optional configuration, {}
         :type cfg: dict
+        :param step: list containing row and col step
+        :type step: list
+        :param window_size: window size
+        :type window_size: int
         :return: None
         """
+        super().__init__(cfg)
 
-        self.cfg = self.check_conf(cfg)
-        self._nbr_iteration = self.cfg["nbr_iteration"]
+        self._iterations = self.cfg["iterations"]
         self._refinement_method = self.cfg["refinement_method"]
         self._window_size = window_size
         self._step = [1, 1] if step is None else step
 
-    @property
-    def margins(self):
-        values = (self._window_size // 2 * ele for _ in range(2) for ele in self._step)
-        return Margins(*values)
-
-    def check_conf(self, cfg: Dict) -> Dict:
+    @classmethod
+    def check_conf(cls, cfg: Dict) -> Dict:
         """
         Check the refinement configuration
 
@@ -71,18 +73,16 @@ class OpticalFlow(refinement.AbstractRefinement):
         :rtype: cfg: dict
         """
 
-        if "nbr_iteration" not in cfg:
-            cfg["nbr_iteration"] = self._NBR_ITERATION
+        cfg["iterations"] = cfg.get("iterations", cls._ITERATIONS)
 
-        schema = {
-            "refinement_method": And(str, lambda x: x in ["optical_flow"]),
-            "nbr_iteration": And(int, lambda nbr_i: nbr_i > 0),
-        }
-
-        checker = Checker(schema)
-        checker.validate(cfg)
+        cfg = super().check_conf(cfg)
 
         return cfg
+
+    @property
+    def margins(self):
+        values = (self._window_size // 2 * ele for _ in range(2) for ele in self._step)
+        return Margins(*values)
 
     def reshape_to_matching_cost_window(
         self,
@@ -303,7 +303,7 @@ class OpticalFlow(refinement.AbstractRefinement):
 
         idx_to_compute = np.arange(reshaped_left.shape[2]).tolist()
 
-        for _ in range(self._nbr_iteration):
+        for _ in range(self._iterations):
 
             computed_drow, computed_dcol, idx_to_compute = self.optical_flow(
                 reshaped_left, reshaped_right, idx_to_compute

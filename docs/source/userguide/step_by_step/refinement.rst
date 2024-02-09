@@ -126,7 +126,10 @@ Configuration and parameters
         | *if above, will be bound to 9*
         | **Optical flow**
         | >0
-      - Yes
+      - | **Dichotomy**
+        | Yes
+        | **Optical flow**
+        | No
     * - *filter*
       - Name of the filter to use
       - str
