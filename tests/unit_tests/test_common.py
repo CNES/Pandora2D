@@ -86,7 +86,11 @@ def create_dataset_coords(data_row, data_col, data_score, row, col):
     Create xr.Dataset with data_row and data_col as data variables and row and col as coordinates
     """
 
-    data_variables = {"row_map": (("row", "col"), data_row), "col_map": (("row", "col"), data_col), "correlation_score": (("row", "col"), data_score)}
+    data_variables = {
+        "row_map": (("row", "col"), data_row),
+        "col_map": (("row", "col"), data_col),
+        "correlation_score": (("row", "col"), data_score),
+    }
 
     coords = {"row": row, "col": col}
 
@@ -151,13 +155,17 @@ class TestDatasetDispMaps:
         """
 
         dataset_test = create_dataset_coords(
-            np.full((len(row), len(col)), 1), np.full((len(row), len(col)), 1), np.full((len(row), len(col)), 1), row, col
+            np.full((len(row), len(col)), 1),
+            np.full((len(row), len(col)), 1),
+            np.full((len(row), len(col)), 1),
+            row,
+            col,
         )
 
         # create dataset with dataset_disp_maps function
         disparity_maps = common.dataset_disp_maps(
-            np.full((len(row), len(col)), 1),
-            np.full((len(row), len(col)), 1),
+            dataset_test.row_map,
+            dataset_test.col_map,
             dataset_test.coords,
             np.full((len(row), len(col)), 1),
             {"invalid_disp": -9999},
@@ -200,8 +208,8 @@ class TestDatasetDispMaps:
         # create dataset with dataset_disp_maps function
         with pytest.raises(ValueError, match=string_match):
             common.dataset_disp_maps(
-                np.full((len(coord_value)), 1),
-                np.full((len(coord_value)), 1),
+                dataset_test.row_map,
+                dataset_test.col_map,
                 dataset_test.coords,
                 np.full((len(coord_value)), 1),
                 {"invalid_disp": -9999},
@@ -279,7 +287,9 @@ class TestDatasetDispMaps:
         delta_row, delta_col, correlation_score = disparity_matcher.compute_disp_maps(cvs)
 
         # create dataset with dataset_disp_maps function
-        disparity_maps = common.dataset_disp_maps(delta_row, delta_col, cvs.coords, correlation_score, {"invalid_disp": -9999})
+        disparity_maps = common.dataset_disp_maps(
+            delta_row, delta_col, cvs.coords, correlation_score, {"invalid_disp": -9999}
+        )
 
         interpolation = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
         # compute refined disparity maps
@@ -291,6 +301,8 @@ class TestDatasetDispMaps:
         disparity_maps["correlation_score"].data = correlation_score
 
         # create ground truth with create_dataset_coords method
-        dataset_ground_truth = create_dataset_coords(delta_x, delta_y, correlation_score, disparity_maps.row, disparity_maps.col)
+        dataset_ground_truth = create_dataset_coords(
+            delta_x, delta_y, correlation_score, disparity_maps.row, disparity_maps.col
+        )
 
         assert disparity_maps.equals(dataset_ground_truth)

@@ -23,8 +23,8 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     img_left_path = "data/left.tif"
     img_right_path = "data/right.tif"
 
-    # image configuration
-    image_cfg = {
+    user_cfg = {
+     # image configuration
         'input': {
             'left': {
                 'img': img_left_path,
@@ -36,12 +36,9 @@ Pandora2D provides a full python API which can be used to compute disparity maps
             },
             "col_disparity": [-2, 2],
             "row_disparity": [-2, 2],
-        }
-    }
-
-    # define pipeline configuration
-    user_pipeline_cfg = {
-        'pipeline':{
+        },
+        # define pipeline configuration
+         'pipeline':{
             "matching_cost" : {
                 "matching_cost_method": "zncc",
                 "window_size": 5,
@@ -57,18 +54,19 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     }
 
     # read images
-    image_datasets = create_datasets_from_inputs(input_config=image_cfg["input"], estimation_cfg=user_pipeline_cfg.get("estimation"))
+    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], estimation_cfg=user_cfg["pipeline"].get("estimation"))
 
     # instantiate Pandora2D Machine
     pandora2d_machine = Pandora2DMachine()
 
     # check the configurations and sequences steps
-    pipeline_cfg = check_configuration.check_pipeline_section(user_pipeline_cfg, pandora2d_machine)
+    pipeline_cfg = check_configuration.check_pipeline_section(user_cfg, pandora2d_machine)
 
     # prepare the machine
     pandora2d_machine.run_prepare(
         image_datasets.left,
-        image_datasets.right
+        image_datasets.right,
+        user_cfg
         )
 
     # trigger all the steps of the machine at ones

@@ -86,9 +86,19 @@ def test_refinement_method_subpixel(cv_dataset):
 
     data = np.full((3, 3), 0.4833878)
 
+    data_variables = {
+        "row_map": (("row", "col"), data),
+        "col_map": (("row", "col"), data),
+        "correlation_score": (("row", "col"), data),
+    }
+
     coords = {"row": np.arange(3), "col": np.arange(3)}
 
-    dataset_disp_map = common.dataset_disp_maps(data, data, coords, data)
+    dataset = xr.Dataset(data_variables, coords)
+
+    dataset_disp_map = common.dataset_disp_maps(
+        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score
+    )
 
     test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
     delta_x, delta_y, _ = test.refinement_method(cost_volumes_test, dataset_disp_map, None, None)
@@ -119,9 +129,19 @@ def test_refinement_method_pixel(cv_dataset):
         dtype=np.float64,
     )
 
-    gt_coords = {"row": np.arange(3), "col": np.arange(3)}
+    data_variables = {
+        "row_map": (("row", "col"), gt_delta_y),
+        "col_map": (("row", "col"), gt_delta_x),
+        "correlation_score": (("row", "col"), gt_delta_x),
+    }
 
-    dataset_disp_map = common.dataset_disp_maps(gt_delta_y, gt_delta_x, gt_coords, gt_delta_x)
+    coords = {"row": np.arange(3), "col": np.arange(3)}
+
+    dataset = xr.Dataset(data_variables, coords)
+
+    dataset_disp_map = common.dataset_disp_maps(
+        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score
+    )
 
     test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
     delta_x, delta_y, _ = test.refinement_method(cost_volumes_test, dataset_disp_map, None, None)
@@ -139,9 +159,19 @@ def test_refinement_correlation_score(cv_dataset):
 
     data = np.full((3, 3), 1.33731468)
 
+    data_variables = {
+        "row_map": (("row", "col"), data),
+        "col_map": (("row", "col"), data),
+        "correlation_score": (("row", "col"), data),
+    }
+
     coords = {"row": np.arange(3), "col": np.arange(3)}
 
-    dataset_disp_map = common.dataset_disp_maps(data, data, coords, data)
+    dataset = xr.Dataset(data_variables, coords)
+
+    dataset_disp_map = common.dataset_disp_maps(
+        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score
+    )
 
     test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
     _, _, correlation_score = test.refinement_method(cost_volumes_test, dataset_disp_map, None, None)
