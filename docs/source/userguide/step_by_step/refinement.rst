@@ -15,6 +15,8 @@ It consists on 3 different steps:
 
 Optical_flow method
 -------------------
+.. warning::
+    The optical flow method is still in an experimental phase.
 
 Inspired by [Lucas & Kanade]_.'s algorithm
 

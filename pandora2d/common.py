@@ -61,7 +61,7 @@ def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray, attributes: 
     :type delta_row: np.ndarray
     :param delta_col: disparity map for col
     :type delta_col: np.ndarray
-    :param attributes: disparity map for col
+    :param attributes: attributes containing invalid disparity values
     :type attributes: dict
     :return: dataset: Dataset with the disparity maps with the data variables :
 

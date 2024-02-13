@@ -77,7 +77,7 @@ class Dichotomy(refinement.AbstractRefinement):
         :type cost_volumes: xarray.Dataset
         :param disp_map: pixel disparity maps
         :type disp_map: xarray.Dataset
-        param img_left: left image dataset
+        :param img_left: left image dataset
         :type img_left: xarray.Dataset
         :param img_right: right image dataset
         :type img_right: xarray.Dataset

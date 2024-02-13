@@ -415,6 +415,10 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         """
 
         logging.info("Refinement computation...")
+
+        if cfg["pipeline"][input_step]["refinement_method"] == "optical_flow":
+            logging.warning("The optical flow method is still in an experimental phase.")
+
         refinement_run = refinement.AbstractRefinement(
             cfg["pipeline"][input_step], self.step, self.window_size
         )  # type: ignore[abstract]
