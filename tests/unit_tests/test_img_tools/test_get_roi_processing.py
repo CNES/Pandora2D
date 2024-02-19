@@ -44,10 +44,10 @@ def default_roi():
 @pytest.mark.parametrize(
     ["col_disparity", "row_disparity", "expected"],
     [
-        pytest.param([-60, 0], [0, 2], [60, 2, 2, 2], id="Negative disparitie for columns"),
-        pytest.param([0, 2], [-60, 0], [2, 60, 2, 2], id="Negative disparitie for rows"),
-        pytest.param([-60, 0], [-60, 0], [60, 60, 2, 2], id="Negative disparitie for columns and rows"),
-        pytest.param([0, 60], [0, 60], [2, 2, 60, 60], id="Negative disparitie for columns and rows"),
+        pytest.param([-60, 0], [0, 2], (60, 2, 2, 2), id="Negative disparity for columns"),
+        pytest.param([0, 2], [-60, 0], (2, 60, 2, 2), id="Negative disparity for rows"),
+        pytest.param([-60, 0], [-60, 0], (60, 60, 2, 2), id="Negative disparity for columns and rows"),
+        pytest.param([0, 60], [0, 60], (2, 2, 60, 60), id="Negative disparity for columns and rows"),
     ],
 )
 def test_roi_with_negative_and_positive_disparities(default_roi, col_disparity, row_disparity, expected):
