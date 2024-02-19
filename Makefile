@@ -88,6 +88,10 @@ test-performance: install ## run performance tests only (for validation plan)
 	@echo "Run performance tests"
 	@${PANDORA2D_VENV}/bin/pytest -m "performance_tests" --html=performance-test-report.html
 
+.PHONY: test-notebook
+test-notebook: install ## run notebook tests only
+	@${PANDORA2D_VENV}/bin/pytest -m "notebook_tests"
+
 ## Code quality, linting section
 
 ### Format with black
