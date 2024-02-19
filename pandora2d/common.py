@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -53,7 +53,7 @@ def save_dataset(dataset: xr.Dataset, output: str) -> None:
     write_data_array(dataset["col_map"], os.path.join(output, "columns_disparity.tif"))
 
 
-def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray) -> xr.Dataset:
+def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray, attributes: dict = None) -> xr.Dataset:
     """
     Create the dataset containing disparity maps
 
@@ -61,6 +61,8 @@ def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray) -> xr.Datase
     :type delta_row: np.ndarray
     :param delta_col: disparity map for col
     :type delta_col: np.ndarray
+    :param attributes: attributes containing invalid disparity values
+    :type attributes: dict
     :return: dataset: Dataset with the disparity maps with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)
@@ -80,5 +82,8 @@ def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray) -> xr.Datase
     )
     # merge two dataset into one
     dataset = dataset_row.merge(dataset_col, join="override", compat="override")
+
+    if attributes is not None:
+        dataset.attrs = attributes
 
     return dataset

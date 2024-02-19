@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -126,13 +126,19 @@ class Interpolation(refinement.AbstractRefinement):
 
         return res
 
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
+    def refinement_method(
+        self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute refine disparity maps
         :param cost_volumes: Cost_volumes has (row, col, disp_col, disp_row) dimensions
         :type cost_volumes: xr.Dataset
-        :param pixel_maps: dataset of pixel disparity maps
-        :type pixel_maps: xr.Dataset
+        :param disp_map: dataset of pixel disparity maps
+        :type disp_map: xr.Dataset
+        :param img_left: left image dataset
+        :type img_left: xarray.Dataset
+        :param img_right: right image dataset
+        :type img_right: xarray.Dataset
         :return: delta_col, delta_row: subpixel disparity maps
         :rtype: Tuple[np.array, np.array]
         """
@@ -144,8 +150,8 @@ class Interpolation(refinement.AbstractRefinement):
         cost_matrix = np.rollaxis(np.rollaxis(data, 3, 0), 3, 1).reshape((ndisprow, ndispcol, nrow * ncol))
 
         # flatten pixel maps for multiprocessing
-        liste_row = list(pixel_maps["row_map"].data.flatten().tolist())
-        liste_col = list(pixel_maps["col_map"].data.flatten().tolist())
+        liste_row = list(disp_map["row_map"].data.flatten().tolist())
+        liste_col = list(disp_map["col_map"].data.flatten().tolist())
 
         # args for multiprocessing
         args = [
@@ -160,7 +166,7 @@ class Interpolation(refinement.AbstractRefinement):
         delta_row = np.array(map_carte)[:, 1]
 
         # reshape disparity maps
-        delta_col = np.reshape(delta_col, (pixel_maps["col_map"].data.shape[0], pixel_maps["col_map"].data.shape[1]))
-        delta_row = np.reshape(delta_row, (pixel_maps["col_map"].data.shape[0], pixel_maps["col_map"].data.shape[1]))
+        delta_col = np.reshape(delta_col, (disp_map["col_map"].data.shape[0], disp_map["col_map"].data.shape[1]))
+        delta_row = np.reshape(delta_row, (disp_map["col_map"].data.shape[0], disp_map["col_map"].data.shape[1]))
 
         return delta_col, delta_row

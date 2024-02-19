@@ -39,12 +39,6 @@ Pandora2D provides a full python API which can be used to compute disparity maps
         }
     }
 
-    # read images
-    image_datasets = create_datasets_from_inputs(input_config=image_cfg["input"])
-
-    # instantiate Pandora2D Machine
-    pandora2d_machine = Pandora2DMachine()
-
     # define pipeline configuration
     user_pipeline_cfg = {
         'pipeline':{
@@ -57,10 +51,16 @@ Pandora2D provides a full python API which can be used to compute disparity maps
                 "invalid_disparity": -9999
             },
             "refinement" : {
-                "refinement_method" : "interpolation"
+                "refinement_method" : "optical_flow"
             }
         }
     }
+
+    # read images
+    image_datasets = create_datasets_from_inputs(input_config=image_cfg["input"], estimation_cfg=user_pipeline_cfg.get("estimation"))
+
+    # instantiate Pandora2D Machine
+    pandora2d_machine = Pandora2DMachine()
 
     # check the configurations and sequences steps
     pipeline_cfg = check_configuration.check_pipeline_section(user_pipeline_cfg, pandora2d_machine)
@@ -90,7 +90,7 @@ Images
 ######
 
 Pandora2D reads the input images before the stereo computation and creates two datasets, one for the left and one for the right
-image which contain the data's image, data's mask and additionnal information.
+image which contain the data's image and additional information.
 
 Example of an image dataset
 

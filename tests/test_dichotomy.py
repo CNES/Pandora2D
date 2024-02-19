@@ -120,7 +120,7 @@ def test_refinement_method(config, caplog, mocker: MockerFixture):
     dichotomy_instance = refinement.dichotomy.Dichotomy(config)
 
     # We can pass anything as it is not yet implemented
-    dichotomy_instance.refinement_method(mocker.ANY, mocker.ANY)
+    dichotomy_instance.refinement_method(mocker.ANY, mocker.ANY, mocker.ANY, mocker.ANY)
 
     assert "refinement_method of Dichotomy not yet implemented" in caplog.messages
 

@@ -1,5 +1,4 @@
 #
-# Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
@@ -19,9 +18,8 @@
 # limitations under the License.
 #
 """
-Init file for refinement module
+Init file for estimation module
 """
 
-from . import interpolation, optical_flow
-from . import dichotomy
-from .refinement import AbstractRefinement
+from . import phase_cross_correlation
+from .estimation import AbstractEstimation

@@ -7,10 +7,12 @@ transition defined by the Pandora2D Machine (`transitions <https://github.com/py
 
 Pandora2D Machine defines 3 possible states:
  - begin
+ - assumption
  - cost_volumes
  - disparity_maps
 
-and 3 transitions, each one corresponding to a step described in :ref:`step_by_step` chapter:
+and 4 transitions, each one corresponding to a step described in :ref:`step_by_step` chapter:
+ - estimation (:ref:`estimation`)
  - matching_cost (:ref:`matching_cost`)
  - disparity (:ref:`disparity`)
  - refinement (:ref:`refinement`)
@@ -18,7 +20,7 @@ and 3 transitions, each one corresponding to a step described in :ref:`step_by_s
 Pandora2D machine starts at the begin state. To go from one state to another one, transitions are called and triggered
 by specific name. It corresponds to the name of Pandora2D steps you can write in configuration file.
 
-The following diagram highligts all states and possible transitions.
+The following diagram highlights all states and possible transitions.
 
     .. figure:: ../Images/Pandora2D_pipeline.png
 
@@ -63,7 +65,7 @@ interpolation method.
             },
             "refinement":
             {
-                "refinement_method": "interpolation"
+                "refinement_method": "optical_flow"
             }
         }
     }

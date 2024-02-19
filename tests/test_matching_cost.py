@@ -2,6 +2,7 @@
 # coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -387,6 +388,7 @@ class TestMatchingCost(unittest.TestCase):
         cost_volumes_test.attrs["no_data_img"] = -9999
         cost_volumes_test.attrs["no_data_mask"] = 1
         cost_volumes_test.attrs["valid_pixels"] = 0
+        cost_volumes_test.attrs["step"] = [1, 1]
 
         # data by function compute_cost_volume
         cfg = {"matching_cost_method": "zncc", "window_size": 3}
