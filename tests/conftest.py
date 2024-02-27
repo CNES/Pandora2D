@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -21,6 +21,7 @@ Module with global test fixtures.
 """
 
 import pathlib
+import re
 import pytest
 
 
@@ -44,6 +45,33 @@ def pytest_collection_modifyitems(config, items):
             mark = getattr(pytest.mark, mark_name)
             item.add_marker(mark)
             item.add_marker(pytest.mark.monitor_skip_test)
+
+
+def pytest_html_results_table_header(cells):
+    """
+    Add columns to html reports:
+
+    1. Category : with values {'TU', 'TF', 'TP', 'TR'}
+    2. Function tested : basename of python test file
+    """
+    cells.insert(1, "<th>Category</th>")
+    cells.insert(2, "<th>Function tested</th>")
+
+
+def pytest_html_results_table_row(report, cells):
+    """
+    Complete columns to html reports with regex pattern :
+
+    "tests/<CATEGORY>_tests/.../tests_<FUNCTION>.py::tests"
+
+    1. CATEGORY : with values {'TU', 'TF', 'TP', 'TR'}
+    2. FUNCTION : basename of python test file
+    """
+    type_dict = {"unit": "TU", "functional": "TF", "resource": "TR", "performance": "TP"}
+    pattern = r"tests/(?P<type>\w+)_tests.*test_(?P<function>\w+)\.py"
+    match = re.match(pattern, report.nodeid)
+    cells.insert(1, f"<td>{type_dict[match.groupdict()['type']]}</td>")
+    cells.insert(2, f"<td>{match.groupdict()['function']}</td>")
 
 
 @pytest.fixture()

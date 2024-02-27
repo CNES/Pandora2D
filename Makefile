@@ -69,24 +69,24 @@ test-all: install test-unit test-functional test-resource test-performance ## ru
 .PHONY: test-unit
 test-unit: install ## run unit tests only (for dev) + coverage (source venv before)
 	@echo "Run unit tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests" --junitxml=pytest-report.xml --cov-config=.coveragerc --cov-report xml --cov
+	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
 
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
 	@echo "Run functional tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests"
+	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html
 
 .PHONY: test-resource
 test-resource: install ## run resource tests only (for validation plan)
 	@echo "Run resource tests"
 	@rm -f tests/resource_tests/.pymon
 	@${PANDORA2D_VENV}/bin/pytest -m "resource_tests and not metrics" --db tests/resource_tests/.pymon
-	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/.pymon
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/.pymon  --html=resource-test-report.html
 
 .PHONY: test-performance
 test-performance: install ## run performance tests only (for validation plan)
 	@echo "Run performance tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "performance_tests"
+	@${PANDORA2D_VENV}/bin/pytest -m "performance_tests" --html=performance-test-report.html
 
 ## Code quality, linting section
 
@@ -182,11 +182,11 @@ clean-test:
 	@rm -rf coverage.xml
 	@rm -fr htmlcov/
 	@rm -fr .pytest_cache
-	@rm -f pytest-report.xml
 	@rm -f pylint-report.txt
 	@rm -f debug.log
 	@rm -f .pymon
 	@rm -f tests/resource_tests/.pymon
+	@rm -f *-test-report.html
 
 .PHONY: clean-doc
 clean-doc:
