@@ -23,6 +23,7 @@ jobs:
         pip install pytest
         pip install pytest-cov
         pip install pytest-mock
+        pip install pytest-monitor
         pip install pytest-html
         pip install codecov
         pip install build
