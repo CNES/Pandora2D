@@ -13,6 +13,9 @@ It consists on 3 different steps:
     * The cost map of each pixel is interpolated using scipy to obtain a continuous function.
     * Then, the interpolated functions are minimized using scipy to obtain the refined disparities.
 
+.. warning::
+    When using the interpolation method, row and column disparity ranges must have a size greater than or equal to 5. 
+
 Optical_flow method
 -------------------
 .. warning::

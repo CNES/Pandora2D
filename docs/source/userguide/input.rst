@@ -40,6 +40,10 @@ Input section is composed of the following keys:
       -
       - If the estimation step is not present
 
+.. warning::
+    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 5. 
+
+
 Left and Right properties are composed of the following keys:
 
 .. list-table:: Left and Right properties
