@@ -18,15 +18,80 @@
 """
 Test the refinement.dichotomy module.
 """
-import json_checker
+import numpy as np
 import pytest
+import json_checker
+
+import xarray as xr
+
 from pandora.margins import Margins
 from pytest_mock import MockerFixture
 
+from pandora2d.matching_cost import MatchingCost
 from pandora2d import refinement
+
 
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
+
+
+@pytest.fixture()
+def cost_volumes():
+    """Pandora2d cost volumes fake data."""
+    number_of_rows = 2
+    rows = np.arange(number_of_rows)
+
+    number_of_cols = 3
+    cols = np.arange(number_of_cols)
+
+    min_disparity_col = -1
+    max_disparity_col = 2
+    number_of_disparity_col = max_disparity_col - min_disparity_col + 1
+
+    min_disparity_row = 2
+    max_disparity_row = 5
+    number_of_disparity_row = max_disparity_row - min_disparity_row + 1
+
+    data = np.arange(number_of_rows * number_of_cols * number_of_disparity_col * number_of_disparity_row).reshape(
+        (number_of_rows, number_of_cols, number_of_disparity_col, number_of_disparity_row)
+    )
+    attrs = {"col_to_compute": 1, "sampling_interval": 1}
+
+    return MatchingCost.allocate_cost_volumes(
+        attrs,
+        rows,
+        cols,
+        [min_disparity_col, max_disparity_col],
+        [min_disparity_row, max_disparity_row],
+        data,
+    )
+
+
+@pytest.fixture()
+def disp_map():
+    """Fake disparity maps."""
+    row = np.array(
+        [
+            [4, 3, 4],
+            [3, 4, 3],
+        ]
+    )
+    col = np.array(
+        [
+            [1, 0, 1],
+            [0, 1, 0],
+        ]
+    )
+    return xr.Dataset(
+        {
+            "row_map": (["row", "col"], row),
+            "col_map": (["row", "col"], col),
+        },
+        coords={
+            "row": np.arange(row.shape[0]),
+            "col": np.arange(col.shape[1]),
+        },
+    )
 
 
 @pytest.fixture()
@@ -134,3 +199,101 @@ def test_margins():
     dichotomy_instance = refinement.dichotomy.Dichotomy(config)
 
     assert dichotomy_instance.margins == Margins(2, 2, 2, 2)
+
+
+class TestDichotomyWindows:
+    """Test DichotomyWindows container."""
+
+    @pytest.mark.parametrize(
+        ["row_index", "col_index", "expected"],
+        [
+            pytest.param(
+                0,
+                0,
+                xr.DataArray(
+                    [
+                        [5, 6, 7],
+                        [9, 10, 11],
+                        [13, 14, 15],
+                    ],
+                    coords={
+                        "row": 0,
+                        "col": 0,
+                        "disp_col": [0, 1, 2],
+                        "disp_row": [3, 4, 5],
+                    },
+                    dims=["disp_col", "disp_row"],
+                ),
+                id="First value",
+            ),
+            pytest.param(
+                1,
+                2,
+                xr.DataArray(
+                    [
+                        [80, 81, 82],
+                        [84, 85, 86],
+                        [88, 89, 90],
+                    ],
+                    coords={
+                        "row": 1,
+                        "col": 2,
+                        "disp_col": [-1, 0, 1],
+                        "disp_row": [2, 3, 4],
+                    },
+                    dims=["disp_col", "disp_row"],
+                ),
+                id="Another value",
+            ),
+        ],
+    )
+    def test_direct_item_access(self, cost_volumes, disp_map, row_index, col_index, expected):
+        """Test we are able to get a dichotomy windows from cost_volumes at given index."""
+        disparity_margins = Margins(2, 2, 2, 2)
+
+        dichotomy_windows = refinement.dichotomy.DichotomyWindows(cost_volumes, disp_map, disparity_margins)
+        result = dichotomy_windows[row_index, col_index]
+
+        assert result.equals(expected)
+
+    def test_iteration(self, cost_volumes, disp_map):
+        """Test we can iterate over dichotomy windows."""
+        disparity_margins = Margins(2, 2, 2, 2)
+
+        dichotomy_windows = refinement.dichotomy.DichotomyWindows(cost_volumes, disp_map, disparity_margins)
+
+        result = list(dichotomy_windows)
+
+        assert len(result) == disp_map.sizes["row"] * disp_map.sizes["col"]
+        assert result[0].equals(
+            xr.DataArray(
+                [
+                    [5, 6, 7],
+                    [9, 10, 11],
+                    [13, 14, 15],
+                ],
+                coords={
+                    "row": 0,
+                    "col": 0,
+                    "disp_col": [0, 1, 2],
+                    "disp_row": [3, 4, 5],
+                },
+                dims=["disp_col", "disp_row"],
+            )
+        )
+        assert result[-2].equals(
+            xr.DataArray(
+                [
+                    [69, 70, 71],
+                    [73, 74, 75],
+                    [77, 78, 79],
+                ],
+                coords={
+                    "row": 1,
+                    "col": 1,
+                    "disp_col": [0, 1, 2],
+                    "disp_row": [3, 4, 5],
+                },
+                dims=["disp_col", "disp_row"],
+            )
+        )

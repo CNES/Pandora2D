@@ -22,6 +22,7 @@ Module for Dichotomy refinement method.
 import logging
 from typing import Dict
 
+import numpy as np
 import xarray as xr
 
 from json_checker import And
@@ -88,3 +89,42 @@ class Dichotomy(refinement.AbstractRefinement):
         :rtype: Tuple[np.ndarray, np.ndarray]
         """
         logging.warning("refinement_method of Dichotomy not yet implemented")
+
+
+class DichotomyWindows:
+    """
+    Container to extract subsampling cost surfaces around a given disparity from cost volumes.
+
+    Dichotomy Window of point with coordinates `row==0` and `col==1` can be accessed with `dichotomy_window[0, 1]`.
+
+    The container is iterable row first then columns.
+    """
+
+    def __init__(self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, disparity_margins: Margins):
+        """
+        Extract subsampling cost surfaces from cost volumes around a given disparity from cost volumes.
+
+        :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
+        :type cost_volumes: xarray.Dataset
+        :param disp_map: pixels disparity maps
+        :param disparity_margins: margins used to define disparity ranges
+        :type disparity_margins: Margins
+        """
+        self.cost_volumes = cost_volumes
+        self.min_row_disp_map = disp_map["row_map"] - disparity_margins.up
+        self.max_row_disp_map = disp_map["row_map"] + disparity_margins.down
+        self.min_col_disp_map = disp_map["col_map"] - disparity_margins.left
+        self.max_col_disp_map = disp_map["col_map"] + disparity_margins.right
+
+    def __getitem__(self, item):
+        """Get cost surface of coordinates item where item is (row, col)."""
+        row, col = item
+        row_slice = np.s_[self.min_row_disp_map.sel(row=row, col=col) : self.max_row_disp_map.sel(row=row, col=col)]
+        col_slice = np.s_[self.min_col_disp_map.sel(row=row, col=col) : self.max_col_disp_map.sel(row=row, col=col)]
+        return self.cost_volumes["cost_volumes"].sel(row=row, col=col, disp_row=row_slice, disp_col=col_slice)
+
+    def __iter__(self):
+        """Iter over cost surfaces, row first then columns."""
+        for row in self.cost_volumes.coords["row"]:
+            for col in self.cost_volumes.coords["col"]:
+                yield self[row, col]
