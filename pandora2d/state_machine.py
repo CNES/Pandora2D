@@ -400,7 +400,10 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         map_col, map_row = disparity_run.compute_disp_maps(self.cost_volumes)
         self.dataset_disp_maps = common.dataset_disp_maps(
-            map_row, map_col, {"invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"]}
+            map_row,
+            map_col,
+            self.cost_volumes.coords,
+            {"invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"]},
         )
 
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
@@ -426,4 +429,4 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         refine_map_col, refine_map_row = refinement_run.refinement_method(
             self.cost_volumes, self.dataset_disp_maps, self.left_img, self.right_img
         )
-        self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col)
+        self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col, self.dataset_disp_maps.coords)

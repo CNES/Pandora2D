@@ -22,6 +22,18 @@
 """
 This module contains functions allowing to save the results and the configuration of Pandora pipeline.
 """
+
+# mypy: disable-error-code="attr-defined, no-redef"
+# pylint: disable=useless-import-alias
+
+# xarray.Coordinates corresponds to the latest version of xarray.
+# xarray.Coordinate corresponds to the version installed by the artifactory.
+# Try/except block to be deleted once the version of xarray has been updated by CNES.
+try:
+    from xarray import Coordinates as Coordinates
+except ImportError:
+    from xarray import Coordinate as Coordinates
+
 import os
 import xarray as xr
 import numpy as np
@@ -53,7 +65,9 @@ def save_dataset(dataset: xr.Dataset, output: str) -> None:
     write_data_array(dataset["col_map"], os.path.join(output, "columns_disparity.tif"))
 
 
-def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray, attributes: dict = None) -> xr.Dataset:
+def dataset_disp_maps(
+    delta_row: np.ndarray, delta_col: np.ndarray, coords: Coordinates, attributes: dict = None
+) -> xr.Dataset:
     """
     Create the dataset containing disparity maps
 
@@ -61,6 +75,8 @@ def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray, attributes: 
     :type delta_row: np.ndarray
     :param delta_col: disparity map for col
     :type delta_col: np.ndarray
+    :param coords: disparity maps coordinates
+    :type coords: xr.Coordinates
     :param attributes: attributes containing invalid disparity values
     :type attributes: dict
     :return: dataset: Dataset with the disparity maps with the data variables :
@@ -70,15 +86,22 @@ def dataset_disp_maps(delta_row: np.ndarray, delta_col: np.ndarray, attributes: 
     :rtype: xarray.Dataset
     """
 
+    # Raise an error if col coordinate is missing
+    if coords.get("col") is None:
+        raise ValueError("The col coordinate does not exist")
+    # Raise an error if row coordinate is missing
+    if coords.get("row") is None:
+        raise ValueError("The row coordinate does not exist")
+
     # create a test dataset for map row
     dataset_row = xr.Dataset(
         {"row_map": (["row", "col"], delta_row)},
-        coords={"row": np.arange(delta_row.shape[0]), "col": np.arange(delta_row.shape[1])},
+        coords={"row": coords.get("row"), "col": coords.get("col")},
     )
     # create a test dataset for map col
     dataset_col = xr.Dataset(
         {"col_map": (["row", "col"], delta_col)},
-        coords={"row": np.arange(delta_col.shape[0]), "col": np.arange(delta_col.shape[1])},
+        coords={"row": coords.get("row"), "col": coords.get("col")},
     )
     # merge two dataset into one
     dataset = dataset_row.merge(dataset_col, join="override", compat="override")
