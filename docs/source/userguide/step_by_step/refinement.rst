@@ -139,7 +139,6 @@ Configuration and parameters
       -
       - | "sinc",
         | "bicubic",
-        | "spline",
         | **Only available if "dichotomy" method**
       - Yes
 
