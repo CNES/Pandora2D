@@ -328,9 +328,9 @@ class OpticalFlow(refinement.AbstractRefinement):
         delta_col = np.pad(delta_col, pad_width=offset, constant_values=self._invalid_disp)
         delta_row = np.pad(delta_row, pad_width=offset, constant_values=self._invalid_disp)
 
-        delta_col[delta_col <= img_left.attrs["row_disparity_source"][0]] = self._invalid_disp
-        delta_col[delta_col >= img_left.attrs["row_disparity_source"][1]] = self._invalid_disp
-        delta_row[delta_row <= img_left.attrs["col_disparity_source"][0]] = self._invalid_disp
-        delta_row[delta_row >= img_left.attrs["col_disparity_source"][1]] = self._invalid_disp
+        delta_col[delta_col <= img_left.attrs["col_disparity_source"][0]] = self._invalid_disp
+        delta_col[delta_col >= img_left.attrs["col_disparity_source"][1]] = self._invalid_disp
+        delta_row[delta_row <= img_left.attrs["row_disparity_source"][0]] = self._invalid_disp
+        delta_row[delta_row >= img_left.attrs["row_disparity_source"][1]] = self._invalid_disp
 
         return delta_col, delta_row, disp_map["correlation_score"].data
