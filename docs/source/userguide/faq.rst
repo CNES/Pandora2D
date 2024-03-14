@@ -85,3 +85,7 @@ It is possible to work on only one section of the image with an ROI. For this, t
     img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=roi)
     img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=roi)
 
+.. note::
+    When the usage_step_roi_config.ipynb notebook is run, disparity maps are displayed. 
+    Margins can be present on these disparity maps, which is why they may be larger than the ROI given by the user. 
+    To remove these margins and display only the user ROI, you can use the `pandora2d.img_tools.remove_roi_margins()` method. 
