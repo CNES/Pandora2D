@@ -62,12 +62,12 @@ class TestSaveDataset:
 
         return dataset
 
-    def test_save_dataset(self, create_test_dataset):
+    def test_save_dataset(self, create_test_dataset, correct_input_cfg):
         """
         Function for testing the dataset_save function
         """
 
-        common.save_dataset(create_test_dataset, "./tests/res_test/")
+        common.save_dataset(create_test_dataset, correct_input_cfg, "./tests/res_test/")
         assert os.path.exists("./tests/res_test/")
 
         assert os.path.exists("./tests/res_test/columns_disparity.tif")
