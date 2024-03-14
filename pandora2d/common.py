@@ -35,13 +35,15 @@ except ImportError:
     from xarray import Coordinate as Coordinates
 
 import os
+from typing import Dict
 import xarray as xr
 import numpy as np
 
 from pandora.common import mkdir_p, write_data_array
+from pandora2d.img_tools import remove_roi_margins
 
 
-def save_dataset(dataset: xr.Dataset, output: str) -> None:
+def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     """
     Save results in the output directory
 
@@ -50,10 +52,16 @@ def save_dataset(dataset: xr.Dataset, output: str) -> None:
         - lines : the disparity map for the lines 2D DataArray (row, col)
         - columns : the disparity map for the columns 2D DataArray (row, col)
     :type dataset: xr.Dataset
+    :param cfg: user configuration
+    :type cfg: Dict
     :param output: output directory
     :type output: string
     :return: None
     """
+
+    # remove ROI margins to save only user ROI in tif files
+    if "ROI" in cfg:
+        dataset = remove_roi_margins(dataset, cfg)
 
     # create output dir
     mkdir_p(output)

@@ -28,6 +28,7 @@ import copy
 from collections.abc import Sequence
 from typing import List, Dict, NamedTuple, Any
 
+from math import floor
 import xarray as xr
 import numpy as np
 from scipy.ndimage import shift
@@ -261,3 +262,62 @@ def get_roi_processing(roi: dict, col_disparity: List[int], row_disparity: List[
     new_roi["margins"][3] = max(abs(row_disparity[1]), roi["margins"][3])
 
     return new_roi
+
+
+def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
+    """
+    Remove ROI margins before saving output dataset
+
+    :param dataset: dataset containing disparity row and col maps
+    :type dataset: xr.Dataset
+    :param cfg: output configuration of the pandora2d machine
+    :type cfg: Dict
+    """
+
+    step = cfg["pipeline"]["matching_cost"]["step"]
+
+    row = dataset.row.data
+    col = dataset.col.data
+
+    # Initialized indexes to get right rows and columns
+    (left, up, right, down) = (0, 0, len(col), len(row))
+
+    # Example with col = [8,10,12,14,16],  step_col=2, row = [0,4,8,12], step_row=4
+    # ROI={
+    #   {"col": "first": 10, "last": 14},
+    #   {"row": "first": 0, "last": 10} }
+    #   {"margins": (3,3,3,3)}
+
+    # According to ROI, we want new_col=[10,12,14]=col[1:-1]
+    # with 1=floor((cfg["ROI"]["col"]["first"] - col[0]) / step_col)=left
+    # and -1=floor((cfg["ROI"]["col"]["last"] - col[-1]) / step_col)=right
+
+    # According to ROI, we want new_row=[0,4,8]=row[0:-1]
+    # with 0=initialized up
+    # and -1=floor((cfg["ROI"]["row"]["last"] - row[-1]) / step[0])=down
+
+    # Get the correct indexes to get the right columns based on the user ROI
+    if col[0] < cfg["ROI"]["col"]["first"]:
+        left = floor((cfg["ROI"]["col"]["first"] - col[0]) / step[1])
+    if col[-1] > cfg["ROI"]["col"]["last"]:
+        right = floor((cfg["ROI"]["col"]["last"] - col[-1]) / step[1])
+
+    # Get the correct indexes to get the right rows based on the user ROI
+    if row[0] < cfg["ROI"]["row"]["first"]:
+        up = floor((cfg["ROI"]["row"]["first"] - row[0]) / step[0])
+    if row[-1] > cfg["ROI"]["row"]["last"]:
+        down = floor((cfg["ROI"]["row"]["last"] - row[-1]) / step[0])
+
+    # Create a new dataset with right rows and columns.
+    data_variables = {
+        "row_map": (("row", "col"), dataset["row_map"].data[up:down, left:right]),
+        "col_map": (("row", "col"), dataset["col_map"].data[up:down, left:right]),
+    }
+
+    coords = {"row": row[up:down], "col": col[left:right]}
+
+    new_dataset = xr.Dataset(data_variables, coords)
+
+    new_dataset.attrs = dataset.attrs
+
+    return new_dataset
