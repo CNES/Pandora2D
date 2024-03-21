@@ -24,6 +24,7 @@
 Test configuration
 """
 
+
 import pytest
 import transitions
 import numpy as np
@@ -260,3 +261,57 @@ class TestCheckConfMatchingCostNodataCondition:
         """Right nodata must can not be float or nan with zncc matching_cost_method."""
         with pytest.raises((ValueError, DictCheckerError)):
             check_configuration.check_conf(configuration, pandora2d_machine)
+
+
+class TestCheckDisparityRangeSize:
+    """Test check_disparity_range_size method."""
+
+    @pytest.mark.parametrize(
+        ["disparity", "title", "string_match"],
+        [
+            pytest.param(
+                [-1, 1],
+                "Column",
+                "Column disparity range with a size < 5 are not allowed with interpolation refinement method",
+                id="Column disparity range < 5",
+            ),
+            pytest.param(
+                [-3, -1],
+                "Row",
+                "Row disparity range with a size < 5 are not allowed with interpolation refinement method",
+                id="Row disparity range < 5",
+            ),
+        ],
+    )
+    def test_fails_with_disparity_ranges_lower_5(self, disparity, title, string_match):
+        """Disparity range size must be greater than or equal to 5 when interpolation is used as refinement method"""
+        with pytest.raises(ValueError, match=string_match):
+            check_configuration.check_disparity_range_size(disparity, title)
+
+    @pytest.mark.parametrize(
+        ["disparity", "title", "string_match"],
+        [
+            pytest.param(
+                "disparity_grid_test",
+                "Column",
+                "Grid disparities are not yet handled by Pandora2D",
+                id="Grid disparity",
+            ),
+        ],
+    )
+    def test_fails_with_grid_disparity(self, disparity, title, string_match):
+        """Disparity grid is not handled yet by Pandora2D"""
+        with pytest.raises(TypeError, match=string_match):
+            check_configuration.check_disparity_range_size(disparity, title)
+
+    @pytest.mark.parametrize(
+        ["disparity", "title"],
+        [
+            pytest.param([-2, 2], "Col", id="Column disparity range greater than or equal to 5"),
+            pytest.param([1, 5], "Row", id="Row disparity range greater than or equal to 5"),
+        ],
+    )
+    def test_passes_with_disparity_ranges_equal_5(self, disparity, title):
+        """Disparity range size is correct"""
+
+        check_configuration.check_disparity_range_size(disparity, title)
