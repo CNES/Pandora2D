@@ -22,6 +22,8 @@ Module with global test fixtures.
 
 import pathlib
 import re
+import sys
+
 import pytest
 
 
@@ -64,7 +66,7 @@ def pytest_html_results_table_row(report, cells):
 
     "tests/<CATEGORY>_tests/.../tests_<FUNCTION>.py::tests"
 
-    1. CATEGORY : with values {'TU', 'TF', 'TP', 'TR'}
+    1. CATEGORY : with values {'TU', 'TF', 'TP', 'TR', 'TPL'}
     2. FUNCTION : basename of python test file
     """
     type_dict = {"unit": "TU", "functional": "TF", "resource": "TR", "performance": "TP"}
