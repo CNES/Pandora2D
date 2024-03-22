@@ -116,6 +116,6 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):
-        common.save_dataset(dataset_disp_maps, path_output)
+        common.save_dataset(dataset_disp_maps, completed_cfg, path_output)
     # save config
     save_config(path_output, completed_cfg)

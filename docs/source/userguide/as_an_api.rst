@@ -72,7 +72,7 @@ Pandora2D provides a full python API which can be used to compute disparity maps
         )
 
     # trigger all the steps of the machine at ones
-    dataset = pandora2d.run(
+    dataset, completed_cfg = pandora2d.run(
         pandora2d_machine,
         image_datasets.left,
         image_datasets.right,
@@ -80,7 +80,7 @@ Pandora2D provides a full python API which can be used to compute disparity maps
         )
 
     # save dataset
-    common.save_dataset(dataset, path_output)
+    common.save_dataset(dataset, completed_cfg, path_output)
 
 
 Pandora2D's data
