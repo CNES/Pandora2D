@@ -45,7 +45,7 @@ Configuration and parameters
      - Window size for similarity measure
      - int
      - 5
-     - > 0
+     - > 0, must be odd
      - No
    * - step
      - Step [row, col] for computing similarity coefficient
@@ -57,6 +57,7 @@ Configuration and parameters
 
 .. note::
     The order of steps should be [row, col].
+
 
 **Example**
 
