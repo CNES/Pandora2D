@@ -256,10 +256,12 @@ def get_roi_processing(roi: dict, col_disparity: List[int], row_disparity: List[
     """
     new_roi = copy.deepcopy(roi)
 
-    new_roi["margins"][0] = max(abs(col_disparity[0]), roi["margins"][0])
-    new_roi["margins"][1] = max(abs(row_disparity[0]), roi["margins"][1])
-    new_roi["margins"][2] = max(abs(col_disparity[1]), roi["margins"][2])
-    new_roi["margins"][3] = max(abs(row_disparity[1]), roi["margins"][3])
+    new_roi["margins"] = (
+        max(abs(col_disparity[0]), roi["margins"][0]),
+        max(abs(row_disparity[0]), roi["margins"][1]),
+        max(abs(col_disparity[1]), roi["margins"][2]),
+        max(abs(row_disparity[1]), roi["margins"][3]),
+    )
 
     return new_roi
 
