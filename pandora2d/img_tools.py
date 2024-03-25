@@ -239,7 +239,8 @@ def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
 
 def get_roi_processing(roi: dict, col_disparity: List[int], row_disparity: List[int]) -> dict:
     """
-    Return a roi which takes disparities into account
+    Return a roi which takes disparities into account.
+    Update cfg roi with new margins.
 
     :param roi: roi in config file
 
@@ -262,6 +263,9 @@ def get_roi_processing(roi: dict, col_disparity: List[int], row_disparity: List[
         max(abs(col_disparity[1]), roi["margins"][2]),
         max(abs(row_disparity[1]), roi["margins"][3]),
     )
+
+    # Update user ROI with new margins.
+    roi["margins"] = new_roi["margins"]
 
     return new_roi
 
