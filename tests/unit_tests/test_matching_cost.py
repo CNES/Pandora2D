@@ -792,10 +792,7 @@ class TestMatchingCostWithRoi:
         Create a fake image to test roi configuration
         """
         image_path = tmp_path / "left_img.png"
-        data = np.array(
-            ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1]]),
-            dtype=np.uint8,
-        )
+        data = np.random.randint(255, size=(5, 5), dtype=np.uint8)
         imsave(image_path, data)
 
         return image_path
@@ -806,52 +803,61 @@ class TestMatchingCostWithRoi:
         Create a fake image to test roi configuration
         """
         image_path = tmp_path / "right_img.png"
-        data = np.array(
-            ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
-            dtype=np.uint8,
-        )
+        data = np.random.randint(255, size=(5, 5), dtype=np.uint8)
         imsave(image_path, data)
 
         return image_path
 
-    @staticmethod
-    def test_roi_inside_and_margins_inside(left_image, right_image):
-        """
-        Test the pandora2d matching cost with roi inside the image
-        """
-        # input configuration
-        input_cfg = {
-            "input": {
-                "left": {
-                    "img": left_image,
-                    "nodata": -9999,
-                },
-                "right": {
-                    "img": right_image,
-                    "nodata": -9999,
-                },
-                "col_disparity": [0, 1],
-                "row_disparity": [-1, 1],
-            }
+    @pytest.fixture()
+    def input_config(self, left_image, right_image):
+        return {
+            "left": {
+                "img": left_image,
+                "nodata": -9999,
+            },
+            "right": {
+                "img": right_image,
+                "nodata": -9999,
+            },
+            "col_disparity": [0, 1],
+            "row_disparity": [-1, 1],
         }
-        input_config = input_cfg["input"]
-        # read images
+
+    @pytest.fixture()
+    def step(self):
+        return [1, 1]
+
+    @pytest.fixture()
+    def matching_cost_config(self, step):
+        return {"matching_cost_method": "zncc", "window_size": 3, "step": step}
+
+    @pytest.fixture()
+    def configuration(self, matching_cost_config, input_config):
+        return {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}}
+
+    @pytest.fixture()
+    def configuration_roi(self, matching_cost_config, input_config, roi):
+        return {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}, "ROI": roi}
+
+    @pytest.fixture()
+    def matching_cost_matcher(self, matching_cost_config):
+        return matching_cost.MatchingCost(matching_cost_config)
+
+    @pytest.fixture()
+    def cost_volumes(self, input_config, matching_cost_matcher, matching_cost_config):
+        """Create cost_volumes."""
         img_left, img_right = create_datasets_from_inputs(input_config, roi=None)
 
-        # Matching cost configuration
-        cfg = {"matching_cost_method": "zncc", "window_size": 3}
-        # initialise matching cost
-        matching_cost_matcher = matching_cost.MatchingCost(cfg)
         matching_cost_matcher.allocate_cost_volume_pandora(
             img_left=img_left,
             img_right=img_right,
             grid_min_col=np.full((3, 3), 0),
             grid_max_col=np.full((3, 3), 1),
-            cfg=cfg,
+            cfg=matching_cost_config,
         )
 
         # compute cost volumes
-        zncc = matching_cost_matcher.compute_cost_volumes(
+        return matching_cost_matcher.compute_cost_volumes(
             img_left=img_left,
             img_right=img_right,
             grid_min_col=np.full((3, 3), 0),
@@ -860,8 +866,66 @@ class TestMatchingCostWithRoi:
             grid_max_row=np.full((3, 3), 0),
         )
 
+    @pytest.fixture()
+    def margins(self):
+        return [1, 2, 1, 1]
+
+    @pytest.fixture()
+    def roi(self, margins):
+        return {"col": {"first": 2, "last": 3}, "row": {"first": 2, "last": 3}, "margins": margins}
+
+    @pytest.mark.parametrize(
+        [
+            "step",
+            "expected_shape",
+            "expected_shape_roi",
+            "cost_volumes_slice",
+            "cost_volumes_with_roi_slice",
+        ],
+        [
+            pytest.param(
+                [1, 1],
+                (5, 5, 2, 2),
+                (5, 4, 2, 2),
+                np.s_[2:4, 2:4, :, :],
+                np.s_[2:4, 1:3, :, :],
+                id="Step=[1, 1]",
+            ),
+            pytest.param(
+                [1, 2],
+                (5, 3, 2, 2),
+                (5, 2, 2, 2),
+                np.s_[2:4, 2:4:2, :, :],
+                np.s_[2:4, 1:3:2, :, :],
+                id="Step=[1, 2]",
+            ),
+            pytest.param(
+                [2, 1],
+                (3, 5, 2, 2),
+                (3, 4, 2, 2),
+                np.s_[2:4, 2:4, :, :],
+                np.s_[2:4, 1:3, :, :],
+                id="Step=[2, 1]",
+            ),
+        ],
+    )
+    def test_roi_inside_and_margins_inside(  # pylint: disable=too-many-arguments
+        self,
+        input_config,
+        configuration_roi,
+        matching_cost_matcher,
+        cost_volumes,
+        roi,
+        expected_shape,
+        expected_shape_roi,
+        cost_volumes_slice,
+        cost_volumes_with_roi_slice,
+    ):
+        """
+        Test the pandora2d matching cost with roi inside the image
+        """
+
         # crop image with roi
-        roi = {"col": {"first": 2, "last": 3}, "row": {"first": 2, "last": 3}, "margins": [1, 2, 1, 1]}
         img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
         matching_cost_matcher.allocate_cost_volume_pandora(
@@ -869,10 +933,10 @@ class TestMatchingCostWithRoi:
             img_right=img_right,
             grid_min_col=np.full((3, 3), 0),
             grid_max_col=np.full((3, 3), 1),
-            cfg=cfg,
+            cfg=configuration_roi,
         )
         # compute cost volumes with roi
-        zncc_roi = matching_cost_matcher.compute_cost_volumes(
+        cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(
             img_left=img_left,
             img_right=img_right,
             grid_min_col=np.full((3, 3), 0),
@@ -881,8 +945,9 @@ class TestMatchingCostWithRoi:
             grid_max_row=np.full((3, 3), 0),
         )
 
-        assert zncc["cost_volumes"].data.shape == (5, 5, 2, 2)
-        assert zncc_roi["cost_volumes"].data.shape == (5, 4, 2, 2)
+        assert cost_volumes_with_roi["cost_volumes"].data.shape == expected_shape_roi
+        assert cost_volumes["cost_volumes"].data.shape == expected_shape
         np.testing.assert_array_equal(
-            zncc["cost_volumes"].data[2:4, 2:4, :, :], zncc_roi["cost_volumes"].data[2:4, 1:3, :, :]
+            cost_volumes["cost_volumes"].data[cost_volumes_slice],
+            cost_volumes_with_roi["cost_volumes"].data[cost_volumes_with_roi_slice],
         )
