@@ -69,7 +69,7 @@ test-all: install test-unit test-functional test-resource test-performance ## ru
 .PHONY: test-unit
 test-unit: install ## run unit tests only (for dev) + coverage (source venv before)
 	@echo "Run unit tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
+	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
 
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
@@ -195,8 +195,8 @@ clean-test:
 .PHONY: clean-doc
 clean-doc:
 	@echo "+ $@"
-	@rm -rf doc/build/
-	@rm -rf doc/sources/api_reference/
+	@rm -rf docs/build/
+	@rm -rf docs/source/api_reference/
 
 .PHONY: clean-notebook
 clean-notebook:
