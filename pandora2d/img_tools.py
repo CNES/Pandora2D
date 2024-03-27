@@ -23,6 +23,15 @@
 This module contains functions associated to raster images.
 """
 
+# mypy: disable-error-code="attr-defined, no-redef"
+# pylint: disable="useless-import-alias,redefined-outer-name"
+# xarray.Coordinates corresponds to the latest version of xarray.
+# xarray.Coordinate corresponds to the version installed by the artifactory.
+# Try/except block to be deleted once the version of xarray has been updated by CNES.
+try:
+    from xarray import Coordinates as Coordinates
+except ImportError:
+    from xarray import Coordinate as Coordinates
 
 import copy
 from collections.abc import Sequence
@@ -31,7 +40,7 @@ from typing import List, Dict, NamedTuple, Any
 from math import floor
 import xarray as xr
 import numpy as np
-from scipy.ndimage import shift
+from scipy.ndimage import shift, zoom
 
 import pandora.img_tools as pandora_img_tools
 
@@ -327,3 +336,92 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
     new_dataset.attrs = dataset.attrs
 
     return new_dataset
+
+
+def row_zoom_img(img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int) -> xr.Dataset:
+    """
+    Return a list that contains the shifted right images in row
+
+    This method is temporary, the user can then choose the filter for this function
+
+    :param img: image to shift
+    :type img: np.ndarray
+    :param ny: row number in data
+    :type ny: int
+    :param subpix: subpixel precision = (1 or pair number)
+    :type subpix: int
+    :param coords: coordinates for output datasets
+    :type coords: Coordinates
+    :param ind: index of range(subpix)
+    :type ind: int
+    :return: an array that contains the shifted right images in row
+    :rtype: array of xarray.Dataset
+    """
+
+    shift = 1 / subpix
+    # For each index, shift the right image for subpixel precision 1/subpix*index
+    data = zoom(img, ((ny * subpix - (subpix - 1)) / float(ny), 1), order=1)[ind::subpix, :]
+    row = np.arange(coords.get("row")[0] + shift * ind, coords.get("row")[-1], step=1)  # type: np.ndarray
+    return xr.Dataset(
+        {"im": (["row", "col"], data)},
+        coords={"row": row, "col": coords.get("col")},
+    )
+
+
+def col_zoom_img(img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int) -> xr.Dataset:
+    """
+    Return a list that contains the shifted right images in col
+
+    This method is temporary, the user can then choose the filter for this function
+
+    :param img: image to shift
+    :type img: np.ndarray
+    :param nx: col number in data
+    :type nx: int
+    :param subpix: subpixel precision = (1 or pair number)
+    :type subpix: int
+    :param coords: coordinates for output datasets
+    :type coords: Coordinates
+    :param ind: index of range(subpix)
+    :type ind: int
+    :return: an array that contains the shifted right images in col
+    :rtype: array of xarray.Dataset
+    """
+
+    shift = 1 / subpix
+    # For each index, shift the right image for subpixel precision 1/subpix*index
+    data = zoom(img, (1, (nx * subpix - (subpix - 1)) / float(nx)), order=1)[:, ind::subpix]
+    col = np.arange(coords.get("col")[0] + shift * ind, coords.get("col")[-1], step=1)  # type: np.ndarray
+    return xr.Dataset(
+        {"im": (["row", "col"], data)},
+        coords={"row": coords.get("row"), "col": col},
+    )
+
+
+def shift_subpix_img(img_right: xr.Dataset, subpix: int, column: bool = True) -> List[xr.Dataset]:
+    """
+    Return an array that contains the shifted right images
+
+    :param img_right: Dataset image containing the image im : 2D (row, col) xarray.Dataset
+    :type img_right: xarray.Dataset
+    :param subpix: subpixel precision = (1 or pair number)
+    :type subpix: int
+    :param column: column to shift (otherwise row)
+    :type column: bool
+    :return: an array that contains the shifted right images
+    :rtype: array of xarray.Dataset
+    """
+    img_right_shift = [img_right]
+
+    if subpix > 1:
+        for ind in np.arange(1, subpix):
+            if column:
+                img_right_shift.append(
+                    col_zoom_img(img_right["im"].data, img_right.sizes["col"], subpix, img_right.coords, ind)
+                )
+            else:
+                img_right_shift.append(
+                    row_zoom_img(img_right["im"].data, img_right.sizes["row"], subpix, img_right.coords, ind)
+                )
+
+    return img_right_shift
