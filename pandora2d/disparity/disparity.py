@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -23,7 +23,7 @@
 This module contains functions associated to the disparity map computation step.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Callable
 from json_checker import Or, And, Checker
 from pandora.margins.descriptors import NullMargins
 
@@ -67,7 +67,7 @@ class Disparity:
         return cfg
 
     @staticmethod
-    def min_split(cost_volumes: xr.Dataset, axis: int) -> np.ndarray:
+    def extrema_split(cost_volumes: xr.Dataset, axis: int, extrema_func: Callable) -> np.ndarray:
         """
         Find the indices of the minimum values for a 4D DataArray, along axis.
         Memory consumption is reduced by splitting the 4D Array.
@@ -76,12 +76,14 @@ class Disparity:
         :type cost_volumes: xarray.Dataset
         :param axis: research axis
         :type axis: int
+        :param extrema_func: minimal or maximal research
+        :type extrema_func: Callable
         :return: the disparities for which the cost volume values are the smallest
         :rtype: np.ndarray
         """
 
         cv_dims = cost_volumes["cost_volumes"].shape
-        disps_min = np.zeros((cv_dims[0], cv_dims[1], cv_dims[5 - axis]), dtype=np.float32)
+        disps = np.zeros((cv_dims[0], cv_dims[1], cv_dims[5 - axis]), dtype=np.float32)
 
         # Numpy min is making a copy of the cost volume.
         # To reduce memory, numpy min is applied on a small part of the cost volume.
@@ -90,117 +92,81 @@ class Disparity:
 
         row_begin = 0
 
-        for col, cv_row in enumerate(cv_chunked_row):  # pylint: disable=unused-variable
+        for _, cv_row in enumerate(cv_chunked_row):
             # To reduce memory, the cost volume is split (along the col axis) into
             # multiple sub-arrays with a step of 100
             cv_chunked_col = np.array_split(cv_row, np.arange(100, cv_dims[0], 100), axis=1)
             col_begin = 0
-            for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disps_min[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = np.min(
-                    cv_col, axis=axis
+            for _, cv_col in enumerate(cv_chunked_col):
+                disps[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = (
+                    extrema_func(cv_col, axis=axis)
                 )
                 col_begin += cv_col.shape[1]
 
             row_begin += cv_row.shape[0]
 
-        return disps_min
+        return disps
 
     @staticmethod
-    def max_split(cost_volumes: xr.Dataset, axis: int) -> np.ndarray:
+    def get_score(cost_volume: np.ndarray, extrema_func: Callable) -> np.ndarray:
         """
-        Find the indices of the minimum values for a 4D DataArray, along axis.
-        Memory consumption is reduced by splitting the 4D Array.
+        Find the indicated extrema values for a 3D DataArray, along axis 2.
+        Memory consumption is reduced by splitting the 3D Array.
 
-        :param cost_volumes: the cost volume dataset
-        :type cost_volumes: xarray.Dataset
-        :param axis: research axis
-        :type axis: int
+        :param cost_volume: the cost volume dataset
+        :type cost_volume: xarray.Dataset
+        :param extrema_func: minimal or maximal research
+        :type extrema_func: Callable
         :return: the disparities for which the cost volume values are the smallest
         :rtype: np.ndarray
         """
-        cv_dims = cost_volumes["cost_volumes"].shape
-        disps_max = np.zeros((cv_dims[0], cv_dims[1], cv_dims[5 - axis]), dtype=np.float32)
 
-        # Numpy min is making a copy of the cost volume.
-        # To reduce memory, numpy min is applied on a small part of the cost volume.
+        ncol, nrow, _ = cost_volume.shape
+        score = np.empty((ncol, nrow), dtype=np.float32)
+
+        # Numpy argmin is making a copy of the cost volume.
+        # To reduce memory, numpy argmin is applied on a small part of the cost volume.
         # The cost volume is split (along the row axis) into multiple sub-arrays with a step of 100
-        cv_chunked_row = np.array_split(cost_volumes["cost_volumes"].data, np.arange(100, cv_dims[1], 100), axis=0)
 
-        row_begin = 0
+        cv_chunked_y = np.array_split(cost_volume.data, np.arange(100, ncol, 100), axis=0)
 
-        for col, cv_row in enumerate(cv_chunked_row):  # pylint: disable=unused-variable
+        y_begin = 0
+
+        for _, cv_y in enumerate(cv_chunked_y):
             # To reduce memory, the cost volume is split (along the col axis) into
             # multiple sub-arrays with a step of 100
-            cv_chunked_col = np.array_split(cv_row, np.arange(100, cv_dims[0], 100), axis=1)
-            col_begin = 0
-            for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disps_max[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1], :] = np.max(
-                    cv_col, axis=axis
-                )
-                col_begin += cv_col.shape[1]
+            cv_chunked_x = np.array_split(cv_y, np.arange(100, nrow, 100), axis=1)
+            x_begin = 0
+            for _, cv_x in enumerate(cv_chunked_x):
+                score[y_begin : y_begin + cv_y.shape[0], x_begin : x_begin + cv_x.shape[1]] = extrema_func(cv_x, axis=2)
+                x_begin += cv_x.shape[1]
 
-            row_begin += cv_row.shape[0]
+            y_begin += cv_y.shape[0]
 
-        return disps_max
+        return score
 
     @staticmethod
-    def argmax_split(max_maps: np.ndarray, axis: int) -> np.ndarray:
+    def arg_split(maps: np.ndarray, axis: int, extrema_func: Callable) -> np.ndarray:
         """
         Find the indices of the maximum values for a 3D DataArray, along axis.
         Memory consumption is reduced by splitting the 3D Array.
 
-        :param max_maps: maps with maximum
-        :type max_maps: np.ndarray
+        :param maps: maps with maximum
+        :type maps: np.ndarray
         :param axis: axis
         :type axis: int
+        :param extrema_func: minimal or maximal index research
+        :type extrema_func: Callable
         :return: the disparities for which the cost volume values are the smallest
         :rtype: np.ndarray
         """
-        ncol, nrow, _ = max_maps.shape
+        ncol, nrow, _ = maps.shape
         disp = np.zeros((ncol, nrow), dtype=np.int64)
 
         # Numpy argmin is making a copy of the cost volume.
         # To reduce memory, numpy argmin is applied on a small part of the cost volume.
         # The cost volume is split (along the row axis) into multiple sub-arrays with a step of 100
-        cv_chunked_row = np.array_split(max_maps, np.arange(100, ncol, 100), axis=0)
-
-        row_begin = 0
-
-        for col, cv_row in enumerate(cv_chunked_row):  # pylint: disable=unused-variable
-            # To reduce memory, the cost volume is split (along the col axis) into
-            # multiple sub-arrays with a step of 100
-            cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)
-            col_begin = 0
-            for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = np.argmax(
-                    cv_col, axis=axis
-                )
-                col_begin += cv_col.shape[1]
-
-            row_begin += cv_row.shape[0]
-
-        return disp
-
-    @staticmethod
-    def argmin_split(min_maps: np.ndarray, axis: int) -> np.ndarray:
-        """
-        Find the indices of the minimum values for a 3D DataArray, along axis 2.
-        Memory consumption is reduced by splitting the 3D Array.
-
-        :param min_maps: maps with minimum
-        :type min_maps: np.ndarray
-        :param axis: axis
-        :type axis: int
-        :return: the disparities for which the cost volume values are the smallest
-        :rtype: np.ndarray
-        """
-        ncol, nrow, _ = min_maps.shape
-        disp = np.zeros((ncol, nrow), dtype=np.int64)
-
-        # Numpy argmin is making a copy of the cost volume.
-        # To reduce memory, numpy argmin is applied on a small part of the cost volume.
-        # The cost volume is split (along the row axis) into multiple sub-arrays with a step of 100
-        cv_chunked_row = np.array_split(min_maps, np.arange(100, ncol, 100), axis=0)
+        cv_chunked_row = np.array_split(maps, np.arange(100, ncol, 100), axis=0)
 
         row_begin = 0
 
@@ -209,8 +175,8 @@ class Disparity:
             # multiple sub-arrays with a step of 100
             cv_chunked_col = np.array_split(cv_row, np.arange(100, nrow, 100), axis=1)
             col_begin = 0
-            for row, cv_col in enumerate(cv_chunked_col):  # pylint: disable=unused-variable
-                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = np.argmin(
+            for _, cv_col in enumerate(cv_chunked_col):
+                disp[row_begin : row_begin + cv_row.shape[0], col_begin : col_begin + cv_col.shape[1]] = extrema_func(
                     cv_col, axis=axis
                 )
                 col_begin += cv_col.shape[1]
@@ -219,18 +185,19 @@ class Disparity:
 
         return disp
 
-    def compute_disp_maps(self, cost_volumes: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
+    def compute_disp_maps(self, cost_volumes: xr.Dataset) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Disparity computation by applying the Winner Takes All strategy
 
-        :param cost_volumes: the cost volumes datsset with the data variables:
+        :param cost_volumes: the cost volumes dataset with the data variables:
             - cost_volume 4D xarray.DataArray (row, col, disp_row, disp_col)
         :type cost_volumes: xr.Dataset
         :return: Two numpy.array:
 
                 - disp_map_col : disparity map for columns
                 - disp_map_row : disparity map for row
-        :rtype: tuple (numpy.ndarray, numpy.ndarray)
+                - correlation_score_map : map containing matching_cost step score
+        :rtype: tuple (numpy.ndarray, numpy.ndarray, numpy.ndarray)
         """
 
         indices_nan = np.isnan(cost_volumes["cost_volumes"].data)
@@ -240,32 +207,40 @@ class Disparity:
             cost_volumes["cost_volumes"].data[indices_nan] = -np.inf
             # -------compute disp_map row---------
             # process of maximum for dispx
-            maps_max_col = self.max_split(cost_volumes, 2)
+            maps_max_col = self.extrema_split(cost_volumes, 2, np.max)
             # process of argmax for dispy
-            disp_map_row = cost_volumes["disp_row"].data[self.argmax_split(maps_max_col, 2)]
+            disp_map_row = cost_volumes["disp_row"].data[self.arg_split(maps_max_col, 2, np.argmax)]
             # -------compute disp_map col---------
             # process of maximum for dispy
-            maps_max_row = self.max_split(cost_volumes, 3)
+            maps_max_row = self.extrema_split(cost_volumes, 3, np.max)
             # process of argmax for dispx
-            disp_map_col = cost_volumes["disp_col"].data[self.argmax_split(maps_max_row, 2)]
+            disp_map_col = cost_volumes["disp_col"].data[self.arg_split(maps_max_row, 2, np.argmax)]
+            # --------compute correlation score----
+            score_map = self.get_score(maps_max_row, np.max)
 
         else:
             # -------compute disp_map row---------
             cost_volumes["cost_volumes"].data[indices_nan] = np.inf
             # process of minimum for dispx
-            maps_min_col = self.min_split(cost_volumes, 2)
+            maps_min_col = self.extrema_split(cost_volumes, 2, np.min)
             # process of argmin for disp
-            disp_map_row = cost_volumes["disp_row"].data[self.argmin_split(maps_min_col, 2)]
+            disp_map_row = cost_volumes["disp_row"].data[self.arg_split(maps_min_col, 2, np.argmin)]
             # -------compute disp_map col---------
             # process of maximum for dispy
-            maps_min_row = self.min_split(cost_volumes, 3)
+            maps_min_row = self.extrema_split(cost_volumes, 3, np.min)
             # process of argmin for dispx
-            disp_map_col = cost_volumes["disp_col"].data[self.argmin_split(maps_min_row, 2)]
+            disp_map_col = cost_volumes["disp_col"].data[self.arg_split(maps_min_row, 2, np.argmin)]
+            # --------compute correlation score----
+            score_map = self.get_score(maps_min_row, np.min)
 
         invalid_mc = np.all(indices_nan, axis=(2, 3))
+
         disp_map_col = disp_map_col.astype("float32")
         disp_map_row = disp_map_row.astype("float32")
+        score_map = score_map.astype("float32")
+
         disp_map_col[invalid_mc] = self._invalid_disparity
         disp_map_row[invalid_mc] = self._invalid_disparity
+        score_map[invalid_mc] = self._invalid_disparity
 
-        return disp_map_col, disp_map_row
+        return disp_map_col, disp_map_row, score_map

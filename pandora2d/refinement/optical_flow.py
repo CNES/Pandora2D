@@ -262,7 +262,7 @@ class OpticalFlow(refinement.AbstractRefinement):
 
     def refinement_method(
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 
@@ -274,8 +274,8 @@ class OpticalFlow(refinement.AbstractRefinement):
         :type img_left: xarray.Dataset
         :param img_right: right image dataset
         :type img_right: xarray.Dataset
-        :return: the refined disparity maps
-        :rtype: Tuple[np.ndarray, np.ndarray]
+        :return: the refined disparity maps and disparity correlation score
+        :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """
 
         # get invalid_disp value
@@ -333,4 +333,4 @@ class OpticalFlow(refinement.AbstractRefinement):
         delta_row[delta_row <= img_left.attrs["col_disparity_source"][0]] = self._invalid_disp
         delta_row[delta_row >= img_left.attrs["col_disparity_source"][1]] = self._invalid_disp
 
-        return delta_col, delta_row
+        return delta_col, delta_row, disp_map["correlation_score"].data

@@ -65,6 +65,9 @@ class Dichotomy(refinement.AbstractRefinement):
 
     @property
     def margins(self):
+        """
+        Create margins for dichotomy object
+        """
         return Margins(2, 2, 2, 2)
 
     def refinement_method(

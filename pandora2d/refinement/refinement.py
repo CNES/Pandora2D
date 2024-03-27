@@ -142,7 +142,7 @@ class AbstractRefinement:
     @abstractmethod
     def refinement_method(
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 
@@ -155,5 +155,5 @@ class AbstractRefinement:
         :param img_right: right image dataset
         :type img_right: xarray.Dataset
         :return: the refined disparity maps
-        :rtype: Tuple[np.ndarray, np.ndarray]
+        :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """

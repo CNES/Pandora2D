@@ -9,7 +9,8 @@ So, the refinement step involves transforming a pixel disparity map into a sub-p
 Two methods are available in pandora2d:
 
 - Interpolation
-- Optical flow.
+- Optical flow
+- Dichotomy
 
 .. warning::
     The optical flow method is still in an experimental phase.

@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-#
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
@@ -29,47 +26,12 @@ Test refinement step
 
 
 import numpy as np
-import xarray as xr
 import pytest
-
+import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
-
 from pandora.margins import Margins
-from pandora2d import refinement, common
 
-
-@pytest.fixture()
-def cv_dataset():
-    """
-    Create dataset cost volumes
-    """
-
-    cv = np.zeros((3, 3, 5, 5))
-    cv[:, :, 2, 2] = np.ones([3, 3])
-    cv[:, :, 2, 3] = np.ones([3, 3])
-    cv[:, :, 3, 2] = np.ones([3, 3])
-    cv[:, :, 3, 3] = np.ones([3, 3])
-
-    c_row = np.arange(cv.shape[0])
-    c_col = np.arange(cv.shape[1])
-
-    # First pixel in the image that is fully computable (aggregation windows are complete)
-    row = np.arange(c_row[0], c_row[-1] + 1)
-    col = np.arange(c_col[0], c_col[-1] + 1)
-
-    disparity_range_col = np.arange(-2, 2 + 1)
-    disparity_range_row = np.arange(-2, 2 + 1)
-
-    cost_volumes_test = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},
-        coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
-    )
-
-    cost_volumes_test.attrs["measure"] = "zncc"
-    cost_volumes_test.attrs["window_size"] = 1
-    cost_volumes_test.attrs["type_measure"] = "max"
-
-    return cost_volumes_test
+from pandora2d import refinement
 
 
 @pytest.fixture()
@@ -96,15 +58,6 @@ def dataset_image():
     return img
 
 
-def test_margins():
-    """
-    test margins of matching cost pipeline
-    """
-    _refinement = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
-
-    assert _refinement.margins == Margins(3, 3, 3, 3), "Not a cubic kernel Margins"
-
-
 @pytest.mark.parametrize("refinement_method", ["interpolation", "optical_flow"])
 def test_check_conf_passes(refinement_method):
     """
@@ -123,67 +76,6 @@ def test_check_conf_fails(refinement_config):
 
     with pytest.raises((KeyError, DictCheckerError)):
         refinement.AbstractRefinement(refinement_config)  # type: ignore[abstract]
-
-
-def test_refinement_method_subpixel(cv_dataset):
-    """
-    test refinement_method with interpolation
-    """
-
-    cost_volumes_test = cv_dataset
-
-    data = np.full((3, 3), 0.4833878)
-
-    dataset_disp_map = common.dataset_disp_maps(data, data, cost_volumes_test.coords)
-
-    test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
-    delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map, None, None)
-
-    np.testing.assert_allclose(data, delta_y, rtol=1e-06)
-    np.testing.assert_allclose(data, delta_x, rtol=1e-06)
-
-
-def test_refinement_method_pixel(cv_dataset):
-    """
-    test refinement
-    """
-
-    cost_volumes_test = cv_dataset
-
-    new_cv_datas = np.zeros((3, 3, 5, 5))
-    new_cv_datas[:, :, 1, 3] = np.ones([3, 3])
-
-    cost_volumes_test["cost_volumes"].data = new_cv_datas
-
-    gt_delta_y = np.array(
-        ([[-1, -1, -1], [-1, -1, -1], [-1, -1, -1]]),
-        dtype=np.float64,
-    )
-
-    gt_delta_x = np.array(
-        ([[1, 1, 1], [1, 1, 1], [1, 1, 1]]),
-        dtype=np.float64,
-    )
-
-    dataset_disp_map = common.dataset_disp_maps(gt_delta_y, gt_delta_x, cost_volumes_test.coords)
-
-    test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
-    delta_x, delta_y = test.refinement_method(cost_volumes_test, dataset_disp_map, None, None)
-
-    np.testing.assert_allclose(gt_delta_y, delta_y, rtol=1e-06)
-    np.testing.assert_allclose(gt_delta_x, delta_x, rtol=1e-06)
-
-
-def test_optical_flow_margins():
-    """
-    test get_margins of refinement pipeline
-    """
-    gt = (2, 2, 2, 2)  # with 5 has default window size
-    _refinement = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
-
-    r_margins = _refinement.margins.astuple()
-
-    assert r_margins == gt
 
 
 def test_reshape_to_matching_cost_window_left(dataset_image):
@@ -298,3 +190,13 @@ def test_warped_image_without_step():
     # check that the generated image is equal to ground truth
     assert np.array_equal(gt_mc_1, test_img_shift[:, :, 0])
     assert np.array_equal(gt_mc_2, test_img_shift[:, :, 1])
+
+
+def test_margins():
+    """
+    test margins of matching cost pipeline
+    """
+    _refinement = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
+    _refinement._window_size = 9
+
+    assert _refinement.margins == Margins(4, 4, 4, 4), "Not a cubic kernel Margins"

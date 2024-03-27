@@ -100,8 +100,6 @@ It’s an iterative process that will, at each iteration:
     * find the new best candidate from those computed coefficients.
 
 
-
-
 Configuration and parameters
 ----------------------------
 

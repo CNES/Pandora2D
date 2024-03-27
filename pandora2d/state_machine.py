@@ -398,11 +398,12 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         logging.info("Disparity computation...")
         disparity_run = disparity.Disparity(cfg["pipeline"][input_step])
 
-        map_col, map_row = disparity_run.compute_disp_maps(self.cost_volumes)
+        map_col, map_row, correlation_score = disparity_run.compute_disp_maps(self.cost_volumes)
         self.dataset_disp_maps = common.dataset_disp_maps(
             map_row,
             map_col,
             self.cost_volumes.coords,
+            correlation_score,
             {"invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"]},
         )
 
@@ -421,12 +422,15 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         if cfg["pipeline"][input_step]["refinement_method"] == "optical_flow":
             logging.warning("The optical flow method is still in an experimental phase.")
+            logging.warning("The correlation score map is at a disparity level for the optical flow method.")
 
         refinement_run = refinement.AbstractRefinement(
             cfg["pipeline"][input_step], self.step, self.window_size
         )  # type: ignore[abstract]
 
-        refine_map_col, refine_map_row = refinement_run.refinement_method(
+        refine_map_col, refine_map_row, correlation_score = refinement_run.refinement_method(
             self.cost_volumes, self.dataset_disp_maps, self.left_img, self.right_img
         )
-        self.dataset_disp_maps = common.dataset_disp_maps(refine_map_row, refine_map_col, self.dataset_disp_maps.coords)
+        self.dataset_disp_maps["row_map"].data = refine_map_row
+        self.dataset_disp_maps["col_map"].data = refine_map_col
+        self.dataset_disp_maps["correlation_score"].data = correlation_score
