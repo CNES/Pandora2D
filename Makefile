@@ -58,18 +58,25 @@ install: venv ## install pandora2D (pip editable mode) without plugins
 	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
 	@echo "PANDORA2D venv usage : source ${PANDORA2D_VENV}/bin/activate; pandora2d -h"
 
+.PHONY: install-plugin
+install-plugin: venv ## install pandora2D (pip editable mode) without plugins
+	@test -f ${PANDORA2D_VENV}/bin/pandora2d || ${PANDORA2D_VENV}/bin/pip install pandora-plugin-mccnn
+	@test -f .git/hooks/pre-commit || echo echo "  Install pre-commit hook"
+	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
+	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
+	@echo "PANDORA2D venv usage : source ${PANDORA2D_VENV}/bin/activate; pandora2d -h"
 ## Test section
 
 .PHONY: test
 test: install test-unit test-functional ## run unit tests and functional tests
 
 .PHONY: test-all
-test-all: install test-unit test-functional test-resource test-performance ## run all tests
+test-all: install test-unit test-functional test-resource test-performance test-notebook test-plugin ## run all tests
 
 .PHONY: test-unit
 test-unit: install ## run unit tests only (for dev) + coverage (source venv before)
 	@echo "Run unit tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
+	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
 
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
@@ -90,7 +97,11 @@ test-performance: install ## run performance tests only (for validation plan)
 
 .PHONY: test-notebook
 test-notebook: install ## run notebook tests only
-	@${PANDORA2D_VENV}/bin/pytest -m "notebook_tests"
+	@${PANDORA2D_VENV}/bin/pytest -m "notebook_tests" --html=notebook-test-report.html
+
+.PHONY: test-plugin
+test-plugin: install-plugin ## run plugins tests only
+	@${PANDORA2D_VENV}/bin/pytest -m "plugin_tests" --html=notebook-test-report.html
 
 ## Code quality, linting section
 
