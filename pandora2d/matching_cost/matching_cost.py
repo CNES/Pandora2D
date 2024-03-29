@@ -164,7 +164,7 @@ class MatchingCost:
         :return: None
         """
         # Adapt Pandora matching cost configuration
-        copy_matching_cost_cfg_with_step = copy.deepcopy(cfg)
+        copy_matching_cost_cfg_with_step = copy.deepcopy(cfg["pipeline"]["matching_cost"])
         copy_matching_cost_cfg_with_step["step"] = self._step_col
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
 
@@ -236,10 +236,9 @@ class MatchingCost:
 
                 # First pixel in the image that is fully computable (aggregation windows are complete)
                 row = np.arange(c_row[0], c_row[-1] + 1, self._step_row)
-                col = np.arange(c_col[0], c_col[-1] + 1, self._step_col)
 
                 cost_volumes = self.allocate_cost_volumes(
-                    cost_volume.attrs, row, col, [min_col, max_col], [min_row, max_row], None
+                    cost_volume.attrs, row, c_col, [min_col, max_col], [min_row, max_row], None
                 )
 
                 # Number of line to be taken as a function of the step.
