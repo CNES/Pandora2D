@@ -14,29 +14,33 @@ It is possible to add a step parameter in the configuration file. This parameter
 
     user_cfg = {
         "input": {
-            "img_left": img_left_path,
-            "img_right": img_right_path,
-            "nodata_left": "NaN",
-            "nodata_right": "NaN",
+            "left": {
+                "img": img_left_path,
+                "nodata": "NaN",
+            },
+            "right": {
+                "img": img_right_path,
+                "nodata": "NaN",
+            },
             "col_disparity": [-3, 3],
             "row_disparity": [-3, 3],
         },
-        "pipeline":{
-            "matching_cost" : {
+        "pipeline": {
+            "matching_cost": {
                 "matching_cost_method": "zncc",
                 "window_size": 7,
-                "step" : [5,5]
+                "step": [5, 5],
             },
             "disparity": {
                 "disparity_method": "wta",
-                "invalid_disparity": -9999
+                "invalid_disparity": -9999,
             },
-            "refinement" : {
-                "refinement_method" : "interpolation"
-            }
-        }
+            "refinement": {
+                "refinement_method": "interpolation",
+            },
+        },
     }
-    
+
 How do I choose to process only a certain part of the image? 
 ****************************************************************
 
@@ -48,31 +52,35 @@ It is possible to work on only one section of the image with an ROI. For this, t
 
     user_cfg = {
         "input": {
-            "img_left": img_left_path,
-            "img_right": img_right_path,
-            "nodata_left": "NaN",
-            "nodata_right": "NaN",
+            "left": {
+                "img": img_left_path,
+                "nodata": "NaN",
+            },
+            "right": {
+                "img": img_right_path,
+                "nodata": "NaN",
+            },
             "col_disparity": [-3, 3],
             "row_disparity": [-3, 3],
         },
-        "ROI":
-        {
+        "ROI": {
             "col": {"first": 10, "last": 100},
-            "row": {"first": 10, "last": 100}
+            "row": {"first": 10, "last": 100},
         },
-        "pipeline":{
-            "matching_cost" : {
+        "pipeline": {
+            "matching_cost": {
                 "matching_cost_method": "zncc",
                 "window_size": 7,
+                "step": [5, 5],
             },
             "disparity": {
                 "disparity_method": "wta",
-                "invalid_disparity": -9999
+                "invalid_disparity": -9999,
             },
-            "refinement" : {
-                "refinement_method" : "interpolation"
-            }
-        }
+            "refinement": {
+                "refinement_method": "interpolation",
+            },
+        },
     }
 
 .. code:: ipython3

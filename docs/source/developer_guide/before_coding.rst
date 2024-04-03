@@ -39,19 +39,16 @@ Pandora2D Classical workflow is :
 
 .. _contribution_license_agreement:
 
-Contribution license agreement
+Contribution License Agreement
 ------------------------------
 
-Contribution license agreement
-------------------------------
-
-PANDORA2D requires that contributors sign out a `Contributor LicenseAgreement <https://en.wikipedia.org/wiki/Contributor_License_Agreement>`_.
+PANDORA2D requires that contributors sign out a `Contributor License Agreement <https://en.wikipedia.org/wiki/Contributor_License_Agreement>`_.
 The purpose of this CLA is to ensure that the project has the necessary ownership or
 grants of rights over all contributions to allow them to distribute under the
-chosen license (Apache License Version 2.0)
+chosen license (Apache License Version 2.0).
 
 To accept your contribution, we need you to complete, sign and email to *cars@cnes.fr* an
-`Individual Contributor LicensingAgreement <https://github.com/CNES/Pandora/blob/master/doc/sources/CLA/ICLA_PANDORA.doc>`_ (ICLA) form and a
+`Individual Contributor Licensing Agreement <https://github.com/CNES/Pandora/blob/master/doc/sources/CLA/ICLA_PANDORA.doc>`_ (ICLA) form and a
 `Corporate Contributor Licensing Agreement <https://github.com/CNES/Pandora/blob/master/doc/sources/CLA/CCLA_PANDORA.doc>`_ (CCLA) form if you are
 contributing on behalf of your company or another entity which retains copyright
 for your contribution.
