@@ -230,7 +230,7 @@ class TestDatasetDispMaps:
                 id="ROI in image and step=2 for rows",
             ),
             pytest.param(
-                {},
+                None,
                 [1, 1],
                 id="No ROI",
             ),
@@ -243,25 +243,33 @@ class TestDatasetDispMaps:
 
         # input configuration
         input_cfg = {
-            "input": {
-                "left": {
-                    "img": left_image,
-                    "nodata": -9999,
-                },
-                "right": {
-                    "img": right_image,
-                    "nodata": -9999,
-                },
-                "col_disparity": [0, 4],
-                "row_disparity": [-2, 2],
-            }
+            "left": {
+                "img": left_image,
+                "nodata": -9999,
+            },
+            "right": {
+                "img": right_image,
+                "nodata": -9999,
+            },
+            "col_disparity": [0, 4],
+            "row_disparity": [-2, 2],
         }
 
-        img_left, img_right = create_datasets_from_inputs(input_cfg["input"], roi=roi)
+        img_left, img_right = create_datasets_from_inputs(input_cfg, roi=roi)
 
-        cfg = {"matching_cost_method": "zncc", "window_size": 3, "step": step}
+        if roi is not None:
+            cfg = {
+                "input": input_cfg,
+                "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": step}},
+                "ROI": roi,
+            }
+        else:
+            cfg = {
+                "input": input_cfg,
+                "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": step}},
+            }
 
-        matching_cost_matcher = matching_cost.MatchingCost(cfg)
+        matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
         matching_cost_matcher.allocate_cost_volume_pandora(
             img_left=img_left,

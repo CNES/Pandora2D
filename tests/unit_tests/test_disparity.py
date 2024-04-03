@@ -92,9 +92,9 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
 
     left, right = left_stereo_object, right_stereo_object
 
-    # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
-    cfg = {"matching_cost_method": "sad", "window_size": 1}
-    matching_cost_test = matching_cost.MatchingCost(cfg)
+    # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min -1, dispy_max 0
+    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 1}}}
+    matching_cost_test = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
     grid_min_col = np.full((3, 3), 0)
     grid_max_col = np.full((3, 3), 1)
@@ -137,9 +137,10 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
 
     left_arg, right_arg = stereo_object_with_args
 
-    # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min 0, dispy_max 1
-    cfg = {"matching_cost_method": "sad", "window_size": 3}
-    matching_cost_test = matching_cost.MatchingCost(cfg)
+    # create a cost_volume, with SAD measure, window_size 3, dispx_min 0, dispx_max 1, dispy_min -1, dispy_max 0
+    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 3}}}
+
+    matching_cost_test = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
     grid_min_col = np.full((3, 3), 0)
     grid_max_col = np.full((3, 3), 1)
@@ -208,9 +209,10 @@ def test_compute_disparity_map_row():
 
     ground_truth_row = np.array([[2, 2, 2, 2], [-1, -1, -1, -1], [-1, -1, -1, -1]])
 
-    # create matching_cost object with measure = ssd, window_size = 3
-    cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc)
+    # create matching_cost object with measure = ssd, window_size = 1
+    cfg_mc = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
+
+    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
     # create disparity object with WTA method
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
@@ -276,9 +278,9 @@ def test_compute_disparity_map_col():
 
     ground_truth_col = np.array([[1, 1, 1, -3], [1, 1, 1, -3], [1, 1, 1, -3]])
 
-    # create matching_cost object with measure = ssd, window_size = 3
-    cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc)
+    # create matching_cost object with measure = ssd, window_size = 1
+    cfg_mc = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
+    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
     # create disparity object with WTA method
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
@@ -344,9 +346,9 @@ def test_compute_disparity_map_col_row():
 
     ground_truth_col = np.array([[1, 1, 1, -3], [1, 1, 1, -3], [1, 1, 1, -3]])
 
-    # create matching_cost object with measure = ssd, window_size = 3
-    cfg_mc = {"matching_cost_method": "ssd", "window_size": 1}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc)
+    # create matching_cost object with measure = ssd, window_size = 1
+    cfg_mc = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
+    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
     # create disparity object with WTA method
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
