@@ -24,12 +24,11 @@
 Test configuration
 """
 
-
 import pytest
 import transitions
 import numpy as np
 import xarray as xr
-from json_checker import DictCheckerError
+from json_checker import DictCheckerError, MissKeyCheckerError
 
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 from pandora2d import check_configuration
@@ -148,6 +147,10 @@ class TestCheckPipelineSection:
 class TestCheckRoiSection:
     """Test check_roi_section."""
 
+    def test_expect_roi_section(self):
+        with pytest.raises(MissKeyCheckerError, match="ROI"):
+            check_configuration.check_roi_section({"input": {}})
+
     def test_nominal_case(self, correct_roi_sensor) -> None:
         """
         Test function for checking user ROI section
@@ -162,6 +165,42 @@ class TestCheckRoiSection:
     def test_first_dimension_gt_last_dimension_raises_exception(self, false_roi_sensor_first_superior_to_last):
         with pytest.raises(BaseException):
             check_configuration.check_roi_section(false_roi_sensor_first_superior_to_last)
+
+    @pytest.mark.parametrize(
+        "roi_section",
+        [
+            pytest.param(
+                {
+                    "ROI": {
+                        "col": {"first": 10, "last": 10},
+                        "row": {"first": 10, "last": 100},
+                    },
+                },
+                id="Only col",
+            ),
+            pytest.param(
+                {
+                    "ROI": {
+                        "col": {"first": 10, "last": 100},
+                        "row": {"first": 10, "last": 10},
+                    },
+                },
+                id="Only row",
+            ),
+            pytest.param(
+                {
+                    "ROI": {
+                        "col": {"first": 10, "last": 10},
+                        "row": {"first": 10, "last": 10},
+                    },
+                },
+                id="Both row and col",
+            ),
+        ],
+    )
+    def test_one_pixel_roi_is_valid(self, roi_section):
+        """Should not raise error."""
+        check_configuration.check_roi_section(roi_section)
 
 
 def test_get_roi_pipeline(
