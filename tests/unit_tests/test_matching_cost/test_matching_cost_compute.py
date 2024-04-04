@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
-#
 # Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2024 CS GROUP France
 #
@@ -22,54 +19,63 @@
 #
 
 """
-Test Matching cost class
+Test compute_cost_volumes method from Matching cost
 """
+import sys
 
 # pylint: disable=redefined-outer-name
 import numpy as np
-import xarray as xr
 import pytest
-import json_checker
+import xarray as xr
+from pandora import import_plugin
 from rasterio import Affine
 
-from pandora import import_plugin
-from pandora.margins import Margins
 from pandora2d import matching_cost
+from pandora2d.img_tools import create_datasets_from_inputs
 
 
-def test_check_conf():
-    """
-    test check_conf of matching cost pipeline
-    """
-    matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
+@pytest.mark.parametrize(
+    "data_fixture_name",
+    [
+        "data_with_null_disparity",
+        "data_with_positive_disparity_in_col",
+        "data_with_positive_disparity_in_row",
+        "data_with_negative_disparity_in_col",
+        "data_with_negative_disparity_in_row",
+        "data_with_disparity_negative_in_row_and_positive_in_col",
+    ],
+)
+@pytest.mark.parametrize("col_step", [1, 2, pytest.param(5, id="Step gt image")])
+@pytest.mark.parametrize("row_step", [1, 2, pytest.param(5, id="Step gt image")])
+def test_steps(request, data_fixture_name, col_step, row_step):
+    """We expect step to work."""
+    data = request.getfixturevalue(data_fixture_name)
 
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "census", "window_size": 5})
+    # sum of squared difference images self.left, self.right, window_size=3
+    cfg = {
+        "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": [row_step, col_step]}}
+    }
+    # initialise matching cost
+    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher.allocate_cost_volume_pandora(
+        img_left=data.left,
+        img_right=data.right,
+        grid_min_col=data.disparity_grids.col_min,
+        grid_max_col=data.disparity_grids.col_max,
+        cfg=cfg,
+    )
+    # compute cost volumes
+    zncc = matching_cost_matcher.compute_cost_volumes(
+        img_left=data.left,
+        img_right=data.right,
+        grid_min_col=data.disparity_grids.col_min,
+        grid_max_col=data.disparity_grids.col_max,
+        grid_min_row=data.disparity_grids.row_min,
+        grid_max_row=data.disparity_grids.row_max,
+    )
 
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
-
-
-@pytest.mark.plugin_tests
-@pytest.mark.skip(reason="Waiting for mccnn check_conf issue")
-def test_check_conf_mccnn():
-    """
-    Test specific check_conf with plugin mccnn
-    """
-
-    import_plugin()
-    # should fail after modification in plugin_mccnn
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "mc_cnn", "window_size": 5})
-
-
-def test_margins():
-    """
-    test margins of matching cost pipeline
-    """
-    _matching_cost = matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
-
-    assert _matching_cost.margins == Margins(2, 2, 2, 2)
+    # indexes are : row, col, disp_x, disp_y
+    np.testing.assert_equal(zncc["cost_volumes"].data, data.full_matching_cost[::row_step, ::col_step, :, :])
 
 
 def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
@@ -77,7 +83,7 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     Test the  cost volume product by ssd
     """
     # sum of squared difference images left, right, window_size=1
-    cfg = {"matching_cost_method": "ssd", "window_size": 1}
+    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
     # sum of squared difference ground truth for the images left, right, window_size=1
     ad_ground_truth = np.zeros((3, 3, 2, 2))
     # disp_x = -1, disp_y = -1
@@ -102,7 +108,7 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     # disp_x = 0, disp_y = -1
     ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
     # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg)
+    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
     matching_cost_matcher.allocate_cost_volume_pandora(
         img_left=left_stereo_object,
@@ -127,6 +133,7 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
 
 
 @pytest.mark.plugin_tests
+@pytest.mark.skipif("mc_cnn" not in sys.modules, reason="MCCNN plugin not installed")
 def test_compute_cv_mc_cnn():
     """
     Test the  cost volume product by mccnn
@@ -135,7 +142,7 @@ def test_compute_cv_mc_cnn():
     import_plugin()
 
     # Applied MCCNN on same data, window_size=11
-    cfg = {"matching_cost_method": "mc_cnn", "window_size": 11}
+    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "mc_cnn", "window_size": 11}}}
 
     data = np.arange(10000).reshape(100, 100)
 
@@ -153,7 +160,7 @@ def test_compute_cv_mc_cnn():
         "row_disparity_source": [-1, 1],
     }
 
-    matching_cost_matcher = matching_cost.MatchingCost(cfg)
+    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
     matching_cost_matcher.allocate_cost_volume_pandora(
         img_left=img,
@@ -187,7 +194,7 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     """
 
     # sum of squared difference images left, right, window_size=1
-    cfg = {"matching_cost_method": "sad", "window_size": 1}
+    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 1}}}
     # sum of absolute difference ground truth for the images left, right, window_size=1
     ad_ground_truth = np.zeros((3, 3, 2, 2))
     # disp_x = -1, disp_y = -1
@@ -213,7 +220,7 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
 
     # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg)
+    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
     matching_cost_matcher.allocate_cost_volume_pandora(
         img_left=left_stereo_object,
         img_right=right_stereo_object,
@@ -279,7 +286,7 @@ def test_compute_cv_zncc():
     }
 
     # sum of squared difference images left, right, window_size=3
-    cfg = {"matching_cost_method": "zncc", "window_size": 3}
+    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3}}}
     # sum of absolute difference ground truth for the images left, right, window_size=1
 
     left = left_zncc["im"].data
@@ -312,7 +319,7 @@ def test_compute_cv_zncc():
     ) / (np.std(left[1:4, 1:4]) * np.std(right_shift[1:4, 1:4]))
 
     # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg)
+    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
     matching_cost_matcher.allocate_cost_volume_pandora(
         img_left=left_zncc,
         img_right=right_zncc,
@@ -337,70 +344,208 @@ def test_compute_cv_zncc():
     np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 0], ad_ground_truth_2_2_0_1, rtol=1e-06)
 
 
-def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
+@pytest.mark.parametrize(
+    ["roi", "step", "col_expected", "row_expected"],
+    [
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
+            [1, 1],
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            np.arange(1, 8),
+            id="ROI and no step",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
+            [2, 2],
+            np.arange(1, 8, 2),
+            np.arange(1, 8, 2),
+            id="ROI and columns step_col=margins",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [3, 3, 3, 3]},
+            [3, 2],
+            np.arange(1, 9, 2),
+            np.arange(0, 8, 3),
+            id="ROI and columns step_col < margins",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
+            [4, 3],
+            np.arange(3, 8, 3),
+            np.arange(1, 8, 4),
+            id="ROI and columns step_col > margins",
+        ),
+    ],
+)
+def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_config, col_expected, row_expected):
     """
-    Test the allocate cost_volumes function
+    Test that we have the correct cost_volumes coordinates with a ROI
     """
 
-    # generated data for the test
-    np_data = np.empty((3, 3, 2, 2))
-    np_data.fill(np.nan)
+    cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}, "ROI": roi}
 
-    c_row = [0, 1, 2]
-    c_col = [0, 1, 2]
+    img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
-    # First pixel in the image that is fully computable (aggregation windows are complete)
-    row = np.arange(c_row[0], c_row[-1] + 1)
-    col = np.arange(c_col[0], c_col[-1] + 1)
-
-    disparity_range_col = np.arange(-1, 0 + 1)
-    disparity_range_row = np.arange(-1, 0 + 1)
-
-    # Create the cost volume
-    if np_data is None:
-        np_data = np.zeros((len(row), len(col), len(disparity_range_col), len(disparity_range_row)), dtype=np.float32)
-
-    cost_volumes_test = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], np_data)},
-        coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
-    )
-
-    cost_volumes_test.attrs["measure"] = "zncc"
-    cost_volumes_test.attrs["window_size"] = 3
-    cost_volumes_test.attrs["type_measure"] = "max"
-    cost_volumes_test.attrs["subpixel"] = 1
-    cost_volumes_test.attrs["offset_row_col"] = 1
-    cost_volumes_test.attrs["cmax"] = 1
-    cost_volumes_test.attrs["crs"] = None
-    cost_volumes_test.attrs["transform"] = Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-    cost_volumes_test.attrs["band_correl"] = None
-    cost_volumes_test.attrs["col_disparity_source"] = [0, 1]
-    cost_volumes_test.attrs["row_disparity_source"] = [-1, 0]
-    cost_volumes_test.attrs["no_data_img"] = -9999
-    cost_volumes_test.attrs["no_data_mask"] = 1
-    cost_volumes_test.attrs["valid_pixels"] = 0
-    cost_volumes_test.attrs["step"] = [1, 1]
-
-    # data by function compute_cost_volume
-    cfg = {"matching_cost_method": "zncc", "window_size": 3}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg)
+    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
     matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_stereo_object,
-        img_right=right_stereo_object,
-        grid_min_col=np.full((3, 3), -1),
-        grid_max_col=np.full((3, 3), 0),
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full((10, 10), 0),
+        grid_max_col=np.full((10, 10), 1),
         cfg=cfg,
     )
-    cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
-        img_left=left_stereo_object,
-        img_right=right_stereo_object,
-        grid_min_col=np.full((3, 3), -1),
-        grid_max_col=np.full((3, 3), 0),
-        grid_min_row=np.full((3, 3), -1),
-        grid_max_row=np.full((3, 3), 0),
+
+    np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
+
+    # compute cost volumes with roi
+    cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full((10, 10), 0),
+        grid_max_col=np.full((10, 10), 1),
+        grid_min_row=np.full((10, 10), -1),
+        grid_max_row=np.full((10, 10), 0),
     )
 
-    # check that the generated xarray dataset is equal to the ground truth
-    np.testing.assert_array_equal(cost_volumes_fun["cost_volumes"].data, cost_volumes_test["cost_volumes"].data)
-    assert cost_volumes_fun.attrs == cost_volumes_test.attrs
+    np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["col"], col_expected)
+    # For the moment, row coordinates are only calculated with step value.
+    # After ticket 108, margins will also be taken into account
+    np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
+
+
+@pytest.mark.parametrize(
+    ["step", "col_expected", "row_expected"],
+    [
+        pytest.param(
+            [1, 1],
+            np.arange(10),
+            np.arange(10),
+            id="No ROI and no step",
+        ),
+        pytest.param(
+            [2, 2],
+            np.arange(0, 10, 2),
+            np.arange(0, 10, 2),
+            id="No ROI and step=2",
+        ),
+    ],
+)
+def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config, col_expected, row_expected):
+    """
+    Test that we have the correct cost_volumes coordinates without a ROI
+    """
+
+    cfg = {
+        "input": input_config,
+        "pipeline": {"matching_cost": matching_cost_config},
+    }
+
+    img_left, img_right = create_datasets_from_inputs(input_config)
+
+    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+
+    matching_cost_matcher.allocate_cost_volume_pandora(
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full((10, 10), 0),
+        grid_max_col=np.full((10, 10), 1),
+        cfg=cfg,
+    )
+
+    np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
+
+    # compute cost volumes without roi
+    cost_volumes = matching_cost_matcher.compute_cost_volumes(
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full((10, 10), 0),
+        grid_max_col=np.full((10, 10), 1),
+        grid_min_row=np.full((10, 10), -1),
+        grid_max_row=np.full((10, 10), 0),
+    )
+
+    np.testing.assert_array_equal(cost_volumes["cost_volumes"].coords["col"], col_expected)
+    np.testing.assert_array_equal(cost_volumes["cost_volumes"].coords["row"], row_expected)
+
+
+@pytest.mark.parametrize(
+    [
+        "step",
+        "expected_shape",
+        "expected_shape_roi",
+        "cost_volumes_slice",
+        "cost_volumes_with_roi_slice",
+        "squared_image_size",
+    ],
+    [
+        pytest.param(
+            [1, 1],
+            (5, 5, 2, 2),
+            (5, 4, 2, 2),
+            np.s_[2:4, 2:4, :, :],
+            np.s_[2:4, 1:3, :, :],
+            (5, 5),
+            id="Step=[1, 1]",
+        ),
+        pytest.param(
+            [1, 2],
+            (5, 3, 2, 2),
+            (5, 2, 2, 2),
+            np.s_[2:4, 2:4:2, :, :],
+            np.s_[2:4, 1:3:2, :, :],
+            (5, 5),
+            id="Step=[1, 2]",
+        ),
+        pytest.param(
+            [2, 1],
+            (3, 5, 2, 2),
+            (3, 4, 2, 2),
+            np.s_[2:4, 2:4, :, :],
+            np.s_[2:4, 1:3, :, :],
+            (5, 5),
+            id="Step=[2, 1]",
+        ),
+    ],
+)
+def test_roi_inside_and_margins_inside(  # pylint: disable=too-many-arguments
+    input_config,
+    configuration_roi,
+    matching_cost_matcher,
+    cost_volumes,
+    roi,
+    expected_shape,
+    expected_shape_roi,
+    cost_volumes_slice,
+    cost_volumes_with_roi_slice,
+):
+    """
+    Test the pandora2d matching cost with roi inside the image
+    """
+
+    # crop image with roi
+    img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
+
+    matching_cost_matcher.allocate_cost_volume_pandora(
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full((5, 5), 0),
+        grid_max_col=np.full((5, 5), 1),
+        cfg=configuration_roi,
+    )
+    # compute cost volumes with roi
+    cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full((5, 5), 0),
+        grid_max_col=np.full((5, 5), 1),
+        grid_min_row=np.full((5, 5), -1),
+        grid_max_row=np.full((5, 5), 0),
+    )
+
+    assert cost_volumes_with_roi["cost_volumes"].data.shape == expected_shape_roi
+    assert cost_volumes["cost_volumes"].data.shape == expected_shape
+    np.testing.assert_array_equal(
+        cost_volumes["cost_volumes"].data[cost_volumes_slice],
+        cost_volumes_with_roi["cost_volumes"].data[cost_volumes_with_roi_slice],
+    )

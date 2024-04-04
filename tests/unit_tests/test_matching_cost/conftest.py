@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
-#
 # Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2024 CS GROUP France
 #
@@ -22,18 +19,100 @@
 #
 
 """
-Test Matching cost class
+Test Matching cost fixtures class
 """
+
 # pylint: disable=redefined-outer-name
 from typing import NamedTuple
 
 import numpy as np
-import xarray as xr
 import pytest
+import xarray as xr
 from rasterio import Affine
-import json_checker
-
+from skimage.io import imsave
 from pandora2d import matching_cost
+
+from pandora2d.img_tools import create_datasets_from_inputs
+
+
+@pytest.fixture()
+def squared_image_size():
+    return (10, 10)
+
+
+@pytest.fixture()
+def left_image(tmp_path, squared_image_size):
+    """
+    Create a fake left image
+    """
+    image_path = tmp_path / "left_img.png"
+    data = np.random.randint(255, size=squared_image_size, dtype=np.uint8)
+    imsave(image_path, data)
+
+    return image_path
+
+
+@pytest.fixture()
+def right_image(tmp_path, squared_image_size):
+    """
+    Create a fake right image
+    """
+    image_path = tmp_path / "right_img.png"
+    data = np.random.randint(255, size=squared_image_size, dtype=np.uint8)
+    imsave(image_path, data)
+
+    return image_path
+
+
+@pytest.fixture()
+def input_config(left_image, right_image):
+    return {
+        "left": {
+            "img": left_image,
+            "nodata": -9999,
+        },
+        "right": {
+            "img": right_image,
+            "nodata": -9999,
+        },
+        "col_disparity": [0, 1],
+        "row_disparity": [-1, 1],
+    }
+
+
+@pytest.fixture()
+def matching_cost_config(step):
+    return {"matching_cost_method": "zncc", "window_size": 3, "step": step}
+
+
+@pytest.fixture()
+def left_image_with_shift(tmp_path):
+    """
+    Create a fake image to test roi configuration
+    """
+    image_path = tmp_path / "left_img.png"
+    data = np.array(
+        ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1]]),
+        dtype=np.uint8,
+    )
+    imsave(image_path, data)
+
+    return image_path
+
+
+@pytest.fixture()
+def right_image_with_shift(tmp_path):
+    """
+    Create a fake image to test roi configuration
+    """
+    image_path = tmp_path / "right_img.png"
+    data = np.array(
+        ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
+        dtype=np.uint8,
+    )
+    imsave(image_path, data)
+
+    return image_path
 
 
 @pytest.fixture()
@@ -375,67 +454,55 @@ def data_with_disparity_negative_in_row_and_positive_in_col(
     )
 
 
-def test_step_configuration():
-    """
-    Test step in matching_cost configuration
-    """
-
-    matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3]})
-
-    # Test with a negative step : test should fail
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [-2, 3]})
-
-    # Test with a one size list step : test should fail
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2]})
-
-    # Test with a three elements list step : test should fail
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3, 4]})
-
-    # Test with a str elements list step : test should fail
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": ["2", 3]})
+@pytest.fixture()
+def configuration_roi(matching_cost_config, input_config, roi):
+    return {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}, "ROI": roi}
 
 
-@pytest.mark.parametrize(
-    "data_fixture_name",
-    [
-        "data_with_null_disparity",
-        "data_with_positive_disparity_in_col",
-        "data_with_positive_disparity_in_row",
-        "data_with_negative_disparity_in_col",
-        "data_with_negative_disparity_in_row",
-        "data_with_disparity_negative_in_row_and_positive_in_col",
-    ],
-)
-@pytest.mark.parametrize("col_step", [1, 2, pytest.param(5, id="Step gt image")])
-@pytest.mark.parametrize("row_step", [1, 2, pytest.param(5, id="Step gt image")])
-def test_steps(request, data_fixture_name, col_step, row_step):
-    """We expect step to work."""
-    data = request.getfixturevalue(data_fixture_name)
+@pytest.fixture()
+def step():
+    return [1, 1]
 
-    # sum of squared difference images self.left, self.right, window_size=3
-    cfg = {"matching_cost_method": "zncc", "window_size": 3, "step": [row_step, col_step]}
-    # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg)
+
+@pytest.fixture()
+def roi(margins):
+    return {"col": {"first": 2, "last": 3}, "row": {"first": 2, "last": 3}, "margins": margins}
+
+
+@pytest.fixture()
+def margins():
+    return [1, 2, 1, 1]
+
+
+@pytest.fixture()
+def matching_cost_matcher(matching_cost_config):
+    return matching_cost.MatchingCost(matching_cost_config)
+
+
+@pytest.fixture()
+def cost_volumes(input_config, matching_cost_matcher, configuration):
+    """Create cost_volumes."""
+    img_left, img_right = create_datasets_from_inputs(input_config, roi=None)
+
     matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=data.left,
-        img_right=data.right,
-        grid_min_col=data.disparity_grids.col_min,
-        grid_max_col=data.disparity_grids.col_max,
-        cfg=cfg,
-    )
-    # compute cost volumes
-    zncc = matching_cost_matcher.compute_cost_volumes(
-        img_left=data.left,
-        img_right=data.right,
-        grid_min_col=data.disparity_grids.col_min,
-        grid_max_col=data.disparity_grids.col_max,
-        grid_min_row=data.disparity_grids.row_min,
-        grid_max_row=data.disparity_grids.row_max,
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full((5, 5), 0),
+        grid_max_col=np.full((5, 5), 1),
+        cfg=configuration,
     )
 
-    # indexes are : row, col, disp_x, disp_y
-    np.testing.assert_equal(zncc["cost_volumes"].data, data.full_matching_cost[::row_step, ::col_step, :, :])
+    # compute cost volumes
+    return matching_cost_matcher.compute_cost_volumes(
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full((5, 5), 0),
+        grid_max_col=np.full((5, 5), 1),
+        grid_min_row=np.full((5, 5), -1),
+        grid_max_row=np.full((5, 5), 0),
+    )
+
+
+@pytest.fixture()
+def configuration(matching_cost_config, input_config):
+    return {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}}
