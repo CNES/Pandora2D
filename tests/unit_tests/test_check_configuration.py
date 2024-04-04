@@ -29,6 +29,7 @@ import transitions
 import numpy as np
 import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
+from skimage.io import imsave
 
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 from pandora2d import check_configuration
@@ -354,3 +355,78 @@ class TestCheckDisparityRangeSize:
         """Disparity range size is correct"""
 
         check_configuration.check_disparity_range_size(disparity, title)
+
+
+class TestDisparityRangeAgainstImageSize:
+    """Test that out of image disparity ranges are not allowed."""
+
+    @pytest.fixture()
+    def image_path(self, tmp_path):
+        path = tmp_path / "tiff_file.tif"
+        imsave(path, np.empty((450, 450)))
+        return path
+
+    @pytest.fixture()
+    def row_disparity(self):
+        return [-4, 1]
+
+    @pytest.fixture()
+    def col_disparity(self):
+        return [-3, 2]
+
+    @pytest.fixture()
+    def configuration(self, image_path, row_disparity, col_disparity):
+        return {
+            "input": {
+                "left": {
+                    "img": str(image_path),
+                    "nodata": "NaN",
+                },
+                "right": {
+                    "img": str(image_path),
+                    "nodata": "NaN",
+                },
+                "row_disparity": row_disparity,
+                "col_disparity": col_disparity,
+            },
+            "pipeline": {
+                "matching_cost": {"matching_cost_method": "zncc", "window_size": 1},
+            },
+        }
+
+    @pytest.mark.parametrize(
+        "row_disparity",
+        [
+            pytest.param([-460, -451], id="Out on left"),
+            pytest.param([451, 460], id="Out on right"),
+        ],
+    )
+    def test_row_disparity_totally_out(self, pandora2d_machine, configuration):
+        """Totally out disparities should raise an error."""
+        with pytest.raises(ValueError, match="Row disparity range out of image"):
+            check_configuration.check_conf(configuration, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        "col_disparity",
+        [
+            pytest.param([-460, -451], id="Out on top"),
+            pytest.param([451, 460], id="Out on bottom"),
+        ],
+    )
+    def test_column_disparity_totally_out(self, pandora2d_machine, configuration):
+        """Totally out disparities should raise an error."""
+        with pytest.raises(ValueError, match="Column disparity range out of image"):
+            check_configuration.check_conf(configuration, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        ["row_disparity", "col_disparity"],
+        [
+            pytest.param([-460, -450], [100, 200], id="Partially out on left"),
+            pytest.param([450, 460], [100, 200], id="Partially out on right"),
+            pytest.param([100, 200], [-460, -450], id="Partially out on top"),
+            pytest.param([100, 200], [450, 460], id="Partially out on bottom"),
+        ],
+    )
+    def test_disparity_partially_out(self, pandora2d_machine, configuration):
+        """Partially out should not raise error."""
+        check_configuration.check_conf(configuration, pandora2d_machine)

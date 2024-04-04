@@ -25,11 +25,13 @@ This module contains functions allowing to check the configuration given to Pand
 
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import xarray as xr
 from json_checker import And, Checker, Or
+
+from pandora.img_tools import get_metadata
 from pandora.check_configuration import (
     check_dataset,
     check_disparities_from_input,
@@ -83,10 +85,7 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
     cfg = update_conf(default_short_configuration_input, user_cfg)
 
     # test disparities
-    if estimation_config is None:
-        check_disparities_from_input(cfg["input"]["col_disparity"], None)
-        check_disparities_from_input(cfg["input"]["row_disparity"], None)
-    else:
+    if estimation_config is not None:
         # add wrong disparity for checking only
         cfg = update_conf(default_configuration_disp, cfg)
 
@@ -98,7 +97,37 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
     # test images
     check_images(cfg["input"])
 
+    if estimation_config is None:
+        check_disparities_from_input(cfg["input"]["col_disparity"], None)
+        check_disparities_from_input(cfg["input"]["row_disparity"], None)
+        left_image_metadata = get_metadata(cfg["input"]["left"]["img"])
+        check_disparity_ranges_are_inside_image(
+            left_image_metadata, cfg["input"]["row_disparity"], cfg["input"]["col_disparity"]
+        )
+
     return cfg
+
+
+def check_disparity_ranges_are_inside_image(
+    image_metadata: xr.Dataset, row_disparity_range: List, col_disparity_range: List
+) -> None:
+    """
+    Raise an error if disparity ranges are out off image.
+
+    :param image_metadata:
+    :type image_metadata: xr.Dataset
+    :param row_disparity_range:
+    :type row_disparity_range: List
+    :param col_disparity_range:
+    :type col_disparity_range: List
+    :return: None
+    :rtype: None
+    :raises: ValueError
+    """
+    if np.abs(row_disparity_range).min() > image_metadata.sizes["row"]:
+        raise ValueError("Row disparity range out of image")
+    if np.abs(col_disparity_range).min() > image_metadata.sizes["col"]:
+        raise ValueError("Column disparity range out of image")
 
 
 def check_roi_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
