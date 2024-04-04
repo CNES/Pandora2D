@@ -404,7 +404,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             map_col,
             self.cost_volumes.coords,
             correlation_score,
-            {"invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"],"crs":self.left_img.crs,"transform":self.left_img.transform},
+            {"invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"]},
         )
 
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:

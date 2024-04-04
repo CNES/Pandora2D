@@ -67,13 +67,13 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     mkdir_p(output)
 
     # save disp map for row
-    write_data_array(dataset["row_map"], os.path.join(output, "row_disparity.tif"), crs=dataset.attrs["crs"],transform=dataset.attrs["transform"])
+    write_data_array(dataset["row_map"], os.path.join(output, "row_disparity.tif"))
 
     # save disp map for columns
-    write_data_array(dataset["col_map"], os.path.join(output, "columns_disparity.tif"), crs=dataset.attrs["crs"],transform=dataset.attrs["transform"])
+    write_data_array(dataset["col_map"], os.path.join(output, "columns_disparity.tif"))
 
     # save correlation score
-    write_data_array(dataset["correlation_score"], os.path.join(output, "correlation_score.tif"),crs=dataset.attrs["crs"], transform=dataset.attrs["transform"])
+    write_data_array(dataset["correlation_score"], os.path.join(output, "correlation_score.tif"))
 
 
 def dataset_disp_maps(
