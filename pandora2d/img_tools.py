@@ -35,7 +35,7 @@ except ImportError:
 
 import copy
 from collections.abc import Sequence
-from typing import List, Dict, NamedTuple, Any
+from typing import List, Dict, Union, NamedTuple, Any
 
 from math import floor
 import xarray as xr
@@ -207,7 +207,7 @@ def add_disparity_grid(dataset: xr.Dataset, col_disparity: List[int], row_dispar
     return dataset
 
 
-def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
+def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     """
     Return a Dataset that contains the shifted right images
 
@@ -219,14 +219,14 @@ def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     :return: img_right_shift: Dataset containing the shifted image
     :rtype: xr.Dataset
     """
-    # dimensions of images
-    nrow_, ncol_ = img_right["im"].shape
+    # coordinates of images
+    row = img_right.get("row")
+    col = img_right.get("col")
+
     # shifted image by scipy
     data = shift(img_right["im"].data, (-dec_row, 0), cval=img_right.attrs["no_data_img"])
     # create shifted image dataset
-    img_right_shift = xr.Dataset(
-        {"im": (["row", "col"], data)}, coords={"row": np.arange(nrow_), "col": np.arange(ncol_)}
-    )
+    img_right_shift = xr.Dataset({"im": (["row", "col"], data)}, coords={"row": row, "col": col})
     # add attributes to dataset
     img_right_shift.attrs = {
         "no_data_img": img_right.attrs["no_data_img"],
@@ -338,7 +338,9 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
     return new_dataset
 
 
-def row_zoom_img(img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int) -> xr.Dataset:
+def row_zoom_img(
+    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str]
+) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in row
 
@@ -354,6 +356,8 @@ def row_zoom_img(img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind
     :type coords: Coordinates
     :param ind: index of range(subpix)
     :type ind: int
+    :param no_data: no_data value in img
+    :type no_data: Union[int, str]
     :return: an array that contains the shifted right images in row
     :rtype: array of xarray.Dataset
     """
@@ -361,14 +365,23 @@ def row_zoom_img(img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind
     shift = 1 / subpix
     # For each index, shift the right image for subpixel precision 1/subpix*index
     data = zoom(img, ((ny * subpix - (subpix - 1)) / float(ny), 1), order=1)[ind::subpix, :]
-    row = np.arange(coords.get("row")[0] + shift * ind, coords.get("row")[-1], step=1)  # type: np.ndarray
+
+    # Add a row full of no data at the end of data have the same shape as img
+    # It enables to use Pandora's compute_cost_volume() methods,
+    # which only accept left and right images of the same shape.
+    data = np.pad(data, ((0, 1), (0, 0)), "constant", constant_values=no_data)
+
+    row = np.arange(coords.get("row")[0] + shift * ind, coords.get("row")[-1] + 1, step=1)  # type: np.ndarray
+
     return xr.Dataset(
         {"im": (["row", "col"], data)},
         coords={"row": row, "col": coords.get("col")},
     )
 
 
-def col_zoom_img(img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int) -> xr.Dataset:
+def col_zoom_img(
+    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str]
+) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in col
 
@@ -384,6 +397,8 @@ def col_zoom_img(img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind
     :type coords: Coordinates
     :param ind: index of range(subpix)
     :type ind: int
+    :param no_data: no_data value in img
+    :type no_data: Union[int, str]
     :return: an array that contains the shifted right images in col
     :rtype: array of xarray.Dataset
     """
@@ -391,14 +406,20 @@ def col_zoom_img(img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind
     shift = 1 / subpix
     # For each index, shift the right image for subpixel precision 1/subpix*index
     data = zoom(img, (1, (nx * subpix - (subpix - 1)) / float(nx)), order=1)[:, ind::subpix]
-    col = np.arange(coords.get("col")[0] + shift * ind, coords.get("col")[-1], step=1)  # type: np.ndarray
+
+    # Add a col full of no data at the end of data to have the same shape as img
+    # It enables to use Pandora's compute_cost_volume() methods,
+    # which only accept left and right images of the same shape.
+    data = np.pad(data, ((0, 0), (0, 1)), "constant", constant_values=no_data)
+
+    col = np.arange(coords.get("col")[0] + shift * ind, coords.get("col")[-1] + 1, step=1)  # type: np.ndarray
     return xr.Dataset(
         {"im": (["row", "col"], data)},
         coords={"row": coords.get("row"), "col": col},
     )
 
 
-def shift_subpix_img(img_right: xr.Dataset, subpix: int, column: bool = True) -> List[xr.Dataset]:
+def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True) -> List[xr.Dataset]:
     """
     Return an array that contains the shifted right images
 
@@ -415,13 +436,27 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, column: bool = True) ->
 
     if subpix > 1:
         for ind in np.arange(1, subpix):
-            if column:
+            if row:
                 img_right_shift.append(
-                    col_zoom_img(img_right["im"].data, img_right.sizes["col"], subpix, img_right.coords, ind)
+                    row_zoom_img(
+                        img_right["im"].data,
+                        img_right.sizes["row"],
+                        subpix,
+                        img_right.coords,
+                        ind,
+                        img_right.attrs["no_data_img"],
+                    ).assign_attrs(img_right.attrs)
                 )
             else:
                 img_right_shift.append(
-                    row_zoom_img(img_right["im"].data, img_right.sizes["row"], subpix, img_right.coords, ind)
+                    col_zoom_img(
+                        img_right["im"].data,
+                        img_right.sizes["col"],
+                        subpix,
+                        img_right.coords,
+                        ind,
+                        img_right.attrs["no_data_img"],
+                    ).assign_attrs(img_right.attrs)
                 )
 
     return img_right_shift

@@ -24,7 +24,7 @@
 This module contains functions associated to the matching cost computation step.
 """
 import copy
-from typing import Dict, List, cast, Union
+from typing import Dict, cast, Union
 from json_checker import And, Checker
 
 import xarray as xr
@@ -45,6 +45,7 @@ class MatchingCost:
 
     _WINDOW_SIZE = 5
     _STEP = [1, 1]
+    _SUBPIX = 1
     margins = HalfWindowMargins()
 
     def __init__(self, cfg: Dict) -> None:
@@ -61,6 +62,7 @@ class MatchingCost:
         # Cast to int in order to help mypy because self.cfg is a Dict, and it can not know the type of step.
         self._step_row = cast(int, self.cfg["step"][0])
         self._step_col = cast(int, self.cfg["step"][1])
+        self._subpix = cast(int, self.cfg["subpix"])
 
         # Init pandora items
         self.pandora_matching_cost_: Union[matching_cost.AbstractMatchingCost, None] = None
@@ -79,11 +81,14 @@ class MatchingCost:
             cfg["window_size"] = self._WINDOW_SIZE
         if "step" not in cfg:
             cfg["step"] = self._STEP
+        if "subpix" not in cfg:
+            cfg["subpix"] = self._SUBPIX
 
         schema = {
             "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc", "mc_cnn"]),
             "window_size": And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0),
             "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y)),
+            "subpix": And(int, lambda sp: sp in [1, 2, 4]),
         }
 
         checker = Checker(schema)
@@ -96,8 +101,8 @@ class MatchingCost:
         cost_volume_attr: dict,
         row: np.ndarray,
         col: np.ndarray,
-        col_disparity: List[int],
-        row_disparity: List[int],
+        disp_range_col: np.ndarray,
+        disp_range_row: np.ndarray,
         np_data: np.ndarray = None,
     ) -> xr.Dataset:
         """
@@ -109,31 +114,23 @@ class MatchingCost:
         :type row: np.ndarray
         :param col: dimension of the image (columns)
         :type col: np.ndarray
-        :param col_disparity: min and max disparities for columns.
-        :type col_disparity: List[int]
-        :param row_disparity: min and max disparities for rows.
-        :type row_disparity: List[int]
+        :param disp_range_col: columns disparity range.
+        :type disp_range_col: np.ndarray
+        :param disp_range_row: rows disparity range.
+        :type disp_range_row: np.ndarray
         :param np_data: 4D numpy.ndarray og cost_volumes. Defaults to None.
         :type np_data: np.ndarray
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
 
-        disp_min_col, disp_max_col = col_disparity
-        disp_min_row, disp_max_row = row_disparity
-
-        disparity_range_col = np.arange(disp_min_col, disp_max_col + 1)
-        disparity_range_row = np.arange(disp_min_row, disp_max_row + 1)
-
         # Create the cost volume
         if np_data is None:
-            np_data = np.zeros(
-                (len(row), len(col), len(disparity_range_col), len(disparity_range_row)), dtype=np.float32
-            )
+            np_data = np.zeros((len(row), len(col), len(disp_range_col), len(disp_range_row)), dtype=np.float32)
 
         cost_volumes = xr.Dataset(
             {"cost_volumes": (["row", "col", "disp_col", "disp_row"], np_data)},
-            coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
+            coords={"row": row, "col": col, "disp_col": disp_range_col, "disp_row": disp_range_row},
         )
 
         cost_volumes.attrs = cost_volume_attr
@@ -226,12 +223,37 @@ class MatchingCost:
         min_row, max_row = self.pandora_matching_cost_.get_min_max_from_grid(grid_min_row, grid_max_row)
         min_col, max_col = self.pandora_matching_cost_.get_min_max_from_grid(grid_min_col, grid_max_col)
 
+        # Array with all x disparities
+        disps_col = self.pandora_matching_cost_.get_disparity_range(min_col, max_col, self._subpix)
         # Array with all y disparities
-        disps_row = range(min_row, max_row + 1)
+        disps_row = self.pandora_matching_cost_.get_disparity_range(min_row, max_row, self._subpix)
+
         row_index = None
+
+        # Contains the shifted right images (with subpixel)
+        imgs_right_shift_subpixel = img_tools.shift_subpix_img(img_right, self._subpix)
+
         for idx, disp_row in enumerate(disps_row):
+
+            i_right = int((disp_row % 1) * self._subpix)
+
+            # Images contained in imgs_right_shift_subpixel are already shifted by 1/subpix.
+            # In order for img_right_shift to contain the right image shifted from disp_row,
+            # we call img_tools.shift_disp_row_img with np.floor(disp_row).
+
+            # For example if subpix=2 and disp_row=1.5
+            # i_right=1
+            # imgs_right_shift_subpixel[i_right] is shifted by 0.5
+            # In img_tools.shift_disp_row_img we shift it by np.floor(1.5)=1 --> In addition it is shifted by 1.5
+
+            # Another example if subpix=4 and disp_row=-1.25
+            # i_right=3
+            # imgs_right_shift_subpixel[i_right] is shifted by 0.75
+            # In img_tools.shift_disp_row_img we shift it by np.floor(-1.25)=-2 --> In addition it is shifted by -1.25
+
             # Shift image in the y axis
-            img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_row)
+            img_right_shift = img_tools.shift_disp_row_img(imgs_right_shift_subpixel[i_right], np.floor(disp_row))
+
             # Compute cost volume
             cost_volume = self.pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, self.grid_)
             # Mask cost volume
@@ -262,7 +284,7 @@ class MatchingCost:
                 col_coords = cost_volume["cost_volume"].coords["col"]
 
                 cost_volumes = self.allocate_cost_volumes(
-                    cost_volume.attrs, row_coords, col_coords, [min_col, max_col], [min_row, max_row], None
+                    cost_volume.attrs, row_coords, col_coords, disps_col, disps_row, None
                 )
 
             # Add current cost volume to the cost_volumes dataset
