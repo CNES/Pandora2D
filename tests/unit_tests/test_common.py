@@ -32,10 +32,12 @@ import numpy as np
 import pytest
 import xarray as xr
 from skimage.io import imsave
-
-from pandora2d import common
+from rasterio import Affine
+from pandora2d import common, run
+from pandora2d.check_configuration import check_conf
 from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d import matching_cost, disparity, refinement
+from pandora2d.state_machine import Pandora2DMachine
 
 
 class TestSaveDataset:
@@ -59,7 +61,10 @@ class TestSaveDataset:
         dataarray_col = xr.DataArray(col, dims=dims, coords=coords)
         dataarray_score = xr.DataArray(score, dims=dims, coords=coords)
 
-        dataset = xr.Dataset({"row_map": dataarray_row, "col_map": dataarray_col, "correlation_score": dataarray_score})
+        dataset = xr.Dataset(
+            {"row_map": dataarray_row, "col_map": dataarray_col, "correlation_score": dataarray_score},
+            attrs={"crs": "EPSG:32632", "transform": Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03)},
+        )
 
         return dataset
 
@@ -107,7 +112,7 @@ class TestDatasetDispMaps:
         """
         Create a fake image to test dataset_disp_maps method
         """
-        image_path = tmp_path / "left_img.png"
+        image_path = tmp_path / "left_img.tif"
         data = np.full((10, 10), 1, dtype=np.uint8)
         imsave(image_path, data)
 
@@ -118,7 +123,7 @@ class TestDatasetDispMaps:
         """
         Create a fake image to test dataset_disp_maps method
         """
-        image_path = tmp_path / "right_img.png"
+        image_path = tmp_path / "right_img.tif"
         data = np.full((10, 10), 1, dtype=np.uint8)
         imsave(image_path, data)
 
@@ -314,3 +319,28 @@ class TestDatasetDispMaps:
         )
 
         assert disparity_maps.equals(dataset_ground_truth)
+
+
+def test_disparity_map_output_georef(correct_pipeline, correct_input_cfg):
+    """
+    Test outputs georef with crs and transform
+    """
+
+    img_left, img_right = create_datasets_from_inputs(input_config=correct_input_cfg["input"])
+
+    # Stock crs and transform information from input
+    img_left.attrs["crs"] = "EPSG:32632"
+    img_left.attrs["transform"] = Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03)
+
+    pandora2d_machine = Pandora2DMachine()
+    # Delete refinement to fastest result
+    del correct_pipeline["pipeline"]["refinement"]
+
+    correct_input_cfg.update(correct_pipeline)
+
+    checked_cfg = check_conf(correct_input_cfg, pandora2d_machine)
+
+    dataset, _ = run(pandora2d_machine, img_left, img_right, checked_cfg)
+
+    assert "EPSG:32632" == dataset.attrs["crs"]
+    assert Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03) == dataset.attrs["transform"]
