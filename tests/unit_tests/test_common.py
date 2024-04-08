@@ -33,15 +33,11 @@ import pytest
 import xarray as xr
 from skimage.io import imsave
 
-<<<<<<< Updated upstream
-from pandora2d import common
-=======
 from pandora2d import common, run
 from pandora2d.check_configuration import check_conf
->>>>>>> Stashed changes
 from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d import matching_cost, disparity, refinement
-
+from pandora2d.state_machine import Pandora2DMachine
 
 
 class TestSaveDataset:
@@ -320,15 +316,11 @@ class TestDatasetDispMaps:
         )
 
         assert disparity_maps.equals(dataset_ground_truth)
-<<<<<<< Updated upstream
-=======
 
 
 def test_disparity_map_output_georef(
-    img_left_path="../../data_samples/images/maricopa/maricopa_left.tif",
-    img_right_path="../../data_samples/images/maricopa/maricopa_right.tif",
+    img_left_path="../data/images/cones/left.tif", img_right_path="../data/images/cones/left.tif"
 ):
-
     image_cfg = {
         "input": {
             "left": {
@@ -378,4 +370,3 @@ def test_disparity_map_output_georef(
 
     assert crs_input == dataset.attrs["crs"]
     assert transform_input == dataset.attrs["transform"]
->>>>>>> Stashed changes
