@@ -54,10 +54,19 @@ Configuration and parameters
      - [1, 1]
      - list[int >0, int >0]
      - No
+   * - subpix
+     - Subpix parameter for computing subpixel disparities
+     - int
+     - 1
+     - [1,2,4]
+     - No
 
 
 .. note::
     The order of steps should be [row, col].
+
+.. warning::
+    The subpix parameter can only take values 1, 2 and 4.
 
 
 **Example**
@@ -77,7 +86,8 @@ Configuration and parameters
             {
                 "matching_cost_method": "ssd",
                 "window_size": 7,
-                "step" : [5, 5]
+                "step" : [5, 5],
+                "subpix": 4,
             },
             //...
         }
