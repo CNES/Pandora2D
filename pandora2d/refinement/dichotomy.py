@@ -139,6 +139,8 @@ class Dichotomy(refinement.AbstractRefinement):
             [cost_values, row_positions, col_positions], op_flags=[["readwrite"], ["readwrite"], ["readwrite"]]
         ) as iterators:
             for dichotomy_window, (cost_value, row_position, col_position) in zip(dichotomy_windows, iterators):
+                if np.isnan(cost_value):
+                    continue
                 for precision in precisions:
                     # Syntax row_position[...] is for assign value back to row_positions with np.nditer
                     (row_position[...], col_position[...]), cost_value[...] = search_new_best_point(
