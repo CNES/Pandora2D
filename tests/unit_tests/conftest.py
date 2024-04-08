@@ -72,11 +72,9 @@ def correct_input_cfg(left_img_path, right_img_path):
         "input": {
             "left": {
                 "img": left_img_path,
-                "nodata": "NaN",
+                "nodata": -9999,
             },
-            "right": {
-                "img": right_img_path,
-            },
+            "right": {"img": right_img_path, "nodata": -9999},
             "col_disparity": [-2, 2],
             "row_disparity": [-2, 2],
         }

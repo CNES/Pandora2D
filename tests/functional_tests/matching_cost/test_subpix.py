@@ -55,6 +55,7 @@ class TestSubpix:
             "crs": None,
             "col_disparity_source": [-2, 2],
             "row_disparity_source": [-2, 2],
+            "transform": None,
         }
 
         right = xr.Dataset(
@@ -66,6 +67,7 @@ class TestSubpix:
             "valid_pixels": 0,
             "no_data_mask": 1,
             "crs": None,
+            "transform": None,
         }
 
         return left, right

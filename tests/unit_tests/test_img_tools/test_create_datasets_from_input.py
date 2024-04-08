@@ -62,7 +62,7 @@ class TestReturnedValue:
         return img_tools.create_datasets_from_inputs(_make_input_section(left_img_path, right_img_path))
 
     def test_use_function_from_pandora(self, mocker, input_section):
-        """Test we use `create_datset_from_inputs` from pandora.
+        """Test we use `create_dataset_from_inputs` from pandora.
 
         We assume this function is well tested in Pandora and that we just need to test that we use it.
         """
