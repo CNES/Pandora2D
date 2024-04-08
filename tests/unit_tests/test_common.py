@@ -33,9 +33,15 @@ import pytest
 import xarray as xr
 from skimage.io import imsave
 
+<<<<<<< Updated upstream
 from pandora2d import common
+=======
+from pandora2d import common, run
+from pandora2d.check_configuration import check_conf
+>>>>>>> Stashed changes
 from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d import matching_cost, disparity, refinement
+
 
 
 class TestSaveDataset:
@@ -314,3 +320,62 @@ class TestDatasetDispMaps:
         )
 
         assert disparity_maps.equals(dataset_ground_truth)
+<<<<<<< Updated upstream
+=======
+
+
+def test_disparity_map_output_georef(
+    img_left_path="../../data_samples/images/maricopa/maricopa_left.tif",
+    img_right_path="../../data_samples/images/maricopa/maricopa_right.tif",
+):
+
+    image_cfg = {
+        "input": {
+            "left": {
+                "img": img_left_path,
+                "nodata": np.nan,
+            },
+            "right": {
+                "img": img_right_path,
+                "nodata": np.nan,
+            },
+            "col_disparity": [-2, 2],
+            "row_disparity": [-2, 2],
+        }
+    }
+
+    img_left, img_right = create_datasets_from_inputs(input_config=image_cfg["input"])
+
+    # Stock crs and transform information from input
+    crs_input = img_left.crs
+    transform_input = img_left.transform
+
+    user_cfg = {
+        "input": {
+            "left": {
+                "img": img_left_path,
+                "nodata": "NaN",
+            },
+            "right": {
+                "img": img_right_path,
+            },
+            "col_disparity": [-2, 2],
+            "row_disparity": [-2, 2],
+        },
+        "pipeline": {
+            "matching_cost": {
+                "matching_cost_method": "zncc",
+                "window_size": 5,
+            },
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -9999},
+        },
+    }
+
+    pandora2d_machine = Pandora2DMachine()
+    checked_cfg = check_conf(user_cfg, pandora2d_machine)
+
+    dataset, _ = run(pandora2d_machine, img_left, img_right, checked_cfg)
+
+    assert crs_input == dataset.attrs["crs"]
+    assert transform_input == dataset.attrs["transform"]
+>>>>>>> Stashed changes
