@@ -27,7 +27,7 @@ This module contains functions to run Pandora pipeline.
 from typing import Dict
 
 import xarray as xr
-from pandora import read_config_file, setup_logging
+from pandora import read_config_file, setup_logging, import_plugin
 from pandora.common import save_config
 
 from pandora2d import common
@@ -83,6 +83,9 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     :type verbose: bool
     :return: None
     """
+
+    # Import pandora plugins
+    import_plugin()
 
     # read the user input's configuration
     user_cfg = read_config_file(cfg_path)

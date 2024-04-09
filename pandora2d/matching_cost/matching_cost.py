@@ -58,7 +58,7 @@ class MatchingCost:
         self.cfg = self.check_conf(cfg)
         self._window_size = int(self.cfg["window_size"])
         self._matching_cost_method = self.cfg["matching_cost_method"]
-        # Cast to int in order to help mypy because self.cfg is a Dict and it can not know the type of step.
+        # Cast to int in order to help mypy because self.cfg is a Dict, and it can not know the type of step.
         self._step_row = cast(int, self.cfg["step"][0])
         self._step_col = cast(int, self.cfg["step"][1])
 
@@ -81,7 +81,7 @@ class MatchingCost:
             cfg["step"] = self._STEP
 
         schema = {
-            "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc"]),
+            "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc", "mc_cnn"]),
             "window_size": And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0),
             "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y)),
         }
@@ -103,8 +103,8 @@ class MatchingCost:
         """
         Allocate the cost volumes
 
-        :param cost_volume_attr: the cost_volume's attributs product by Pandora
-        :type cost_volume: xr.Dataset
+        :param cost_volume_attr: the cost_volume's attributes product by Pandora
+        :type cost_volume_attr: xr.Dataset
         :param row: dimension of the image (row)
         :type row: np.ndarray
         :param col: dimension of the image (columns)

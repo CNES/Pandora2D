@@ -22,6 +22,7 @@ Module with global test fixtures.
 
 import pathlib
 import re
+
 import pytest
 
 

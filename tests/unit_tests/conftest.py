@@ -22,7 +22,7 @@
 from copy import deepcopy
 import numpy as np
 import xarray as xr
-
+from rasterio import Affine
 import pytest
 
 from pandora2d import Pandora2DMachine
@@ -181,6 +181,7 @@ def left_stereo_object():
         "crs": None,
         "col_disparity_source": [0, 1],
         "row_disparity_source": [-1, 0],
+        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
     }
 
     return left
@@ -206,6 +207,7 @@ def right_stereo_object():
         "valid_pixels": 0,
         "no_data_mask": 1,
         "crs": None,
+        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
     }
 
     return right
