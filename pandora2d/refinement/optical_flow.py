@@ -127,7 +127,6 @@ class OpticalFlow(refinement.AbstractRefinement):
 
             for row in computable_row:
                 for col in computable_col:
-
                     shift_col = (
                         0 if np.isnan(disp_col[idx]) or disp_col[idx] == self._invalid_disp else int(disp_col[idx])
                     )
@@ -304,7 +303,6 @@ class OpticalFlow(refinement.AbstractRefinement):
         idx_to_compute = np.arange(reshaped_left.shape[2]).tolist()
 
         for _ in range(self._iterations):
-
             computed_drow, computed_dcol, idx_to_compute = self.optical_flow(
                 reshaped_left, reshaped_right, idx_to_compute
             )
