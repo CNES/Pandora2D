@@ -177,6 +177,13 @@ class MatchingCost:
         # Compute validity mask to identify invalid points in cost volume
         self.grid_ = validity_mask(img_left, img_right, self.grid_)
 
+        # Add ROI margins in attributes
+        # Enables to compute cost volumes row coordinates later by using pandora.matching_cost.get_coordinates()
+        if "ROI" in cfg:
+            self.grid_.attrs["ROI_margins"] = cfg["ROI"]["margins"]
+        else:
+            self.grid_.attrs["ROI_margins"] = None
+
     def compute_cost_volumes(
         self,
         img_left: xr.Dataset,
@@ -221,7 +228,7 @@ class MatchingCost:
 
         # Array with all y disparities
         disps_row = range(min_row, max_row + 1)
-        row_step = None
+        row_index = None
         for idx, disp_row in enumerate(disps_row):
             # Shift image in the y axis
             img_right_shift = img_tools.shift_img_pandora2d(img_right, disp_row)
@@ -231,27 +238,43 @@ class MatchingCost:
             self.pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, grid_min_col, grid_max_col)
             # If first iteration, initialize cost_volumes dataset
             if idx == 0:
-                c_row = cost_volume["cost_volume"].coords["row"]
-                c_col = cost_volume["cost_volume"].coords["col"]
 
-                # First pixel in the image that is fully computable (aggregation windows are complete)
-                row = np.arange(c_row[0], c_row[-1] + 1, self._step_row)
+                img_row_coordinates = img_left["im"].coords["row"]
+
+                # Case without a ROI: we only take the step into account to compute row coordinates.
+                if self.grid_.attrs["ROI_margins"] is None:
+                    row_coords = np.arange(img_row_coordinates[0], img_row_coordinates[-1] + 1, self._step_row)
+
+                # Case with a ROI: we use pandora get_coordinates() method to compute row coordinates.
+                # This method consider step and ROI margins when computing row coordinates.
+                # This ensures that the first point of the ROI given by the user is computed in the cost volume.
+                else:
+                    row_coords = self.pandora_matching_cost_.get_coordinates(
+                        margin=self.grid_.attrs["ROI_margins"][1],
+                        img_coordinates=img_row_coordinates,
+                        step=self._step_row,
+                    )
+
+                # We want row_index to start at 0
+                row_index = row_coords - img_left.coords["row"].data[0]
+
+                # Columns coordinates are already handled correctly by Pandora.
+                col_coords = cost_volume["cost_volume"].coords["col"]
 
                 cost_volumes = self.allocate_cost_volumes(
-                    cost_volume.attrs, row, c_col, [min_col, max_col], [min_row, max_row], None
+                    cost_volume.attrs, row_coords, col_coords, [min_col, max_col], [min_row, max_row], None
                 )
 
-                # Number of line to be taken as a function of the step.
-                # Note that the row vector may not start at zero.
-                row_step = np.arange(0, c_row[-1] + 1 - c_row[0], self._step_row)
-
             # Add current cost volume to the cost_volumes dataset
-            cost_volumes["cost_volumes"].data[:, :, :, idx] = cost_volume["cost_volume"].data[row_step, :, :]
+            cost_volumes["cost_volumes"].data[:, :, :, idx] = cost_volume["cost_volume"].data[row_index, :, :]
 
         # Add disparity source
         del cost_volumes.attrs["disparity_source"]
         cost_volumes.attrs["col_disparity_source"] = img_left.attrs["col_disparity_source"]
         cost_volumes.attrs["row_disparity_source"] = img_left.attrs["row_disparity_source"]
         cost_volumes.attrs["step"] = self.cfg["step"]
+
+        # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
+        del cost_volumes.attrs["ROI_margins"]
 
         return cost_volumes

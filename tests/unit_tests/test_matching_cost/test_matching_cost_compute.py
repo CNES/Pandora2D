@@ -351,29 +351,92 @@ def test_compute_cv_zncc():
             {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
             [1, 1],
             np.arange(1, 8),  # Coordinates of user ROI + margins
-            np.arange(1, 8),
-            id="ROI and no step",
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            id="ROI and step=[1,1]",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 5, "last": 6}, "margins": [2, 3, 2, 3]},
+            [2, 1],
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            np.arange(3, 10, 2),  # ROI["row"]["first"]=5 then coordinates are [3, 5, 7, 9]
+            id="ROI and step_row < up margin",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 3, 2, 3]},
+            [3, 1],
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            np.arange(0, 9, 3),  # ROI["row"]["first"]=3 then coordinates are [0, 3, 6]
+            id="ROI and step_row = up margin",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 4, "last": 5}, "margins": [2, 4, 2, 4]},
+            [2, 1],
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            np.arange(0, 10, 2),  # ROI["row"]["first"]=4 then coordinates are [0, 2, 4, 6, 8]
+            id="ROI and up margin % step_row = 0",
         ),
         pytest.param(
             {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
-            [2, 2],
-            np.arange(1, 8, 2),
-            np.arange(1, 8, 2),
-            id="ROI and columns step_col=margins",
+            [3, 1],
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            np.arange(3, 8, 3),  # ROI["row"]["first"]=3 then coordinates are [3, 6]
+            id="ROI and step_row > up margin",
         ),
         pytest.param(
-            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [3, 3, 3, 3]},
+            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
+            [9, 1],
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            np.array([3]),  # Only ROI["row"]["first"]=3 is in the cost_volume rows
+            id="ROI and step_row greater than the number of rows in the ROI",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [3, 2, 3, 2]},
+            [1, 2],
+            np.arange(1, 9, 2),  # ROI["col"]["first"]=3 then coordinates are [1, 3, 5, 7]
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            id="ROI and step_col < left margin",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
+            [1, 2],
+            np.arange(1, 8, 2),  # ROI["col"]["first"]=3 then coordinates are [1, 3, 5, 7]
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            id="ROI and step_col = left margin",
+        ),
+        pytest.param(
+            {"col": {"first": 4, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [4, 2, 4, 2]},
+            [1, 2],
+            np.arange(0, 10, 2),  # ROI["col"]["first"]=4 then coordinates are [0, 2, 4, 6, 8]
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            id="ROI and left margin % step_col = 0",
+        ),
+        pytest.param(
+            {"col": {"first": 4, "last": 6}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
+            [1, 3],
+            np.arange(4, 9, 3),  # ROI["col"]["first"]=4 then coordinates are [4, 7]
+            np.arange(1, 8),  # Coordinates of user ROI + margins
+            id="ROI and step_col > left margin",
+        ),
+        pytest.param(
+            {"col": {"first": 4, "last": 6}, "row": {"first": 3, "last": 5}, "margins": [3, 3, 3, 3]},
+            [1, 12],
+            np.array([4]),  # Only ROI["col"]["first"]=4 is in the cost_volume columns
+            np.arange(0, 9),  # Coordinates of user ROI + margins
+            id="ROI and step_row greater than the number of columns in the ROI",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 4, "last": 6}, "margins": [3, 2, 3, 2]},
             [3, 2],
-            np.arange(1, 9, 2),
-            np.arange(0, 8, 3),
-            id="ROI and columns step_col < margins",
+            np.arange(1, 9, 2),  # ROI["col"]["first"]=3 then coordinates are [1, 3, 5, 7]
+            np.arange(4, 9, 3),  # ROI["row"]["first"]=4 then coordinates are [4, 7]
+            id="ROI, step_row=3 and step_col=2",
         ),
         pytest.param(
-            {"col": {"first": 3, "last": 5}, "row": {"first": 3, "last": 5}, "margins": [2, 2, 2, 2]},
-            [4, 3],
-            np.arange(3, 8, 3),
-            np.arange(1, 8, 4),
-            id="ROI and columns step_col > margins",
+            {"col": {"first": 2, "last": 5}, "row": {"first": 5, "last": 7}, "margins": [2, 2, 2, 2]},
+            [10, 11],
+            np.array([2]),  # Only ROI["col"]["first"]=2 is in the cost_volume columns
+            np.array([5]),  # Only ROI["row"]["first"]=5 is in the cost_volume rows
+            id="ROI and step_row and step_col greater than the number of columns and rows in the ROI",
         ),
     ],
 )
@@ -409,8 +472,6 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
     )
 
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["col"], col_expected)
-    # For the moment, row coordinates are only calculated with step value.
-    # After ticket 108, margins will also be taken into account
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
@@ -419,15 +480,45 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
     [
         pytest.param(
             [1, 1],
-            np.arange(10),
-            np.arange(10),
-            id="No ROI and no step",
+            np.arange(10),  # Same col coordinates as left image
+            np.arange(10),  # Same row coordinates as left image
+            id="No ROI, step_row=1 and step_col=1",
         ),
         pytest.param(
-            [2, 2],
+            [2, 1],
+            np.arange(10),
+            np.arange(0, 10, 2),  #   1 < step_row < len(cost_volume["cost_volumes"].coords["row"])
+            id="No ROI, step_row=2 and step_col=1",
+        ),
+        pytest.param(
+            [11, 1],
+            np.arange(10),
+            np.array([0]),  # step_row > len(cost_volume["cost_volumes"].coords["row"]) --> only 1 row
+            id="No ROI and step_row greater than the number of rows in the cost volume",
+        ),
+        pytest.param(
+            [1, 3],
+            np.arange(0, 10, 3),  #   1 < step_col < len(cost_volume["cost_volumes"].coords["col"])
+            np.arange(10),
+            id="No ROI, step_row=1 and step_col=3",
+        ),
+        pytest.param(
+            [1, 12],
+            np.array([0]),  # step_col > len(cost_volume["cost_volumes"].coords["col"]) --> only 1 col
+            np.arange(10),
+            id="No ROI and step_col greater than the number of columns in the cost volume",
+        ),
+        pytest.param(
+            [3, 2],
             np.arange(0, 10, 2),
-            np.arange(0, 10, 2),
-            id="No ROI and step=2",
+            np.arange(0, 10, 3),
+            id="No ROI, step_row=3 and step_col=2",
+        ),
+        pytest.param(
+            [12, 13],
+            np.array([0]),  # step_col > len(cost_volume["cost_volumes"].coords["col"]) --> only 1 col
+            np.array([0]),  # step_row > len(cost_volume["cost_volumes"].coords["row"]) --> only 1 row
+            id="No ROI and step_col and step_row greater than the number of rows and columns in the cost volume",
         ),
     ],
 )
