@@ -41,12 +41,12 @@ def pipeline_config(correct_pipeline):
 
 @pytest.fixture(name="left_img_path")
 def left_img_path_fixture():
-    return "./tests/data/images/cones/left.png"
+    return "./tests/data/images/cones/left.tif"
 
 
 @pytest.fixture(name="right_img_path")
 def right_img_path_fixture():
-    return "./tests/data/images/cones/right.png"
+    return "./tests/data/images/cones/right.tif"
 
 
 @pytest.fixture
@@ -55,11 +55,9 @@ def correct_input_cfg(left_img_path, right_img_path):
         "input": {
             "left": {
                 "img": left_img_path,
-                "nodata": "NaN",
+                "nodata": np.nan,
             },
-            "right": {
-                "img": right_img_path,
-            },
+            "right": {"img": right_img_path, "nodata": np.nan},
             "col_disparity": [-2, 2],
             "row_disparity": [-2, 2],
         }
