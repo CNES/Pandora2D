@@ -29,9 +29,9 @@ import numpy as np
 from pandora2d import img_tools
 
 
-class TestShiftImgPandora2D(unittest.TestCase):
+class TestShiftDispRowImg(unittest.TestCase):
     """
-    test shift_img_pandora2D function.
+    test shift_disp_row_img function.
     """
 
     def setUp(self) -> None:
@@ -87,11 +87,11 @@ class TestShiftImgPandora2D(unittest.TestCase):
         # associate nan value in mask to the no_data param
         self.data_down["msk"].data[no_data_pixels] = int(self.data_down.attrs["no_data_mask"])
 
-    def test_shift_img_pandora2d(self):
+    def test_shift_disp_row_img(self):
         """
-        Test of shift_img_pandora_2d function
+        Test of shift_disp_row_img function
         """
-        my_data_down = img_tools.shift_img_pandora2d(self.data, 1)
+        my_data_down = img_tools.shift_disp_row_img(self.data, 1)
         assert my_data_down.equals(self.data_down)
 
 
@@ -107,7 +107,7 @@ class TestShiftSubpixImg:
 
         return xr.Dataset(
             {"im": (["row", "col"], data)}, coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
-        )
+        ).assign_attrs({"no_data_img": -9999})
 
     @pytest.fixture()
     def roi_image(self):
@@ -116,7 +116,33 @@ class TestShiftSubpixImg:
             ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 2, 1], [1, 1, 1, 4, 3, 1], [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1])
         )
 
-        return xr.Dataset({"im": (["row", "col"], data)}, coords={"row": np.arange(2, 7), "col": np.arange(5, 11)})
+        return xr.Dataset(
+            {"im": (["row", "col"], data)}, coords={"row": np.arange(2, 7), "col": np.arange(5, 11)}
+        ).assign_attrs({"no_data_img": -9999})
+
+    @pytest.mark.parametrize(
+        ["image", "subpix", "number", "expected"],
+        [
+            pytest.param(
+                "monoband_image", 4, 1, np.array([0.25, 1.25, 2.25, 3.25, 4.25, 5.25]), id="monoband image subpix 0.25"
+            ),
+            pytest.param(
+                "monoband_image", 4, 2, np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]), id="monoband image subpix 0.5"
+            ),
+            pytest.param(
+                "monoband_image", 4, 3, np.array([0.75, 1.75, 2.75, 3.75, 4.75, 5.75]), id="monoband image subpix 0.75"
+            ),
+            pytest.param("roi_image", 2, 1, np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]), id="monoband image subpix 0.25"),
+        ],
+    )
+    def test_column(self, image, subpix, number, expected, request):
+        """
+        Test shift_subpix_img function for column shift
+        """
+        shifted_img = img_tools.shift_subpix_img(request.getfixturevalue(image), subpix, False)
+
+        # check if columns coordinates has been shifted
+        np.testing.assert_array_equal(expected, shifted_img[number].col)
 
     @pytest.mark.parametrize(
         ["image", "subpix", "number", "expected"],
@@ -128,32 +154,14 @@ class TestShiftSubpixImg:
             pytest.param(
                 "monoband_image", 4, 3, np.array([0.75, 1.75, 2.75, 3.75, 4.75]), id="monoband image subpix 0.75"
             ),
-            pytest.param("roi_image", 2, 1, np.array([5.5, 6.5, 7.5, 8.5, 9.5]), id="monoband image subpix 0.25"),
-        ],
-    )
-    def test_column(self, image, subpix, number, expected, request):
-        """
-        Test shift_subpix_img function for column shift
-        """
-        shifted_img = img_tools.shift_subpix_img(request.getfixturevalue(image), subpix, True)
-
-        # check if columns coordinates has been shifted
-        np.testing.assert_array_equal(expected, shifted_img[number].col)
-
-    @pytest.mark.parametrize(
-        ["image", "subpix", "number", "expected"],
-        [
-            pytest.param("monoband_image", 4, 1, np.array([0.25, 1.25, 2.25, 3.25]), id="monoband image subpix 0.25"),
-            pytest.param("monoband_image", 4, 2, np.array([0.5, 1.5, 2.5, 3.5]), id="monoband image subpix 0.5"),
-            pytest.param("monoband_image", 4, 3, np.array([0.75, 1.75, 2.75, 3.75]), id="monoband image subpix 0.75"),
-            pytest.param("roi_image", 2, 1, np.array([2.5, 3.5, 4.5, 5.5]), id="monoband image subpix 0.25"),
+            pytest.param("roi_image", 2, 1, np.array([2.5, 3.5, 4.5, 5.5, 6.5]), id="monoband image subpix 0.25"),
         ],
     )
     def test_row(self, image, subpix, number, expected, request):
         """
         Test shift_subpix_img function for row shift
         """
-        shifted_img = img_tools.shift_subpix_img(request.getfixturevalue(image), subpix, False)
+        shifted_img = img_tools.shift_subpix_img(request.getfixturevalue(image), subpix, True)
 
         # check if columns coordinates has been shifted
         np.testing.assert_array_equal(expected, shifted_img[number].row)
@@ -163,11 +171,11 @@ class TestShiftSubpixImg:
         Test shift_subpix_img function for row and col shift or col and row shift
         """
 
-        shifted_img = img_tools.shift_subpix_img(monoband_image, 2, False)
-        shifted_img_row_and_col = img_tools.shift_subpix_img(shifted_img[1], 2, True)
-
         shifted_img = img_tools.shift_subpix_img(monoband_image, 2, True)
-        shifted_img_col_and_row = img_tools.shift_subpix_img(shifted_img[1], 2, False)
+        shifted_img_row_and_col = img_tools.shift_subpix_img(shifted_img[1], 2, False)
+
+        shifted_img = img_tools.shift_subpix_img(monoband_image, 2, False)
+        shifted_img_col_and_row = img_tools.shift_subpix_img(shifted_img[1], 2, True)
 
         # check if data is the same
         np.testing.assert_array_equal(shifted_img_row_and_col[1]["im"].data, shifted_img_col_and_row[1]["im"].data)
@@ -176,8 +184,22 @@ class TestShiftSubpixImg:
         """
         Test shift_subpix_img function for row shift or col shift
         """
-        shifted_row_img = img_tools.shift_subpix_img(monoband_image, 2, False)
-        shifted_col_img = img_tools.shift_subpix_img(monoband_image, 2, True)
+        shifted_row_img = img_tools.shift_subpix_img(monoband_image, 2, True)
 
+        shifted_col_img = img_tools.shift_subpix_img(monoband_image, 2, False)
+
+        # Test that the last row of shifted_row_img is full of no data
+        np.testing.assert_array_equal(
+            shifted_row_img[1]["im"][-1, :],
+            np.full((len(shifted_row_img[1]["im"][-1, :])), monoband_image.attrs["no_data_img"]),
+        )
+
+        # Test that the last column of shifted_col_img is full of no data
+        np.testing.assert_array_equal(
+            shifted_col_img[1]["im"][:, -1],
+            np.full((len(shifted_col_img[1]["im"][:, -1])), monoband_image.attrs["no_data_img"]),
+        )
+
+        # Test that the content of shifted_row_img and shifted_col_img are different
         with pytest.raises(AssertionError):
-            np.testing.assert_array_equal(shifted_row_img[1]["im"].shape, shifted_col_img[1]["im"].shape)
+            np.testing.assert_array_equal(shifted_row_img[1]["im"], shifted_col_img[1]["im"])

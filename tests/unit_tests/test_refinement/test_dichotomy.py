@@ -103,8 +103,8 @@ def zeros_cost_volumes(
         attrs,
         rows,
         cols,
-        [min_disparity_col, max_disparity_col],
-        [min_disparity_row, max_disparity_row],
+        np.arange(min_disparity_col, max_disparity_col + 1),
+        np.arange(min_disparity_row, max_disparity_row + 1),
         data,
     )
 

@@ -24,6 +24,7 @@ Test compute_cost_volumes method from Matching cost
 import sys
 
 # pylint: disable=redefined-outer-name
+# pylint: disable=too-many-lines
 import numpy as np
 import pytest
 import xarray as xr
@@ -31,7 +32,7 @@ from pandora import import_plugin
 from rasterio import Affine
 
 from pandora2d import matching_cost
-from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 
 
 @pytest.mark.parametrize(
@@ -640,3 +641,682 @@ def test_roi_inside_and_margins_inside(  # pylint: disable=too-many-arguments
         cost_volumes["cost_volumes"].data[cost_volumes_slice],
         cost_volumes_with_roi["cost_volumes"].data[cost_volumes_with_roi_slice],
     )
+
+
+class TestSubpix:
+    """Test subpix parameter"""
+
+    @pytest.fixture()
+    def make_image_fixture(self):
+        """
+        Create image dataset
+        """
+
+        def make_image(disp_row, disp_col, data):
+            img = xr.Dataset(
+                {"im": (["row", "col"], data)},
+                coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+            )
+
+            add_disparity_grid(img, disp_col, disp_row)
+
+            img.attrs = {
+                "no_data_img": -9999,
+                "valid_pixels": 0,
+                "no_data_mask": 1,
+                "crs": None,
+                "col_disparity_source": disp_col,
+                "row_disparity_source": disp_row,
+            }
+
+            return img
+
+        return make_image
+
+    @pytest.fixture()
+    def make_cost_volumes(self, make_image_fixture, request):
+        """
+        Instantiate a matching_cost and compute cost_volumes
+        """
+
+        cfg = {
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": "ssd",
+                    "window_size": 1,
+                    "step": request.param["step"],
+                    "subpix": request.param["subpix"],
+                }
+            }
+        }
+
+        disp_row = request.param["disp_row"]
+        disp_col = request.param["disp_col"]
+
+        img_left = make_image_fixture(disp_row, disp_col, request.param["data_left"])
+        img_right = make_image_fixture(disp_row, disp_col, request.param["data_right"])
+
+        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+
+        matching_cost_.allocate_cost_volume_pandora(
+            img_left=img_left,
+            img_right=img_right,
+            grid_min_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[0]),
+            grid_max_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[1]),
+            cfg=cfg,
+        )
+
+        cost_volumes = matching_cost_.compute_cost_volumes(
+            img_left=img_left,
+            img_right=img_right,
+            grid_min_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[0]),
+            grid_max_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[1]),
+            grid_min_row=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_row[0]),
+            grid_max_row=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_row[1]),
+        )
+
+        return cost_volumes
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "shape_expected", "row_disparity", "col_disparity"],
+        [
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "disp_row": [0, 3],
+                    "disp_col": [-2, 2],
+                    "data_left": np.full((10, 10), 1),
+                    "data_right": np.full((10, 10), 1),
+                },
+                (10, 10, 5, 4),  # (row, col, disp_col, disp_row)
+                np.arange(4),  # [0, 1, 2, 3]
+                np.arange(-2, 3),  # [-2, -1, 0, 1, 2]
+                id="subpix=1, step_row=1 and step_col=1",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 2,
+                    "disp_row": [0, 3],
+                    "disp_col": [-2, 2],
+                    "data_left": np.full((10, 10), 1),
+                    "data_right": np.full((10, 10), 1),
+                },
+                (10, 10, 9, 7),  # (row, col, disp_col, disp_row)
+                np.arange(0, 3.5, 0.5),  # [0, 0.5, 1, 1.5, 2, 2.5, 3]
+                np.arange(-2, 2.5, 0.5),  # [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
+                id="subpix=2, step_row=1 and step_col=1",
+            ),
+            pytest.param(
+                {
+                    "step": [2, 3],
+                    "subpix": 2,
+                    "disp_row": [0, 3],
+                    "disp_col": [-2, 2],
+                    "data_left": np.full((10, 10), 1),
+                    "data_right": np.full((10, 10), 1),
+                },
+                (5, 4, 9, 7),  # (row, col, disp_col, disp_row)
+                np.arange(0, 3.5, 0.5),  # [0, 0.5, 1, 1.5, 2, 2.5, 3] # step has no influence on subpix disparity range
+                np.arange(-2, 2.5, 0.5),  # [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
+                id="subpix=2, step_row=2 and step_col=3",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [0, 3],
+                    "disp_col": [-2, 2],
+                    "data_left": np.full((10, 10), 1),
+                    "data_right": np.full((10, 10), 1),
+                },
+                (10, 10, 17, 13),  # (row, col, disp_col, disp_row)
+                np.arange(0, 3.25, 0.25),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
+                np.arange(
+                    -2, 2.25, 0.25
+                ),  # [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
+                id="subpix=4, step_row=1 and step_col=1",
+            ),
+            pytest.param(
+                {
+                    "step": [3, 2],
+                    "subpix": 4,
+                    "disp_row": [0, 3],
+                    "disp_col": [-2, 2],
+                    "data_left": np.full((10, 10), 1),
+                    "data_right": np.full((10, 10), 1),
+                },
+                (4, 5, 17, 13),  # (row, col, disp_col, disp_row)
+                np.arange(
+                    0, 3.25, 0.25  # step has no influence on subpix disparity range
+                ),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
+                np.arange(
+                    -2, 2.25, 0.25
+                ),  # [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
+                id="subpix=4, step_row=3 and step_col=2",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_subpix(self, shape_expected, row_disparity, col_disparity, make_cost_volumes):
+        """
+        Test subpix parameter in matching cost
+        """
+
+        cost_volumes = make_cost_volumes
+
+        # Check that the cost volume has the correct shape
+        np.testing.assert_array_equal(cost_volumes["cost_volumes"].shape, shape_expected)
+        # Check that the subpixel row disparities are correct
+        np.testing.assert_array_equal(cost_volumes.disp_row, row_disparity)
+        # Check that the subpixel col disparities are correct
+        np.testing.assert_array_equal(cost_volumes.disp_col, col_disparity)
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "index_disp_col_zero", "index_best_disp_row"],
+        [
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 2,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [0.5, 0.5, 0.5, 0.5, 0.5],
+                            [1.5, 1.5, 1.5, 1.5, 1.5],
+                            [2.5, 2.5, 2.5, 2.5, 2.5],
+                            [3.5, 3.5, 3.5, 3.5, 3.5],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                4,  # disp_col[4]=0
+                np.array([[5]]),  # disp_row[5]=0.5
+                id="Subpix=2 and rows shifted by 0.5",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [0.75, 0.75, 0.75, 0.75, 0.75],
+                            [1.75, 1.75, 1.75, 1.75, 1.75],
+                            [2.75, 2.75, 2.75, 2.75, 2.75],
+                            [3.75, 3.75, 3.75, 3.75, 3.75],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                8,  # disp_col[8]=0
+                np.array([[9]]),  # disp_row[9]=0.25
+                id="Subpix=4 and rows shifted by 0.25",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [0.25, 0.25, 0.25, 0.25, 0.25],
+                            [1.25, 1.25, 1.25, 1.25, 1.25],
+                            [2.25, 2.25, 2.25, 2.25, 2.25],
+                            [3.25, 3.25, 3.25, 3.25, 3.25],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                8,  # disp_col[8]=0
+                np.array([[11]]),  # disp_row[11]=0.75
+                id="Subpix=4 and rows shifted by 0.75",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_cost_volumes_values_subpix_positive_row(self, make_cost_volumes, index_disp_col_zero, index_best_disp_row):
+        """
+        Test cost volume values when using subpix with a constant positive row shift.
+        """
+
+        cost_volumes = make_cost_volumes
+
+        # We test that for each point of the cost volume with disp_col=0 (no shift in columns)
+        # we obtain that the mininimum value corresponds to the correct disparity (the one at index_best_disp_row)
+        # we also check that with a subpix different from 1 we obtain a single minimum,
+        # whereas with a subpix=1 we can obtain several.
+
+        # If the shift is positive, we test all the rows expect the last one for which the shift is equal to 0.
+        for col in range(cost_volumes["cost_volumes"].shape[1]):
+            for row in range(cost_volumes["cost_volumes"].shape[0] - 1):
+
+                # index_min = all minimum value indexes
+                index_min = np.where(
+                    cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :]
+                    == cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :].min()
+                )
+                np.testing.assert_array_equal(index_min, index_best_disp_row)
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "index_disp_col_zero", "index_best_disp_row"],
+        [
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 2,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [1.5, 1.5, 1.5, 1.5, 1.5],
+                            [2.5, 2.5, 2.5, 2.5, 2.5],
+                            [3.5, 3.5, 3.5, 3.5, 3.5],
+                            [4.5, 4.5, 4.5, 4.5, 4.5],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                4,  # disp_col[4]=0
+                np.array([[3]]),  # disp_row[3]=-0.5
+                id="Subpix=2 and rows shifted by -0.5",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [1.25, 1.25, 1.25, 1.25, 1.25],
+                            [2.25, 2.25, 2.25, 2.25, 2.25],
+                            [3.25, 3.25, 3.25, 3.25, 3.25],
+                            [4.25, 4.25, 4.25, 4.25, 4.25],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                8,  # disp_col[8]=0
+                np.array([[7]]),  # disp_row[7]=-0.25
+                id="Subpix=4 and rows shifted by -0.25",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [1.75, 1.75, 1.75, 1.75, 1.75],
+                            [2.75, 2.75, 2.75, 2.75, 2.75],
+                            [3.75, 3.75, 3.75, 3.75, 3.75],
+                            [4.75, 4.75, 4.75, 4.75, 4.75],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                8,  # disp_col[8]=0
+                np.array([[5]]),  # disp_row[5]=-0.75
+                id="Subpix=4 and rows shifted by -0.75",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_cost_volumes_values_subpix_negative_row(self, make_cost_volumes, index_disp_col_zero, index_best_disp_row):
+        """
+        Test cost volume values when using subpix with a constant negative row shift.
+        """
+
+        cost_volumes = make_cost_volumes
+
+        # We test that for each point of the cost volume with disp_col=0 (no shift in columns)
+        # we obtain that the mininimum value corresponds to the correct disparity (the one at index_best_disp_row)
+        # we also check that with a subpix different from 1 we obtain a single minimum,
+        # whereas with a subpix=1 we can obtain several.
+
+        # If the shift is negative, we test all the rows expect the first one for which the shift is equal to 0.
+        for col in range(cost_volumes["cost_volumes"].shape[1]):
+            for row in range(1, cost_volumes["cost_volumes"].shape[0]):
+
+                # index_min = all minimum value indexes
+                index_min = np.where(
+                    cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :]
+                    == cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :].min()
+                )
+                np.testing.assert_array_equal(index_min, index_best_disp_row)
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "index_disp_row_zero", "index_best_disp_col"],
+        [
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 2,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [0.5, 1.5, 2.5, 3.5, 4.5],
+                            [0.5, 1.5, 2.5, 3.5, 4.5],
+                            [0.5, 1.5, 2.5, 3.5, 4.5],
+                            [0.5, 1.5, 2.5, 3.5, 4.5],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                4,  # disp_row[4]=0
+                np.array([[5]]),  # disp_col[5]=0.5
+                id="Subpix=2 and columns shifted by 0.5",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [0.75, 1.75, 2.75, 3.75, 4.75],
+                            [0.75, 1.75, 2.75, 3.75, 4.75],
+                            [0.75, 1.75, 2.75, 3.75, 4.75],
+                            [0.75, 1.75, 2.75, 3.75, 4.75],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                8,  # disp_row[8]=0
+                np.array([[9]]),  # disp_col[9]=0.25
+                id="Subpix=4 and columns shifted by 0.25",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [0.25, 1.25, 2.25, 3.25, 4.25],
+                            [0.25, 1.25, 2.25, 3.25, 4.25],
+                            [0.25, 1.25, 2.25, 3.25, 4.25],
+                            [0.25, 1.25, 2.25, 3.25, 4.25],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                8,  # disp_row[8]=0
+                np.array([[11]]),  # disp_col[11]=0.75
+                id="Subpix=4 and columns shifted by 0.75",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_cost_volumes_values_subpix_positive_col(self, make_cost_volumes, index_disp_row_zero, index_best_disp_col):
+        """
+        Test cost volume values when using subpix with a constant positive column shift.
+        """
+
+        cost_volumes = make_cost_volumes
+
+        # We test that for each point of the cost volume with disp_row=0 (no shift in rows)
+        # we obtain that the mininimum value corresponds to the correct disparity (the one at index_best_disp_col)
+        # we also check that with a subpix different from 1 we obtain a single minimum,
+        # whereas with a subpix=1 we can obtain several.
+
+        # If the shift is positive, we test all the columns expect the last one for which the shift is equal to 0.
+        for col in range(cost_volumes["cost_volumes"].shape[1] - 1):
+            for row in range(cost_volumes["cost_volumes"].shape[0]):
+
+                # index_min = all minimum value indexes
+                index_min = np.where(
+                    cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero]
+                    == cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero].min()
+                )
+                np.testing.assert_array_equal(index_min, index_best_disp_col)
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "index_disp_row_zero", "index_best_disp_col"],
+        [
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 2,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [1.5, 2.5, 3.5, 4.5, 5.5],
+                            [1.5, 2.5, 3.5, 4.5, 5.5],
+                            [1.5, 2.5, 3.5, 4.5, 5.5],
+                            [1.5, 2.5, 3.5, 4.5, 5.5],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                4,  # disp_row[4]=0
+                np.array([[3]]),  # disp_col[3]=-0.5
+                id="Subpix=2 and columns shifted by -0.5",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [1.25, 2.25, 3.25, 4.25, 5.25],
+                            [1.25, 2.25, 3.25, 4.25, 5.25],
+                            [1.25, 2.25, 3.25, 4.25, 5.25],
+                            [1.25, 2.25, 3.25, 4.25, 5.25],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                8,  # disp_row[8]=0
+                np.array([[7]]),  # disp_col[7]=-0.25
+                id="Subpix=4 and columns shifted by -0.25",
+            ),
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [1.75, 2.75, 3.75, 4.75, 5.75],
+                            [1.75, 2.75, 3.75, 4.75, 5.75],
+                            [1.75, 2.75, 3.75, 4.75, 5.75],
+                            [1.75, 2.75, 3.75, 4.75, 5.75],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                8,  # disp_row[8]=0
+                np.array([[5]]),  # disp_col[5]=-0.75
+                id="Subpix=4 and columns shifted by -0.75",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_cost_volumes_values_subpix_negative_col(self, make_cost_volumes, index_disp_row_zero, index_best_disp_col):
+        """
+        Test cost volume values when using subpix with a constant negative column shift.
+        """
+
+        cost_volumes = make_cost_volumes
+
+        # We test that for each point of the cost volume with disp_row=0 (no shift in rows)
+        # we obtain that the mininimum value corresponds to the correct disparity (the one at index_best_disp_col)
+        # we also check that with a subpix different from 1 we obtain a single minimum,
+        # whereas with a subpix=1 we can obtain several.
+
+        # If the shift is negative, we test all the columns expect the first one for which the shift is equal to 0.
+        for col in range(1, cost_volumes["cost_volumes"].shape[1]):
+            for row in range(cost_volumes["cost_volumes"].shape[0]):
+
+                # index_min = all minimum value indexes
+                index_min = np.where(
+                    cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero]
+                    == cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero].min()
+                )
+                np.testing.assert_array_equal(index_min, index_best_disp_col)
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "row", "col", "disp_col"],
+        [
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [1.5, 1.5, 1.5, 1.5, 1.5],
+                            [2.5, 2.5, 2.5, 2.5, 2.5],
+                            [3.5, 3.5, 3.5, 3.5, 3.5],
+                            [4.5, 4.5, 4.5, 4.5, 4.5],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                1,
+                1,
+                2,  # disp_col[2]=0
+                id="Subpix=1 and rows shifted by -0.5",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_cost_volumes_values_subpix_1_row(self, make_cost_volumes, row, col, disp_col):
+        """
+        Test cost volume can have several minimum when using subpix=1 with a constant shift in rows.
+        """
+
+        cost_volumes = make_cost_volumes
+
+        # Test that we have several minimum
+        # Constant shift in rows
+
+        with pytest.raises(AssertionError):
+            np.testing.assert_array_equal(
+                len(
+                    np.where(
+                        cost_volumes["cost_volumes"][row, col, disp_col, :]
+                        == cost_volumes["cost_volumes"][row, col, disp_col, :].min()
+                    )[0]
+                ),
+                1,
+            )
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "row", "col", "disp_row"],
+        [
+            pytest.param(
+                {
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "disp_row": [-2, 2],
+                    "disp_col": [-2, 2],
+                    "data_left": np.array(
+                        ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
+                        dtype=np.float64,
+                    ),
+                    "data_right": np.array(
+                        (
+                            [0.5, 1.5, 2.5, 3.5, 4.5],
+                            [0.5, 1.5, 2.5, 3.5, 4.5],
+                            [0.5, 1.5, 2.5, 3.5, 4.5],
+                            [0.5, 1.5, 2.5, 3.5, 4.5],
+                        ),
+                        dtype=np.float64,
+                    ),
+                },
+                3,
+                3,
+                2,  # disp_row[2]=0
+                id="Subpix=1 and columns shifted by 0.5",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_cost_volumes_values_subpix_1_col(self, make_cost_volumes, row, col, disp_row):
+        """
+        Test cost volume can have several minimum when using subpix=1 with a constant shift in columns.
+        """
+
+        cost_volumes = make_cost_volumes
+
+        # Test that we have several minimum
+        # Constant shift in columns
+
+        with pytest.raises(AssertionError):
+            np.testing.assert_array_equal(
+                len(
+                    np.where(
+                        cost_volumes["cost_volumes"][row, col, :, disp_row]
+                        == cost_volumes["cost_volumes"][row, col, :, disp_row].min()
+                    )[0]
+                ),
+                1,
+            )
