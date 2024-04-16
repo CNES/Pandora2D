@@ -33,6 +33,7 @@ import numpy as np
 from pandora import matching_cost
 from pandora.criteria import validity_mask
 from pandora.margins.descriptors import HalfWindowMargins
+from pandora.margins import Margins
 
 
 from pandora2d import img_tools
@@ -142,7 +143,13 @@ class MatchingCost:
         return cost_volumes
 
     def allocate_cost_volume_pandora(
-        self, img_left: xr.Dataset, img_right: xr.Dataset, grid_min_col: np.ndarray, grid_max_col: np.ndarray, cfg: Dict
+        self,
+        img_left: xr.Dataset,
+        img_right: xr.Dataset,
+        grid_min_col: np.ndarray,
+        grid_max_col: np.ndarray,
+        cfg: Dict,
+        margins: Margins = None,
     ) -> None:
         """
 
@@ -158,12 +165,19 @@ class MatchingCost:
         :type grid_max_col: np.ndarray
         :param cfg: matching_cost computation configuration
         :type cfg: Dict
+        :param margins: refinement margins
+        :type margins: Margins
         :return: None
         """
         # Adapt Pandora matching cost configuration
         copy_matching_cost_cfg_with_step = copy.deepcopy(cfg["pipeline"]["matching_cost"])
         copy_matching_cost_cfg_with_step["step"] = self._step_col
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
+
+        if margins is not None:
+
+            grid_min_col -= margins.left
+            grid_max_col += margins.right
 
         # Initialize Pandora matching cost
         self.pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
@@ -189,6 +203,7 @@ class MatchingCost:
         grid_max_col: np.ndarray,
         grid_min_row: np.ndarray,
         grid_max_row: np.ndarray,
+        margins: Margins = None,
     ) -> xr.Dataset:
         """
 
@@ -210,6 +225,8 @@ class MatchingCost:
         :type grid_min_row: np.ndarray
         :param grid_max_row: grid containing max disparities for rows.
         :type grid_max_row: np.ndarray
+        :param margins: refinement margins
+        :type margins: Margins
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
@@ -218,6 +235,11 @@ class MatchingCost:
 
         # Adapt Pandora matching cost configuration
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
+
+        if margins is not None:
+
+            grid_min_row -= margins.up
+            grid_max_row += margins.down
 
         # Obtain absolute min and max disparities
         min_row, max_row = self.pandora_matching_cost_.get_min_max_from_grid(grid_min_row, grid_max_row)
@@ -294,6 +316,7 @@ class MatchingCost:
         del cost_volumes.attrs["disparity_source"]
         cost_volumes.attrs["col_disparity_source"] = img_left.attrs["col_disparity_source"]
         cost_volumes.attrs["row_disparity_source"] = img_left.attrs["row_disparity_source"]
+        cost_volumes.attrs["disparity_margins"] = margins
         cost_volumes.attrs["step"] = self.cfg["step"]
 
         # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
