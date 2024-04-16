@@ -73,6 +73,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     cost_volumes_test.attrs["no_data_mask"] = 1
     cost_volumes_test.attrs["valid_pixels"] = 0
     cost_volumes_test.attrs["step"] = [1, 1]
+    cost_volumes_test.attrs["disparity_margins"] = None
 
     # data by function compute_cost_volume
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3}}}

@@ -26,11 +26,12 @@ import sys
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
 import numpy as np
-import pytest
 import xarray as xr
 from pandora import import_plugin
+from pandora.margins import Margins
 from rasterio import Affine
 
+import pytest
 from pandora2d import matching_cost
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 
@@ -1320,3 +1321,310 @@ class TestSubpix:
                 ),
                 1,
             )
+
+
+class TestDisparityMargins:
+    """
+    Test the addition of disparity margins in the cost volume
+    """
+
+    @pytest.fixture()
+    def create_datasets(self):
+        """
+        Creates left and right datasets
+        """
+
+        data = np.full((5, 5), 1)
+        left = xr.Dataset(
+            {"im": (["row", "col"], data)},
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        )
+
+        add_disparity_grid(left, [0, 1], [-1, 0])
+
+        left.attrs = {
+            "no_data_img": -9999,
+            "valid_pixels": 0,
+            "no_data_mask": 1,
+            "crs": None,
+            "col_disparity_source": [0, 1],
+            "row_disparity_source": [-1, 0],
+        }
+
+        data = np.full((5, 5), 1)
+        right = xr.Dataset(
+            {"im": (["row", "col"], data)},
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        )
+
+        right.attrs = {
+            "no_data_img": -9999,
+            "valid_pixels": 0,
+            "no_data_mask": 1,
+            "crs": None,
+            "col_disparity_source": [0, 1],
+            "row_disparity_source": [-1, 0],
+        }
+
+        return left, right
+
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
+    @pytest.mark.parametrize(
+        ["margins", "subpix", "gt_cv_shape", "gt_disp_col", "gt_disp_row"],
+        [
+            pytest.param(
+                None,
+                1,
+                (5, 5, 2, 2),  # margins=None -> we do not add disparity margins
+                [0, 1],
+                [-1, 0],
+                id="Margins=None",
+            ),
+            pytest.param(
+                Margins(0, 0, 0, 0),
+                1,
+                (5, 5, 2, 2),
+                [0, 1],
+                [-1, 0],  # margins=(0,0,0,0) -> we do not add disparity margins
+                id="Margins(left=0, up=0, right=0, down=0)",
+            ),
+            pytest.param(
+                Margins(3, 3, 3, 3),
+                1,
+                (
+                    5,
+                    5,
+                    8,
+                    8,
+                ),
+                [-3, -2, -1, 0, 1, 2, 3, 4],
+                [-4, -3, -2, -1, 0, 1, 2, 3],
+                # margins=(3,3,3,3) -> we add a margin of 3 on disp_min_col, disp_max_col, disp_min_row, disp_max_row
+                id="Margins(left=3, up=3, right=3, down=3)",
+            ),
+            pytest.param(
+                Margins(0, 1, 2, 3),
+                1,
+                (
+                    5,
+                    5,
+                    4,
+                    6,
+                ),
+                [0, 1, 2, 3],
+                [-2, -1, 0, 1, 2, 3],
+                # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2 on disp_max_col,
+                # 1 on disp_min_row and 3 on disp_max_row
+                id="Margins(left=0, up=1, right=2, down=3)",
+            ),
+            pytest.param(
+                Margins(4, 2, 4, 2),
+                1,
+                (
+                    5,
+                    5,
+                    10,
+                    6,
+                ),
+                [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+                [-3, -2, -1, 0, 1, 2],
+                # margins=(4,2,4,2) -> we add a margin of 4 on disp_min_col and on disp_max_col
+                # and of 2 on disp_min_row and disp_max_row
+                id="Margins(left=4, up=2, right=4, down=2)",
+            ),
+            pytest.param(
+                Margins(2, 6, 2, 6),
+                1,
+                (
+                    5,
+                    5,
+                    6,
+                    14,
+                ),
+                [-2, -1, 0, 1, 2, 3],
+                [-7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6],
+                # margins=(2,6,2,6) -> we add a margin of 2 on disp_min_col and on disp_max_col
+                # and of 6 on disp_min_row and disp_max_row
+                id="Margins(left=2, up=6, right=2, down=6)",
+            ),
+            pytest.param(
+                Margins(6, 2, 6, 2),
+                1,
+                (
+                    5,
+                    5,
+                    14,
+                    6,
+                ),
+                [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7],
+                [-3, -2, -1, 0, 1, 2],
+                # margins=(6,2,6,2) -> we add a margin of 6 on disp_min_col and on disp_max_col
+                # and of 2 on disp_min_row and disp_max_row
+                id="Margins(left=6, up=2, right=6, down=2)",
+                marks=pytest.mark.xfail(
+                    reason="Pandora point_interval method does not work with disparities greater than the image"
+                ),
+            ),
+            pytest.param(
+                Margins(3, 3, 3, 3),
+                2,
+                (
+                    5,
+                    5,
+                    15,
+                    15,
+                ),
+                [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+                [-4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
+                # margins=(3,3,3,3) and subpix=2 -> we add a margin of 3x2 on disp_min_col, disp_max_col,
+                # disp_min_row, disp_max_row
+                id="Margins(left=3, up=3, right=3, down=3), subpix=2",
+            ),
+            pytest.param(
+                Margins(0, 1, 2, 3),
+                2,
+                (
+                    5,
+                    5,
+                    7,
+                    11,
+                ),
+                [0, 0.5, 1, 1.5, 2, 2.5, 3],
+                [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
+                # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x2 on disp_max_col,
+                # 1x2 on disp_min_row and 3x2 on disp_max_row
+                id="Margins(left=0, up=1, right=2, down=3)",
+            ),
+            pytest.param(
+                Margins(6, 4, 2, 3),
+                2,
+                (
+                    5,
+                    5,
+                    19,
+                    17,
+                ),
+                [-6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
+                [-5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
+                # margins=(6,4,2,3) -> we add a margin of 6x2 on disp_min_col, 2x2 on disp_max_col,
+                # 4x2 on disp_min_row and 3x2 on disp_max_row
+                id="Margins(left=6, up=4, right=2, down=3)",
+                marks=pytest.mark.xfail(
+                    reason="Pandora point_interval method does not work with disparities greater than the image"
+                ),
+            ),
+            pytest.param(
+                Margins(0, 0, 0, 0),
+                4,
+                (
+                    5,
+                    5,
+                    5,
+                    5,
+                ),
+                [0, 0.25, 0.5, 0.75, 1],
+                [-1, -0.75, -0.5, -0.25, 0],  # we do not add disparity margins
+                id="Margins(left=0, up=0, right=0, down=0), subpix=4",
+            ),
+            pytest.param(
+                Margins(0, 1, 2, 3),
+                4,
+                (
+                    5,
+                    5,
+                    13,
+                    21,
+                ),
+                [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3],
+                [
+                    -2,
+                    -1.75,
+                    -1.5,
+                    -1.25,
+                    -1,
+                    -0.75,
+                    -0.5,
+                    -0.25,
+                    0,
+                    0.25,
+                    0.5,
+                    0.75,
+                    1,
+                    1.25,
+                    1.5,
+                    1.75,
+                    2,
+                    2.25,
+                    2.5,
+                    2.75,
+                    3,
+                ],
+                # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x4 on disp_max_col,
+                # 1x4 on disp_min_row and 3x4 on disp_max_row
+                id="Margins(left=0, up=1, right=2, down=3), subpix=4",
+            ),
+            pytest.param(
+                Margins(3, 3, 3, 3),
+                4,
+                (
+                    5,
+                    5,
+                    29,
+                    29,
+                ),
+                np.arange(-3, 4.25, 0.25),
+                np.arange(-4, 3.25, 0.25),
+                # margins=(3,3,3,3) and subpix=4 -> we add a margin of 3x4 on disp_min_col, disp_max_col,
+                # disp_min_row, disp_max_row
+                id="Margins(left=3, up=3, right=3, down=3), subpix=4",
+            ),
+        ],
+    )
+    def test_compute_cost_volume_margins(
+        self, create_datasets, margins, subpix, gt_cv_shape, gt_disp_col, gt_disp_row, matching_cost_method
+    ):
+        """
+        Test the addition of margins on the disparities dimensions of the cost_volumes
+        after the compute_cost_volume method
+        """
+
+        cfg = {
+            "pipeline": {
+                "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 1, "subpix": subpix}
+            }
+        }
+
+        left, right = create_datasets
+
+        # Initialize matching_cost
+        matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+
+        # Allocate cost volume
+        matching_cost_matcher.allocate_cost_volume_pandora(
+            img_left=left,
+            img_right=right,
+            grid_min_col=np.full((5, 5), 0),
+            grid_max_col=np.full((5, 5), 1),
+            cfg=cfg,
+            margins=margins,
+        )
+
+        # minimum and maximum column disparity may have been modified
+        # after disparity margins were added in allocate_cost_volume_pandora
+        disp_col_min = matching_cost_matcher.grid_.disp.min()
+        disp_col_max = matching_cost_matcher.grid_.disp.max()
+
+        # compute cost volumes
+        cost_volumes = matching_cost_matcher.compute_cost_volumes(
+            img_left=left,
+            img_right=right,
+            grid_min_col=np.full((5, 5), disp_col_min),
+            grid_max_col=np.full((5, 5), disp_col_max),
+            grid_min_row=np.full((5, 5), -1),
+            grid_max_row=np.full((5, 5), 0),
+            margins=margins,
+        )
+
+        np.testing.assert_array_equal(cost_volumes["cost_volumes"].shape, gt_cv_shape)
+        np.testing.assert_array_equal(cost_volumes["cost_volumes"].disp_col, gt_disp_col)
+        np.testing.assert_array_equal(cost_volumes["cost_volumes"].disp_row, gt_disp_row)
