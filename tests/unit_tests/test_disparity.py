@@ -165,7 +165,28 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
     np.testing.assert_allclose(min_tensor, expected_result, atol=1e-06)
 
 
-def test_compute_disparity_map_row():
+@pytest.mark.parametrize(
+    "margins",
+    [
+        None,
+        Margins(0, 0, 0, 0),
+        Margins(0, 0, 1, 1),
+        Margins(1, 1, 1, 1),
+        pytest.param(
+            Margins(3, 3, 3, 3),
+            marks=pytest.mark.xfail(
+                reason="Pandora point_interval method does not work with disparities greater than the image"
+            ),
+        ),
+        pytest.param(
+            Margins(1, 2, 3, 4),
+            marks=pytest.mark.xfail(
+                reason="Pandora point_interval method does not work with disparities greater than the image"
+            ),
+        ),
+    ],
+)
+def test_compute_disparity_map_row(margins):
     """
     Test function for disparity computation
     """
@@ -217,15 +238,20 @@ def test_compute_disparity_map_row():
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
 
-    grid_min_col = np.full((3, 3), -2)
-    grid_max_col = np.full((3, 3), 2)
-    grid_min_row = np.full((3, 3), -2)
-    grid_max_row = np.full((3, 3), 2)
+    grid_min_col = np.full((3, 4), -2)
+    grid_max_col = np.full((3, 4), 2)
+    grid_min_row = np.full((3, 4), -2)
+    grid_max_row = np.full((3, 4), 2)
     matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        img_left=left,
+        img_right=right,
+        grid_min_col=grid_min_col,
+        grid_max_col=grid_max_col,
+        cfg=cfg_mc,
+        margins=margins,
     )
     cvs = matching_cost_matcher.compute_cost_volumes(
-        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, margins
     )
 
     delta_x, delta_y, _ = disparity_matcher.compute_disp_maps(cvs)
@@ -234,7 +260,27 @@ def test_compute_disparity_map_row():
     np.testing.assert_array_equal(ground_truth_row, delta_y)
 
 
-def test_compute_disparity_map_col():
+@pytest.mark.parametrize(
+    "margins",
+    [
+        None,
+        Margins(0, 0, 0, 0),
+        Margins(1, 0, 1, 0),
+        pytest.param(
+            Margins(3, 3, 3, 3),
+            marks=pytest.mark.xfail(
+                reason="Pandora point_interval method does not work with disparities greater than the image"
+            ),
+        ),
+        pytest.param(
+            Margins(1, 2, 3, 4),
+            marks=pytest.mark.xfail(
+                reason="Pandora point_interval method does not work with disparities greater than the image"
+            ),
+        ),
+    ],
+)
+def test_compute_disparity_map_col(margins):
     """
     Test function for disparity computation
     """
@@ -285,15 +331,20 @@ def test_compute_disparity_map_col():
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
 
-    grid_min_col = np.full((3, 3), -3)
-    grid_max_col = np.full((3, 3), 3)
-    grid_min_row = np.full((3, 3), -3)
-    grid_max_row = np.full((3, 3), 3)
+    grid_min_col = np.full((3, 4), -3)
+    grid_max_col = np.full((3, 4), 3)
+    grid_min_row = np.full((3, 4), -3)
+    grid_max_row = np.full((3, 4), 3)
     matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        img_left=left,
+        img_right=right,
+        grid_min_col=grid_min_col,
+        grid_max_col=grid_max_col,
+        cfg=cfg_mc,
+        margins=margins,
     )
     cvs = matching_cost_matcher.compute_cost_volumes(
-        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, margins
     )
 
     delta_x, delta_y, _ = disparity_matcher.compute_disp_maps(cvs)
@@ -302,7 +353,27 @@ def test_compute_disparity_map_col():
     np.testing.assert_array_equal(ground_truth_row, delta_y)
 
 
-def test_compute_disparity_map_col_row():
+@pytest.mark.parametrize(
+    "margins",
+    [
+        None,
+        Margins(0, 0, 0, 0),
+        Margins(1, 0, 1, 0),
+        pytest.param(
+            Margins(3, 3, 3, 3),
+            marks=pytest.mark.xfail(
+                reason="Pandora point_interval method does not work with disparities greater than the image"
+            ),
+        ),
+        pytest.param(
+            Margins(1, 2, 3, 4),
+            marks=pytest.mark.xfail(
+                reason="Pandora point_interval method does not work with disparities greater than the image"
+            ),
+        ),
+    ],
+)
+def test_compute_disparity_map_col_row(margins):
     """
     Test function for disparity computation
     """
@@ -353,15 +424,20 @@ def test_compute_disparity_map_col_row():
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
 
-    grid_min_col = np.full((3, 3), -3)
-    grid_max_col = np.full((3, 3), 3)
-    grid_min_row = np.full((3, 3), -3)
-    grid_max_row = np.full((3, 3), 3)
+    grid_min_col = np.full((3, 4), -3)
+    grid_max_col = np.full((3, 4), 3)
+    grid_min_row = np.full((3, 4), -3)
+    grid_max_row = np.full((3, 4), 3)
     matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg_mc
+        img_left=left,
+        img_right=right,
+        grid_min_col=grid_min_col,
+        grid_max_col=grid_max_col,
+        cfg=cfg_mc,
+        margins=margins,
     )
     cvs = matching_cost_matcher.compute_cost_volumes(
-        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, margins
     )
 
     delta_x, delta_y, _ = disparity_matcher.compute_disp_maps(cvs)
@@ -411,6 +487,7 @@ def test_masked_nan():
     )
 
     cost_volumes_dataset.attrs["type_measure"] = "max"
+    cost_volumes_dataset.attrs["disparity_margins"] = None
 
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -99}
     disparity_matcher = disparity.Disparity(cfg_disp)
