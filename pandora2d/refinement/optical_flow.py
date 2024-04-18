@@ -59,7 +59,12 @@ class OpticalFlow(refinement.AbstractRefinement):
 
         self._iterations = self.cfg["iterations"]
         self._refinement_method = self.cfg["refinement_method"]
+
+        if window_size <= 1:
+            raise ValueError("Window size is under the minimum. Must be superior at 1")
+
         self._window_size = window_size
+
         self._step = [1, 1] if step is None else step
 
     @classmethod
