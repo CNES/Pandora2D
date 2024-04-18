@@ -30,8 +30,8 @@ import pytest
 import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
 from pandora.margins import Margins
-
-from pandora2d import refinement
+from pandora2d.state_machine import Pandora2DMachine
+from pandora2d import refinement, check_configuration
 
 
 @pytest.fixture()
@@ -200,3 +200,18 @@ def test_margins():
     _refinement._window_size = 9
 
     assert _refinement.margins == Margins(4, 4, 4, 4), "Not a cubic kernel Margins"
+
+
+def test_check_conf_wrong_window_size_with_optical_flow(correct_pipeline):
+    """
+    test configuration with optical flow and window size of 1 to catch error
+    """
+    # Define test configuration
+    correct_pipeline["pipeline"]["refinement"]["refinement_method"] = "optical_flow"
+    correct_pipeline["pipeline"]["matching_cost"]["window_size"] = 1
+
+    # Check configuration
+    pandora2d_machine = Pandora2DMachine()
+    with pytest.raises(ValueError) as err:
+        check_configuration.check_pipeline_section(correct_pipeline, pandora2d_machine)
+    assert "Window size is under the minimum. Must be superior at 1" in err.value.args[0]
