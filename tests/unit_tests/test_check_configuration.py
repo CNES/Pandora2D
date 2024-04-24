@@ -130,6 +130,15 @@ class TestCheckInputSection:
         with pytest.raises(DictCheckerError):
             check_configuration.check_input_section(false_input_path_image)
 
+    def test_default_nodata(self, correct_input_cfg):
+        """Default nodata value shoud be -9999."""
+        del correct_input_cfg["input"]["left"]["nodata"]
+
+        result = check_configuration.check_input_section(correct_input_cfg)
+
+        assert result["input"]["left"]["nodata"] == -9999
+        assert result["input"]["right"]["nodata"] == -9999
+
 
 class TestCheckPipelineSection:
     """Test check_pipeline_section."""

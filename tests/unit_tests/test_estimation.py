@@ -105,6 +105,23 @@ def test_check_conf():
     )  # type: ignore[abstract]
 
 
+@pytest.mark.parametrize(
+    ["parameter", "expected_value"],
+    [
+        ["range_col", 5],
+        ["range_row", 5],
+        ["sample_factor", 1],
+    ],
+)
+def test_default_parameters_values(full_configuration, parameter, expected_value):
+    """Test default values are the expected ones."""
+    del full_configuration[parameter]
+
+    result = estimation.AbstractEstimation(full_configuration)  # type: ignore[abstract]
+
+    assert result.cfg[parameter] == expected_value
+
+
 def test_update_cfg_with_estimation(estimation_class):
     """
     test update_cfg_with_estimation function

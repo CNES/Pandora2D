@@ -36,17 +36,21 @@ from pandora.margins import Margins
 from pandora2d import matching_cost, disparity
 
 
-def test_check_conf():
-    """
-    test check_conf of matching cost pipeline
-    """
-    disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
+class TestCheckConf:
+    """Test check conf."""
 
-    with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError):
-        disparity.Disparity({"invalid_disparity": "5"})
+    def test_nominal_case(self):
+        """Should not raise error."""
+        disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
 
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        disparity.Disparity({"disparity_method": "WTN"})
+    def test_disparity_method_is_mandatory(self):
+        """Should raise an error."""
+        with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError):
+            disparity.Disparity({"invalid_disparity": "5"})
+
+    def test_default_invalid_disparity(self):
+        result = disparity.Disparity({"disparity_method": "wta"})
+        assert result.cfg["invalid_disparity"] == -9999
 
 
 def test_margins():
