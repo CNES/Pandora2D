@@ -169,6 +169,26 @@ class TestCheckPipelineSection:
         with pytest.raises(transitions.core.MachineError):
             check_configuration.check_pipeline_section(false_pipeline_disp, pandora2d_machine)
 
+    @pytest.mark.parametrize(
+        "step_order",
+        [
+            ["disparity", "matching_cost", "refinement"],
+            ["matching_cost", "refinement", "disparity"],
+            ["matching_cost", "estimation", "disparity"],
+        ],
+    )
+    def test_wrong_order_should_raise_error(self, pandora2d_machine, step_order):
+        """Pipeline section order is important."""
+        steps = {
+            "estimation": {"estimated_shifts": [-0.5, 1.3], "error": [1.0], "phase_diff": [1.0]},
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "refinement": {"refinement_method": "interpolation"},
+        }
+        configuration = {"pipeline": {step: steps[step] for step in step_order}}
+        with pytest.raises(transitions.core.MachineError):
+            check_configuration.check_pipeline_section(configuration, pandora2d_machine)
+
 
 class TestCheckRoiSection:
     """Test check_roi_section."""
