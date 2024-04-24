@@ -24,6 +24,9 @@
 Test configuration
 """
 
+import random
+import string
+
 import pytest
 import transitions
 import numpy as np
@@ -475,3 +478,17 @@ class TestDisparityRangeAgainstImageSize:
     def test_disparity_partially_out(self, pandora2d_machine, configuration):
         """Partially out should not raise error."""
         check_configuration.check_conf(configuration, pandora2d_machine)
+
+
+@pytest.mark.parametrize(
+    "extra_section_name",
+    [
+        # Let's build a random extra_section_name with a length between 1 and 15 letters
+        "".join(random.choices(string.ascii_letters, k=random.randint(1, 15)))
+    ],
+)
+def test_extra_section_is_allowed(correct_input_cfg, correct_pipeline, pandora2d_machine, extra_section_name):
+    """Should not raise an error if an extra section is added."""
+    configuration = {**correct_input_cfg, **correct_pipeline, extra_section_name: {}}
+
+    check_configuration.check_conf(configuration, pandora2d_machine)
