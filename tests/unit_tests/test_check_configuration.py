@@ -118,6 +118,10 @@ class TestCheckInputSection:
     def test_check_nominal_case(self, correct_input_cfg) -> None:
         assert check_configuration.check_input_section(correct_input_cfg)
 
+    def test_fails_if_input_section_is_missing(self):
+        with pytest.raises(KeyError, match="input key is missing"):
+            check_configuration.check_input_section({})
+
     def test_false_input_disp_should_exit(self, false_input_disp):
         with pytest.raises(ValueError, match="disp_max must be bigger than disp_min"):
             check_configuration.check_input_section(false_input_disp)
@@ -129,6 +133,10 @@ class TestCheckInputSection:
 
 class TestCheckPipelineSection:
     """Test check_pipeline_section."""
+
+    def test_fails_if_pipeline_section_is_missing(self, pandora2d_machine) -> None:
+        with pytest.raises(KeyError, match="pipeline key is missing"):
+            assert check_configuration.check_pipeline_section({}, pandora2d_machine)
 
     def test_nominal_case(self, pandora2d_machine, correct_pipeline) -> None:
         """

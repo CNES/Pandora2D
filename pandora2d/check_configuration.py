@@ -81,6 +81,9 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
     :rtype: cfg: dict
     """
 
+    if "input" not in user_cfg:
+        raise KeyError("input key is missing")
+
     # Add missing steps and inputs defaults values in user_cfg
     cfg = update_conf(default_short_configuration_input, user_cfg)
 
@@ -172,6 +175,10 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     """
 
     cfg = update_conf({}, user_cfg)
+
+    if "pipeline" not in cfg:
+        raise KeyError("pipeline key is missing")
+
     pandora2d_machine.check_conf(cfg)
 
     cfg = update_conf(cfg, pandora2d_machine.pipeline_cfg)
