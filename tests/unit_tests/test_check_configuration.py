@@ -130,6 +130,14 @@ class TestCheckInputSection:
         with pytest.raises(DictCheckerError):
             check_configuration.check_input_section(false_input_path_image)
 
+    def test_fails_with_images_of_different_sizes(self, correct_input_cfg, make_empty_image):
+        """Images must have the same shape and size."""
+        correct_input_cfg["input"]["left"]["img"] = str(make_empty_image("left.tiff"))
+        correct_input_cfg["input"]["right"]["img"] = str(make_empty_image("right.tiff", shape=(50, 50)))
+
+        with pytest.raises(AttributeError, match="Images must have the same size"):
+            check_configuration.check_input_section(correct_input_cfg)
+
     def test_default_nodata(self, correct_input_cfg):
         """Default nodata value shoud be -9999."""
         del correct_input_cfg["input"]["left"]["nodata"]
