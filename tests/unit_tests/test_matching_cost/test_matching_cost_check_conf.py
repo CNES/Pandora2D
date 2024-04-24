@@ -21,6 +21,7 @@
 """
 Test check_conf method from Matching cost
 """
+
 import json_checker
 import pytest
 from pandora import import_plugin
@@ -43,8 +44,6 @@ def test_invalid_method():
     with pytest.raises(json_checker.core.exceptions.DictCheckerError):
         matching_cost.MatchingCost({"matching_cost_method": "census", "window_size": 5})
 
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
 
 class TestWindowSize:
     """Test window_size parameter values."""
@@ -54,6 +53,9 @@ class TestWindowSize:
 
         assert result.cfg["window_size"] == 5
 
+    def test_fails_with_invalid_window_size(self):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
 
 
 @pytest.mark.plugin_tests

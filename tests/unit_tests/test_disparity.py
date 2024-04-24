@@ -48,6 +48,11 @@ class TestCheckConf:
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError):
             disparity.Disparity({"invalid_disparity": "5"})
 
+    def test_fails_with_bad_disparity_method_value(self):
+        """Should raise an error."""
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            disparity.Disparity({"disparity_method": "WTN"})
+
     def test_default_invalid_disparity(self):
         result = disparity.Disparity({"disparity_method": "wta"})
         assert result.cfg["invalid_disparity"] == -9999
