@@ -24,6 +24,7 @@ Run pandora2d configurations from end to end.
 
 import json
 from copy import deepcopy
+from typing import Dict
 
 import pytest
 
@@ -117,6 +118,22 @@ def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_p
 def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement):
     """Test a configuration with monoband images and left nodata set to NaN."""
     configuration = {**correct_input_cfg, **correct_pipeline_without_refinement}
+
+    run_dir = run_pipeline(configuration)
+
+    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+        output_config = json.load(output_file)
+
+    result = remove_extra_keys(output_config, configuration)
+
+    assert result == configuration
+    assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
+
+
+@pytest.mark.xfail(reason="Multiband is not managed")
+def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_without_refinement):
+    """Test a configuration with multiband images."""
+    configuration: Dict[str, Dict] = {**correct_multiband_input_cfg, **correct_pipeline_without_refinement}
 
     run_dir = run_pipeline(configuration)
 

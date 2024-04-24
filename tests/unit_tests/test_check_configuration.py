@@ -192,6 +192,30 @@ class TestCheckPipelineSection:
         with pytest.raises(transitions.core.MachineError):
             check_configuration.check_pipeline_section(configuration, pandora2d_machine)
 
+    def test_multiband_pipeline(self, pandora2d_machine, left_rgb_path, right_rgb_path):
+        """
+        Test the method check_conf for multiband images
+        """
+        input_multiband_cfg = {
+            "left": {
+                "img": left_rgb_path,
+            },
+            "right": {
+                "img": right_rgb_path,
+            },
+            "col_disparity": [-60, 0],
+            "row_disparity": [-60, 0],
+        }
+        cfg = {
+            "input": input_multiband_cfg,
+            "pipeline": {
+                "matching_cost": {"matching_cost_method": "zncc", "window_size": 5, "subpix": 2},
+                "disparity": {"disparity_method": "wta"},
+            },
+        }
+
+        check_configuration.check_conf(cfg, pandora2d_machine)
+
 
 class TestCheckRoiSection:
     """Test check_roi_section."""
