@@ -22,9 +22,9 @@
 """
 This module contains class associated to the pandora state machine
 """
+
 import copy
 import logging
-from operator import add
 from typing import TYPE_CHECKING, Dict, List, Literal, Optional, TypedDict, Union
 
 import numpy as np
@@ -243,22 +243,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             if trans["trigger"] not in deleted_triggers:  # type: ignore
                 self.remove_transition(trans["trigger"])  # type: ignore
                 deleted_triggers.append(trans["trigger"])  # type: ignore
-
-    def get_global_margins(self):
-        """
-        Aggregation margins
-        """
-        aggregate_margins = [0, 0, 0, 0]
-        max_margins = [0, 0, 0, 0]
-        for cfg in self._transitions_margins.values():
-            step_margins = cfg["margins"]
-            type_margin = cfg["type"]
-            if type_margin == "aggregate":
-                aggregate_margins = list(map(add, aggregate_margins, step_margins))
-            else:
-                max_margins = list(map(max, aggregate_margins, step_margins))
-
-        return [max(x, y) for x, y in zip(max_margins, aggregate_margins)]
 
     def estimation_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
