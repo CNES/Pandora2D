@@ -26,6 +26,7 @@ This module contains functions associated to the disparity map computation step.
 from typing import Dict, Tuple, Callable
 from json_checker import Or, And, Checker
 from pandora.margins.descriptors import NullMargins
+from pandora.margins import Margins
 
 import numpy as np
 import xarray as xr
@@ -200,36 +201,70 @@ class Disparity:
         :rtype: tuple (numpy.ndarray, numpy.ndarray, numpy.ndarray)
         """
 
-        indices_nan = np.isnan(cost_volumes["cost_volumes"].data)
+        disparity_margins = cost_volumes.attrs["disparity_margins"]
+
+        # Check margins presence
+        if disparity_margins is not None and disparity_margins != Margins(0, 0, 0, 0):
+            margins = disparity_margins.asdict()
+            for key in margins.keys():
+                margins[key] *= cost_volumes.attrs["subpixel"]
+
+            # Get the right index when right and down margins are equals to 0
+            if margins["right"] == 0:
+                margins["right"] = -cost_volumes.sizes["disp_col"]
+            if margins["down"] == 0:
+                margins["down"] = -cost_volumes.sizes["disp_row"]
+
+            cost_volumes_user = xr.Dataset(
+                {
+                    "cost_volumes": (
+                        ["row", "col", "disp_col", "disp_row"],
+                        cost_volumes["cost_volumes"].data[
+                            :, :, margins["left"] : -margins["right"], margins["up"] : -margins["down"]
+                        ],
+                    )
+                },
+                coords={
+                    "row": cost_volumes.coords["row"],
+                    "col": cost_volumes.coords["col"],
+                    "disp_col": cost_volumes.coords["disp_col"][margins["left"] : -margins["right"]],
+                    "disp_row": cost_volumes.coords["disp_row"][margins["up"] : -margins["down"]],
+                },
+            )
+        else:
+            cost_volumes_user = cost_volumes.copy(deep=True)
+
+        indices_nan = np.isnan(cost_volumes_user["cost_volumes"].data)
 
         # Winner Takes All strategy
         if cost_volumes.attrs["type_measure"] == "max":
-            cost_volumes["cost_volumes"].data[indices_nan] = -np.inf
+
+            cost_volumes_user["cost_volumes"].data[indices_nan] = -np.inf
             # -------compute disp_map row---------
             # process of maximum for dispx
-            maps_max_col = self.extrema_split(cost_volumes, 2, np.max)
+            maps_max_col = self.extrema_split(cost_volumes_user, 2, np.max)
             # process of argmax for dispy
-            disp_map_row = cost_volumes["disp_row"].data[self.arg_split(maps_max_col, 2, np.argmax)]
+            disp_map_row = cost_volumes_user["disp_row"].data[self.arg_split(maps_max_col, 2, np.argmax)]
             # -------compute disp_map col---------
             # process of maximum for dispy
-            maps_max_row = self.extrema_split(cost_volumes, 3, np.max)
+            maps_max_row = self.extrema_split(cost_volumes_user, 3, np.max)
             # process of argmax for dispx
-            disp_map_col = cost_volumes["disp_col"].data[self.arg_split(maps_max_row, 2, np.argmax)]
+            disp_map_col = cost_volumes_user["disp_col"].data[self.arg_split(maps_max_row, 2, np.argmax)]
             # --------compute correlation score----
             score_map = self.get_score(maps_max_row, np.max)
 
         else:
             # -------compute disp_map row---------
-            cost_volumes["cost_volumes"].data[indices_nan] = np.inf
+            cost_volumes_user["cost_volumes"].data[indices_nan] = np.inf
             # process of minimum for dispx
-            maps_min_col = self.extrema_split(cost_volumes, 2, np.min)
+            maps_min_col = self.extrema_split(cost_volumes_user, 2, np.min)
             # process of argmin for disp
-            disp_map_row = cost_volumes["disp_row"].data[self.arg_split(maps_min_col, 2, np.argmin)]
+            disp_map_row = cost_volumes_user["disp_row"].data[self.arg_split(maps_min_col, 2, np.argmin)]
             # -------compute disp_map col---------
             # process of maximum for dispy
-            maps_min_row = self.extrema_split(cost_volumes, 3, np.min)
+            maps_min_row = self.extrema_split(cost_volumes_user, 3, np.min)
             # process of argmin for dispx
-            disp_map_col = cost_volumes["disp_col"].data[self.arg_split(maps_min_row, 2, np.argmin)]
+            disp_map_col = cost_volumes_user["disp_col"].data[self.arg_split(maps_min_row, 2, np.argmin)]
             # --------compute correlation score----
             score_map = self.get_score(maps_min_row, np.min)
 

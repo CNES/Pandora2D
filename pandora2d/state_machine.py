@@ -318,8 +318,9 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         :return: None
         """
         self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
+
         self.matching_cost_.allocate_cost_volume_pandora(
-            self.left_img, self.right_img, self.disp_min_col, self.disp_max_col, cfg
+            self.left_img, self.right_img, self.disp_min_col, self.disp_max_col, cfg, self.margins.get("refinement")
         )
 
     def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
@@ -366,6 +367,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             self.disp_max_col,
             self.disp_min_row,
             self.disp_max_row,
+            self.margins.get("refinement"),
         )
 
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:
