@@ -1,11 +1,11 @@
 {
   "input": {
     "left": {
-      "img": "./tests/data/images/cones/left.png",
+      "img": "./tests/data/images/cones/monoband/left.png",
       "nodata": "NaN"
     },
     "right": {
-      "img": "./tests/data/images/cones/right.png"
+      "img": "./tests/data/images/cones/monoband/right.png"
     },
     "col_disparity": [-2, 2],
     "row_disparity": [-2, 2]

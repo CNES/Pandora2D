@@ -22,22 +22,20 @@ Test the refinement.dichotomy pipeline.
 import pandora2d
 
 
-def test_dichotomy_execution_with_spline():
+def test_dichotomy_execution_with_spline(left_img_path, right_img_path):
     """Test that execution of Pandora2d with a dichotomy refinement does not fail.
 
     Uses spline from `scipy.ndimage.map_coordinates`.
     """
-    img_left_path = "tests/data/images/cones/left.png"
-    img_right_path = "tests/data/images/cones/right.png"
     pandora2d_machine = pandora2d.state_machine.Pandora2DMachine()
     user_cfg = {
         "input": {
             "left": {
-                "img": img_left_path,
+                "img": str(left_img_path),
                 "nodata": "NaN",
             },
             "right": {
-                "img": img_right_path,
+                "img": str(right_img_path),
                 "nodata": "NaN",
             },
             "col_disparity": [-3, 3],

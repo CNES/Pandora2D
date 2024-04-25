@@ -17,13 +17,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-""" Module with global test fixtures. """
+"""Module with global test fixtures."""
 
 from copy import deepcopy
 import numpy as np
 import xarray as xr
 from rasterio import Affine
 import pytest
+from skimage.io import imsave
 
 from pandora2d import Pandora2DMachine
 
@@ -39,14 +40,30 @@ def pipeline_config(correct_pipeline):
     return deepcopy(correct_pipeline)
 
 
-@pytest.fixture(name="left_img_path")
-def left_img_path_fixture():
-    return "./tests/data/images/cones/left.png"
+@pytest.fixture()
+def make_empty_image(tmp_path):
+    """Returns an empty image factory.
 
+    temporary dir is the same accross calls in for the same test so if multiple images need to be created ensure to
+    give a different name for each one.
+    """
 
-@pytest.fixture(name="right_img_path")
-def right_img_path_fixture():
-    return "./tests/data/images/cones/right.png"
+    def make(name="empty.tiff", shape=(450, 450)):
+        """
+        Make an empty image and return its path.
+
+        :param name: name of the image
+        :type name: str
+        :param shape: shape of the image
+        :type shape: Tuple[int, int]
+        :return: image path
+        :rtype: pathlib.Path
+        """
+        path = tmp_path / name
+        imsave(path, np.empty(shape))
+        return path
+
+    return make
 
 
 @pytest.fixture
