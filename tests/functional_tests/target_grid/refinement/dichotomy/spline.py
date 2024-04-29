@@ -53,7 +53,7 @@ def test_dichotomy_execution_with_spline(left_img_path, right_img_path):
             "refinement": {
                 "refinement_method": "dichotomy",
                 "iterations": 1,
-                "filter": "spline",
+                "filter": "bicubic",
             },
         },
     }
