@@ -22,7 +22,6 @@
 """
 This module contains functions allowing to save the results and the configuration of Pandora pipeline.
 """
-
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable=useless-import-alias
 
@@ -38,6 +37,8 @@ import os
 from typing import Dict
 import xarray as xr
 import numpy as np
+
+from rasterio import Affine
 
 from pandora.common import mkdir_p, write_data_array
 from pandora2d.img_tools import remove_roi_margins
@@ -62,7 +63,8 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     # remove ROI margins to save only user ROI in tif files
     if "ROI" in cfg:
         dataset = remove_roi_margins(dataset, cfg)
-
+        # Translate georeferencement origin to ROI origin:
+        dataset.attrs["transform"] *= Affine.translation(cfg["ROI"]["col"]["first"], cfg["ROI"]["row"]["first"])
     # create output dir
     mkdir_p(output)
 
