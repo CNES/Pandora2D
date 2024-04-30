@@ -20,6 +20,8 @@
 Module with global test fixtures.
 """
 
+# pylint: disable=redefined-outer-name
+
 import pathlib
 import re
 
@@ -78,3 +80,57 @@ def pytest_html_results_table_row(report, cells):
 @pytest.fixture()
 def classic_config():
     return "./tests/data/json_conf_files/classic_cfg.json"
+
+
+@pytest.fixture()
+def left_img_path():
+    return "./tests/data/images/cones/monoband/left.png"
+
+
+@pytest.fixture()
+def right_img_path():
+    return "./tests/data/images/cones/monoband/right.png"
+
+
+@pytest.fixture()
+def left_rgb_path():
+    return "./tests/data/images/cones/multibands/left.tif"
+
+
+@pytest.fixture()
+def right_rgb_path():
+    return "./tests/data/images/cones/multibands/right.tif"
+
+
+@pytest.fixture
+def correct_input_cfg(left_img_path, right_img_path):
+    return {
+        "input": {
+            "left": {
+                "img": left_img_path,
+                "nodata": "NaN",
+            },
+            "right": {
+                "img": right_img_path,
+            },
+            "col_disparity": [-2, 2],
+            "row_disparity": [-2, 2],
+        }
+    }
+
+
+@pytest.fixture
+def correct_multiband_input_cfg(left_rgb_path, right_rgb_path):
+    return {
+        "input": {
+            "left": {
+                "img": left_rgb_path,
+                "nodata": "NaN",
+            },
+            "right": {
+                "img": right_rgb_path,
+            },
+            "col_disparity": [-2, 2],
+            "row_disparity": [-2, 2],
+        }
+    }

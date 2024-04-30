@@ -25,7 +25,6 @@ Test Matching cost class
 
 # pylint: disable=redefined-outer-name
 
-
 import numpy as np
 import pytest
 import json_checker
@@ -33,16 +32,19 @@ from pandora2d import estimation
 
 
 @pytest.fixture()
-def estimation_class():
+def full_configuration():
+    return {
+        "estimation_method": "phase_cross_correlation",
+        "range_col": 5,
+        "range_row": 5,
+        "sample_factor": 10,
+    }
+
+
+@pytest.fixture()
+def estimation_class(full_configuration):
     """Build estimation object."""
-    estimation_class = estimation.AbstractEstimation(  # type: ignore[abstract]
-        {
-            "estimation_method": "phase_cross_correlation",
-            "range_col": 5,
-            "range_row": 5,
-            "sample_factor": 10,
-        }
-    )
+    estimation_class = estimation.AbstractEstimation(full_configuration)  # type: ignore[abstract]
     return estimation_class
 
 
@@ -72,6 +74,12 @@ def estimation_class():
             15,
             json_checker.core.exceptions.DictCheckerError,
             id="not a multiple of 10 sample factor",
+        ),
+        pytest.param(
+            "phase_cross_correlation", 6, 5, 1, json_checker.core.exceptions.DictCheckerError, id="even range_row"
+        ),
+        pytest.param(
+            "phase_cross_correlation", 5, 6, 1, json_checker.core.exceptions.DictCheckerError, id="even range_col"
         ),
     ],
 )
@@ -103,6 +111,23 @@ def test_check_conf():
             "sample_factor": 10,
         }
     )  # type: ignore[abstract]
+
+
+@pytest.mark.parametrize(
+    ["parameter", "expected_value"],
+    [
+        ["range_col", 5],
+        ["range_row", 5],
+        ["sample_factor", 1],
+    ],
+)
+def test_default_parameters_values(full_configuration, parameter, expected_value):
+    """Test default values are the expected ones."""
+    del full_configuration[parameter]
+
+    result = estimation.AbstractEstimation(full_configuration)  # type: ignore[abstract]
+
+    assert result.cfg[parameter] == expected_value
 
 
 def test_update_cfg_with_estimation(estimation_class):

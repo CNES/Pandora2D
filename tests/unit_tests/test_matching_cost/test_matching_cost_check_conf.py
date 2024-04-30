@@ -21,6 +21,7 @@
 """
 Test check_conf method from Matching cost
 """
+
 import json_checker
 import pytest
 from pandora import import_plugin
@@ -37,11 +38,24 @@ def test_check_conf():
     """
     matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
 
+
+def test_invalid_method():
+    """census is not expected to be used with pandora2d."""
     with pytest.raises(json_checker.core.exceptions.DictCheckerError):
         matching_cost.MatchingCost({"matching_cost_method": "census", "window_size": 5})
 
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
+
+class TestWindowSize:
+    """Test window_size parameter values."""
+
+    def test_default_window_size(self):
+        result = matching_cost.MatchingCost({"matching_cost_method": "zncc", "step": [1, 1]})
+
+        assert result.cfg["window_size"] == 5
+
+    def test_fails_with_invalid_window_size(self):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
 
 
 @pytest.mark.plugin_tests
@@ -57,28 +71,34 @@ def test_check_conf_mccnn():
         matching_cost.MatchingCost({"matching_cost_method": "mc_cnn", "window_size": 5})
 
 
-def test_step_configuration():
+class TestStep:
     """
     Test step in matching_cost configuration
     """
 
-    matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3]})
+    def test_nominal_case(self):
+        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3]})
 
-    # Test with a negative step : test should fail
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [-2, 3]})
+    def test_default_step(self):
+        result = matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
 
-    # Test with a one size list step : test should fail
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2]})
+        assert result.cfg["step"] == [1, 1]
 
-    # Test with a three elements list step : test should fail
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3, 4]})
+    def test_fails_with_negative_step(self):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [-2, 3]})
 
-    # Test with a str elements list step : test should fail
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": ["2", 3]})
+    def test_fails_with_one_element_list(self):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2]})
+
+    def test_fails_with_more_than_two_element_list(self):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3, 4]})
+
+    def test_fails_with_string_element(self):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": ["2", 3]})
 
 
 def test_margins():

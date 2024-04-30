@@ -24,7 +24,6 @@ Test refinement step
 # pylint: disable=redefined-outer-name, protected-access
 # mypy: disable-error-code=attr-defined
 
-
 import numpy as np
 import pytest
 import xarray as xr
@@ -76,6 +75,26 @@ def test_check_conf_fails(refinement_config):
 
     with pytest.raises((KeyError, DictCheckerError)):
         refinement.AbstractRefinement(refinement_config)  # type: ignore[abstract]
+
+
+class TestIterationsCheck:
+    """Test Iteration parameter."""
+
+    def test_iterations_is_not_mandatory(self):
+        """Should not raise error."""
+        refinement.optical_flow.OpticalFlow({"refinement_method": "optical_flow"})
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param(1.5, id="float"),
+            pytest.param(-1, id="negative"),
+        ],
+    )
+    def test_fails_with_invalid_iteration_value(self, value):
+        """Iteration should be only positive integer."""
+        with pytest.raises((KeyError, DictCheckerError)):
+            refinement.optical_flow.OpticalFlow({"refinement_method": "optical_flow", "iterations": value})
 
 
 def test_reshape_to_matching_cost_window_left(dataset_image):

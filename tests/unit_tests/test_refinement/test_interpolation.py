@@ -25,10 +25,11 @@ Test refinement step
 # pylint: disable=redefined-outer-name, protected-access
 # mypy: disable-error-code=attr-defined
 
-
 import numpy as np
 import pytest
 import xarray as xr
+import json_checker
+
 from pandora.margins import Margins
 
 from pandora2d import common, refinement
@@ -66,6 +67,11 @@ def cv_dataset():
     cost_volumes_test.attrs["type_measure"] = "max"
 
     return cost_volumes_test
+
+
+def test_checkconf_fails_if_iterations_is_given():
+    with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError):
+        refinement.interpolation.Interpolation({"refinement_method": "interpolation", "iterations": 1})
 
 
 def test_margins():

@@ -24,6 +24,9 @@
 Test configuration
 """
 
+import random
+import string
+
 import pytest
 import transitions
 import numpy as np
@@ -118,6 +121,10 @@ class TestCheckInputSection:
     def test_check_nominal_case(self, correct_input_cfg) -> None:
         assert check_configuration.check_input_section(correct_input_cfg)
 
+    def test_fails_if_input_section_is_missing(self):
+        with pytest.raises(KeyError, match="input key is missing"):
+            check_configuration.check_input_section({})
+
     def test_false_input_disp_should_exit(self, false_input_disp):
         with pytest.raises(ValueError, match="disp_max must be bigger than disp_min"):
             check_configuration.check_input_section(false_input_disp)
@@ -126,9 +133,30 @@ class TestCheckInputSection:
         with pytest.raises(DictCheckerError):
             check_configuration.check_input_section(false_input_path_image)
 
+    def test_fails_with_images_of_different_sizes(self, correct_input_cfg, make_empty_image):
+        """Images must have the same shape and size."""
+        correct_input_cfg["input"]["left"]["img"] = str(make_empty_image("left.tiff"))
+        correct_input_cfg["input"]["right"]["img"] = str(make_empty_image("right.tiff", shape=(50, 50)))
+
+        with pytest.raises(AttributeError, match="Images must have the same size"):
+            check_configuration.check_input_section(correct_input_cfg)
+
+    def test_default_nodata(self, correct_input_cfg):
+        """Default nodata value shoud be -9999."""
+        del correct_input_cfg["input"]["left"]["nodata"]
+
+        result = check_configuration.check_input_section(correct_input_cfg)
+
+        assert result["input"]["left"]["nodata"] == -9999
+        assert result["input"]["right"]["nodata"] == -9999
+
 
 class TestCheckPipelineSection:
     """Test check_pipeline_section."""
+
+    def test_fails_if_pipeline_section_is_missing(self, pandora2d_machine) -> None:
+        with pytest.raises(KeyError, match="pipeline key is missing"):
+            assert check_configuration.check_pipeline_section({}, pandora2d_machine)
 
     def test_nominal_case(self, pandora2d_machine, correct_pipeline) -> None:
         """
@@ -143,6 +171,50 @@ class TestCheckPipelineSection:
     def test_false_disp_dict_should_raise_error(self, pandora2d_machine, false_pipeline_disp):
         with pytest.raises(transitions.core.MachineError):
             check_configuration.check_pipeline_section(false_pipeline_disp, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        "step_order",
+        [
+            ["disparity", "matching_cost", "refinement"],
+            ["matching_cost", "refinement", "disparity"],
+            ["matching_cost", "estimation", "disparity"],
+        ],
+    )
+    def test_wrong_order_should_raise_error(self, pandora2d_machine, step_order):
+        """Pipeline section order is important."""
+        steps = {
+            "estimation": {"estimated_shifts": [-0.5, 1.3], "error": [1.0], "phase_diff": [1.0]},
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "refinement": {"refinement_method": "interpolation"},
+        }
+        configuration = {"pipeline": {step: steps[step] for step in step_order}}
+        with pytest.raises(transitions.core.MachineError):
+            check_configuration.check_pipeline_section(configuration, pandora2d_machine)
+
+    def test_multiband_pipeline(self, pandora2d_machine, left_rgb_path, right_rgb_path):
+        """
+        Test the method check_conf for multiband images
+        """
+        input_multiband_cfg = {
+            "left": {
+                "img": left_rgb_path,
+            },
+            "right": {
+                "img": right_rgb_path,
+            },
+            "col_disparity": [-60, 0],
+            "row_disparity": [-60, 0],
+        }
+        cfg = {
+            "input": input_multiband_cfg,
+            "pipeline": {
+                "matching_cost": {"matching_cost_method": "zncc", "window_size": 5, "subpix": 2},
+                "disparity": {"disparity_method": "wta"},
+            },
+        }
+
+        check_configuration.check_conf(cfg, pandora2d_machine)
 
 
 class TestCheckRoiSection:
@@ -430,3 +502,17 @@ class TestDisparityRangeAgainstImageSize:
     def test_disparity_partially_out(self, pandora2d_machine, configuration):
         """Partially out should not raise error."""
         check_configuration.check_conf(configuration, pandora2d_machine)
+
+
+@pytest.mark.parametrize(
+    "extra_section_name",
+    [
+        # Let's build a random extra_section_name with a length between 1 and 15 letters
+        "".join(random.choices(string.ascii_letters, k=random.randint(1, 15)))
+    ],
+)
+def test_extra_section_is_allowed(correct_input_cfg, correct_pipeline, pandora2d_machine, extra_section_name):
+    """Should not raise an error if an extra section is added."""
+    configuration = {**correct_input_cfg, **correct_pipeline, extra_section_name: {}}
+
+    check_configuration.check_conf(configuration, pandora2d_machine)
