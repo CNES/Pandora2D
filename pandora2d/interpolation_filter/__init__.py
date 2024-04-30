@@ -22,3 +22,4 @@ Init file for interpolation filter module
 """
 
 from .interpolation_filter import AbstractFilter
+from . import bicubic
