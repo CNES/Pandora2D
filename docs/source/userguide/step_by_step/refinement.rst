@@ -100,6 +100,8 @@ It’s an iterative process that will, at each iteration:
     * compute the similarity coefficients at those positions using the given filter method.
     * find the new best candidate from those computed coefficients.
 
+Available filters are described in :ref:`interpolation_filters`.
+
 
 Configuration and parameters
 ----------------------------
