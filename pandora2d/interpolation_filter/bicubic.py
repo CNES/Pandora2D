@@ -18,6 +18,8 @@
 #
 """This module contains bicubic interpolation filter.
 """
+from functools import lru_cache
+
 import numpy as np
 from pandora.margins import Margins
 
@@ -39,6 +41,7 @@ class Bicubic(AbstractFilter):
         """Return filter's Margins."""
         return Margins(1, 1, 2, 2)
 
+    @lru_cache
     def get_coeffs(self, fractional_shift: float) -> np.ndarray:
         tab_coeffs = np.empty(4)
         alpha = self._ALPHA
