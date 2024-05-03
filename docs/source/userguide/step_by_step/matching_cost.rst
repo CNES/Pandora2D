@@ -46,7 +46,9 @@ Configuration and parameters
      - Window size for similarity measure
      - int
      - 5
-     - > 0, must be odd or 11 if "matching_cost_method" is "mc_cnn"
+     - | > 0 and **odd**
+       | or 11 if "matching_cost_method" is "mc_cnn"
+       | or >1 if "refinement_method" is "optical_flow"
      - No
    * - step
      - Step [row, col] for computing similarity coefficient
