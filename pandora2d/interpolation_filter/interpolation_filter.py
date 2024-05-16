@@ -85,7 +85,7 @@ class AbstractFilter(ABC):
         return decorator
 
     @abstractmethod
-    def get_coeffs(self, fractionnal_shift: float) -> np.ndarray:
+    def get_coeffs(self, fractional_shift: float) -> np.ndarray:
         """
         Returns the interpolator coefficients to be applied to the resampling area.
 
@@ -93,8 +93,8 @@ class AbstractFilter(ABC):
             - For a row shift, returned array size = up_margin + down_margin + 1
             - For a column shift, returned array size = left_margin + right_margin + 1
 
-        :param fractionnal_shift: positive fractional shift of the subpixel position to be interpolated
-        :type fractionnal_shift: float
+        :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
+        :type fractional_shift: float
         :return: a array of interpolator coefficients whose size depends on the filter margins
         :rtype: np.ndarray
         """
