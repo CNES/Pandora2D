@@ -327,8 +327,8 @@ class OpticalFlow(refinement.AbstractRefinement):
         nb_valid_points_row = nb_row - 2 * offset
         nb_valid_points_col = nb_col - 2 * offset
 
-        delta_col = delta_col.reshape([nb_valid_points_col, nb_valid_points_row])
-        delta_row = delta_row.reshape([nb_valid_points_col, nb_valid_points_row])
+        delta_col = delta_col.reshape([nb_valid_points_row, nb_valid_points_col])
+        delta_row = delta_row.reshape([nb_valid_points_row, nb_valid_points_col])
 
         # add borders
         delta_col = np.pad(delta_col, pad_width=offset, constant_values=self._invalid_disp)
