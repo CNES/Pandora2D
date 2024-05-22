@@ -37,7 +37,7 @@ from pandora2d.img_tools import create_datasets_from_inputs
 
 @pytest.fixture()
 def squared_image_size():
-    return (10, 10)
+    return 10, 10
 
 
 @pytest.fixture()
