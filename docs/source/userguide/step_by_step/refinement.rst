@@ -20,6 +20,7 @@ Optical_flow method
 -------------------
 .. warning::
     The optical flow method is still in an experimental phase.
+    The parameter window_size in the matching cost parameters require a value greater than 1 .
 
 Inspired by [Lucas & Kanade]_.'s algorithm
 
@@ -98,6 +99,8 @@ It’s an iterative process that will, at each iteration:
     * compute the half way positions between each best candidate in the cost volume and its nearest neighbours.
     * compute the similarity coefficients at those positions using the given filter method.
     * find the new best candidate from those computed coefficients.
+
+Available filters are described in :ref:`interpolation_filters`.
 
 
 Configuration and parameters

@@ -6,4 +6,5 @@ Exploring the field
 
    exploring_the_field/initial_disparity.rst
    exploring_the_field/refining_disparity.rst
+   exploring_the_field/interpolation_filters.rst
 

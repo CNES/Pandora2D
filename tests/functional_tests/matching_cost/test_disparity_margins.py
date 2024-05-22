@@ -83,7 +83,7 @@ class TestDisparityMargins:
             "pipeline": {
                 "matching_cost": {
                     "matching_cost_method": matching_cost_method,
-                    "window_size": 1,
+                    "window_size": 3,
                     "step": [1, 1],
                     "subpix": subpix,
                 },
@@ -119,9 +119,9 @@ class TestDisparityMargins:
                 {
                     "refinement_method": "optical_flow",
                 },
-                (10, 10, 3, 5),
-                [1, 2, 3],
-                [-2, -1, 0, 1, 2],
+                (10, 10, 5, 7),
+                [0, 1, 2, 3, 4],
+                [-3, -2, -1, 0, 1, 2, 3],
                 id="Subpix=1 and refinement_method=optical_flow",
             ),
             pytest.param(
@@ -147,9 +147,9 @@ class TestDisparityMargins:
                 {
                     "refinement_method": "optical_flow",
                 },
-                (10, 10, 5, 9),
-                [1, 1.5, 2, 2.5, 3],
-                [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2],
+                (10, 10, 9, 13),
+                [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+                [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
                 id="Subpix=2 and refinement_method=optical_flow",
             ),
             pytest.param(
@@ -175,9 +175,9 @@ class TestDisparityMargins:
                 {
                     "refinement_method": "optical_flow",
                 },
-                (10, 10, 9, 17),
-                [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3],
-                [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
+                (10, 10, 17, 25),
+                [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4],
+                np.arange(-3, 3.25, 0.25),
                 id="Subpix=4 and refinement_method=optical_flow",
             ),
         ],
