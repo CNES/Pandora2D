@@ -25,6 +25,7 @@ Test check_conf method from Matching cost
 import importlib.util
 import json_checker
 import pytest
+from pandora.matching_cost import AbstractMatchingCost
 from pandora.margins import Margins
 
 from pandora2d import matching_cost
@@ -48,14 +49,17 @@ def test_invalid_method():
 class TestWindowSize:
     """Test window_size parameter values."""
 
-    def test_default_window_size(self):
-        result = matching_cost.MatchingCost({"matching_cost_method": "zncc", "step": [1, 1]})
+    @pytest.mark.parametrize("method", ["zncc", "sad", "ssd"])
+    def test_default_window_size(self, method):
+        result = matching_cost.MatchingCost({"matching_cost_method": method, "step": [1, 1]})
 
-        assert result.cfg["window_size"] == 5
+        assert result.cfg["window_size"] == AbstractMatchingCost._WINDOW_SIZE  # pylint: disable=W0212 protected-access
 
-    def test_fails_with_invalid_window_size(self):
-        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
+    @pytest.mark.parametrize("method", ["zncc", "sad", "ssd"])
+    def test_fails_with_invalid_window_size(self, method):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
+            matching_cost.MatchingCost({"matching_cost_method": method, "window_size": -1})
+        assert "window_size" in err.value.args[0]
 
 
 @pytest.mark.usefixtures("import_plugins")
