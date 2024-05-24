@@ -97,9 +97,9 @@ class TestPandora2D:
         [
             pytest.param({"refinement_method": "interpolation"}, Margins(3, 3, 3, 3), id="interpolation"),
             pytest.param(
-                {"refinement_method": "dichotomy", "iterations": 3, "filter": "sinc"},
+                {"refinement_method": "dichotomy", "iterations": 3, "filter": "bicubic"},
                 Margins(2, 2, 2, 2),
-                id="dichotomy with sinc filter",
+                id="dichotomy with bicubic filter",
             ),
         ],
     )
