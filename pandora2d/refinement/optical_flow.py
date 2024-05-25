@@ -29,6 +29,7 @@ from json_checker import And
 from scipy.ndimage import map_coordinates
 from pandora.margins import Margins
 
+import pandora2d.schema as cst_schema
 from . import refinement
 
 
@@ -47,7 +48,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         "refinement_method": And(str, lambda x: x in ["optical_flow"]),
         "iterations": And(int, lambda it: it > 0),
         "window_size": And(int, lambda input: input > 1 and (input % 2) != 0),
-        "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y)),
+        "step": cst_schema.STEP_SCHEMA,
     }
 
     def __init__(self, cfg: dict = None, step: list = None, window_size: int = 5) -> None:

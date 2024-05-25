@@ -36,6 +36,7 @@ from pandora.margins import Margins
 
 
 from pandora2d import img_tools
+import pandora2d.schema as cst_schema
 
 
 class MatchingCost:
@@ -146,7 +147,7 @@ class MatchingCost:
         }
         schema = {
             "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc", "mc_cnn"]),
-            "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y)),
+            "step": cst_schema.STEP_SCHEMA,
         }
 
         checker = Checker(schema)
