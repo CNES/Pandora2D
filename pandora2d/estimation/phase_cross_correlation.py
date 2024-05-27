@@ -84,8 +84,8 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
         # Estimation schema config
         schema = {
             "estimation_method": And(str, lambda estimation_method: estimation_method in ["phase_cross_correlation"]),
-            "range_col": And(int, lambda range_col: range_col % 2 and range_col > 2),
-            "range_row": And(int, lambda range_row: range_row % 2 and range_row > 2),
+            "range_row": And(int, lambda range_row: range_row > 2, lambda range_row: range_row % 2 != 0),
+            "range_col": And(int, lambda range_col: range_col > 2, lambda range_col: range_col % 2 != 0),
             "sample_factor": And(int, lambda sf: sf % 10 == 0 or sf == 1, lambda sf: sf > 0),
         }
 
