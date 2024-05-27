@@ -49,20 +49,20 @@ Configuration and parameters
       - Exploration around the initial disparity for columns
       - int
       - 5
-      - >0, odd number
+      - >2, odd number
       - No
     * - *range_row*
       - Exploration around the initial disparity for rows
       - int
       - 5
-      - >0, odd number
+      - >2, odd number
       - No
     * - *sample_factor*
       - | Upsampling factor.
         | Images will be registered to within 1 / upsample_factor of a pixel
       - int
       - 1
-      - >= 1
+      - >= 1, multiple of 10
       - No
 
 
