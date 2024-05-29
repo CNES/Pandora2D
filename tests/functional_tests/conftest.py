@@ -29,12 +29,12 @@ import pandora2d
 def run_pipeline(tmp_path):
     """Fixture that returns a function to run a pipeline and which returns the output directory path."""
 
-    def run(configuration):
+    def run(configuration, output_dir="output"):
         config_path = tmp_path / "config.json"
         with config_path.open("w", encoding="utf-8") as file_:
             json.dump(configuration, file_, indent=2)
 
-        pandora2d.main(str(config_path), str(tmp_path / "output"), verbose=False)
+        pandora2d.main(str(config_path), str(tmp_path / output_dir), verbose=False)
         return tmp_path
 
     return run

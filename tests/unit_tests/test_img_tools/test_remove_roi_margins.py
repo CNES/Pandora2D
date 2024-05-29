@@ -33,9 +33,11 @@ def create_dataset(row, col):
     Create dataset to test remove_roi_margins method
     """
 
+    data = np.full((len(row), len(col)), 1)
     data_variables = {
-        "row_map": (("row", "col"), np.full((len(row), len(col)), 1)),
-        "col_map": (("row", "col"), np.full((len(row), len(col)), 1)),
+        "row_map": (("row", "col"), data),
+        "col_map": (("row", "col"), data),
+        "correlation_score": (("row", "col"), data),
     }
 
     coords = {"row": row, "col": col}
