@@ -22,9 +22,9 @@
 Test check_conf method from Matching cost
 """
 
+import importlib.util
 import json_checker
 import pytest
-from pandora import import_plugin
 from pandora.margins import Margins
 
 from pandora2d import matching_cost
@@ -58,17 +58,20 @@ class TestWindowSize:
             matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": -1})
 
 
+@pytest.mark.usefixtures("import_plugins")
 @pytest.mark.plugin_tests
-@pytest.mark.skip(reason="Waiting for mccnn check_conf issue")
-def test_check_conf_mccnn():
-    """
-    Test specific check_conf with plugin mccnn
-    """
+@pytest.mark.skipif(importlib.util.find_spec("mc_cnn") is None, reason="MCCNN plugin not installed")
+class TestMCCNNConf:
+    """Test window_size with MCCNN plugin."""
 
-    import_plugin()
-    # should fail after modification in plugin_mccnn
-    with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "mc_cnn", "window_size": 5})
+    def test_default_window_size(self):
+        result = matching_cost.MatchingCost({"matching_cost_method": "mc_cnn", "step": [1, 1]})
+        assert result.cfg["window_size"] == 11
+
+    def test_fails_with_invalid_window_size(self):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
+            matching_cost.MatchingCost({"matching_cost_method": "mc_cnn", "window_size": 5})
+        assert "window_size" in err.value.args[0]
 
 
 class TestStep:

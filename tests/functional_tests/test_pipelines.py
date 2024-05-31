@@ -144,3 +144,21 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
 
     assert result == configuration
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
+
+
+def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pipeline_with_optical_flow):
+    """Test optical_flow configuration has a window_size and a step identical to matching_cost step."""
+    configuration: Dict[str, Dict] = {**correct_input_cfg, **correct_pipeline_with_optical_flow}
+    configuration["pipeline"]["refinement"]["iterations"] = 1
+
+    run_dir = run_pipeline(configuration)
+
+    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+        output_config = json.load(output_file)
+
+    matching_cost_cfg = output_config["pipeline"]["matching_cost"]
+    refinement_cfg = output_config["pipeline"]["refinement"]
+
+    # Check window_size and step parameters
+    assert matching_cost_cfg["window_size"] == refinement_cfg["window_size"]
+    assert matching_cost_cfg["step"] == refinement_cfg["step"]

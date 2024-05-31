@@ -29,6 +29,7 @@ from json_checker import And
 from scipy.ndimage import map_coordinates
 from pandora.margins import Margins
 
+import pandora2d.schema as cst_schema
 from . import refinement
 
 
@@ -43,7 +44,12 @@ class OpticalFlow(refinement.AbstractRefinement):
 
     _ITERATIONS = 4
 
-    schema = {"refinement_method": And(str, lambda x: x in ["optical_flow"]), "iterations": And(int, lambda it: it > 0)}
+    schema = {
+        "refinement_method": And(str, lambda x: x in ["optical_flow"]),
+        "iterations": And(int, lambda it: it > 0),
+        "window_size": And(int, lambda input: input > 1 and (input % 2) != 0),
+        "step": cst_schema.STEP_SCHEMA,
+    }
 
     def __init__(self, cfg: dict = None, step: list = None, window_size: int = 5) -> None:
         """
@@ -55,17 +61,15 @@ class OpticalFlow(refinement.AbstractRefinement):
         :type window_size: int
         :return: None
         """
+        # Update user configuration with step and window_size parameters to check them
+        cfg["window_size"] = window_size
+        cfg["step"] = [1, 1] if step is None else step
         super().__init__(cfg)
 
         self._iterations = self.cfg["iterations"]
         self._refinement_method = self.cfg["refinement_method"]
-
-        if window_size <= 1:
-            raise ValueError("Window size is under the minimum. Must be superior at 1")
-
-        self._window_size = window_size
-
-        self._step = [1, 1] if step is None else step
+        self._window_size = self.cfg["window_size"]
+        self._step = self.cfg["step"]
 
     @classmethod
     def check_conf(cls, cfg: Dict) -> Dict:
@@ -324,8 +328,8 @@ class OpticalFlow(refinement.AbstractRefinement):
         nb_valid_points_row = nb_row - 2 * offset
         nb_valid_points_col = nb_col - 2 * offset
 
-        delta_col = delta_col.reshape([nb_valid_points_col, nb_valid_points_row])
-        delta_row = delta_row.reshape([nb_valid_points_col, nb_valid_points_row])
+        delta_col = delta_col.reshape([nb_valid_points_row, nb_valid_points_col])
+        delta_row = delta_row.reshape([nb_valid_points_row, nb_valid_points_col])
 
         # add borders
         delta_col = np.pad(delta_col, pad_width=offset, constant_values=self._invalid_disp)

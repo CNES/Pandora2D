@@ -21,17 +21,16 @@
 """
 Test compute_cost_volumes method from Matching cost
 """
-import sys
+import importlib.util
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
 import numpy as np
 import xarray as xr
-from pandora import import_plugin
-from pandora.margins import Margins
 from rasterio import Affine
 
 import pytest
+from pandora.margins import Margins
 from pandora2d import matching_cost
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 
@@ -134,14 +133,13 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     np.testing.assert_allclose(ssd["cost_volumes"].data, ad_ground_truth, atol=1e-06)
 
 
+@pytest.mark.usefixtures("import_plugins")
 @pytest.mark.plugin_tests
-@pytest.mark.skipif("mc_cnn" not in sys.modules, reason="MCCNN plugin not installed")
+@pytest.mark.skipif(importlib.util.find_spec("mc_cnn") is None, reason="MCCNN plugin not installed")
 def test_compute_cv_mc_cnn():
     """
     Test the  cost volume product by mccnn
     """
-
-    import_plugin()
 
     # Applied MCCNN on same data, window_size=11
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "mc_cnn", "window_size": 11}}}

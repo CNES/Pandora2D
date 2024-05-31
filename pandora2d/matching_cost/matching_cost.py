@@ -24,7 +24,7 @@
 This module contains functions associated to the matching cost computation step.
 """
 import copy
-from typing import Dict, cast, Union
+from typing import Dict, List, cast, Union
 from json_checker import And, Checker
 
 import xarray as xr
@@ -32,11 +32,11 @@ import numpy as np
 
 from pandora import matching_cost
 from pandora.criteria import validity_mask
-from pandora.margins.descriptors import HalfWindowMargins
 from pandora.margins import Margins
 
 
 from pandora2d import img_tools
+import pandora2d.schema as cst_schema
 
 
 class MatchingCost:
@@ -44,10 +44,7 @@ class MatchingCost:
     Matching Cost class
     """
 
-    _WINDOW_SIZE = 5
     _STEP = [1, 1]
-    _SUBPIX = 1
-    margins = HalfWindowMargins()
 
     def __init__(self, cfg: Dict) -> None:
         """
@@ -57,17 +54,82 @@ class MatchingCost:
         :type cfg: dict
         :return: None
         """
-        self.cfg = self.check_conf(cfg)
-        self._window_size = int(self.cfg["window_size"])
-        self._matching_cost_method = self.cfg["matching_cost_method"]
+        # Check the matching_cost parameters specific to pandora2d
+        updated_cfg = self.check_conf(cfg)
+        self._matching_cost_method = updated_cfg["matching_cost_method"]
         # Cast to int in order to help mypy because self.cfg is a Dict, and it can not know the type of step.
-        self._step_row = cast(int, self.cfg["step"][0])
-        self._step_col = cast(int, self.cfg["step"][1])
-        self._subpix = cast(int, self.cfg["subpix"])
+        self._step_row = cast(int, updated_cfg["step"][0])
+        self._step_col = cast(int, updated_cfg["step"][1])
 
-        # Init pandora items
-        self.pandora_matching_cost_: Union[matching_cost.AbstractMatchingCost, None] = None
+        # Check the matching_cost parameters specific to pandora
+        self.pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**self.get_config_for_pandora(cfg))
         self.grid_: xr.Dataset = None
+
+    @property
+    def cfg(self) -> Dict[str, Union[str, int, List[int]]]:
+        """
+        Get used configuration
+
+        :return: cfg: dictionary with all parameters
+        :rtype: cfg: dict
+        """
+        return {
+            "matching_cost_method": self._matching_cost_method,
+            "step": self._step,
+            "window_size": self._window_size,
+            "subpix": self._subpix,
+        }
+
+    @property
+    def _step(self) -> List[int]:
+        """
+        Get step [row, col]
+
+        :return: step: list with row & col step
+        :rtype: step: list
+        """
+        return [self._step_row, self._step_col]
+
+    @property
+    def _window_size(self) -> int:
+        """
+        Get window_size, parameter specific to pandora
+
+        :return: window_size: window used to compute correlation
+        :rtype: window_size: int
+        """
+        return self.pandora_matching_cost_._window_size  # pylint: disable=W0212 protected-access
+
+    @property
+    def _subpix(self) -> int:
+        """
+        Get subpix, parameter specific to pandora
+
+        :return: subpix: subpix used
+        :rtype: subpix: int
+        """
+        return self.pandora_matching_cost_._subpix  # pylint: disable=W0212 protected-access
+
+    @property
+    def margins(self) -> Margins:
+        """
+        Get margins from pandora correlation measurement
+
+        """
+        return self.pandora_matching_cost_.margins
+
+    def get_config_for_pandora(self, cfg: Dict) -> Dict[str, str]:
+        """
+        Get configuration for matching_cost in pandora
+
+        :param cfg: user_config for matching cost pandora2d
+        :type cfg: dict
+        :return: cfg: matching cost pandora configuration
+        :rtype: cfg: dict
+        """
+        copy_cfg = copy.deepcopy(cfg)
+        copy_cfg["step"] = self._step_col
+        return copy_cfg
 
     def check_conf(self, cfg: Dict) -> Dict[str, str]:
         """
@@ -78,24 +140,20 @@ class MatchingCost:
         :return: cfg: global configuration
         :rtype: cfg: dict
         """
-        if "window_size" not in cfg:
-            cfg["window_size"] = self._WINDOW_SIZE
-        if "step" not in cfg:
-            cfg["step"] = self._STEP
-        if "subpix" not in cfg:
-            cfg["subpix"] = self._SUBPIX
-
+        # Check only matching_cost pandora2d param
+        pandora_2d_cfg = {
+            "matching_cost_method": cfg["matching_cost_method"],
+            "step": cfg.get("step", self._STEP),
+        }
         schema = {
             "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc", "mc_cnn"]),
-            "window_size": And(int, lambda ws: ws > 0, lambda ws: ws % 2 != 0),
-            "step": And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y)),
-            "subpix": And(int, lambda sp: sp in [1, 2, 4]),
+            "step": cst_schema.STEP_SCHEMA,
         }
 
         checker = Checker(schema)
-        checker.validate(cfg)
+        checker.validate(pandora_2d_cfg)
 
-        return cfg
+        return pandora_2d_cfg
 
     @staticmethod
     def allocate_cost_volumes(
@@ -170,17 +228,11 @@ class MatchingCost:
         :return: None
         """
         # Adapt Pandora matching cost configuration
-        copy_matching_cost_cfg_with_step = copy.deepcopy(cfg["pipeline"]["matching_cost"])
-        copy_matching_cost_cfg_with_step["step"] = self._step_col
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
 
         if margins is not None:
-
             grid_min_col -= margins.left
             grid_max_col += margins.right
-
-        # Initialize Pandora matching cost
-        self.pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**copy_matching_cost_cfg_with_step)
 
         # Initialize pandora an empty grid for cost volume
         self.grid_ = self.pandora_matching_cost_.allocate_cost_volume(img_left, (grid_min_col, grid_max_col), cfg)
@@ -237,7 +289,6 @@ class MatchingCost:
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
 
         if margins is not None:
-
             grid_min_row -= margins.up
             grid_max_row += margins.down
 
@@ -256,7 +307,6 @@ class MatchingCost:
         imgs_right_shift_subpixel = img_tools.shift_subpix_img(img_right, self._subpix)
 
         for idx, disp_row in enumerate(disps_row):
-
             i_right = int((disp_row % 1) * self._subpix)
 
             # Images contained in imgs_right_shift_subpixel are already shifted by 1/subpix.
@@ -282,7 +332,6 @@ class MatchingCost:
             self.pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, grid_min_col, grid_max_col)
             # If first iteration, initialize cost_volumes dataset
             if idx == 0:
-
                 img_row_coordinates = img_left["im"].coords["row"]
 
                 # Case without a ROI: we only take the step into account to compute row coordinates.
@@ -317,7 +366,7 @@ class MatchingCost:
         cost_volumes.attrs["col_disparity_source"] = img_left.attrs["col_disparity_source"]
         cost_volumes.attrs["row_disparity_source"] = img_left.attrs["row_disparity_source"]
         cost_volumes.attrs["disparity_margins"] = margins
-        cost_volumes.attrs["step"] = self.cfg["step"]
+        cost_volumes.attrs["step"] = self._step
 
         # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
         del cost_volumes.attrs["ROI_margins"]
