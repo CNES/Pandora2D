@@ -57,6 +57,10 @@ class TestCheckConf:
         result = disparity.Disparity({"disparity_method": "wta"})
         assert result.cfg["invalid_disparity"] == -9999
 
+    def test_nan_invalid_disparity(self):
+        result = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": "NaN"})
+        assert np.isnan(result.cfg["invalid_disparity"])
+
 
 def test_margins():
     """

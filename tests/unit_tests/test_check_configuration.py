@@ -118,6 +118,10 @@ class TestCheckInputSection:
     Test check input section.
     """
 
+    @pytest.fixture()
+    def basic_estimation_cfg(self):
+        return {"estimation_method": "phase_cross_correlation"}
+
     def test_check_nominal_case(self, correct_input_cfg) -> None:
         assert check_configuration.check_input_section(correct_input_cfg)
 
@@ -149,6 +153,25 @@ class TestCheckInputSection:
 
         assert result["input"]["left"]["nodata"] == -9999
         assert result["input"]["right"]["nodata"] == -9999
+
+    @pytest.mark.parametrize(
+        "estimation_config",
+        [
+            pytest.param(None, id="without esimation config"),
+            pytest.param("basic_estimation_cfg", id="with basic config"),
+        ],
+    )
+    def test_check_nominal_case_with_estimation_config(self, correct_input_cfg, estimation_config, request):
+        """Default estimation_config value : None or basic config."""
+        if estimation_config is not None:
+            estimation_config = request.getfixturevalue(estimation_config)
+        assert check_configuration.check_input_section(correct_input_cfg, estimation_config)
+
+    def test_estimation_config_without_disparity(self, correct_input_cfg, basic_estimation_cfg):
+        """Default basic estimation config without disparity in user configuration."""
+        del correct_input_cfg["input"]["col_disparity"]
+        del correct_input_cfg["input"]["row_disparity"]
+        assert check_configuration.check_input_section(correct_input_cfg, basic_estimation_cfg)
 
 
 class TestCheckPipelineSection:
@@ -215,6 +238,42 @@ class TestCheckPipelineSection:
         }
 
         check_configuration.check_conf(cfg, pandora2d_machine)
+
+
+class TestCheckConf:
+    """Test check_conf method."""
+
+    def test_passes_with_good_disparity_range_and_interpolation_step(
+        self, correct_input_cfg, correct_pipeline, pandora2d_machine
+    ):
+        """
+        Test col_disparity & row_disparity range (=5) with interpolation step in user configuration
+        """
+        user_cfg = {**correct_input_cfg, **correct_pipeline}
+        check_configuration.check_conf(user_cfg, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        ["col_disparity", "row_disparity"],
+        [
+            pytest.param([0, 2], [-2, 2], id="col_disparity range too small"),
+            pytest.param([-2, 2], [1, 4], id="row_disparity range too small"),
+            pytest.param([0, 2], [1, 4], id="col_disparity & row_disparity range too small"),
+        ],
+    )
+    def test_fails_with_wrong_disparity_range_and_interpolation_step(
+        self, correct_input_cfg, correct_pipeline, pandora2d_machine, col_disparity, row_disparity
+    ):
+        """
+        Test wrong col_disparity & row_disparity range with interpolation step in user configuration
+        """
+        correct_input_cfg["input"]["col_disparity"] = col_disparity
+        correct_input_cfg["input"]["row_disparity"] = row_disparity
+        user_cfg = {**correct_input_cfg, **correct_pipeline}
+        with pytest.raises(ValueError) as err:
+            check_configuration.check_conf(user_cfg, pandora2d_machine)
+        assert (
+            "disparity range with a size < 5 are not allowed with interpolation refinement method" in err.value.args[0]
+        )
 
 
 class TestCheckRoiSection:
