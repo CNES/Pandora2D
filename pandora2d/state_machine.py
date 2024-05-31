@@ -163,11 +163,11 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.left_img = img_left
         self.right_img = img_right
         # Column's min, max disparities
-        self.disp_min_col = img_left["col_disparity"].sel(band_disp="min").data
-        self.disp_max_col = img_left["col_disparity"].sel(band_disp="max").data
+        self.disp_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
+        self.disp_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
         # Row's min, max disparities
-        self.disp_min_row = img_left["row_disparity"].sel(band_disp="min").data
-        self.disp_max_row = img_left["row_disparity"].sel(band_disp="max").data
+        self.disp_min_row = img_left["row_disparity"].sel(band_disp="min").data.copy()
+        self.disp_max_row = img_left["row_disparity"].sel(band_disp="max").data.copy()
         self.completed_cfg = copy.copy(cfg)
 
         self.add_transitions(self._transitions_run)
