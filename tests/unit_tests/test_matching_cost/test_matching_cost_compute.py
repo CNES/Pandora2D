@@ -1459,9 +1459,6 @@ class TestDisparityMargins:
                 # margins=(6,2,6,2) -> we add a margin of 6 on disp_min_col and on disp_max_col
                 # and of 2 on disp_min_row and disp_max_row
                 id="Margins(left=6, up=2, right=6, down=2)",
-                marks=pytest.mark.xfail(
-                    reason="Pandora point_interval method does not work with disparities greater than the image"
-                ),
             ),
             pytest.param(
                 Margins(3, 3, 3, 3),
@@ -1507,9 +1504,6 @@ class TestDisparityMargins:
                 # margins=(6,4,2,3) -> we add a margin of 6x2 on disp_min_col, 2x2 on disp_max_col,
                 # 4x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=6, up=4, right=2, down=3)",
-                marks=pytest.mark.xfail(
-                    reason="Pandora point_interval method does not work with disparities greater than the image"
-                ),
             ),
             pytest.param(
                 Margins(0, 0, 0, 0),

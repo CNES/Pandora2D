@@ -187,15 +187,9 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
         Margins(1, 1, 1, 1),
         pytest.param(
             Margins(3, 3, 3, 3),
-            marks=pytest.mark.xfail(
-                reason="Pandora point_interval method does not work with disparities greater than the image"
-            ),
         ),
         pytest.param(
             Margins(1, 2, 3, 4),
-            marks=pytest.mark.xfail(
-                reason="Pandora point_interval method does not work with disparities greater than the image"
-            ),
         ),
     ],
 )
@@ -281,15 +275,9 @@ def test_compute_disparity_map_row(margins):
         Margins(1, 0, 1, 0),
         pytest.param(
             Margins(3, 3, 3, 3),
-            marks=pytest.mark.xfail(
-                reason="Pandora point_interval method does not work with disparities greater than the image"
-            ),
         ),
         pytest.param(
             Margins(1, 2, 3, 4),
-            marks=pytest.mark.xfail(
-                reason="Pandora point_interval method does not work with disparities greater than the image"
-            ),
         ),
     ],
 )
@@ -374,15 +362,9 @@ def test_compute_disparity_map_col(margins):
         Margins(1, 0, 1, 0),
         pytest.param(
             Margins(3, 3, 3, 3),
-            marks=pytest.mark.xfail(
-                reason="Pandora point_interval method does not work with disparities greater than the image"
-            ),
         ),
         pytest.param(
             Margins(1, 2, 3, 4),
-            marks=pytest.mark.xfail(
-                reason="Pandora point_interval method does not work with disparities greater than the image"
-            ),
         ),
     ],
 )
