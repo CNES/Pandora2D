@@ -21,16 +21,14 @@ Module for Dichotomy refinement method.
 """
 
 import logging
-from functools import partial
 from typing import Dict, Tuple, Union, NamedTuple, Callable
 
 import numpy as np
-import scipy
 import xarray as xr
 
 from json_checker import And
 
-from pandora.margins import Margins
+from pandora2d.interpolation_filter import AbstractFilter
 from . import refinement
 
 COST_SELECTION_METHOD_MAPPING = {"min": np.nanargmin, "max": np.nanargmax}
@@ -46,6 +44,21 @@ class Dichotomy(refinement.AbstractRefinement):
         "iterations": And(int, lambda it: it > 0),
         "filter": And(str, lambda x: x in ["sinc", "bicubic"]),
     }
+
+    _filter = None
+
+    def __init__(self, cfg: dict = None, _: list = None, __: int = 5) -> None:
+        """
+        :param cfg: optional configuration, {}
+        :type cfg: dict
+        :return: None
+        """
+
+        super().__init__(cfg)
+
+        self._filter = AbstractFilter(  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
+            self.cfg["filter"]
+        )
 
     @classmethod
     def check_conf(cls, cfg: Dict) -> Dict:
@@ -76,7 +89,8 @@ class Dichotomy(refinement.AbstractRefinement):
 
         It will be used for ROI and for dichotomy window extraction from cost volumes.
         """
-        return Margins(2, 2, 2, 2)  # Hard coded for map_coordinates of order 3.
+
+        return self._filter.margins
 
     def refinement_method(
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
@@ -95,19 +109,13 @@ class Dichotomy(refinement.AbstractRefinement):
         :return: the refined disparity maps
         :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """
-        filter_method = partial(scipy.ndimage.map_coordinates, mode="mirror", prefilter=True, output=np.float32)
         cost_selection_method = COST_SELECTION_METHOD_MAPPING[cost_volumes.attrs["type_measure"]]
 
+        # Initial disparity maps
         row_map = disp_map["row_map"]
         col_map = disp_map["col_map"]
-        # Because in cost_volumes, disparities in columns are along array rows and disparities in rows are along
-        # array columns, `col_positions` use `up` margins and `row_positions` use `left` margins.
-        # see test_dichotomy.py::TestDichotomyWindows::test_cost_volumes_dimensions_order
-        col_positions = np.full_like(col_map, self.margins.up, dtype=np.float32)
-        row_positions = np.full_like(row_map, self.margins.left, dtype=np.float32)
-        # Due to filter footprint, we need margins to extract surrounding disparities around pixellic best
-        # candidate.
-        dichotomy_windows = DichotomyWindows(cost_volumes, disp_map, self.margins)
+
+        cost_surfaces = CostSurfaces(cost_volumes)
 
         # With invalid data in disparity maps, there is no corresponding data in cost volume, so we temporarily
         # replace them by an existing value to permits the extraction, then we put NaNs at corresponding coordinates
@@ -131,98 +139,92 @@ class Dichotomy(refinement.AbstractRefinement):
         invalid_disparity_map_mask = invalid_row_disparity_map_mask | invalid_col_disparity_map_mask
         cost_values[invalid_disparity_map_mask] = np.nan
 
+        # row_disparity_source and col_disparity_sources contain the user disparity range
+        row_disparity_source = cost_volumes.attrs["row_disparity_source"]
+        col_disparity_source = cost_volumes.attrs["col_disparity_source"]
+
         precisions = [1 / 2 ** (it + 1) for it in range(self.cfg["iterations"])]
+
+        # Convert disparity maps to np.array to optimise performance
+        row_map = row_map.to_numpy()
+        col_map = col_map.to_numpy()
 
         # See usage of np.nditer:
         # https://numpy.org/doc/stable/reference/arrays.nditer.html#modifying-array-values
         with np.nditer(
-            [cost_values, row_positions, col_positions], op_flags=[["readwrite"], ["readwrite"], ["readwrite"]]
+            [cost_values, row_map, col_map],
+            op_flags=[["readwrite"], ["readwrite"], ["readwrite"]],
         ) as iterators:
-            for dichotomy_window, (cost_value, row_position, col_position) in zip(dichotomy_windows, iterators):
+            for cost_surface, (cost_value, disp_row_init, disp_col_init) in zip(cost_surfaces, iterators):
+
+                # Invalid value
                 if np.isnan(cost_value):
                     continue
+
+                # If the best candidate found at the disparity step is at the edge of the disparity range
+                # we do no enter the dichotomy loop
+                if (disp_row_init in row_disparity_source) or (disp_col_init in col_disparity_source):
+                    continue
+
+                # pos_disp_col_init corresponds to the position in the cost surface
+                # of the initial disparity value in column
+                # In cost surface, disp_col are along rows, so pos_disp_col_init corresponds to a row index
+                pos_disp_col_init = cost_surface["disp_col"].searchsorted(disp_col_init)
+
+                # pos_disp_row_init corresponds to the position in the cost surface
+                # of the initial disparity value in row
+                # In cost surface, disp_row are along columns, so pos_disp_row_init corresponds to a column index
+                pos_disp_row_init = cost_surface["disp_row"].searchsorted(disp_row_init)
+
+                ###         Example:        ###
+
+                # a cost surface is shown below:
+                #
+                #                  disp_row
+                #               -2 -1 0  1  2
+                #
+                #          -2   0  1  2  3  4
+                #          -1   0  1  2  3  4
+                #  disp_col 0   0  1  2  3  4
+                #           1   0  6  2  3  4
+                #           2   0  1  2  3  4
+                #
+                # Here the best coefficient is 6 (max cost selection).
+                # This coefficient corresponds to:
+                # disp_row_init = -1
+                # disp_col_init = 1
+                # pos_disp_row_init = 1
+                # pos_disp_col_init = 3
+
                 for precision in precisions:
-                    # Syntax row_position[...] is for assign value back to row_positions with np.nditer
-                    (row_position[...], col_position[...]), cost_value[...] = search_new_best_point(
-                        dichotomy_window.data,
-                        precision,
-                        (row_position, col_position),  # type: ignore # Reason: is 0 dim array
-                        cost_value,  # type: ignore # Reason: is 0 dim array
-                        filter_method,
-                        cost_selection_method,
+                    # Syntax disp_row_init[...] is for assign value back to row_map with np.nditer
+                    (pos_disp_row_init, pos_disp_col_init), disp_row_init[...], disp_col_init[...], cost_value[...] = (
+                        search_new_best_point(
+                            cost_surface.data,
+                            precision,
+                            (disp_row_init, disp_col_init),  # type: ignore # Reason: is 0 dim array
+                            (pos_disp_row_init, pos_disp_col_init),
+                            cost_value,  # type: ignore # Reason: is 0 dim array
+                            self._filter,
+                            cost_selection_method,
+                        )
                     )
 
         logging.info("Dichotomy precision reached: %s", precisions[-1])
-        # Because disparities in columns are along array rows and disparities in rows are along array columns,
-        # `delta_col` uses `row_positions` and `delta_row` uses `col_position`.
-        delta_row = col_positions - self.margins.up
-        delta_col = row_positions - self.margins.left
 
-        new_row_map = build_subpixellic_disparity_map(
-            delta_row,
-            disp_map["row_map"],
-            invalid_disparity,
-            invalid_row_disparity_map_mask,
-            *cost_volumes.attrs["row_disparity_source"],
-        )
-        new_col_map = build_subpixellic_disparity_map(
-            delta_col,
-            disp_map["col_map"],
-            invalid_disparity,
-            invalid_col_disparity_map_mask,
-            *cost_volumes.attrs["col_disparity_source"],
-        )
-        return new_col_map, new_row_map, cost_values
+        return col_map, row_map, cost_values
 
 
-def build_subpixellic_disparity_map(
-    delta: np.ndarray,
-    disp_map: xr.DataArray,
-    invalid_disparity: Union[int, float],
-    invalid_disparity_map_mask: np.ndarray,
-    min_disparity: Union[int, float],
-    max_disparity: Union[int, float],
-) -> np.ndarray:
-    """
-    Build subpixellic map by applying delta to original one and clipping values to disparity range.
-
-    :param delta:
-    :type delta: np.ndarray
-    :param disp_map:
-    :type disp_map: xr.DataArray
-    :param invalid_disparity:
-    :type invalid_disparity: Union[int, float]
-    :param invalid_disparity_map_mask:
-    :type invalid_disparity_map_mask: np.ndarray
-    :param min_disparity:
-    :type min_disparity: Union[int, float]
-    :param max_disparity:
-    :type max_disparity: Union[int, float]
-    :return: disparity map
-    :rtype: np.ndarray
-    """
-    # Compute new maps taking subpixellic delta into account
-    new_map = (disp_map + delta).data
-    before_range = new_map < min_disparity
-    after_range = new_map > max_disparity
-    # Clip values to disparity range
-    new_map[before_range] = min_disparity
-    new_map[after_range] = max_disparity
-    # clip operation removed invalid values, so let’s put them back
-    new_map[invalid_disparity_map_mask] = invalid_disparity
-    return new_map
-
-
-class DichotomyWindows:
+class CostSurfaces:
     """
     Container to extract subsampling cost surfaces around a given disparity from cost volumes.
 
-    Dichotomy Window of point with coordinates `row==0` and `col==1` can be accessed with `dichotomy_window[0, 1]`.
+    Cost Surface of point with coordinates `row==0` and `col==1` can be accessed with   `cost_surface[0, 1]`.
 
     The container is iterable row first then columns.
     """
 
-    def __init__(self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, disparity_margins: Margins):
+    def __init__(self, cost_volumes: xr.Dataset):
         """
         Extract subsampling cost surfaces from cost volumes around a given disparity from cost volumes.
 
@@ -233,17 +235,11 @@ class DichotomyWindows:
         :type disparity_margins: Margins
         """
         self.cost_volumes = cost_volumes
-        self.min_row_disp_map = disp_map["row_map"] - disparity_margins.up
-        self.max_row_disp_map = disp_map["row_map"] + disparity_margins.down
-        self.min_col_disp_map = disp_map["col_map"] - disparity_margins.left
-        self.max_col_disp_map = disp_map["col_map"] + disparity_margins.right
 
     def __getitem__(self, item):
         """Get cost surface of coordinates item where item is (row, col)."""
         row, col = item
-        row_slice = np.s_[self.min_row_disp_map.sel(row=row, col=col) : self.max_row_disp_map.sel(row=row, col=col)]
-        col_slice = np.s_[self.min_col_disp_map.sel(row=row, col=col) : self.max_col_disp_map.sel(row=row, col=col)]
-        return self.cost_volumes["cost_volumes"].sel(row=row, col=col, disp_row=row_slice, disp_col=col_slice)
+        return self.cost_volumes["cost_volumes"].sel(row=row, col=col)
 
     def __iter__(self):
         """Iter over cost surfaces, row first then columns."""
@@ -259,40 +255,81 @@ class Point(NamedTuple):
     col: Union[int, float, np.float32]
 
 
+def all_same(sequence):
+    """Return True if all items in sequence are equals."""
+    return len(set(sequence)) == 1
+
+
 def search_new_best_point(
-    dichotomy_window: np.ndarray,
+    cost_surface: np.ndarray,
     precision: float,
+    initial_disparity: Union[Tuple[np.floating, np.floating], Tuple[int, int]],
     initial_position: Union[Tuple[np.floating, np.floating], Tuple[int, int]],
     initial_value: np.float32,
-    filter_method: Callable,
+    filter_dicho: AbstractFilter,
     cost_selection_method: Callable,
-) -> Tuple[Point, np.floating]:
+) -> Tuple[Point, np.floating, np.floating, np.floating]:
     """
     Find best position and cost after interpolation of cost surface for given precision.
 
-    :param dichotomy_window: Disparities in rows and cols of a point
-    :type dichotomy_window: np.ndarray
+    :param cost_surface: Disparities in rows and cols of a point
+    :type cost_surface: np.ndarray
     :param precision: subpixellic precision to use
     :type precision: float
+    :param initial_disparity: initial disparities (disp_row, disp_col)
+    :type initial_disparity: Union[Tuple[np.floating, np.floating], Tuple[int, int]]
     :param initial_position: coordinates (row, col) to interpolate around
     :type initial_position: Union[Tuple[np.floating, np.floating], Tuple[int, int]]
     :param initial_value: initial value
     :type initial_value: np.float32
-    :param filter_method: function used to do interpolation. Its parameters should be:
-                            - inputs: ndarray with values to interpolate from.
-                            - coordinates: The coordinates at which input is evaluated.
-    :type filter_method: Callable
+    :param filter_dicho: filter used to do interpolation in dichotomy loop
+    :type filter_dicho: AbstractFilter
     :param cost_selection_method: function used to select best cost
     :type cost_selection_method: Callable
-    :return: coordinates of best interpolated cost and its value.
-    :rtype: Tuple[Point, np.float32]
+    :return: coordinates of best interpolated cost, its value and its corresponding disparities.
+    :rtype: Tuple[Point, np.floating, np.floating, np.floating]
     """
-    initial_row, initial_col = initial_position
-    new_rows = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1], dtype=np.float32) * precision + initial_row
-    new_cols = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.float32) * precision + initial_col
-    candidates = filter_method(dichotomy_window, [new_rows, new_cols])
+
+    # initial_disp_row corresponds to row_map[i,j]
+    # initial_disp_col corresponds to col_map[i,j]
+    initial_disp_row, initial_disp_col = initial_disparity
+
+    # initial_pos_disp_row is the column index corresponding to initial_disp_row in cost surface
+    # initial_pos_disp_col is the row index corresponding to initial_disp_col in cost surface
+    initial_pos_disp_row, initial_pos_disp_col = initial_position
+
+    # Used to compute new positions and new disparities based on precision
+    disp_row_shifts = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1], dtype=np.float32) * precision
+    disp_col_shifts = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.float32) * precision
+
+    # disp_row are along columns in cost_surface, then new_cols are computed from initial_pos_disp_row
+    new_cols = disp_row_shifts + initial_pos_disp_row
+    # disp_col are along rows in cost_surface, then new_rows are computed from initial_pos_disp_col
+    new_rows = disp_col_shifts + initial_pos_disp_col
+
+    # New subpixel disparity values
+    new_rows_disp = disp_row_shifts + initial_disp_row
+    new_cols_disp = disp_col_shifts + initial_disp_col
+
+    # Interpolate points at positions (new_rows[i], new_cols[i])
+    candidates = filter_dicho.interpolate(cost_surface, (new_cols, new_rows))
+
     # In case a NaN is present in the kernel, candidates will be all-NaNs. Let’s restore initial_position value so
     # that best candidate search will be able to find it.
-    candidates[4] = initial_value
-    best_index = cost_selection_method(candidates)
-    return Point(new_rows[best_index], new_cols[best_index]), candidates[best_index]
+    candidates[4] = float(initial_value)
+
+    # If all interpolated coefficients are equals,
+    # we keep the initial disparity as the best candidate
+    initial_best_index = 4
+    best_index = initial_best_index if all_same(candidates) else cost_selection_method(candidates)
+
+    # We return:
+    # - index of best new disparities in cost surface
+    # - new best disparities
+    # - value of best similarity coefficient for new best disparities
+    return (
+        Point(new_cols[best_index], new_rows[best_index]),
+        new_rows_disp[best_index],
+        new_cols_disp[best_index],
+        candidates[best_index],
+    )

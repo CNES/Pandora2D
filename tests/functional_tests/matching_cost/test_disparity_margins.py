@@ -99,9 +99,9 @@ class TestDisparityMargins:
             pytest.param(
                 1,
                 {"refinement_method": "dichotomy", "iterations": 1, "filter": "bicubic"},
-                (10, 10, 7, 9),
-                [-1, 0, 1, 2, 3, 4, 5],
-                [-4, -3, -2, -1, 0, 1, 2, 3, 4],
+                (10, 10, 6, 8),
+                [0, 1, 2, 3, 4, 5],
+                [-3, -2, -1, 0, 1, 2, 3, 4],
                 id="Subpix=1 and refinement_method=dichotomy",
             ),
             pytest.param(
@@ -127,9 +127,9 @@ class TestDisparityMargins:
             pytest.param(
                 2,
                 {"refinement_method": "dichotomy", "iterations": 1, "filter": "bicubic"},
-                (10, 10, 13, 17),
-                [-1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
-                [-4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+                (10, 10, 11, 15),
+                [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
+                [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
                 id="Subpix=2 and refinement_method=dichotomy",
             ),
             pytest.param(
@@ -155,9 +155,9 @@ class TestDisparityMargins:
             pytest.param(
                 4,
                 {"refinement_method": "dichotomy", "iterations": 1, "filter": "bicubic"},
-                (10, 10, 25, 33),
-                np.arange(-1, 5.25, 0.25),
-                np.arange(-4, 4.25, 0.25),
+                (10, 10, 21, 29),
+                np.arange(0, 5.25, 0.25),
+                np.arange(-3, 4.25, 0.25),
                 id="Subpix=4 and refinement_method=dichotomy",
             ),
             pytest.param(

@@ -19,13 +19,18 @@
 Test the refinement.dichotomy pipeline.
 """
 
+import pytest
+
+import numpy as np
+
 import pandora2d
 
 
-def test_dichotomy_execution_with_spline(left_img_path, right_img_path):
-    """Test that execution of Pandora2d with a dichotomy refinement does not fail.
-
-    Uses spline from `scipy.ndimage.map_coordinates`.
+@pytest.mark.parametrize("subpix", [1, 2, 4])
+@pytest.mark.parametrize("iterations", [1, 2])
+def test_dichotomy_execution(left_img_path, right_img_path, subpix, iterations):
+    """
+    Test that execution of Pandora2d with a dichotomy refinement does not fail.
     """
     pandora2d_machine = pandora2d.state_machine.Pandora2DMachine()
     user_cfg = {
@@ -45,6 +50,7 @@ def test_dichotomy_execution_with_spline(left_img_path, right_img_path):
             "matching_cost": {
                 "matching_cost_method": "zncc",
                 "window_size": 7,
+                "subpix": subpix,
             },
             "disparity": {
                 "disparity_method": "wta",
@@ -52,7 +58,7 @@ def test_dichotomy_execution_with_spline(left_img_path, right_img_path):
             },
             "refinement": {
                 "refinement_method": "dichotomy",
-                "iterations": 1,
+                "iterations": iterations,
                 "filter": "bicubic",
             },
         },
@@ -60,4 +66,9 @@ def test_dichotomy_execution_with_spline(left_img_path, right_img_path):
     cfg = pandora2d.check_configuration.check_conf(user_cfg, pandora2d_machine)
     image_datasets = pandora2d.img_tools.create_datasets_from_inputs(input_config=cfg["input"])
 
-    pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+    dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+
+    # Checking that resulting disparity maps are not full of nans
+    with np.testing.assert_raises(AssertionError):
+        assert np.all(np.isnan(dataset_disp_maps.row_map.data))
+        assert np.all(np.isnan(dataset_disp_maps.col_map.data))

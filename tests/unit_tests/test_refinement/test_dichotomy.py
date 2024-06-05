@@ -20,12 +20,11 @@ Test the refinement.dichotomy module.
 """
 
 import logging
-from functools import partial
+import copy
 
 import numpy as np
 import pytest
 import json_checker
-import scipy
 
 import xarray as xr
 
@@ -34,6 +33,7 @@ from pytest_mock import MockerFixture
 
 from pandora2d.matching_cost import MatchingCost
 from pandora2d import refinement
+from pandora2d.interpolation_filter.bicubic import Bicubic
 
 
 # Make pylint happy with fixtures:
@@ -126,9 +126,9 @@ def invalid_disparity():
 @pytest.fixture()
 def disp_map(invalid_disparity, rows, cols):
     """Fake disparity maps with alternating values."""
-    row = np.full(rows.size * cols.size, 4)
+    row = np.full(rows.size * cols.size, 4.0)
     row[::2] = 5
-    col = np.zeros(rows.size * cols.size)
+    col = np.full(rows.size * cols.size, 0.0)
     col[::2] = 1
     return xr.Dataset(
         {
@@ -146,7 +146,7 @@ def disp_map(invalid_disparity, rows, cols):
 @pytest.fixture()
 def config():
     """Basic configuration expected to be good."""
-    return {"refinement_method": "dichotomy", "iterations": 2, "filter": "sinc"}
+    return {"refinement_method": "dichotomy", "iterations": 2, "filter": "bicubic"}
 
 
 def test_factory(config):
@@ -200,7 +200,7 @@ class TestCheckConf:
 
         assert dichotomy_instance.cfg["iterations"] == iterations
 
-    @pytest.mark.parametrize("filter_name", ["sinc", "bicubic"])
+    @pytest.mark.parametrize("filter_name", ["bicubic"])
     def test_valid_filter_names(self, config, filter_name):
         """Test accepted filter names."""
         config["filter"] = filter_name
@@ -266,7 +266,7 @@ class TestRefinementMethod:
 
     @pytest.fixture()
     def filter_name(self):
-        return "sinc"
+        return "bicubic"
 
     @pytest.fixture()
     def config(self, iterations, filter_name):
@@ -304,25 +304,28 @@ class TestRefinementMethod:
         mocked_search_new_best_point = mocker.patch(
             "pandora2d.refinement.dichotomy.search_new_best_point",
             autospec=True,
-            return_value=(refinement.dichotomy.Point(0, 0), 0),
+            return_value=(refinement.dichotomy.Point(0, 0), 0, 0, 0),
         )
 
         dichotomy_instance.refinement_method(cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY)
 
         mocked_search_new_best_point.assert_called_with(
-            dichotomy_window=mocker.ANY,
+            cost_surface=mocker.ANY,
             precision=mocker.ANY,
+            initial_disparity=mocker.ANY,
             initial_position=mocker.ANY,
             initial_value=mocker.ANY,
-            filter_method=mocker.ANY,
+            filter_dicho=mocker.ANY,
             cost_selection_method=expected,
         )
 
     def test_result_of_one_iteration(self, dichotomy_instance, cost_volumes, disp_map, mocker: MockerFixture):
         """Test result of refinement method is as expected."""
 
+        copy_disp_map = copy.deepcopy(disp_map)
+
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY
+            cost_volumes, copy_disp_map, img_left=mocker.ANY, img_right=mocker.ANY
         )
 
         assert result_disp_col[0, 2] == disp_map["col_map"][0, 2] + 0.5
@@ -334,14 +337,17 @@ class TestRefinementMethod:
     def test_result_of_two_iterations(self, dichotomy_instance, cost_volumes, disp_map, mocker: MockerFixture):
         """Test result of refinement method is as expected."""
 
+        copy_disp_map = copy.deepcopy(disp_map)
+
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY
+            cost_volumes, copy_disp_map, img_left=mocker.ANY, img_right=mocker.ANY
         )
 
-        assert result_disp_row[0, 2] == disp_map["row_map"][0, 2] - 0.5
-        assert result_disp_col[0, 2] == disp_map["col_map"][0, 2] + 0.5
+        # Different results from the spline filter
+        assert result_disp_row[0, 2] == disp_map["row_map"][0, 2] - 0.25
+        assert result_disp_col[0, 2] == disp_map["col_map"][0, 2] + 0.25
         assert result_disp_row[1, 0] == disp_map["row_map"][1, 0]
-        assert result_disp_col[1, 0] == disp_map["col_map"][1, 0] - 0.5
+        assert result_disp_col[1, 0] == disp_map["col_map"][1, 0] - 0.25
 
     def test_with_nans_in_disp_map(self, dichotomy_instance, cost_volumes, disp_map, mocker: MockerFixture):
         """Test that even with NaNs in disparity maps we can extract values from cost_volumes."""
@@ -350,8 +356,10 @@ class TestRefinementMethod:
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map[{"row": 1, "col": 0}] = np.nan
 
+        copy_disp_map = copy.deepcopy(disp_map)
+
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY
+            cost_volumes, copy_disp_map, img_left=mocker.ANY, img_right=mocker.ANY
         )
 
         assert result_disp_row[0, 2] == disp_map["row_map"][0, 2] - 0.5
@@ -368,9 +376,11 @@ class TestRefinementMethod:
         disp_map["row_map"][{"row": 1, "col": 0}] = invalid_disparity
         disp_map["col_map"][{"row": 0, "col": 1}] = invalid_disparity
 
+        copy_disp_map = copy.deepcopy(disp_map)
+
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
             cost_volumes,
-            disp_map,
+            copy_disp_map,
             img_left=mocker.ANY,
             img_right=mocker.ANY,
         )
@@ -418,15 +428,15 @@ def test_margins():
     Test margins of Dichotomy.
     """
 
-    config = {"refinement_method": "dichotomy", "iterations": 2, "filter": "sinc"}
+    config = {"refinement_method": "dichotomy", "iterations": 2, "filter": "bicubic"}
 
     dichotomy_instance = refinement.dichotomy.Dichotomy(config)
 
-    assert dichotomy_instance.margins == Margins(2, 2, 2, 2)
+    assert dichotomy_instance.margins == Margins(1, 1, 2, 2)
 
 
-class TestDichotomyWindows:
-    """Test DichotomyWindows container."""
+class TestCostSurfaces:
+    """Test CostSurfaces container."""
 
     @pytest.mark.parametrize(
         ["row_index", "col_index", "expected"],
@@ -436,17 +446,18 @@ class TestDichotomyWindows:
                 0,
                 xr.DataArray(
                     [
-                        [7, 8, 9, 10, 11],
-                        [13, 14, 15, 16, 17],
-                        [19, 20, 21, 22, 23],
-                        [25, 26, 27, 28, 29],
-                        [31, 32, 33, 34, 35],
+                        [0, 1, 2, 3, 4, 5],
+                        [6, 7, 8, 9, 10, 11],
+                        [12, 13, 14, 15, 16, 17],
+                        [18, 19, 20, 21, 22, 23],
+                        [24, 25, 26, 27, 28, 29],
+                        [30, 31, 32, 33, 34, 35],
                     ],
                     coords={
                         "row": 0,
                         "col": 0,
-                        "disp_col": [-1, 0, 1, 2, 3],
-                        "disp_row": [3, 4, 5, 6, 7],
+                        "disp_col": [-2, -1, 0, 1, 2, 3],
+                        "disp_row": [2, 3, 4, 5, 6, 7],
                     },
                     dims=["disp_col", "disp_row"],
                 ),
@@ -457,17 +468,18 @@ class TestDichotomyWindows:
                 2,
                 xr.DataArray(
                     [
-                        [180, 181, 182, 183, 184],
-                        [186, 187, 188, 189, 190],
-                        [192, 193, 194, 195, 196],
-                        [198, 199, 200, 201, 202],
-                        [204, 205, 206, 207, 208],
+                        [180, 181, 182, 183, 184, 185],
+                        [186, 187, 188, 189, 190, 191],
+                        [192, 193, 194, 195, 196, 197],
+                        [198, 199, 200, 201, 202, 203],
+                        [204, 205, 206, 207, 208, 209],
+                        [210, 211, 212, 213, 214, 215],
                     ],
                     coords={
                         "row": 1,
                         "col": 2,
-                        "disp_col": [-2, -1, 0, 1, 2],
-                        "disp_row": [2, 3, 4, 5, 6],
+                        "disp_col": [-2, -1, 0, 1, 2, 3],
+                        "disp_row": [2, 3, 4, 5, 6, 7],
                     },
                     dims=["disp_col", "disp_row"],
                 ),
@@ -475,67 +487,66 @@ class TestDichotomyWindows:
             ),
         ],
     )
-    def test_direct_item_access(self, cost_volumes, disp_map, row_index, col_index, expected):
+    def test_direct_item_access(self, cost_volumes, row_index, col_index, expected):
         """Test we are able to get a dichotomy windows from cost_volumes at given index."""
-        disparity_margins = Margins(2, 2, 2, 2)
 
-        dichotomy_windows = refinement.dichotomy.DichotomyWindows(cost_volumes, disp_map, disparity_margins)
-        result = dichotomy_windows[row_index, col_index]
+        cost_surfaces = refinement.dichotomy.CostSurfaces(cost_volumes)
+        result = cost_surfaces[row_index, col_index]
 
         assert result.equals(expected)
 
-    def test_cost_volumes_dimensions_order(self, cost_volumes, disp_map):
-        """This test is here to show that disp_row is along columns numpy array and disp_cal along numpy array rows."""
-        disparity_margins = Margins(2, 2, 2, 2)
+    def test_cost_volumes_dimensions_order(self, cost_volumes):
+        """This test is here to show that disp_row is along columns numpy array and disp_col along numpy array rows."""
 
-        dichotomy_windows = refinement.dichotomy.DichotomyWindows(cost_volumes, disp_map, disparity_margins)
-        result = dichotomy_windows[0, 0]
+        cost_surfaces = refinement.dichotomy.CostSurfaces(cost_volumes)
+        result = cost_surfaces[0, 0]
 
         # Result is:
         # xr.DataArray(
         #     [
-        #         [7, 8, 9, 10, 11],
-        #         [13, 14, 15, 16, 17],
-        #         [19, 20, 21, 22, 23],
-        #         [25, 26, 27, 28, 29],
-        #         [31, 32, 33, 34, 35],
-        #     ],
+        #       [  0,   1,   2,   3,   4,   5],
+        #       [  6,   7,   8,   9,  10,  11],
+        #       [ 12,  13,  14,  15,  16,  17],
+        #       [ 18,  19,  20,  21,  22,  23],
+        #       [ 24,  25,  26,  27,  28,  29],
+        #       [ 30,  31,  32,  33,  34,  35],
+        # ],
         #     coords={
         #         "row": 0,
         #         "col": 0,
-        #         "disp_col": [-1, 0, 1, 2, 3],
-        #         "disp_row": [3, 4, 5, 6, 7],
+        #         "disp_col": [-2, -1, 0, 1, 2, 3],
+        #         "disp_row": [2, 3, 4, 5, 6, 7],
         #     },
         #     dims=["disp_col", "disp_row"],
         # )
 
         # disp_row is along columns numpy array and disp_cal along numpy array rows:
-        np.testing.assert_array_equal(result.sel(disp_row=3).data, [7, 13, 19, 25, 31])
-        np.testing.assert_array_equal(result.sel(disp_col=0).data, [13, 14, 15, 16, 17])
+        np.testing.assert_array_equal(result.sel(disp_row=3).data, [1, 7, 13, 19, 25, 31])
+        np.testing.assert_array_equal(result.sel(disp_col=0).data, [12, 13, 14, 15, 16, 17])
 
     def test_iteration(self, cost_volumes, disp_map):
-        """Test we can iterate over dichotomy windows."""
-        disparity_margins = Margins(2, 2, 2, 2)
+        """Test we can iterate over cost surfaces."""
 
-        dichotomy_windows = refinement.dichotomy.DichotomyWindows(cost_volumes, disp_map, disparity_margins)
+        cost_surfaces = refinement.dichotomy.CostSurfaces(cost_volumes)
 
-        result = list(dichotomy_windows)
+        result = list(cost_surfaces)
 
         assert len(result) == disp_map.sizes["row"] * disp_map.sizes["col"]
         assert result[0].equals(
             xr.DataArray(
                 [
-                    [7, 8, 9, 10, 11],
-                    [13, 14, 15, 16, 17],
-                    [19, 20, 21, 22, 23],
-                    [25, 26, 27, 28, 29],
-                    [31, 32, 33, 34, 35],
+                    [0, 1, 2, 3, 4, 5],
+                    [6, 7, 8, 9, 10, 11],
+                    [12, 13, 14, 15, 16, 17],
+                    [18, 19, 20, 21, 22, 23],
+                    [24, 25, 26, 27, 28, 29],
+                    [30, 31, 32, 33, 34, 35],
                 ],
                 coords={
                     "row": 0,
                     "col": 0,
-                    "disp_col": [-1, 0, 1, 2, 3],
-                    "disp_row": [3, 4, 5, 6, 7],
+                    "disp_col": [-2, -1, 0, 1, 2, 3],
+                    "disp_row": [2, 3, 4, 5, 6, 7],
                 },
                 dims=["disp_col", "disp_row"],
             ),
@@ -543,17 +554,18 @@ class TestDichotomyWindows:
         assert result[-2].equals(
             xr.DataArray(
                 [
-                    [151, 152, 153, 154, 155],
-                    [157, 158, 159, 160, 161],
-                    [163, 164, 165, 166, 167],
-                    [169, 170, 171, 172, 173],
-                    [175, 176, 177, 178, 179],
+                    [144, 145, 146, 147, 148, 149],
+                    [150, 151, 152, 153, 154, 155],
+                    [156, 157, 158, 159, 160, 161],
+                    [162, 163, 164, 165, 166, 167],
+                    [168, 169, 170, 171, 172, 173],
+                    [174, 175, 176, 177, 178, 179],
                 ],
                 coords={
                     "row": 1,
                     "col": 1,
-                    "disp_col": [-1, 0, 1, 2, 3],
-                    "disp_row": [3, 4, 5, 6, 7],
+                    "disp_col": [-2, -1, 0, 1, 2, 3],
+                    "disp_row": [2, 3, 4, 5, 6, 7],
                 },
                 dims=["disp_col", "disp_row"],
             )
@@ -561,63 +573,75 @@ class TestDichotomyWindows:
 
 
 @pytest.mark.parametrize(
-    ["dichotomy_window", "precision", "initial_position", "initial_value", "expected"],
+    ["cost_surface", "precision", "initial_disparity", "initial_position", "initial_value", "expected"],
     [
         pytest.param(
             np.array(
                 [
-                    [0, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
                 ]
             ),
             0.5,
-            (1, 1),
+            (2, 2),
+            (2, 2),
             1.0,
-            (refinement.dichotomy.Point(1.0, 1.0), np.float32(1.0)),
+            (refinement.dichotomy.Point(2.0, 2.0), np.float32(2.0), np.float32(2.0), np.float32(1.0)),
             id="Initial is best",
         ),
         # This case is not realistic as the initial value should be the maximum value, but it is easier to test.
         pytest.param(
             np.array(
                 [
-                    [0, 0, 0],
-                    [0, 1, 0],
-                    [20, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 20, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
                 ]
             ),
             0.5,
-            (1, 1),
+            (2, 2),
+            (2, 2),
             1.0,
-            (refinement.dichotomy.Point(1.5, 0.5), np.float32(7.3007812)),
+            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.5), np.float32(2.5), np.float32(6.64453125)),
             id="Bottom left is best",
         ),
         pytest.param(
             np.array(
                 [
-                    [0, 0, 0],
-                    [0, 1, 0],
-                    [20, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 20, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
                 ]
             ),
             0.25,
-            (1.5, 0.5),
+            (1.5, 2.5),
+            (1.5, 2.5),
             7.638916,
-            (refinement.dichotomy.Point(1.75, 0.25), np.float32(15.473938)),
+            (refinement.dichotomy.Point(1.25, 2.75), np.float32(1.25), np.float32(2.75), np.float32(15.09161376953125)),
             id="Bottom left is best at 0.25 precision",
         ),
         pytest.param(
             np.array(
                 [
-                    [np.nan, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 20],
+                    [0, 0, 0, 0, 0],
+                    [0, np.nan, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 20, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
                 ]
             ),
             0.5,
-            (1, 1),
+            (2, 2),
+            (2, 2),
             np.float32(1.0),
-            (refinement.dichotomy.Point(1.0, 1.0), np.float32(1.0)),
+            (refinement.dichotomy.Point(2.0, 2.0), np.float32(2.0), np.float32(2.0), np.float32(1.0)),
             id="NaN in kernel gives initial position",
         ),
         pytest.param(
@@ -632,8 +656,9 @@ class TestDichotomyWindows:
             ),
             0.5,
             (2, 2),
+            (2, 2),
             1.0,
-            (refinement.dichotomy.Point(2.5, 2.5), np.float32(8.389848)),
+            (refinement.dichotomy.Point(2.5, 2.5), np.float32(2.5), np.float32(2.5), np.float32(6.64453125)),
             id="Bottom right is best",
         ),
         pytest.param(
@@ -648,18 +673,28 @@ class TestDichotomyWindows:
             ),
             0.5,
             (2, 2),
+            (2, 2),
             1.0,
-            (refinement.dichotomy.Point(2.5, 2.5), np.float32(4.8216147)),
+            (refinement.dichotomy.Point(2.5, 2.5), np.float32(2.5), np.float32(2.5), np.float32(6.64453125)),
             id="NaN outside of kernel has no effect",
-            marks=pytest.mark.xfail(reason="Due to map_coordinates prefilter"),
         ),
     ],
 )
-def test_search_new_best_point(dichotomy_window, precision, initial_position, initial_value, expected):
+def test_search_new_best_point(cost_surface, precision, initial_disparity, initial_position, initial_value, expected):
     """Test we get new coordinates as expected."""
-    filter_method = partial(scipy.ndimage.map_coordinates, mode="mirror", prefilter=True, output=np.float32)
+
+    filter_dicho = Bicubic("bicubic")
+
     cost_selection_method = np.nanargmax
+
     result = refinement.dichotomy.search_new_best_point(
-        dichotomy_window, precision, initial_position, initial_value, filter_method, cost_selection_method
+        cost_surface,
+        precision,
+        initial_disparity,
+        initial_position,
+        initial_value,
+        filter_dicho,
+        cost_selection_method,
     )
+
     assert result == expected
