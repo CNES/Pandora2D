@@ -10,6 +10,11 @@ Welcome to Pandora2D's documentation!
 **Pandora2d  is a tool that provide disparity maps for images pairs with a combination in both direction.**
 **It uses** `Pandora <https://github.com/cnes/pandora>`_
 
+.. warning::
+    The maturity of Pandora2D is tightly linked to the progress of the `Trishna mission <https://trishna.cnes.fr>`_.
+    
+    As long as this mission is in the development phase, released versions of Pandora2d should be considered experimental. 
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
