@@ -42,11 +42,13 @@ def test_report_disparities():
         "row": {
             "mean": 10.0,
             "std": 10.0,
+            "quantiles": {"p10": 0.0, "p25": 0.0, "p50": 10.0, "p75": 20.0, "p90": 20.0},
             "minimal_valid_pixel_ratio": 2 / 3,
         },
         "col": {
             "mean": 15.0,
             "std": 5.0,
+            "quantiles": {"p10": 10.0, "p25": 10.0, "p50": 15.0, "p75": 20.0, "p90": 20.0},
             "minimal_valid_pixel_ratio": 2 / 3,
         },
     }

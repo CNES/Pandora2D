@@ -18,11 +18,22 @@
 
 """Functions to compute statistics on results."""
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Dict, Union
 
 import numpy as np
 import xarray as xr
+
+
+@dataclass
+class Quantiles:
+    """Quantiles."""
+
+    p10: Union[float, np.floating]
+    p25: Union[float, np.floating]
+    p50: Union[float, np.floating]
+    p75: Union[float, np.floating]
+    p90: Union[float, np.floating]
 
 
 @dataclass
@@ -31,6 +42,7 @@ class Statistics:
 
     mean: Union[float, np.floating]
     std: Union[float, np.floating]
+    quantiles: Quantiles
     minimal_valid_pixel_ratio: Union[float, np.floating] = 1.0
 
     def __str__(self):
@@ -39,11 +51,7 @@ class Statistics:
     def to_dict(self) -> Dict:
         """Convert statistics into a dictionary."""
         # We need to cast to float because np.float can not be serialized to JSON
-        return {
-            "mean": float(self.mean),
-            "std": float(self.std),
-            "minimal_valid_pixel_ratio": float(self.minimal_valid_pixel_ratio),
-        }
+        return asdict(self)
 
 
 def compute_statistics(dataarray: xr.DataArray, invalid_values: Union[np.floating, np.integer] = None) -> Statistics:
@@ -63,4 +71,16 @@ def compute_statistics(dataarray: xr.DataArray, invalid_values: Union[np.floatin
         mask = np.isin(dataarray.to_numpy(), invalid_values, invert=True)
         data = dataarray.to_numpy()[mask]
         minimal_valid_pixel_ratio = mask.sum() / mask.size
-    return Statistics(mean=np.nanmean(data), std=np.nanstd(data), minimal_valid_pixel_ratio=minimal_valid_pixel_ratio)
+
+    quantiles = (
+        Quantiles(*np.nanquantile(data, [0.1, 0.25, 0.5, 0.75, 0.9]))
+        if data.size
+        else Quantiles(np.nan, np.nan, np.nan, np.nan, np.nan)
+    )
+
+    return Statistics(
+        mean=np.nanmean(data),
+        std=np.nanstd(data),
+        minimal_valid_pixel_ratio=minimal_valid_pixel_ratio,
+        quantiles=quantiles,
+    )

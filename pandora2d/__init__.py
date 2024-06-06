@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
@@ -21,9 +21,12 @@
 This module contains functions to run Pandora pipeline.
 """
 
+import json
+from pathlib import Path
 from typing import Dict
 
 import xarray as xr
+
 from pandora import read_config_file, setup_logging, import_plugin
 from pandora.common import save_config
 
@@ -31,6 +34,8 @@ from pandora2d import common
 from pandora2d.check_configuration import check_conf, check_datasets
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 from pandora2d.state_machine import Pandora2DMachine
+from pandora2d import reporting
+from pandora2d.reporting import NumpyPrimitiveEncoder
 
 
 def run(
@@ -117,6 +122,9 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):
         common.save_dataset(dataset_disp_maps, completed_cfg, path_output)
+        report = {"statistics": {"disparity": reporting.report_disparities(dataset_disp_maps)}}
+        with open(Path(path_output) / "report.json", "w", encoding="utf8") as fd:
+            json.dump(report, fd, indent=2, cls=NumpyPrimitiveEncoder)
     # Update output configuration with detailed margins
     completed_cfg["margins"] = pandora2d_machine.margins.to_dict()
     # save config

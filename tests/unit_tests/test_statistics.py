@@ -25,7 +25,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from pandora2d.statistics import compute_statistics, Statistics
+from pandora2d.statistics import compute_statistics, Statistics, Quantiles
 
 
 @pytest.fixture()
@@ -43,9 +43,13 @@ class TestStatistics:
     """Test Statistics class."""
 
     @pytest.fixture()
-    def statistics(self):
+    def quantiles(self):
+        return Quantiles(1.0, 2.0, 3.0, 4.0, 5.0)
+
+    @pytest.fixture()
+    def statistics(self, quantiles):
         """Instantiate a Statistics object."""
-        return Statistics(mean=10.5, std=5.3)
+        return Statistics(mean=10.5, std=5.3, quantiles=quantiles)
 
     def test_str(self, statistics):
         """Test conversion to str."""
@@ -53,7 +57,12 @@ class TestStatistics:
 
     def test_to_dict(self, statistics):
         """Test conversion to dict."""
-        assert statistics.to_dict() == {"mean": 10.5, "std": 5.3, "minimal_valid_pixel_ratio": 1.0}
+        assert statistics.to_dict() == {
+            "mean": 10.5,
+            "std": 5.3,
+            "minimal_valid_pixel_ratio": 1.0,
+            "quantiles": {"p10": 1.0, "p25": 2.0, "p50": 3.0, "p75": 4.0, "p90": 5.0},
+        }
 
 
 class TestComputeStatistics:
