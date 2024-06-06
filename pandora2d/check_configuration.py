@@ -326,7 +326,7 @@ default_short_configuration_input = {
     }
 }
 
-default_configuration_disp = {"input": {"col_disparity": [-9999, -9999], "row_disparity": [-9999, -9999]}}
+default_configuration_disp = {"input": {"col_disparity": [-9999, -9995], "row_disparity": [-9999, -9995]}}
 
 roi_configuration_schema = {
     "row": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},
