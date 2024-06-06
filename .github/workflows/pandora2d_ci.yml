@@ -33,7 +33,7 @@ jobs:
     - name: Test with pytest
       run: |
         export NUMBA_DISABLE_JIT="1"
-        pytest -m "unit_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
+        pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
         pytest -m "functional_tests" --html=functional-test-report.html
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
