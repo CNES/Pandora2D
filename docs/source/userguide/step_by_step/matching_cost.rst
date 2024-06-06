@@ -19,6 +19,7 @@ Different measures of similarity are available in Pandora2D :
 - SAD (Sum of Absolute Differences)
 - SSD (Sum of Squared Differences)
 - ZNCC (Zero mean Normalized Cross Correlation)
+- MCCNN (Neural network which computes a similarity measure) (MANDATORY: pandora_plugin_mccnn) (please see: `pandora documentation <https://pandora.readthedocs.io/en/stable/userguide/plugins/plugin_mccnn.html>`_)
 
 
 Configuration and parameters
@@ -39,13 +40,15 @@ Configuration and parameters
      - Similarity measure
      - str
      -
-     - "ssd" , "sad", "zncc"
+     - "ssd" , "sad", "zncc", "mc_cnn"
      - Yes.
    * - window_size
      - Window size for similarity measure
      - int
      - 5
-     - > 0
+     - | > 0 and **odd**
+       | or 11 if "matching_cost_method" is "mc_cnn"
+       | or >1 if "refinement_method" is "optical_flow"
      - No
    * - step
      - Step [row, col] for computing similarity coefficient
@@ -53,10 +56,20 @@ Configuration and parameters
      - [1, 1]
      - list[int >0, int >0]
      - No
+   * - subpix
+     - Subpix parameter for computing subpixel disparities
+     - int
+     - 1
+     - [1,2,4]
+     - No
 
 
 .. note::
     The order of steps should be [row, col].
+
+.. warning::
+    The subpix parameter can only take values 1, 2 and 4.
+
 
 **Example**
 
@@ -75,7 +88,8 @@ Configuration and parameters
             {
                 "matching_cost_method": "ssd",
                 "window_size": 7,
-                "step" : [5, 5]
+                "step" : [5, 5],
+                "subpix": 4,
             },
             //...
         }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -22,14 +22,25 @@
 """
 This module contains functions allowing to check the configuration given to Pandora pipeline.
 """
-from typing import Dict
-import xarray as xr
-from json_checker import Checker, Or, And
+
+from __future__ import annotations
+
+from typing import Dict, List
+
 import numpy as np
+import xarray as xr
+from json_checker import And, Checker, Or
 
-from pandora.check_configuration import check_disparities_from_input, check_images, get_config_input, check_dataset
-from pandora.check_configuration import concat_conf, update_conf, rasterio_can_open_mandatory
-
+from pandora.img_tools import get_metadata
+from pandora.check_configuration import (
+    check_dataset,
+    check_disparities_from_input,
+    check_images,
+    concat_conf,
+    get_config_input,
+    rasterio_can_open_mandatory,
+    update_conf,
+)
 
 from pandora2d.state_machine import Pandora2DMachine
 
@@ -58,18 +69,28 @@ def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
         raise ValueError("left and right datasets must have the same shape")
 
 
-def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = None) -> Dict[str, dict]:
     """
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
     :type user_cfg: dict
+    :param estimation_config: get estimation config if in user_config
+    :type estimation_config: dict
     :return: cfg: global configuration
     :rtype: cfg: dict
     """
 
+    if "input" not in user_cfg:
+        raise KeyError("input key is missing")
+
     # Add missing steps and inputs defaults values in user_cfg
     cfg = update_conf(default_short_configuration_input, user_cfg)
+
+    # test disparities
+    if estimation_config is not None:
+        # add wrong disparity for checking only
+        cfg = update_conf(default_configuration_disp, cfg)
 
     # check schema
     configuration_schema = {"input": input_configuration_schema}
@@ -79,11 +100,37 @@ def check_input_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     # test images
     check_images(cfg["input"])
 
-    # test disparities
-    check_disparities_from_input(cfg["input"]["col_disparity"], None)
-    check_disparities_from_input(cfg["input"]["row_disparity"], None)
+    if estimation_config is None:
+        check_disparities_from_input(cfg["input"]["col_disparity"], None)
+        check_disparities_from_input(cfg["input"]["row_disparity"], None)
+        left_image_metadata = get_metadata(cfg["input"]["left"]["img"])
+        check_disparity_ranges_are_inside_image(
+            left_image_metadata, cfg["input"]["row_disparity"], cfg["input"]["col_disparity"]
+        )
 
     return cfg
+
+
+def check_disparity_ranges_are_inside_image(
+    image_metadata: xr.Dataset, row_disparity_range: List, col_disparity_range: List
+) -> None:
+    """
+    Raise an error if disparity ranges are out off image.
+
+    :param image_metadata:
+    :type image_metadata: xr.Dataset
+    :param row_disparity_range:
+    :type row_disparity_range: List
+    :param col_disparity_range:
+    :type col_disparity_range: List
+    :return: None
+    :rtype: None
+    :raises: ValueError
+    """
+    if np.abs(row_disparity_range).min() > image_metadata.sizes["row"]:
+        raise ValueError("Row disparity range out of image")
+    if np.abs(col_disparity_range).min() > image_metadata.sizes["col"]:
+        raise ValueError("Column disparity range out of image")
 
 
 def check_roi_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
@@ -128,6 +175,10 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     """
 
     cfg = update_conf({}, user_cfg)
+
+    if "pipeline" not in cfg:
+        raise KeyError("pipeline key is missing")
+
     pandora2d_machine.check_conf(cfg)
 
     cfg = update_conf(cfg, pandora2d_machine.pipeline_cfg)
@@ -158,7 +209,7 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
 
     # check input
     user_cfg_input = get_config_input(user_cfg)
-    cfg_input = check_input_section(user_cfg_input)
+    cfg_input = check_input_section(user_cfg_input, user_cfg["pipeline"].get("estimation"))
 
     user_cfg_roi = get_roi_config(user_cfg)
     cfg_roi = check_roi_section(user_cfg_roi)
@@ -166,7 +217,17 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     # check pipeline
     cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
 
-    check_right_nodata_condition(cfg_input, cfg_pipeline)
+    # The estimation step can be utilized independently.
+    if "matching_cost" in cfg_pipeline["pipeline"]:
+        check_right_nodata_condition(cfg_input, cfg_pipeline)
+
+    # The refinement step with interpolation method is not allowed with disparity ranges of size lower than 5
+    if (
+        "refinement" in cfg_pipeline["pipeline"]
+        and cfg_pipeline["pipeline"]["refinement"]["refinement_method"] == "interpolation"
+    ):
+        check_disparity_range_size(cfg_input["input"]["col_disparity"], "Column")
+        check_disparity_range_size(cfg_input["input"]["row_disparity"], "Row")
 
     cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline])
 
@@ -181,12 +242,33 @@ def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
     :param cfg_pipeline: pipeline section of configuration
     :type cfg_pipeline: Dict
     """
+
     if not isinstance(cfg_input["input"]["right"]["nodata"], int) and cfg_pipeline["pipeline"]["matching_cost"][
         "matching_cost_method"
     ] in ["sad", "ssd"]:
         raise ValueError(
             "nodata of right image must be of type integer with sad or ssd matching_cost_method (ex: 9999)"
         )
+
+
+def check_disparity_range_size(disparity: list[int] | str, title: str) -> None:
+    """
+    Check that disparity ranges with a size < 5 are not allowed for interpolation refinement method.
+
+    :param disparity: disparity range
+    :type disparity: list[int] | str
+    :param cfg_pipeline: pipeline section of configuration
+    :type cfg_pipeline: Dict
+    """
+
+    if isinstance(disparity, list):
+        if (abs(disparity[1] - disparity[0]) + 1) < 5:
+            raise ValueError(
+                title + " disparity range with a size < 5 are not allowed with interpolation refinement method"
+            )
+
+    if isinstance(disparity, str):
+        raise TypeError("Grid disparities are not yet handled by Pandora2D")
 
 
 def check_roi_coherence(roi_cfg: dict) -> None:
@@ -243,6 +325,8 @@ default_short_configuration_input = {
         },
     }
 }
+
+default_configuration_disp = {"input": {"col_disparity": [-9999, -9995], "row_disparity": [-9999, -9995]}}
 
 roi_configuration_schema = {
     "row": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},

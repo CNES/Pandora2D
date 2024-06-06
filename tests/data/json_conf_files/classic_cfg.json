@@ -1,0 +1,26 @@
+{
+  "input": {
+    "left": {
+      "img": "./tests/data/images/cones/monoband/left.png",
+      "nodata": "NaN"
+    },
+    "right": {
+      "img": "./tests/data/images/cones/monoband/right.png"
+    },
+    "col_disparity": [-2, 2],
+    "row_disparity": [-2, 2]
+  },
+  "pipeline": {
+    "matching_cost": {
+      "matching_cost_method": "zncc",
+      "window_size": 5
+    },
+    "disparity": {
+      "disparity_method": "wta",
+      "invalid_disparity": -99
+    },
+    "refinement": {
+      "refinement_method": "interpolation"
+    }
+  }
+}

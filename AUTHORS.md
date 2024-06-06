@@ -21,6 +21,7 @@ This file keeps track of authors contributions.
 * Emmanuelle Sarrazin <emmanuelle.sarrazin@cnes.fr>
 * Natalia Jimenez <natalia.jimenez-diaz@csgroup.eu>
 * Quentin Fardet <quentin.fardet@csgroup.eu>
+* Jerome Lebreton <jerome.lebreton@csgroup.eu>
 
 Update here with new contributors.
 

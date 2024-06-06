@@ -23,8 +23,8 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     img_left_path = "data/left.tif"
     img_right_path = "data/right.tif"
 
-    # image configuration
-    image_cfg = {
+    user_cfg = {
+     # image configuration
         'input': {
             'left': {
                 'img': img_left_path,
@@ -36,18 +36,9 @@ Pandora2D provides a full python API which can be used to compute disparity maps
             },
             "col_disparity": [-2, 2],
             "row_disparity": [-2, 2],
-        }
-    }
-
-    # read images
-    image_datasets = create_datasets_from_inputs(input_config=image_cfg["input"])
-
-    # instantiate Pandora2D Machine
-    pandora2d_machine = Pandora2DMachine()
-
-    # define pipeline configuration
-    user_pipeline_cfg = {
-        'pipeline':{
+        },
+        # define pipeline configuration
+         'pipeline':{
             "matching_cost" : {
                 "matching_cost_method": "zncc",
                 "window_size": 5,
@@ -57,22 +48,29 @@ Pandora2D provides a full python API which can be used to compute disparity maps
                 "invalid_disparity": -9999
             },
             "refinement" : {
-                "refinement_method" : "interpolation"
+                "refinement_method" : "optical_flow"
             }
         }
     }
 
+    # read images
+    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], estimation_cfg=user_cfg["pipeline"].get("estimation"))
+
+    # instantiate Pandora2D Machine
+    pandora2d_machine = Pandora2DMachine()
+
     # check the configurations and sequences steps
-    pipeline_cfg = check_configuration.check_pipeline_section(user_pipeline_cfg, pandora2d_machine)
+    pipeline_cfg = check_configuration.check_pipeline_section(user_cfg, pandora2d_machine)
 
     # prepare the machine
     pandora2d_machine.run_prepare(
         image_datasets.left,
-        image_datasets.right
+        image_datasets.right,
+        user_cfg
         )
 
     # trigger all the steps of the machine at ones
-    dataset = pandora2d.run(
+    dataset, completed_cfg = pandora2d.run(
         pandora2d_machine,
         image_datasets.left,
         image_datasets.right,
@@ -80,7 +78,7 @@ Pandora2D provides a full python API which can be used to compute disparity maps
         )
 
     # save dataset
-    common.save_dataset(dataset, path_output)
+    common.save_dataset(dataset, completed_cfg, path_output)
 
 
 Pandora2D's data
@@ -90,7 +88,7 @@ Images
 ######
 
 Pandora2D reads the input images before the stereo computation and creates two datasets, one for the left and one for the right
-image which contain the data's image, data's mask and additionnal information.
+image which contain the data's image and additional information.
 
 Example of an image dataset
 
@@ -177,6 +175,9 @@ stored in a xarray.Dataset.
     Data variables:
         row_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         col_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
+        correlation_score  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
+    Attributes:
+        invalid_disp: nan
 
 Border management
 #################

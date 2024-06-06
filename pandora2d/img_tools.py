@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -23,16 +23,26 @@
 This module contains functions associated to raster images.
 """
 
+# mypy: disable-error-code="attr-defined, no-redef"
+# pylint: disable="useless-import-alias,redefined-outer-name"
+# xarray.Coordinates corresponds to the latest version of xarray.
+# xarray.Coordinate corresponds to the version installed by the artifactory.
+# Try/except block to be deleted once the version of xarray has been updated by CNES.
+try:
+    from xarray import Coordinates as Coordinates
+except ImportError:
+    from xarray import Coordinate as Coordinates
 
 import copy
 from collections.abc import Sequence
-from typing import List, Dict, NamedTuple, Any
+from typing import List, Dict, Union, NamedTuple, Any
 
+from math import floor
 import xarray as xr
 import numpy as np
+from scipy.ndimage import shift, zoom
 
 import pandora.img_tools as pandora_img_tools
-from scipy.ndimage import shift
 
 
 class Datasets(NamedTuple):
@@ -42,7 +52,7 @@ class Datasets(NamedTuple):
     right: xr.Dataset
 
 
-def create_datasets_from_inputs(input_config: Dict, roi: Dict = None) -> Datasets:
+def create_datasets_from_inputs(input_config: Dict, roi: Dict = None, estimation_cfg: Dict = None) -> Datasets:
     """
     Read image and return the corresponding xarray.DataSet
 
@@ -56,6 +66,8 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None) -> Dataset
 
             with margins : left, up, right, down
     :type roi: dict
+    :param estimation_cfg: dictionary containing estimation configuration
+    :type estimation_cfg: dict
     :return: Datasets
             NamedTuple with two attributes `left` and `right` each containing a
             xarray.DataSet containing the variables :
@@ -66,7 +78,12 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None) -> Dataset
 
     :rtype: Datasets
     """
-    check_disparities(input_config)
+    if estimation_cfg is None:
+        check_disparities(input_config)
+    else:
+        input_config["col_disparity"] = [-9999, -9999]
+        input_config["row_disparity"] = [-9999, -9999]
+
     return Datasets(
         pandora_img_tools.create_dataset_from_inputs(input_config["left"], roi).pipe(
             add_left_disparity_grid, input_config
@@ -190,7 +207,7 @@ def add_disparity_grid(dataset: xr.Dataset, col_disparity: List[int], row_dispar
     return dataset
 
 
-def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
+def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     """
     Return a Dataset that contains the shifted right images
 
@@ -202,14 +219,14 @@ def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     :return: img_right_shift: Dataset containing the shifted image
     :rtype: xr.Dataset
     """
-    # dimensions of images
-    nrow_, ncol_ = img_right["im"].shape
+    # coordinates of images
+    row = img_right.get("row")
+    col = img_right.get("col")
+
     # shifted image by scipy
     data = shift(img_right["im"].data, (-dec_row, 0), cval=img_right.attrs["no_data_img"])
     # create shifted image dataset
-    img_right_shift = xr.Dataset(
-        {"im": (["row", "col"], data)}, coords={"row": np.arange(nrow_), "col": np.arange(ncol_)}
-    )
+    img_right_shift = xr.Dataset({"im": (["row", "col"], data)}, coords={"row": row, "col": col})
     # add attributes to dataset
     img_right_shift.attrs = {
         "no_data_img": img_right.attrs["no_data_img"],
@@ -231,7 +248,8 @@ def shift_img_pandora2d(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
 
 def get_roi_processing(roi: dict, col_disparity: List[int], row_disparity: List[int]) -> dict:
     """
-    Return a roi which takes disparities into account
+    Return a roi which takes disparities into account.
+    Update cfg roi with new margins.
 
     :param roi: roi in config file
 
@@ -248,9 +266,198 @@ def get_roi_processing(roi: dict, col_disparity: List[int], row_disparity: List[
     """
     new_roi = copy.deepcopy(roi)
 
-    new_roi["margins"][0] = max(abs(col_disparity[0]), roi["margins"][0])
-    new_roi["margins"][1] = max(abs(row_disparity[0]), roi["margins"][1])
-    new_roi["margins"][2] = max(abs(col_disparity[1]), roi["margins"][2])
-    new_roi["margins"][3] = max(abs(row_disparity[1]), roi["margins"][3])
+    new_roi["margins"] = (
+        max(abs(col_disparity[0]), roi["margins"][0]),
+        max(abs(row_disparity[0]), roi["margins"][1]),
+        max(abs(col_disparity[1]), roi["margins"][2]),
+        max(abs(row_disparity[1]), roi["margins"][3]),
+    )
+
+    # Update user ROI with new margins.
+    roi["margins"] = new_roi["margins"]
 
     return new_roi
+
+
+def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
+    """
+    Remove ROI margins before saving output dataset
+
+    :param dataset: dataset containing disparity row and col maps
+    :type dataset: xr.Dataset
+    :param cfg: output configuration of the pandora2d machine
+    :type cfg: Dict
+    """
+
+    step = cfg["pipeline"]["matching_cost"]["step"]
+
+    row = dataset.row.data
+    col = dataset.col.data
+
+    # Initialized indexes to get right rows and columns
+    (left, up, right, down) = (0, 0, len(col), len(row))
+
+    # Example with col = [8,10,12,14,16],  step_col=2, row = [0,4,8,12], step_row=4
+    # ROI={
+    #   {"col": "first": 10, "last": 14},
+    #   {"row": "first": 0, "last": 10} }
+    #   {"margins": (3,3,3,3)}
+
+    # According to ROI, we want new_col=[10,12,14]=col[1:-1]
+    # with 1=floor((cfg["ROI"]["col"]["first"] - col[0]) / step_col)=left
+    # and -1=floor((cfg["ROI"]["col"]["last"] - col[-1]) / step_col)=right
+
+    # According to ROI, we want new_row=[0,4,8]=row[0:-1]
+    # with 0=initialized up
+    # and -1=floor((cfg["ROI"]["row"]["last"] - row[-1]) / step[0])=down
+
+    # Get the correct indexes to get the right columns based on the user ROI
+    if col[0] < cfg["ROI"]["col"]["first"]:
+        left = floor((cfg["ROI"]["col"]["first"] - col[0]) / step[1])
+    if col[-1] > cfg["ROI"]["col"]["last"]:
+        right = floor((cfg["ROI"]["col"]["last"] - col[-1]) / step[1])
+
+    # Get the correct indexes to get the right rows based on the user ROI
+    if row[0] < cfg["ROI"]["row"]["first"]:
+        up = floor((cfg["ROI"]["row"]["first"] - row[0]) / step[0])
+    if row[-1] > cfg["ROI"]["row"]["last"]:
+        down = floor((cfg["ROI"]["row"]["last"] - row[-1]) / step[0])
+
+    # Create a new dataset with right rows and columns.
+    data_variables = {
+        "row_map": (("row", "col"), dataset["row_map"].data[up:down, left:right]),
+        "col_map": (("row", "col"), dataset["col_map"].data[up:down, left:right]),
+        "correlation_score": (("row", "col"), dataset["correlation_score"].data[up:down, left:right]),
+    }
+
+    coords = {"row": row[up:down], "col": col[left:right]}
+
+    new_dataset = xr.Dataset(data_variables, coords)
+
+    new_dataset.attrs = dataset.attrs
+
+    return new_dataset
+
+
+def row_zoom_img(
+    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str]
+) -> xr.Dataset:
+    """
+    Return a list that contains the shifted right images in row
+
+    This method is temporary, the user can then choose the filter for this function
+
+    :param img: image to shift
+    :type img: np.ndarray
+    :param ny: row number in data
+    :type ny: int
+    :param subpix: subpixel precision = (1 or pair number)
+    :type subpix: int
+    :param coords: coordinates for output datasets
+    :type coords: Coordinates
+    :param ind: index of range(subpix)
+    :type ind: int
+    :param no_data: no_data value in img
+    :type no_data: Union[int, str]
+    :return: an array that contains the shifted right images in row
+    :rtype: array of xarray.Dataset
+    """
+
+    shift = 1 / subpix
+    # For each index, shift the right image for subpixel precision 1/subpix*index
+    data = zoom(img, ((ny * subpix - (subpix - 1)) / float(ny), 1), order=1)[ind::subpix, :]
+
+    # Add a row full of no data at the end of data have the same shape as img
+    # It enables to use Pandora's compute_cost_volume() methods,
+    # which only accept left and right images of the same shape.
+    data = np.pad(data, ((0, 1), (0, 0)), "constant", constant_values=no_data)
+
+    row = np.arange(coords.get("row")[0] + shift * ind, coords.get("row")[-1] + 1, step=1)  # type: np.ndarray
+
+    return xr.Dataset(
+        {"im": (["row", "col"], data)},
+        coords={"row": row, "col": coords.get("col")},
+    )
+
+
+def col_zoom_img(
+    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str]
+) -> xr.Dataset:
+    """
+    Return a list that contains the shifted right images in col
+
+    This method is temporary, the user can then choose the filter for this function
+
+    :param img: image to shift
+    :type img: np.ndarray
+    :param nx: col number in data
+    :type nx: int
+    :param subpix: subpixel precision = (1 or pair number)
+    :type subpix: int
+    :param coords: coordinates for output datasets
+    :type coords: Coordinates
+    :param ind: index of range(subpix)
+    :type ind: int
+    :param no_data: no_data value in img
+    :type no_data: Union[int, str]
+    :return: an array that contains the shifted right images in col
+    :rtype: array of xarray.Dataset
+    """
+
+    shift = 1 / subpix
+    # For each index, shift the right image for subpixel precision 1/subpix*index
+    data = zoom(img, (1, (nx * subpix - (subpix - 1)) / float(nx)), order=1)[:, ind::subpix]
+
+    # Add a col full of no data at the end of data to have the same shape as img
+    # It enables to use Pandora's compute_cost_volume() methods,
+    # which only accept left and right images of the same shape.
+    data = np.pad(data, ((0, 0), (0, 1)), "constant", constant_values=no_data)
+
+    col = np.arange(coords.get("col")[0] + shift * ind, coords.get("col")[-1] + 1, step=1)  # type: np.ndarray
+    return xr.Dataset(
+        {"im": (["row", "col"], data)},
+        coords={"row": coords.get("row"), "col": col},
+    )
+
+
+def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True) -> List[xr.Dataset]:
+    """
+    Return an array that contains the shifted right images
+
+    :param img_right: Dataset image containing the image im : 2D (row, col) xarray.Dataset
+    :type img_right: xarray.Dataset
+    :param subpix: subpixel precision = (1 or pair number)
+    :type subpix: int
+    :param column: column to shift (otherwise row)
+    :type column: bool
+    :return: an array that contains the shifted right images
+    :rtype: array of xarray.Dataset
+    """
+    img_right_shift = [img_right]
+
+    if subpix > 1:
+        for ind in np.arange(1, subpix):
+            if row:
+                img_right_shift.append(
+                    row_zoom_img(
+                        img_right["im"].data,
+                        img_right.sizes["row"],
+                        subpix,
+                        img_right.coords,
+                        ind,
+                        img_right.attrs["no_data_img"],
+                    ).assign_attrs(img_right.attrs)
+                )
+            else:
+                img_right_shift.append(
+                    col_zoom_img(
+                        img_right["im"].data,
+                        img_right.sizes["col"],
+                        subpix,
+                        img_right.coords,
+                        ind,
+                        img_right.attrs["no_data_img"],
+                    ).assign_attrs(img_right.attrs)
+                )
+
+    return img_right_shift

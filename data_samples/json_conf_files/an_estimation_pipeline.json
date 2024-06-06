@@ -1,0 +1,31 @@
+{
+  "input": {
+    "left": {
+      "img": "./maricopa/left.tif",
+      "nodata": -9999
+    },
+    "right": {
+      "img": "./maricopa/right.tif",
+      "nodata": -9999
+    }
+  },
+  "pipeline": {
+    "estimation": {
+      "estimation_method": "phase_cross_correlation",
+      "range_row": 5,
+      "range_col": 5,
+      "sample_factor": 100
+    },
+    "matching_cost": {
+      "matching_cost_method": "zncc",
+      "window_size": 5
+    },
+    "disparity": {
+      "disparity_method": "wta",
+      "invalid_disparity": "NaN"
+    },
+    "refinement": {
+      "refinement_method": "interpolation"
+    }
+  }
+}

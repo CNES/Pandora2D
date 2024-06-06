@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, Tuple
 from abc import abstractmethod, ABCMeta
+from json_checker import Checker
 
 import xarray as xr
 import numpy as np
@@ -45,15 +46,18 @@ class AbstractRefinement:
     cfg = None
     margins = NullMargins()
 
+    schema: Dict  # This will raise an AttributeError if not override in subclasses
+
     # If we don't make cfg optional, we got this error when we use subprocesses in refinement_method :
     # AbstractRefinement.__new__() missing 1 required positional argument: 'cfg'
-    def __new__(cls, cfg: dict | None = None):
+    def __new__(cls, cfg: dict = None, _: list = None, __: int = 5):
         """
         Return the plugin associated with the refinement_method given in the configuration
 
         :param cfg: configuration {'refinement_method': value}
         :type cfg: dictionary
         """
+
         if cls is AbstractRefinement:
             if isinstance(cfg["refinement_method"], str):
                 try:
@@ -80,6 +84,13 @@ class AbstractRefinement:
             return super(AbstractRefinement, cls).__new__(cls)
         return None
 
+    def desc(self) -> None:
+        """
+        Describes the refinement method
+        :return: None
+        """
+        print(f"{self._refinement_method} refinement measure")
+
     @classmethod
     def register_subclass(cls, short_name: str):
         """
@@ -101,15 +112,48 @@ class AbstractRefinement:
 
         return decorator
 
+    def __init__(self, cfg: Dict, _: list = None, __: int = 5) -> None:
+        """
+        :param cfg: optional configuration, {}
+        :type cfg: dict
+        :param step: list containing row and col step
+        :type step: list
+        :param window_size: window size
+        :type window_size: int
+        :return: None
+        """
+        self.cfg = self.check_conf(cfg)
+
+    @classmethod
+    def check_conf(cls, cfg: Dict) -> Dict:
+        """
+        Check the refinement method configuration.
+
+        :param cfg: user_config for refinement method
+        :type cfg: dict
+        :return: cfg: global configuration
+        :rtype: cfg: dict
+        """
+        checker = Checker(cls.schema)
+        checker.validate(cfg)
+
+        return cfg
+
     @abstractmethod
-    def refinement_method(self, cost_volumes: xr.Dataset, pixel_maps: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
+    def refinement_method(
+        self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.dataset
-        :param pixel_maps: pixels disparity maps
-        :type pixel_maps: xarray.dataset
+        :type cost_volumes: xarray.Dataset
+        :param disp_map: pixels disparity maps
+        :type disp_map: xarray.Dataset
+        :param img_left: left image dataset
+        :type img_left: xarray.Dataset
+        :param img_right: right image dataset
+        :type img_right: xarray.Dataset
         :return: the refined disparity maps
-        :rtype: Tuple[np.ndarray, np.ndarray]
+        :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """

@@ -33,12 +33,16 @@ Input section is composed of the following keys:
       - Minimal and Maximal disparities for columns
       - [int, int]
       -
-      - Yes
+      - If the estimation step is not present
     * - *row_disparity*
       - Minimal and Maximal disparities for rows
       - [int, int]
       -
-      - Yes
+      - If the estimation step is not present
+
+.. warning::
+    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 5. 
+
 
 Left and Right properties are composed of the following keys:
 

@@ -21,7 +21,7 @@
       "invalid_disparity": "NaN"
     },
     "refinement": {
-      "refinement_method": "interpolation"
+      "refinement_method": "optical_flow"
     }
   }
 }

@@ -58,11 +58,50 @@ install: venv ## install pandora2D (pip editable mode) without plugins
 	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
 	@echo "PANDORA2D venv usage : source ${PANDORA2D_VENV}/bin/activate; pandora2d -h"
 
+.PHONY: install-plugin
+install-plugin: venv ## install pandora2D (pip editable mode) without plugins
+	@test -f ${PANDORA2D_VENV}/bin/pandora2d || ${PANDORA2D_VENV}/bin/pip install pandora-plugin-mccnn
+	@test -f .git/hooks/pre-commit || echo echo "  Install pre-commit hook"
+	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
+	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
+	@echo "PANDORA2D venv usage : source ${PANDORA2D_VENV}/bin/activate; pandora2d -h"
 ## Test section
 
 .PHONY: test
-test: install ## run all tests (except notebooks) + coverage (source venv before)
-	@${PANDORA2D_VENV}/bin/pytest --junitxml=pytest-report.xml --cov-config=.coveragerc --cov-report xml --cov
+test: install test-unit test-functional ## run unit tests and functional tests
+
+.PHONY: test-all
+test-all: install test-unit test-functional test-resource test-performance test-notebook test-plugin ## run all tests
+
+.PHONY: test-unit
+test-unit: install ## run unit tests only (for dev) + coverage (source venv before)
+	@echo "Run unit tests"
+	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
+
+.PHONY: test-functional
+test-functional: install ## run functional tests only (for dev and validation plan)
+	@echo "Run functional tests"
+	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html
+
+.PHONY: test-resource
+test-resource: install ## run resource tests only (for validation plan)
+	@echo "Run resource tests"
+	@rm -f tests/resource_tests/.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "resource_tests and not metrics" --db tests/resource_tests/.pymon
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/.pymon  --html=resource-test-report.html
+
+.PHONY: test-performance
+test-performance: install ## run performance tests only (for validation plan)
+	@echo "Run performance tests"
+	@${PANDORA2D_VENV}/bin/pytest -m "performance_tests" --html=performance-test-report.html
+
+.PHONY: test-notebook
+test-notebook: install ## run notebook tests only
+	@${PANDORA2D_VENV}/bin/pytest -m "notebook_tests" --html=notebook-test-report.html
+
+.PHONY: test-plugin
+test-plugin: install-plugin ## run plugins tests only
+	@${PANDORA2D_VENV}/bin/pytest -m "plugin_tests" --html=notebook-test-report.html
 
 ## Code quality, linting section
 
@@ -94,7 +133,7 @@ lint/mypy: ## check linting with mypy
 .PHONY: lint/pylint
 lint/pylint: ## check linting with pylint
 	@echo "+ $@"
-	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d "tests/*" --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
+	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests ./*.py --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
 
 ## Documentation section
 
@@ -158,15 +197,17 @@ clean-test:
 	@rm -rf coverage.xml
 	@rm -fr htmlcov/
 	@rm -fr .pytest_cache
-	@rm -f pytest-report.xml
 	@rm -f pylint-report.txt
 	@rm -f debug.log
+	@rm -f .pymon
+	@rm -f tests/resource_tests/.pymon
+	@rm -f *-test-report.html
 
 .PHONY: clean-doc
 clean-doc:
 	@echo "+ $@"
-	@rm -rf doc/build/
-	@rm -rf doc/sources/api_reference/
+	@rm -rf docs/build/
+	@rm -rf docs/source/api_reference/
 
 .PHONY: clean-notebook
 clean-notebook:

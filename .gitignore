@@ -50,6 +50,10 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+tests/resource_tests/result/
+
+# Monitoring test
+.pymon
 
 # Translations
 *.mo

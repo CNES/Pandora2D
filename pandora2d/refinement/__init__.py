@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-# coding: utf8
 #
 # Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2024 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -23,5 +22,5 @@
 Init file for refinement module
 """
 
-from . import interpolation
+from . import interpolation, optical_flow, dichotomy
 from .refinement import AbstractRefinement

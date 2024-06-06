@@ -23,6 +23,8 @@ jobs:
         pip install pytest
         pip install pytest-cov
         pip install pytest-mock
+        pip install pytest-monitor
+        pip install pytest-html
         pip install codecov
         pip install build
     - name: Install Pandora2d
@@ -31,7 +33,8 @@ jobs:
     - name: Test with pytest
       run: |
         export NUMBA_DISABLE_JIT="1"
-        pytest --junitxml=pytest-report.xml --cov-config=.coveragerc --cov-report xml --cov
+        pytest -m "unit_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
+        pytest -m "functional_tests" --html=functional-test-report.html
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
     - name: Create source distrubition
