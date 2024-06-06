@@ -49,12 +49,11 @@ class TestStatistics:
 
     def test_str(self, statistics):
         """Test conversion to str."""
-        # TODO: see formatting of number of digits
         assert str(statistics) == "Mean: 10.5 ± 5.3"
 
     def test_to_dict(self, statistics):
         """Test conversion to dict."""
-        assert statistics.to_dict() == {"mean": 10.5, "std": 5.3}
+        assert statistics.to_dict() == {"mean": 10.5, "std": 5.3, "minimal_valid_pixel_ratio": 1.0}
 
 
 class TestComputeStatistics:
@@ -89,3 +88,18 @@ class TestComputeStatistics:
         result = compute_statistics(data, invalid_values)
 
         assert result.std == expected
+
+    @pytest.mark.parametrize(
+        ["raw_data", "invalid_values", "expected"],
+        [
+            pytest.param(np.zeros((10, 8)), None, 1, id="No invalid"),
+            pytest.param(np.array([[-99, -99, -99], [-99, -99, -99]]), -99, 0, id="All invalid"),
+            pytest.param(np.array([[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]]), np.nan, 0, id="All nans"),
+            pytest.param(np.array([[20, 30, -99, -99], [-99, -99, -99, -99]]), -99, 0.25, id="Mixed valid/invalid"),
+        ],
+    )
+    def test_minimal_valid_pixel_ratio(self, data, invalid_values, expected):
+        """Test std statistic result."""
+        result = compute_statistics(data, invalid_values)
+
+        assert result.minimal_valid_pixel_ratio == expected

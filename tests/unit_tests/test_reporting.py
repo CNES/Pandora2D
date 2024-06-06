@@ -38,4 +38,15 @@ def test_report_disparities():
     )
     result = reporting.report_disparities(disparities)
 
-    assert result == {"row": {"mean": 10, "std": 10}, "col": {"mean": 15, "std": 5}}
+    assert result == {
+        "row": {
+            "mean": 10.0,
+            "std": 10.0,
+            "minimal_valid_pixel_ratio": 2 / 3,
+        },
+        "col": {
+            "mean": 15.0,
+            "std": 5.0,
+            "minimal_valid_pixel_ratio": 2 / 3,
+        },
+    }

@@ -31,6 +31,7 @@ class Statistics:
 
     mean: Union[float, np.floating]
     std: Union[float, np.floating]
+    minimal_valid_pixel_ratio: Union[float, np.floating] = 1.0
 
     def __str__(self):
         return f"Mean: {self.mean} ± {self.std}"
@@ -38,7 +39,11 @@ class Statistics:
     def to_dict(self) -> Dict:
         """Convert statistics into a dictionary."""
         # We need to cast to float because np.float can not be serialized to JSON
-        return {"mean": float(self.mean), "std": float(self.std)}
+        return {
+            "mean": float(self.mean),
+            "std": float(self.std),
+            "minimal_valid_pixel_ratio": float(self.minimal_valid_pixel_ratio),
+        }
 
 
 def compute_statistics(dataarray: xr.DataArray, invalid_values: Union[np.floating, np.integer] = None) -> Statistics:
@@ -51,9 +56,11 @@ def compute_statistics(dataarray: xr.DataArray, invalid_values: Union[np.floatin
     :return: computed statistics
     :rtype: Statistics
     """
-    if invalid_values is None:
+    if invalid_values is None or np.isnan(invalid_values):
         data = dataarray.to_numpy()
+        minimal_valid_pixel_ratio = (~np.isnan(data)).sum() / data.size
     else:
         mask = np.isin(dataarray.to_numpy(), invalid_values, invert=True)
         data = dataarray.to_numpy()[mask]
-    return Statistics(mean=np.nanmean(data), std=np.nanstd(data))
+        minimal_valid_pixel_ratio = mask.sum() / mask.size
+    return Statistics(mean=np.nanmean(data), std=np.nanstd(data), minimal_valid_pixel_ratio=minimal_valid_pixel_ratio)
