@@ -46,6 +46,7 @@ def test_dichotomy_execution(left_img_path, right_img_path, subpix, iterations):
             "col_disparity": [-3, 3],
             "row_disparity": [-3, 3],
         },
+        "ROI": {"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}},
         "pipeline": {
             "matching_cost": {
                 "matching_cost_method": "zncc",
@@ -64,7 +65,13 @@ def test_dichotomy_execution(left_img_path, right_img_path, subpix, iterations):
         },
     }
     cfg = pandora2d.check_configuration.check_conf(user_cfg, pandora2d_machine)
-    image_datasets = pandora2d.img_tools.create_datasets_from_inputs(input_config=cfg["input"])
+
+    cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
+    roi = pandora2d.img_tools.get_roi_processing(
+        cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"]
+    )
+
+    image_datasets = pandora2d.img_tools.create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
 
     dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
 
