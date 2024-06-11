@@ -29,7 +29,7 @@ import pytest
 import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
 from pandora.margins import Margins
-from pandora2d import refinement
+from pandora2d import refinement, common, matching_cost, disparity
 
 
 @pytest.fixture()
@@ -206,9 +206,29 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
             "disp_row": disparity_range_row,
         },
     )
+    cost_volumes.attrs["offset_row_col"] = 1
+
+    offset = cost_volumes.offset_row_col
+
+    # get first and last coordinates for row and col in cost volume dataset
+    first_col_coordinate = cost_volumes.col.data[0] + offset
+    last_col_coordinate = cost_volumes.col.data[-1] - offset
+    col_extrema_coordinates = [
+        find_nearest_column(first_col_coordinate, cost_volumes.col.data, "+"),
+        find_nearest_column(last_col_coordinate, cost_volumes.col.data, "-"),
+    ]
+
+    first_row_coordinate = cost_volumes.row.data[0] + offset
+    last_row_coordinate = cost_volumes.row.data[-1] - offset
+    row_extrema_coordinates = [
+        find_nearest_column(first_row_coordinate, cost_volumes.row.data, "+"),
+        find_nearest_column(last_row_coordinate, cost_volumes.row.data, "-"),
+    ]
 
     # for left image
-    reshaped_left = refinement_class.reshape_to_matching_cost_window(img, cost_volumes)
+    reshaped_left = refinement_class.reshape_to_matching_cost_window(
+        img, cost_volumes, (row_extrema_coordinates, col_extrema_coordinates)
+    )
 
     # test four matching_cost
     idx_1_1 = [[0, 1, 2], [5, 6, 7], [10, 11, 12]]
@@ -251,8 +271,28 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
         },
     )
 
+    cost_volumes.attrs["offset_row_col"] = 1
+    offset = cost_volumes.offset_row_col
+
+    # get first and last coordinates for row and col in cost volume dataset
+    first_col_coordinate = cost_volumes.col.data[0] + offset
+    last_col_coordinate = cost_volumes.col.data[-1] - offset
+    col_extrema_coordinates = [
+        find_nearest_column(first_col_coordinate, cost_volumes.col.data, "+"),
+        find_nearest_column(last_col_coordinate, cost_volumes.col.data, "-"),
+    ]
+
+    first_row_coordinate = cost_volumes.row.data[0] + offset
+    last_row_coordinate = cost_volumes.row.data[-1] - offset
+    row_extrema_coordinates = [
+        find_nearest_column(first_row_coordinate, cost_volumes.row.data, "+"),
+        find_nearest_column(last_row_coordinate, cost_volumes.row.data, "-"),
+    ]
+
     # for right image
-    reshaped_right = refinement_class.reshape_to_matching_cost_window(img, cost_volumes, row_disp_map, col_disp_map)
+    reshaped_right = refinement_class.reshape_to_matching_cost_window(
+        img, cost_volumes, (row_extrema_coordinates, col_extrema_coordinates), row_disp_map, col_disp_map
+    )
 
     # test four matching_cost
     idx_1_1 = [[12, 13, 14], [17, 18, 19], [22, 23, 24]]
@@ -294,3 +334,100 @@ def test_warped_image_without_step():
     # check that the generated image is equal to ground truth
     assert np.array_equal(gt_mc_1, test_img_shift[:, :, 0])
     assert np.array_equal(gt_mc_2, test_img_shift[:, :, 1])
+
+
+@pytest.mark.parametrize(["row", "col", "step_row", "step_col"], [(10, 10, 2, 1), (10, 10, 1, 2), (10, 10, 2, 2)])
+def test_step_with_refinement_method(row, col, step_row, step_col):
+    """
+    TODO
+    """
+
+    # create image dataset 1
+    data = np.random.uniform(0, row * col, (row, col))
+    data = np.round(data, 2)
+
+    dataset_img_ = xr.Dataset(
+        {"im": (["row", "col"], data)},
+        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+    )
+    dataset_img_.attrs = {
+        "no_data_img": -9999,
+        "valid_pixels": 0,
+        "no_data_mask": 1,
+        "crs": None,
+        "col_disparity_source": [-2, 2],
+        "row_disparity_source": [-2, 2],
+        "invalid_disparity": np.nan,
+    }
+
+    # create image dataset 2 - same as img1 but with a shift
+    shifted_data = np.roll(data, 2, axis=0)
+    dataset_img_shift = xr.Dataset(
+        {"im": (["row", "col"], shifted_data)},
+        coords={"row": np.arange(shifted_data.shape[0]), "col": np.arange(shifted_data.shape[1])},
+    )
+    dataset_img_shift.attrs = {
+        "no_data_img": -9999,
+        "valid_pixels": 0,
+        "no_data_mask": 1,
+        "crs": None,
+        "col_disparity_source": [-2, 2],
+        "row_disparity_source": [-2, 2],
+        "invalid_disparity": np.nan,
+    }
+
+    # create cos volume dataset
+    cfg_mc = {
+        "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": [step_row, step_col]}}
+    }
+    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
+    cfg_disp = {"disparity_method": "wta", "invalid_disparity": np.nan}
+    grid_min_col = np.full((3, 3), -2)
+    grid_max_col = np.full((3, 3), 2)
+    grid_min_row = np.full((3, 3), -2)
+    grid_max_row = np.full((3, 3), 2)
+    matching_cost_matcher.allocate_cost_volume_pandora(
+        img_left=dataset_img_,
+        img_right=dataset_img_shift,
+        grid_min_col=grid_min_col,
+        grid_max_col=grid_max_col,
+        cfg=cfg_mc,
+    )
+
+    dataset_cv = matching_cost_matcher.compute_cost_volumes(
+        dataset_img_, dataset_img_shift, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+    )
+
+    # create disparity dataset
+    disparity_matcher = disparity.Disparity(cfg_disp)
+    delta_x, delta_y, score = disparity_matcher.compute_disp_maps(dataset_cv)
+
+    data_variables = {
+        "row_map": (("row", "col"), delta_x),
+        "col_map": (("row", "col"), delta_y),
+        "correlation_score": (("row", "col"), score),
+    }
+    coords = {"row": dataset_cv.row.data, "col": dataset_cv.col.data}
+    dataset = xr.Dataset(data_variables, coords)
+    dataset_disp_map = common.dataset_disp_maps(
+        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score, attributes={"invalid_disp": np.nan}
+    )
+
+    # Start test
+    refinement_class = refinement.AbstractRefinement(
+        {"refinement_method": "optical_flow"}, [step_row, step_col], 3
+    )  # type: ignore[abstract]
+
+    refinement_class.refinement_method(dataset_cv, dataset_disp_map, dataset_img_, dataset_img_shift)
+
+
+def find_nearest_column(value, data, direction):
+    """
+    TODO
+    """
+    if direction == "+":
+        return data[np.searchsorted(data, value, side="left")]
+    if direction == "-":
+        return data[np.searchsorted(data, value, side="right") - 1]
+
+    raise ValueError("Direction must be '+' or '-'")
