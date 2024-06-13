@@ -6,9 +6,12 @@
 Welcome to Pandora2D's documentation!
 =====================================
 
+**Pandora2D is an Image Registration framework. It computes 2D displacement maps from a pair of images taken over the same scene.** **It uses** `Pandora <https://github.com/cnes/pandora>`_.
 
-**Pandora2d  is a tool that provide disparity maps for images pairs with a combination in both direction.**
-**It uses** `Pandora <https://github.com/cnes/pandora>`_
+**The framework features a high level of modularity, allowing users to configure their own pipeline from a broad class of algorithms described in** :ref:`step_by_step` **chapter.**
+
+**Although Pandora2D was funded by CNES for Earth Observation applications, it is, in practice, agnostic to the type of sensor used for image acquisition.** 
+**Therefore, it can be used for any application derived from** `image registration <https://en.wikipedia.org/wiki/Image_registration>`_.
 
 .. warning::
     The maturity of Pandora2D is tightly linked to the progress of the `Trishna mission <https://trishna.cnes.fr>`_.
