@@ -20,7 +20,7 @@ Optical_flow method
 -------------------
 .. warning::
     The optical flow method is still in an experimental phase.
-    The parameter window_size in the matching cost parameters require a value greater than 1 .
+    The parameter window_size in the matching cost parameters requires a value greater than 1 .
 
 Inspired by [Lucas & Kanade]_.'s algorithm
 

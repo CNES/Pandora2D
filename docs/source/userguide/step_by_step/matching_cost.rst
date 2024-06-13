@@ -5,7 +5,7 @@ Matching cost computation
 
 Theoretical basics
 ------------------
-The first step compute from the pair of images a cost volumes containing the similarity coefficients. The cost volumes is a 4D tensor with dims
+The first step computes from the pair of images a cost volumes containing the similarity coefficients. The cost volumes is a 4D tensor with dims
 [row, col, disp_col, disp_row].
 
 For each disparity in the input vertical disparity range (disp_min_row, disp_max_row),
