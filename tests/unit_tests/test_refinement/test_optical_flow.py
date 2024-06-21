@@ -296,38 +296,123 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
     assert np.array_equal(reshaped_right[:, :, 4], idx_2_2)
 
 
-def test_warped_image_without_step():
+@pytest.mark.parametrize(
+    ["window_size", "mc_1", "mc_2", "gt_mc_1", "gt_mc_2"],
+    [
+        pytest.param(
+            5,
+            np.array(
+                [[0, 1, 2, 3, 4], [6, 7, 8, 9, 10], [12, 13, 14, 15, 16], [18, 19, 20, 21, 22], [24, 25, 26, 27, 28]]
+            ),
+            np.array(
+                [[1, 2, 3, 4, 5], [7, 8, 9, 10, 11], [13, 14, 15, 16, 17], [19, 20, 21, 22, 23], [25, 26, 27, 28, 29]]
+            ),
+            np.array(
+                [
+                    [19, 20, 21, 22, 22],
+                    [25, 26, 27, 28, 28],
+                    [25, 26, 27, 28, 28],
+                    [19, 20, 21, 22, 22],
+                    [13, 14, 15, 16, 16],
+                ]
+            ),
+            np.array(
+                [
+                    [20, 21, 22, 23, 23],
+                    [26, 27, 28, 29, 29],
+                    [26, 27, 28, 29, 29],
+                    [20, 21, 22, 23, 23],
+                    [14, 15, 16, 17, 17],
+                ]
+            ),
+        ),
+        pytest.param(
+            3,
+            np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]]),
+            np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
+            np.array([[7, 8, 8], [4, 5, 5], [1, 2, 2]]),
+            np.array([[8, 9, 9], [5, 6, 6], [2, 3, 3]]),
+        ),
+    ],
+)
+def test_warped_image_without_step(window_size, mc_1, mc_2, gt_mc_1, gt_mc_2):
     """
-    test warped image
+    test warped image with different window size
+    no test for window size at 1 because "window_size": And(int, lambda input: input > 1 and (input % 2) != 0)
     """
 
-    refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
-
-    mc_1 = np.array(
-        [[0, 1, 2, 3, 4], [6, 7, 8, 9, 10], [12, 13, 14, 15, 16], [18, 19, 20, 21, 22], [24, 25, 26, 27, 28]]
-    )
-    mc_2 = np.array(
-        [[1, 2, 3, 4, 5], [7, 8, 9, 10, 11], [13, 14, 15, 16, 17], [19, 20, 21, 22, 23], [25, 26, 27, 28, 29]]
-    )
+    refinement_class = refinement.AbstractRefinement(
+        {"refinement_method": "optical_flow"}, None, window_size
+    )  # type: ignore[abstract]
 
     reshaped_right = np.stack((mc_1, mc_2)).transpose((1, 2, 0))
-
     delta_row = -3 * np.ones(2)
     delta_col = -np.ones(2)
 
     test_img_shift = refinement_class.warped_img(reshaped_right, delta_row, delta_col, [0, 1])
 
-    gt_mc_1 = np.array(
-        [[19, 20, 21, 22, 22], [25, 26, 27, 28, 28], [25, 26, 27, 28, 28], [19, 20, 21, 22, 22], [13, 14, 15, 16, 16]]
-    )
-
-    gt_mc_2 = np.array(
-        [[20, 21, 22, 23, 23], [26, 27, 28, 29, 29], [26, 27, 28, 29, 29], [20, 21, 22, 23, 23], [14, 15, 16, 17, 17]]
-    )
-
     # check that the generated image is equal to ground truth
     assert np.array_equal(gt_mc_1, test_img_shift[:, :, 0])
     assert np.array_equal(gt_mc_2, test_img_shift[:, :, 1])
+
+
+def test_optical_flow_method():
+    """
+    test optical flow method with a simple col shift
+    """
+
+    # input array creation
+    array_left = np.array([[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]])
+    array_right = np.array(
+        [
+            [0.1, 1.2, 2.3, 3.4, 4.5],
+            [0.1, 1.2, 2.3, 3.4, 4.5],
+            [0.1, 1.2, 2.3, 3.4, 4.5],
+            [0.1, 1.2, 2.3, 3.4, 4.5],
+            [0.1, 1.2, 2.3, 3.4, 4.5],
+        ]
+    )
+
+    one_dim_size = (array_left.shape[0] - 2) * (array_left.shape[1] - 2)  # -2 because of margin
+
+    # patch creation
+    patches_left = np.lib.stride_tricks.sliding_window_view(array_left, [3, 3])
+    patches_left = patches_left.reshape((one_dim_size, 3, 3)).transpose((1, 2, 0))
+    patches_right = np.lib.stride_tricks.sliding_window_view(array_right, [3, 3])
+    patches_right = patches_right.reshape((one_dim_size, 3, 3)).transpose((1, 2, 0))
+
+    idx_to_compute = np.arange(patches_left.shape[2]).tolist()
+
+    # class initialisation
+    refinement_class = refinement.AbstractRefinement(
+        {"refinement_method": "optical_flow"}, [1, 1], 3
+    )  # type: ignore[abstract]
+
+    computed_drow, computed_dcol, idx_to_compute = refinement_class.optical_flow(
+        patches_left, patches_right, idx_to_compute
+    )
+
+    truth_drow = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    truth_dcol = [0.2, 0.3, 0.4, 0.2, 0.3, 0.4, 0.2, 0.3, 0.4]
+
+    assert np.allclose(computed_dcol, truth_dcol, atol=1e-03)
+    assert np.allclose(computed_drow, truth_drow, atol=1e-03)
+
+
+def test_lucas_kanade_core_algorithm():
+    """
+    test lucas kanade algorithm with simple flow in x axis
+    """
+
+    left_data = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]], dtype=float)
+
+    right_data = np.array([[2.1, 3.1, 4.1], [2.1, 3.1, 4.1], [2.1, 3.1, 4.1]], dtype=float)
+
+    refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
+    motion_y, motion_x = refinement_class.lucas_kanade_core_algorithm(left_data, right_data)
+
+    expected_motion = [1.1, 0.0]
+    assert np.allclose([motion_x, motion_y], expected_motion, atol=1e-3)
 
 
 @pytest.fixture()
@@ -339,7 +424,8 @@ def make_img_dataset(data, shift=0):
     """
     Instantiate an image dataset with specified rows, columns, and row shift.
     """
-    data = np.roll(data, shift, axis=0)
+    # data = np.roll(data, shift, axis=0)
+    data = data * 2.2
     data = np.round(data, 2)
 
     return xr.Dataset(
@@ -436,3 +522,53 @@ def test_step_with_refinement_method(make_left_right_images, row, col, step_row,
     )  # type: ignore[abstract]
 
     refinement_class.refinement_method(dataset_cv, dataset_disp_map, dataset_img, dataset_img_shift)
+
+
+@pytest.mark.parametrize(
+    ["row", "col", "step_row", "step_col", "window_size"], [(11, 11, 1, 1, 3), (11, 11, 1, 1, 5), (11, 11, 1, 1, 11)]
+)
+def test_window_size_refinement_method(make_left_right_images, row, col, step_row, step_col, window_size):
+    """
+    Test refinement method with different windows size and check border value, here the step is fixed to 1
+    """
+
+    # create left image dataset  and right image dataset with same as left but with a row shift
+    dataset_img, dataset_img_shift = make_left_right_images
+
+    # create cost volume dataset
+    cfg_mc = {
+        "pipeline": {
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": window_size, "step": [step_row, step_col]}
+        }
+    }
+
+    dataset_cv = make_cv_dataset(dataset_img, dataset_img_shift, cfg_mc)
+
+    # create disparity dataset
+    cfg_disp = {"disparity_method": "wta", "invalid_disparity": np.nan}
+    dataset_disp_map = make_disparity_dataset(dataset_cv, cfg_disp)
+
+    # Start test
+    refinement_class = refinement.AbstractRefinement(
+        {"refinement_method": "optical_flow"}, [step_row, step_col], window_size
+    )  # type: ignore[abstract]
+
+    delta_col, delta_row, _ = refinement_class.refinement_method(
+        dataset_cv, dataset_disp_map, dataset_img, dataset_img_shift
+    )
+
+    pad = max(window_size // 2 * ele for _ in range(2) for ele in [step_row, step_col])
+
+    # Check if there are any _invalid_disp inside image without border
+    assert not np.isnan(delta_col[pad : col - pad, pad : col - pad]).any()
+    assert not np.isnan(delta_row[pad : row - pad, pad : row - pad]).any()
+
+    # Check _invalid_disp in border zone
+    assert np.isnan(delta_col[0:pad, col - pad : col]).any()
+    assert np.isnan(delta_row[0:pad, row - pad : row]).any()
+
+    # Check final image shape
+    assert np.array_equal(row, delta_row.shape[0])
+    assert np.array_equal(row, delta_row.shape[1])
+    assert np.array_equal(col, delta_col.shape[0])
+    assert np.array_equal(col, delta_col.shape[1])
