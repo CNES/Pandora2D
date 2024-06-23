@@ -28,7 +28,7 @@ for images pairs with a combination of vertical and horizontal stereo.</h4>
 
 Before Pandora2D   |  After Pandora2D
 :-----------------:|:----------------:
-![](https://raw.githubusercontent.com/CNES/Pandora2D/master/doc/sources/Images/avant_recalage.gif?inline=false)  |  ![](https://raw.githubusercontent.com/CNES/Pandora2D/master/doc/sources/Images/apres_recalage.gif?inline=false)
+![](https://raw.githubusercontent.com/CNES/Pandora2D/master/docs/source/Images/avant_recalage.gif?inline=false)  |  ![](https://raw.githubusercontent.com/CNES/Pandora2D/master/docs/source/Images/apres_recalage.gif?inline=false)
 
 
 ## Install
