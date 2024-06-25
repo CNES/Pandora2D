@@ -46,6 +46,6 @@ def report_disparities(data: xr.Dataset) -> Dict:
     :return: dictionary with reported data
     :rtype: Dict
     """
-    row_stats = compute_statistics(data["row_map"], data.attrs["invalid_disp"])
-    col_stats = compute_statistics(data["col_map"], data.attrs["invalid_disp"])
+    row_stats = compute_statistics(data["row_map"].data, data.attrs["invalid_disp"])
+    col_stats = compute_statistics(data["col_map"].data, data.attrs["invalid_disp"])
     return {"row": row_stats.to_dict(), "col": col_stats.to_dict()}

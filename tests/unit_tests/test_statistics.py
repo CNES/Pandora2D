@@ -23,20 +23,8 @@
 
 import numpy as np
 import pytest
-import xarray as xr
 
 from pandora2d.statistics import compute_statistics, Statistics, Quantiles
-
-
-@pytest.fixture()
-def data(raw_data):
-    """Build DataArray from raw_data."""
-    nb_rows, nb_cols = raw_data.shape
-    return xr.DataArray(
-        data=raw_data,
-        coords={"row": np.arange(nb_rows), "col": np.arange(nb_cols)},
-        dims=["row", "col"],
-    )
 
 
 class TestStatistics:
@@ -69,7 +57,7 @@ class TestComputeStatistics:
     """Test compute_statistics function."""
 
     @pytest.mark.parametrize(
-        ["raw_data", "invalid_values", "expected"],
+        ["data", "invalid_values", "expected"],
         [
             [np.zeros((10, 8)), None, 0],
             [np.array([[0, 0, 0], [20, 20, 20]]), None, 10],
@@ -84,7 +72,7 @@ class TestComputeStatistics:
         assert result.mean == expected
 
     @pytest.mark.parametrize(
-        ["raw_data", "invalid_values", "expected"],
+        ["data", "invalid_values", "expected"],
         [
             [np.zeros((10, 8)), None, 0],
             [np.array([[10, 10, 10], [20, 20, 20]]), None, 5],
@@ -99,7 +87,7 @@ class TestComputeStatistics:
         assert result.std == expected
 
     @pytest.mark.parametrize(
-        ["raw_data", "invalid_values", "expected"],
+        ["data", "invalid_values", "expected"],
         [
             pytest.param(np.zeros((10, 8)), None, 1, id="No invalid"),
             pytest.param(np.array([[-99, -99, -99], [-99, -99, -99]]), -99, 0, id="All invalid"),

@@ -22,7 +22,6 @@ from dataclasses import asdict, dataclass
 from typing import Dict, Union
 
 import numpy as np
-import xarray as xr
 
 
 @dataclass
@@ -54,22 +53,21 @@ class Statistics:
         return asdict(self)
 
 
-def compute_statistics(dataarray: xr.DataArray, invalid_values: Union[np.floating, np.integer] = None) -> Statistics:
+def compute_statistics(data: np.ndarray, invalid_values: Union[np.floating, np.integer] = None) -> Statistics:
     """Compute statistics of a dataArray.
 
-    :param dataarray: data to compute statistics from.
-    :type dataarray: xr.DataArray
+    :param data: data to compute statistics from.
+    :type data: xr.DataArray
     :param invalid_values: value to exclude from computation
     :type invalid_values: Union[np.floating, np.integer]
     :return: computed statistics
     :rtype: Statistics
     """
     if invalid_values is None or np.isnan(invalid_values):
-        data = dataarray.to_numpy()
         minimal_valid_pixel_ratio = (~np.isnan(data)).sum() / data.size
     else:
-        mask = np.isin(dataarray.to_numpy(), invalid_values, invert=True)
-        data = dataarray.to_numpy()[mask]
+        mask = np.isin(data, invalid_values, invert=True)
+        data = data[mask]
         minimal_valid_pixel_ratio = mask.sum() / mask.size
 
     quantiles = (
