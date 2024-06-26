@@ -45,7 +45,7 @@ def remove_extra_keys(extended: dict, reference: dict):
     >>> extended = {"a": 1, "b": 2, "c": 3}
     >>> reference = {"a": 1, "b": 2}
     >>> remove_extra_keys(extended, reference)
-    {"a": 1, "b": 2}
+    {'a': 1, 'b': 2}
     """
     extended_copy = deepcopy(extended)
     keys_only_in_extended = extended_copy.keys() - reference.keys()
@@ -112,6 +112,12 @@ def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_p
 
     assert result == configuration
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
+
+    # Test for report
+    with open(run_dir / "output" / "report.json", encoding="utf8") as report_file:
+        report = json.load(report_file)
+
+    assert report["statistics"]["disparity"].keys() == {"row", "col"}
 
 
 @pytest.mark.xfail(reason="saved nan in nodata is not valid json and is not comparable to nan")
