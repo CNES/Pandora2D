@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0 (June 2024)
+
+### Added
+- Adding configuration file with dichotomy step. [#132]
+- Add warning documentation about stored disparity maps when step is different from 1. [#140]
+- Add warning documentation about pandora2d maturity. [#129]
+
+### Fixed
+- Fix estimation check_conf method. [#115]
+- Fix plot disparity maps with correct dataset on the notebook. [#139]
+- Fix update image path on README.md file. [#135]
+
+### Changed
+- Add ROI in test_dichotomy_execution. [#134]
+- Update version copyright. [#133]
+- Update README.md file. [#136]
+
 ## 0.3.0a1 (June 2024)
 
 ### Added

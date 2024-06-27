@@ -60,7 +60,7 @@ install: venv ## install pandora2D (pip editable mode) without plugins
 
 .PHONY: install-plugin
 install-plugin: venv ## install pandora2D (pip editable mode) without plugins
-	@test -f ${PANDORA2D_VENV}/bin/pandora2d || ${PANDORA2D_VENV}/bin/pip install pandora-plugin-mccnn
+	@test -f ${PANDORA2D_VENV}/bin/pandora-plugin-mccnn || ${PANDORA2D_VENV}/bin/pip install pandora-plugin-mccnn
 	@test -f .git/hooks/pre-commit || echo echo "  Install pre-commit hook"
 	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
 	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
@@ -101,7 +101,7 @@ test-notebook: install ## run notebook tests only
 
 .PHONY: test-plugin
 test-plugin: install-plugin ## run plugins tests only
-	@${PANDORA2D_VENV}/bin/pytest -m "plugin_tests" --html=notebook-test-report.html
+	@${PANDORA2D_VENV}/bin/pytest -m "plugin_tests" --html=plugin-test-report.html
 
 ## Code quality, linting section
 

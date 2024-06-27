@@ -15,6 +15,12 @@ Saved images
         The output correlation_score map with optical flow refinement method contains the disparity
         step correlation score.
 
+.. warning::
+        If a step (in row or column) different from 1 is chosen at the :ref:`matching_cost` step, 
+        the disparity maps stored at the output of the pandora2D machine will be smaller than the image or ROI given by the user in the :ref:`inputs`. 
+
+        An issue has been opened on this subject, and the problem will be solved soon.  
+
 Saved configuration
 *******************
 
