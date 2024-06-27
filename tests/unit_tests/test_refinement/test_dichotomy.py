@@ -76,6 +76,11 @@ def type_measure():
 
 
 @pytest.fixture()
+def subpixel():
+    return 1
+
+
+@pytest.fixture()
 def zeros_cost_volumes(
     rows,
     cols,
@@ -84,10 +89,11 @@ def zeros_cost_volumes(
     min_disparity_col,
     max_disparity_col,
     type_measure,
+    subpixel,
 ):
     """Create a cost_volumes full of zeros."""
-    number_of_disparity_col = max_disparity_col - min_disparity_col + 1
-    number_of_disparity_row = max_disparity_row - min_disparity_row + 1
+    number_of_disparity_col = int((max_disparity_col - min_disparity_col) * subpixel + 1)
+    number_of_disparity_row = int((max_disparity_row - min_disparity_row) * subpixel + 1)
 
     data = np.zeros((rows.size, cols.size, number_of_disparity_col, number_of_disparity_row))
     attrs = {
@@ -97,14 +103,15 @@ def zeros_cost_volumes(
         "sampling_interval": 1,
         "type_measure": type_measure,
         "step": [1, 1],
+        "subpixel": subpixel,
     }
 
     return MatchingCost.allocate_cost_volumes(
         attrs,
         rows,
         cols,
-        np.arange(min_disparity_col, max_disparity_col + 1),
-        np.arange(min_disparity_row, max_disparity_row + 1),
+        np.linspace(min_disparity_col, max_disparity_col, number_of_disparity_col),
+        np.linspace(min_disparity_row, max_disparity_row, number_of_disparity_row),
         data,
     )
 
