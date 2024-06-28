@@ -287,6 +287,7 @@ class TestRefinementMethod:
     def dichotomy_instance(self, config):
         return refinement.dichotomy.Dichotomy(config)
 
+    @pytest.mark.parametrize("subpixel", [1, 2])
     @pytest.mark.parametrize(["iterations", "precision"], [[1, 0.5], [2, 0.25], [3, 0.125]])
     def test_precision_is_logged(
         self, cost_volumes, disp_map, dichotomy_instance, precision, mocker: MockerFixture, caplog
@@ -294,7 +295,7 @@ class TestRefinementMethod:
         """Precision should be logged."""
         with caplog.at_level(logging.INFO):
             dichotomy_instance.refinement_method(cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY)
-        assert caplog.record_tuples == [("root", logging.INFO, f"Dichotomy precision reached: {precision}")]
+        assert ("root", logging.INFO, f"Dichotomy precision reached: {precision}") in caplog.record_tuples
 
     @pytest.mark.parametrize(
         ["type_measure", "expected"],
@@ -428,6 +429,29 @@ class TestRefinementMethod:
         assert np.nanmin(result_disp_col) >= min_disparity_col
         assert np.nanmax(result_disp_row) <= max_disparity_row
         assert np.nanmax(result_disp_col) <= max_disparity_col
+
+    @pytest.mark.parametrize(
+        ["subpixel", "iterations"],
+        [
+            pytest.param(2, 1),
+            pytest.param(4, 1),
+            pytest.param(4, 2),
+        ],
+    )
+    def test_skip_iterations_with_subpixel(
+        self, dichotomy_instance, cost_volumes, disp_map, subpixel, mocker: MockerFixture
+    ):
+        """First iterations must be skipped since precision is already reached by subpixel."""
+        result_disp_map = copy.deepcopy(disp_map)
+        result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
+            cost_volumes,
+            result_disp_map,
+            img_left=mocker.ANY,
+            img_right=mocker.ANY,
+        )
+
+        np.testing.assert_array_equal(result_disp_row, disp_map["row_map"])
+        np.testing.assert_array_equal(result_disp_col, disp_map["col_map"])
 
 
 def test_margins():
