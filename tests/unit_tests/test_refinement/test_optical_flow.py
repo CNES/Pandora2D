@@ -29,7 +29,8 @@ import pytest
 import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
 from pandora.margins import Margins
-from pandora2d import refinement
+from pandora2d import refinement, common, matching_cost, disparity
+from pandora2d.refinement.optical_flow import OpticalFlow
 
 
 @pytest.fixture()
@@ -189,8 +190,7 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
 
     img = dataset_image
 
-    refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
-    refinement_class._window_size = 3
+    refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"}, [1, 1], 3)  # type: ignore[abstract]
 
     cv = np.zeros((6, 5, 5, 5))
 
@@ -205,10 +205,28 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
             "disp_col": disparity_range_col,
             "disp_row": disparity_range_row,
         },
+        attrs={"offset_row_col": 1},
     )
 
+    # get first and last coordinates for row and col in cost volume dataset
+    first_col_coordinate = cost_volumes.col.data[0] + cost_volumes.offset_row_col
+    last_col_coordinate = cost_volumes.col.data[-1] - cost_volumes.offset_row_col
+    col_extrema_coordinates = [
+        OpticalFlow.find_nearest_column(first_col_coordinate, cost_volumes.col.data, "+"),
+        OpticalFlow.find_nearest_column(last_col_coordinate, cost_volumes.col.data, "-"),
+    ]
+
+    first_row_coordinate = cost_volumes.row.data[0] + cost_volumes.offset_row_col
+    last_row_coordinate = cost_volumes.row.data[-1] - cost_volumes.offset_row_col
+    row_extrema_coordinates = [
+        OpticalFlow.find_nearest_column(first_row_coordinate, cost_volumes.row.data, "+"),
+        OpticalFlow.find_nearest_column(last_row_coordinate, cost_volumes.row.data, "-"),
+    ]
+
     # for left image
-    reshaped_left = refinement_class.reshape_to_matching_cost_window(img, cost_volumes)
+    reshaped_left = refinement_class.reshape_to_matching_cost_window(
+        img, cost_volumes, (row_extrema_coordinates, col_extrema_coordinates)
+    )
 
     # test four matching_cost
     idx_1_1 = [[0, 1, 2], [5, 6, 7], [10, 11, 12]]
@@ -228,9 +246,7 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
     """
 
     img = dataset_image
-
-    refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"})  # type: ignore[abstract]
-    refinement_class._window_size = 3
+    refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"}, [1, 1], 3)  # type: ignore[abstract]
 
     # Create disparity maps
     col_disp_map = [2, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0]
@@ -249,10 +265,28 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
             "disp_col": disparity_range_col,
             "disp_row": disparity_range_row,
         },
+        attrs={"offset_row_col": 1},
     )
 
+    # get first and last coordinates for row and col in cost volume dataset
+    first_col_coordinate = cost_volumes.col.data[0] + cost_volumes.offset_row_col
+    last_col_coordinate = cost_volumes.col.data[-1] - cost_volumes.offset_row_col
+    col_extrema_coordinates = [
+        OpticalFlow.find_nearest_column(first_col_coordinate, cost_volumes.col.data, "+"),
+        OpticalFlow.find_nearest_column(last_col_coordinate, cost_volumes.col.data, "-"),
+    ]
+
+    first_row_coordinate = cost_volumes.row.data[0] + cost_volumes.offset_row_col
+    last_row_coordinate = cost_volumes.row.data[-1] - cost_volumes.offset_row_col
+    row_extrema_coordinates = [
+        OpticalFlow.find_nearest_column(first_row_coordinate, cost_volumes.row.data, "+"),
+        OpticalFlow.find_nearest_column(last_row_coordinate, cost_volumes.row.data, "-"),
+    ]
+
     # for right image
-    reshaped_right = refinement_class.reshape_to_matching_cost_window(img, cost_volumes, row_disp_map, col_disp_map)
+    reshaped_right = refinement_class.reshape_to_matching_cost_window(
+        img, cost_volumes, (row_extrema_coordinates, col_extrema_coordinates), row_disp_map, col_disp_map
+    )
 
     # test four matching_cost
     idx_1_1 = [[12, 13, 14], [17, 18, 19], [22, 23, 24]]
@@ -294,3 +328,111 @@ def test_warped_image_without_step():
     # check that the generated image is equal to ground truth
     assert np.array_equal(gt_mc_1, test_img_shift[:, :, 0])
     assert np.array_equal(gt_mc_2, test_img_shift[:, :, 1])
+
+
+@pytest.fixture()
+def make_data(row, col):
+    return np.random.uniform(0, row * col, (row, col))
+
+
+def make_img_dataset(data, shift=0):
+    """
+    Instantiate an image dataset with specified rows, columns, and row shift.
+    """
+    data = np.roll(data, shift, axis=0)
+    data = np.round(data, 2)
+
+    return xr.Dataset(
+        {"im": (["row", "col"], data)},
+        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        attrs={
+            "no_data_img": -9999,
+            "valid_pixels": 0,
+            "no_data_mask": 1,
+            "crs": None,
+            "col_disparity_source": [-2, 2],
+            "row_disparity_source": [-2, 2],
+            "invalid_disparity": np.nan,
+        },
+    )
+
+
+@pytest.fixture()
+def make_left_right_images(make_data):
+    data = make_data
+    return make_img_dataset(data, 0), make_img_dataset(data, 2)
+
+
+def make_cv_dataset(dataset_img, dataset_img_shift, cfg_mc):
+    """
+    Instantiate a cost volume dataset
+    """
+    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
+    grid_min_col = np.full((3, 3), -2)
+    grid_max_col = np.full((3, 3), 2)
+    grid_min_row = np.full((3, 3), -2)
+    grid_max_row = np.full((3, 3), 2)
+
+    matching_cost_matcher.allocate_cost_volume_pandora(
+        img_left=dataset_img,
+        img_right=dataset_img_shift,
+        grid_min_col=grid_min_col,
+        grid_max_col=grid_max_col,
+        cfg=cfg_mc,
+    )
+
+    dataset_cv = matching_cost_matcher.compute_cost_volumes(
+        dataset_img, dataset_img_shift, grid_min_col, grid_max_col, grid_min_row, grid_max_row
+    )
+    return dataset_cv
+
+
+def make_disparity_dataset(dataset_cv, cfg_disp):
+    """
+    Instantiate a disparity dataset
+    """
+    disparity_matcher = disparity.Disparity(cfg_disp)
+    delta_x, delta_y, score = disparity_matcher.compute_disp_maps(dataset_cv)
+
+    data_variables = {
+        "row_map": (("row", "col"), delta_x),
+        "col_map": (("row", "col"), delta_y),
+        "correlation_score": (("row", "col"), score),
+    }
+    coords = {"row": dataset_cv.row.data, "col": dataset_cv.col.data}
+    dataset = xr.Dataset(data_variables, coords)
+    dataset_disp_map = common.dataset_disp_maps(
+        dataset.row_map,
+        dataset.col_map,
+        dataset.coords,
+        dataset.correlation_score,
+        attributes={"invalid_disp": np.nan},
+    )
+    return dataset_disp_map
+
+
+@pytest.mark.parametrize(["row", "col", "step_row", "step_col"], [(10, 10, 2, 1), (10, 10, 1, 2), (10, 10, 2, 2)])
+def test_step_with_refinement_method(make_left_right_images, row, col, step_row, step_col):
+    """
+    Test refinement method with a step
+    """
+
+    # create left image dataset  and right image dataset with same as left but with a row shift
+    dataset_img, dataset_img_shift = make_left_right_images
+
+    # create cost volume dataset
+    cfg_mc = {
+        "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": [step_row, step_col]}}
+    }
+    dataset_cv = make_cv_dataset(dataset_img, dataset_img_shift, cfg_mc)
+
+    # create disparity dataset
+    cfg_disp = {"disparity_method": "wta", "invalid_disparity": np.nan}
+    dataset_disp_map = make_disparity_dataset(dataset_cv, cfg_disp)
+
+    # Start test
+    refinement_class = refinement.AbstractRefinement(
+        {"refinement_method": "optical_flow"}, [step_row, step_col], 3
+    )  # type: ignore[abstract]
+
+    refinement_class.refinement_method(dataset_cv, dataset_disp_map, dataset_img, dataset_img_shift)
