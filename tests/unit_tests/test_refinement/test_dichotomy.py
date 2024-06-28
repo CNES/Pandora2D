@@ -422,27 +422,33 @@ class TestRefinementMethod:
         assert np.nanmax(result_disp_col) <= max_disparity_col
 
     @pytest.mark.parametrize(
-        ["subpixel", "iterations"],
+        ["subpixel", "iterations", "nb_of_skipped"],
         [
-            pytest.param(2, 1),
-            pytest.param(4, 1),
-            pytest.param(4, 2),
+            pytest.param(2, 1, 1),
+            pytest.param(4, 1, 2),
+            pytest.param(4, 2, 2),
+            pytest.param(8, 3, 3),
         ],
     )
     def test_skip_iterations_with_subpixel(
-        self, dichotomy_instance, cost_volumes, disp_map, subpixel, mocker: MockerFixture
+        self, dichotomy_instance, cost_volumes, disp_map, subpixel, nb_of_skipped, caplog, mocker: MockerFixture
     ):
         """First iterations must be skipped since precision is already reached by subpixel."""
         result_disp_map = copy.deepcopy(disp_map)
-        result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes,
-            result_disp_map,
-            img_left=mocker.ANY,
-            img_right=mocker.ANY,
-        )
+        with caplog.at_level(logging.INFO):
+            result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
+                cost_volumes,
+                result_disp_map,
+                img_left=mocker.ANY,
+                img_right=mocker.ANY,
+            )
 
         np.testing.assert_array_equal(result_disp_row, disp_map["row_map"])
         np.testing.assert_array_equal(result_disp_col, disp_map["col_map"])
+        assert (
+            f"With subpixel of `{subpixel}` the `{nb_of_skipped}` first dichotomy iterations will be skipped."
+            in caplog.messages
+        )
 
 
 @pytest.mark.parametrize("filter_name", ["bicubic"])
