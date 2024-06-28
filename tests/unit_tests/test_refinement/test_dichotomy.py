@@ -151,15 +151,31 @@ def disp_map(invalid_disparity, rows, cols):
 
 
 @pytest.fixture()
-def config():
-    """Basic configuration expected to be good."""
-    return {"refinement_method": "dichotomy", "iterations": 2, "filter": "bicubic"}
+def iterations():
+    return 2
 
 
-def test_factory(config):
+@pytest.fixture()
+def filter_name():
+    return "bicubic"
+
+
+@pytest.fixture()
+def config(iterations, filter_name):
+    return {
+        "refinement_method": "dichotomy",
+        "iterations": iterations,
+        "filter": filter_name,
+    }
+
+
+@pytest.fixture()
+def dichotomy_instance(config):
+    return refinement.dichotomy.Dichotomy(config)
+
+
+def test_factory(dichotomy_instance):
     """With `refinement_method` equals to `dichotomy`, we should get a Dichotomy object."""
-    dichotomy_instance = refinement.AbstractRefinement(config)  # type: ignore[abstract]
-
     assert isinstance(dichotomy_instance, refinement.dichotomy.Dichotomy)
     assert isinstance(dichotomy_instance, refinement.AbstractRefinement)
 
@@ -175,21 +191,20 @@ class TestCheckConf:
             refinement.dichotomy.Dichotomy(config)
         assert "invalid_method" in err.value.args[0]
 
+    @pytest.mark.parametrize("iterations", [0])
     def test_iterations_below_minimum(self, config):
         """An exception should be raised."""
-        config["iterations"] = 0
-
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
             refinement.dichotomy.Dichotomy(config)
         assert "Not valid data" in err.value.args[0]
         assert "iterations" in err.value.args[0]
 
+    @pytest.mark.parametrize("iterations", [10])
     def test_iterations_above_maximum(self, config, caplog):
         """Test that when user set an iteration value above defined maximum,
         we replace it by this maximum and log a warning.
         """
-        config["iterations"] = 10
-
+        # caplog does not capture logs from fixture, so we can not use dichotomy_instance fixture
         dichotomy_instance = refinement.dichotomy.Dichotomy(config)
 
         assert dichotomy_instance.cfg["iterations"] == 9
@@ -199,21 +214,13 @@ class TestCheckConf:
         )
 
     @pytest.mark.parametrize("iterations", [1, 9])
-    def test_iterations_in_allowed_range(self, config, iterations):
+    def test_iterations_in_allowed_range(self, iterations, dichotomy_instance):
         """It should not fail."""
-        config["iterations"] = iterations
-
-        dichotomy_instance = refinement.dichotomy.Dichotomy(config)
-
         assert dichotomy_instance.cfg["iterations"] == iterations
 
     @pytest.mark.parametrize("filter_name", ["bicubic"])
-    def test_valid_filter_names(self, config, filter_name):
+    def test_valid_filter_names(self, filter_name, dichotomy_instance):
         """Test accepted filter names."""
-        config["filter"] = filter_name
-
-        dichotomy_instance = refinement.dichotomy.Dichotomy(config)
-
         assert dichotomy_instance.cfg["filter"] == filter_name
 
     @pytest.mark.parametrize("missing", ["refinement_method", "iterations", "filter"])
@@ -270,22 +277,6 @@ class TestRefinementMethod:
     @pytest.fixture()
     def iterations(self):
         return 1
-
-    @pytest.fixture()
-    def filter_name(self):
-        return "bicubic"
-
-    @pytest.fixture()
-    def config(self, iterations, filter_name):
-        return {
-            "refinement_method": "dichotomy",
-            "iterations": iterations,
-            "filter": filter_name,
-        }
-
-    @pytest.fixture()
-    def dichotomy_instance(self, config):
-        return refinement.dichotomy.Dichotomy(config)
 
     @pytest.mark.parametrize("subpixel", [1, 2])
     @pytest.mark.parametrize(["iterations", "precision"], [[1, 0.5], [2, 0.25], [3, 0.125]])
@@ -454,15 +445,11 @@ class TestRefinementMethod:
         np.testing.assert_array_equal(result_disp_col, disp_map["col_map"])
 
 
-def test_margins():
+@pytest.mark.parametrize("filter_name", ["bicubic"])
+def test_margins(dichotomy_instance):
     """
     Test margins of Dichotomy.
     """
-
-    config = {"refinement_method": "dichotomy", "iterations": 2, "filter": "bicubic"}
-
-    dichotomy_instance = refinement.dichotomy.Dichotomy(config)
-
     assert dichotomy_instance.margins == Margins(1, 1, 2, 2)
 
 
