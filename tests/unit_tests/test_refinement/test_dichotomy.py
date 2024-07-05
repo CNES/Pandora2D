@@ -76,6 +76,11 @@ def type_measure():
 
 
 @pytest.fixture()
+def subpixel():
+    return 1
+
+
+@pytest.fixture()
 def zeros_cost_volumes(
     rows,
     cols,
@@ -84,10 +89,11 @@ def zeros_cost_volumes(
     min_disparity_col,
     max_disparity_col,
     type_measure,
+    subpixel,
 ):
     """Create a cost_volumes full of zeros."""
-    number_of_disparity_col = max_disparity_col - min_disparity_col + 1
-    number_of_disparity_row = max_disparity_row - min_disparity_row + 1
+    number_of_disparity_col = int((max_disparity_col - min_disparity_col) * subpixel + 1)
+    number_of_disparity_row = int((max_disparity_row - min_disparity_row) * subpixel + 1)
 
     data = np.zeros((rows.size, cols.size, number_of_disparity_col, number_of_disparity_row))
     attrs = {
@@ -97,14 +103,15 @@ def zeros_cost_volumes(
         "sampling_interval": 1,
         "type_measure": type_measure,
         "step": [1, 1],
+        "subpixel": subpixel,
     }
 
     return MatchingCost.allocate_cost_volumes(
         attrs,
         rows,
         cols,
-        np.arange(min_disparity_col, max_disparity_col + 1),
-        np.arange(min_disparity_row, max_disparity_row + 1),
+        np.linspace(min_disparity_col, max_disparity_col, number_of_disparity_col),
+        np.linspace(min_disparity_row, max_disparity_row, number_of_disparity_row),
         data,
     )
 
@@ -144,15 +151,31 @@ def disp_map(invalid_disparity, rows, cols):
 
 
 @pytest.fixture()
-def config():
-    """Basic configuration expected to be good."""
-    return {"refinement_method": "dichotomy", "iterations": 2, "filter": "bicubic"}
+def iterations():
+    return 2
 
 
-def test_factory(config):
+@pytest.fixture()
+def filter_name():
+    return "bicubic"
+
+
+@pytest.fixture()
+def config(iterations, filter_name):
+    return {
+        "refinement_method": "dichotomy",
+        "iterations": iterations,
+        "filter": filter_name,
+    }
+
+
+@pytest.fixture()
+def dichotomy_instance(config):
+    return refinement.dichotomy.Dichotomy(config)
+
+
+def test_factory(dichotomy_instance):
     """With `refinement_method` equals to `dichotomy`, we should get a Dichotomy object."""
-    dichotomy_instance = refinement.AbstractRefinement(config)  # type: ignore[abstract]
-
     assert isinstance(dichotomy_instance, refinement.dichotomy.Dichotomy)
     assert isinstance(dichotomy_instance, refinement.AbstractRefinement)
 
@@ -168,21 +191,20 @@ class TestCheckConf:
             refinement.dichotomy.Dichotomy(config)
         assert "invalid_method" in err.value.args[0]
 
+    @pytest.mark.parametrize("iterations", [0])
     def test_iterations_below_minimum(self, config):
         """An exception should be raised."""
-        config["iterations"] = 0
-
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
             refinement.dichotomy.Dichotomy(config)
         assert "Not valid data" in err.value.args[0]
         assert "iterations" in err.value.args[0]
 
+    @pytest.mark.parametrize("iterations", [10])
     def test_iterations_above_maximum(self, config, caplog):
         """Test that when user set an iteration value above defined maximum,
         we replace it by this maximum and log a warning.
         """
-        config["iterations"] = 10
-
+        # caplog does not capture logs from fixture, so we can not use dichotomy_instance fixture
         dichotomy_instance = refinement.dichotomy.Dichotomy(config)
 
         assert dichotomy_instance.cfg["iterations"] == 9
@@ -192,21 +214,13 @@ class TestCheckConf:
         )
 
     @pytest.mark.parametrize("iterations", [1, 9])
-    def test_iterations_in_allowed_range(self, config, iterations):
+    def test_iterations_in_allowed_range(self, iterations, dichotomy_instance):
         """It should not fail."""
-        config["iterations"] = iterations
-
-        dichotomy_instance = refinement.dichotomy.Dichotomy(config)
-
         assert dichotomy_instance.cfg["iterations"] == iterations
 
     @pytest.mark.parametrize("filter_name", ["bicubic"])
-    def test_valid_filter_names(self, config, filter_name):
+    def test_valid_filter_names(self, filter_name, dichotomy_instance):
         """Test accepted filter names."""
-        config["filter"] = filter_name
-
-        dichotomy_instance = refinement.dichotomy.Dichotomy(config)
-
         assert dichotomy_instance.cfg["filter"] == filter_name
 
     @pytest.mark.parametrize("missing", ["refinement_method", "iterations", "filter"])
@@ -264,22 +278,7 @@ class TestRefinementMethod:
     def iterations(self):
         return 1
 
-    @pytest.fixture()
-    def filter_name(self):
-        return "bicubic"
-
-    @pytest.fixture()
-    def config(self, iterations, filter_name):
-        return {
-            "refinement_method": "dichotomy",
-            "iterations": iterations,
-            "filter": filter_name,
-        }
-
-    @pytest.fixture()
-    def dichotomy_instance(self, config):
-        return refinement.dichotomy.Dichotomy(config)
-
+    @pytest.mark.parametrize("subpixel", [1, 2])
     @pytest.mark.parametrize(["iterations", "precision"], [[1, 0.5], [2, 0.25], [3, 0.125]])
     def test_precision_is_logged(
         self, cost_volumes, disp_map, dichotomy_instance, precision, mocker: MockerFixture, caplog
@@ -287,7 +286,7 @@ class TestRefinementMethod:
         """Precision should be logged."""
         with caplog.at_level(logging.INFO):
             dichotomy_instance.refinement_method(cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY)
-        assert caplog.record_tuples == [("root", logging.INFO, f"Dichotomy precision reached: {precision}")]
+        assert ("root", logging.INFO, f"Dichotomy precision reached: {precision}") in caplog.record_tuples
 
     @pytest.mark.parametrize(
         ["type_measure", "expected"],
@@ -422,16 +421,41 @@ class TestRefinementMethod:
         assert np.nanmax(result_disp_row) <= max_disparity_row
         assert np.nanmax(result_disp_col) <= max_disparity_col
 
+    @pytest.mark.parametrize(
+        ["subpixel", "iterations", "nb_of_skipped"],
+        [
+            pytest.param(2, 1, 1),
+            pytest.param(4, 1, 2),
+            pytest.param(4, 2, 2),
+            pytest.param(8, 3, 3),
+        ],
+    )
+    def test_skip_iterations_with_subpixel(
+        self, dichotomy_instance, cost_volumes, disp_map, subpixel, nb_of_skipped, caplog, mocker: MockerFixture
+    ):
+        """First iterations must be skipped since precision is already reached by subpixel."""
+        result_disp_map = copy.deepcopy(disp_map)
+        with caplog.at_level(logging.INFO):
+            result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
+                cost_volumes,
+                result_disp_map,
+                img_left=mocker.ANY,
+                img_right=mocker.ANY,
+            )
 
-def test_margins():
+        np.testing.assert_array_equal(result_disp_row, disp_map["row_map"])
+        np.testing.assert_array_equal(result_disp_col, disp_map["col_map"])
+        assert (
+            f"With subpixel of `{subpixel}` the `{nb_of_skipped}` first dichotomy iterations will be skipped."
+            in caplog.messages
+        )
+
+
+@pytest.mark.parametrize("filter_name", ["bicubic"])
+def test_margins(dichotomy_instance):
     """
     Test margins of Dichotomy.
     """
-
-    config = {"refinement_method": "dichotomy", "iterations": 2, "filter": "bicubic"}
-
-    dichotomy_instance = refinement.dichotomy.Dichotomy(config)
-
     assert dichotomy_instance.margins == Margins(1, 1, 2, 2)
 
 

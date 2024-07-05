@@ -143,7 +143,16 @@ class Dichotomy(refinement.AbstractRefinement):
         row_disparity_source = cost_volumes.attrs["row_disparity_source"]
         col_disparity_source = cost_volumes.attrs["col_disparity_source"]
 
-        precisions = [1 / 2 ** (it + 1) for it in range(self.cfg["iterations"])]
+        # start iterations after subpixel precision: `subpixel.bit_length() - 1` found which power of 2 subpixel is,
+        # and we add 1 to start at next iteration
+        first_iteration = cost_volumes.attrs["subpixel"].bit_length()
+        precisions = [1 / 2**it for it in range(first_iteration, self.cfg["iterations"] + 1)]
+        if first_iteration >= 0:
+            logging.info(
+                "With subpixel of `%s` the `%s` first dichotomy iterations will be skipped.",
+                cost_volumes.attrs["subpixel"],
+                first_iteration - 1,
+            )
 
         # Convert disparity maps to np.array to optimise performance
         row_map = row_map.to_numpy()
@@ -156,7 +165,6 @@ class Dichotomy(refinement.AbstractRefinement):
             op_flags=[["readwrite"], ["readwrite"], ["readwrite"]],
         ) as iterators:
             for cost_surface, (cost_value, disp_row_init, disp_col_init) in zip(cost_surfaces, iterators):
-
                 # Invalid value
                 if np.isnan(cost_value):
                     continue
@@ -210,7 +218,9 @@ class Dichotomy(refinement.AbstractRefinement):
                         )
                     )
 
-        logging.info("Dichotomy precision reached: %s", precisions[-1])
+        logging.info(
+            "Dichotomy precision reached: %s", precisions[-1] if precisions else 1 / 2 ** (first_iteration - 1)
+        )
 
         return col_map, row_map, cost_values
 
