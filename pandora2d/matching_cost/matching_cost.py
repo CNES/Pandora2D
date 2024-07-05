@@ -234,18 +234,40 @@ class MatchingCost:
             grid_min_col -= margins.left
             grid_max_col += margins.right
 
+        # Get updated ROI left margin for pandora method get_coordinates()
+        # To get right coordinates in cost_volume when initial left_margin > cfg["ROI"]["col"]["first"]
+        # We need to have left_margin = cfg["ROI"]["col"]["first"]
+        cfg_for_get_coordinates = copy.deepcopy(cfg)
+        if "ROI" in cfg:
+            cfg_for_get_coordinates["ROI"]["margins"] = (
+                min(cfg["ROI"]["margins"][0], cfg["ROI"]["col"]["first"]),
+                cfg["ROI"]["margins"][1],
+                cfg["ROI"]["margins"][2],
+                cfg["ROI"]["margins"][3],
+            )
+
         # Initialize pandora an empty grid for cost volume
-        self.grid_ = self.pandora_matching_cost_.allocate_cost_volume(img_left, (grid_min_col, grid_max_col), cfg)
+        self.grid_ = self.pandora_matching_cost_.allocate_cost_volume(
+            img_left, (grid_min_col, grid_max_col), cfg_for_get_coordinates
+        )
 
         # Compute validity mask to identify invalid points in cost volume
         self.grid_ = validity_mask(img_left, img_right, self.grid_)
 
         # Add ROI margins in attributes
         # Enables to compute cost volumes row coordinates later by using pandora.matching_cost.get_coordinates()
+        # Get updated ROI up margin for pandora method get_coordinates()
+        # To get right coordinates in cost_volume when initial up_margin > cfg["ROI"]["row"]["first"]
+        # We need to have up_margin = cfg["ROI"]["row"]["first"]
         if "ROI" in cfg:
-            self.grid_.attrs["ROI_margins"] = cfg["ROI"]["margins"]
+            self.grid_.attrs["ROI_margins_for_cv"] = (
+                cfg["ROI"]["margins"][0],
+                min(cfg["ROI"]["margins"][1], cfg["ROI"]["row"]["first"]),
+                cfg["ROI"]["margins"][2],
+                cfg["ROI"]["margins"][3],
+            )
         else:
-            self.grid_.attrs["ROI_margins"] = None
+            self.grid_.attrs["ROI_margins_for_cv"] = None
 
     def compute_cost_volumes(
         self,
@@ -335,7 +357,7 @@ class MatchingCost:
                 img_row_coordinates = img_left["im"].coords["row"]
 
                 # Case without a ROI: we only take the step into account to compute row coordinates.
-                if self.grid_.attrs["ROI_margins"] is None:
+                if self.grid_.attrs["ROI_margins_for_cv"] is None:
                     row_coords = np.arange(img_row_coordinates[0], img_row_coordinates[-1] + 1, self._step_row)
 
                 # Case with a ROI: we use pandora get_coordinates() method to compute row coordinates.
@@ -343,7 +365,7 @@ class MatchingCost:
                 # This ensures that the first point of the ROI given by the user is computed in the cost volume.
                 else:
                     row_coords = self.pandora_matching_cost_.get_coordinates(
-                        margin=self.grid_.attrs["ROI_margins"][1],
+                        margin=self.grid_.attrs["ROI_margins_for_cv"][1],
                         img_coordinates=img_row_coordinates,
                         step=self._step_row,
                     )
@@ -369,6 +391,6 @@ class MatchingCost:
         cost_volumes.attrs["step"] = self._step
 
         # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
-        del cost_volumes.attrs["ROI_margins"]
+        del cost_volumes.attrs["ROI_margins_for_cv"]
 
         return cost_volumes

@@ -438,6 +438,20 @@ def test_compute_cv_zncc():
             np.array([5]),  # Only ROI["row"]["first"]=5 is in the cost_volume rows
             id="ROI and step_row and step_col greater than the number of columns and rows in the ROI",
         ),
+        pytest.param(
+            {"col": {"first": 1, "last": 7}, "row": {"first": 1, "last": 7}, "margins": [2, 2, 2, 2]},
+            [2, 1],
+            np.arange(10),  # Coordinates of user ROI + margins
+            np.arange(1, 10, 2),  # ROI["row"]["first"]=1 then coordinates are [1,3,5,7,9]
+            id="First point of ROI lower than margin and step_row=2",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 1, "last": 5}, "margins": [4, 4, 4, 4]},
+            [1, 2],
+            np.arange(1, 10, 2),  # ROI["col"]["first"]=3 then coordinates are [1,3,5,7,9]
+            np.arange(0, 10),  # Coordinates of user ROI + margins
+            id="First point of ROI lower than margin and step_col=2",
+        ),
     ],
 )
 def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_config, col_expected, row_expected):
