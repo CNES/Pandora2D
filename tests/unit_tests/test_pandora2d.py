@@ -24,6 +24,7 @@
 """
 Test state_machine
 """
+
 import copy
 import numpy as np
 
@@ -99,7 +100,7 @@ class TestPandora2D:
         [
             pytest.param({"refinement_method": "interpolation"}, Margins(3, 3, 3, 3), id="interpolation"),
             pytest.param(
-                {"refinement_method": "dichotomy", "iterations": 3, "filter": "bicubic"},
+                {"refinement_method": "dichotomy", "iterations": 3, "filter": {"method": "bicubic"}},
                 Margins(2, 2, 2, 2),
                 id="dichotomy with bicubic filter",
             ),

@@ -16,8 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""This module contains bicubic interpolation filter.
-"""
+"""This module contains bicubic interpolation filter."""
+
 from functools import lru_cache
 
 import numpy as np
@@ -35,6 +35,8 @@ class Bicubic(AbstractFilter):
 
     _ALPHA = -0.5
     _SIZE = 4
+
+    schema = {"method": "bicubic"}
 
     @property
     def margins(self) -> Margins:

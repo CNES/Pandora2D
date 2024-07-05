@@ -24,7 +24,7 @@
       "refinement": {
         "refinement_method": "dichotomy",
         "iterations": 2,
-        "filter": "bicubic"
+        "filter": { "method": "bicubic"}
       }
     }
   }

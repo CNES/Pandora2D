@@ -19,6 +19,7 @@
 """
 This module contains functions associated to the interpolation filters.
 """
+
 from __future__ import annotations
 import logging
 from typing import Dict, Tuple, List
@@ -26,6 +27,7 @@ from abc import abstractmethod, ABC
 
 import math
 import numpy as np
+from json_checker import Checker
 
 from pandora.margins.descriptors import NullMargins
 
@@ -40,8 +42,9 @@ class AbstractFilter(ABC):
     cfg = None
     margins = NullMargins()
     _SIZE = 4
+    schema = {}
 
-    def __new__(cls, filter_method: str | None = None):
+    def __new__(cls, cfg: dict | None = None, **kwargs):
         """
         Return the plugin associated with the interpolation filter given in the configuration
 
@@ -50,13 +53,37 @@ class AbstractFilter(ABC):
         """
 
         if cls is AbstractFilter:
-            if isinstance(filter_method, str):
+            if isinstance(cfg["method"], str):
+                filter_method = cfg["method"]
                 try:
                     return super(AbstractFilter, cls).__new__(cls.interpolation_filter_methods_avail[filter_method])
                 except KeyError:
                     logging.error("No subpixel method named %s supported", filter_method)
                     raise KeyError
         return super(AbstractFilter, cls).__new__(cls)
+
+    def __init__(self, cfg: Dict, **_) -> None:
+        """
+        :param cfg: optional configuration, {}
+        :type cfg: dict
+        :return: None
+        """
+        self.cfg = self.check_conf(cfg)
+
+    @classmethod
+    def check_conf(cls, cfg: Dict) -> Dict:
+        """
+        Check the refinement method configuration.
+
+        :param cfg: user_config for refinement method
+        :type cfg: dict
+        :return: cfg: global configuration
+        :rtype: cfg: dict
+        """
+        checker = Checker(cls.schema)
+        checker.validate(cfg)
+
+        return cfg
 
     def desc(self) -> None:
         """
@@ -141,7 +168,6 @@ class AbstractFilter(ABC):
         eps = np.finfo(np.float32).eps
 
         for pos_col, pos_row in zip(*positions):
-
             # get_coeffs method receives positive coefficients
             fractional_row = abs(math.modf(pos_row)[0])
             fractional_col = abs(math.modf(pos_col)[0])
