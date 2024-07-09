@@ -63,36 +63,36 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
     """
 
     _transitions_run = [
-        {"trigger": "estimation", "source": "begin", "dest": "assumption", "after": "estimation_run"},
+        {"trigger": "estimation", "source": "begin", "dest": "assumption", "before": "estimation_run"},
         {
             "trigger": "matching_cost",
             "source": "begin",
             "dest": "cost_volumes",
             "prepare": "matching_cost_prepare",
-            "after": "matching_cost_run",
+            "before": "matching_cost_run",
         },
         {
             "trigger": "matching_cost",
             "source": "assumption",
             "dest": "cost_volumes",
             "prepare": "matching_cost_prepare",
-            "after": "matching_cost_run",
+            "before": "matching_cost_run",
         },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "after": "disp_maps_run"},
-        {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_run"},
+        {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "before": "disp_maps_run"},
+        {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "before": "refinement_run"},
     ]
 
     _transitions_check = [
-        {"trigger": "estimation", "source": "begin", "dest": "assumption", "after": "estimation_check_conf"},
-        {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "after": "matching_cost_check_conf"},
+        {"trigger": "estimation", "source": "begin", "dest": "assumption", "before": "estimation_check_conf"},
+        {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "before": "matching_cost_check_conf"},
         {
             "trigger": "matching_cost",
             "source": "assumption",
             "dest": "cost_volumes",
-            "after": "matching_cost_check_conf",
+            "before": "matching_cost_check_conf",
         },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "after": "disparity_check_conf"},
-        {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "after": "refinement_check_conf"},
+        {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "before": "disparity_check_conf"},
+        {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "before": "refinement_check_conf"},
     ]
 
     margins = GlobalMargins()
