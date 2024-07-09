@@ -137,13 +137,15 @@ Configuration and parameters
         | **Optical flow**
         | No
     * - *filter*
-      - Name of the filter to use
-      - str
-      -
-      - | "sinc",
-        | "bicubic",
+      - Configuration of the filter used for interpolation
+      - dict
+      - keys: "method", "size"
+      - | {"method": "sinc"},
+        | {"method": "bicubic"},
         | **Only available if "dichotomy" method**
-      - Yes
+      - | method: Yes
+        | size: Optional (only with sinc)
+
 
 **Example**
 
