@@ -368,7 +368,9 @@ def row_zoom_img(
     # which only accept left and right images of the same shape.
     data = np.pad(data, ((0, 1), (0, 0)), "constant", constant_values=no_data)
 
-    row = np.arange(coords.get("row")[0] + shift * ind, coords.get("row")[-1] + 1, step=1)  # type: np.ndarray
+    row = np.arange(
+        coords.get("row").values[0] + shift * ind, coords.get("row").values[-1] + 1, step=1
+    )  # type: np.ndarray
 
     return xr.Dataset(
         {"im": (["row", "col"], data)},
@@ -409,7 +411,9 @@ def col_zoom_img(
     # which only accept left and right images of the same shape.
     data = np.pad(data, ((0, 0), (0, 1)), "constant", constant_values=no_data)
 
-    col = np.arange(coords.get("col")[0] + shift * ind, coords.get("col")[-1] + 1, step=1)  # type: np.ndarray
+    col = np.arange(
+        coords.get("col").values[0] + shift * ind, coords.get("col").values[-1] + 1, step=1
+    )  # type: np.ndarray
     return xr.Dataset(
         {"im": (["row", "col"], data)},
         coords={"row": coords.get("row"), "col": col},
