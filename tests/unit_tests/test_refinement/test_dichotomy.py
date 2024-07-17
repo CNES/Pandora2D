@@ -175,13 +175,20 @@ def dichotomy_instance(config):
 
 
 def test_factory(dichotomy_instance):
-    """With `refinement_method` equals to `dichotomy`, we should get a Dichotomy object."""
+    """
+    Description : With `refinement_method` equals to `dichotomy`, we should get a Dichotomy object.
+    Data :
+    Requirement : EX_REF_DICH_00
+    """
     assert isinstance(dichotomy_instance, refinement.dichotomy.Dichotomy)
     assert isinstance(dichotomy_instance, refinement.AbstractRefinement)
 
 
 class TestCheckConf:
-    """Test the check_conf method."""
+    """
+    Description : Test the check_conf method.
+    Requirement : EX_CONF_08, EX_REF_01, EX_REF_DICH_01
+    """
 
     def test_method_field(self, config):
         """An exception should be raised if `refinement_method` is not `dichotomy`."""
@@ -225,7 +232,11 @@ class TestCheckConf:
 
     @pytest.mark.parametrize("missing", ["refinement_method", "iterations", "filter"])
     def test_fails_on_missing_keys(self, config, missing):
-        """Should raise an error when a mandatory key is missing."""
+        """
+        Description : Should raise an error when a mandatory key is missing.
+        Data :
+        Requirement : EX_CONF_08
+        """
         del config[missing]
 
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError) as err:
@@ -283,7 +294,11 @@ class TestRefinementMethod:
     def test_precision_is_logged(
         self, cost_volumes, disp_map, dichotomy_instance, precision, mocker: MockerFixture, caplog
     ):
-        """Precision should be logged."""
+        """
+        Description : Precision should be logged.
+        Data :
+        Requirement : EX_REF_DICH_01
+        """
         with caplog.at_level(logging.INFO):
             dichotomy_instance.refinement_method(cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY)
         assert ("root", logging.INFO, f"Dichotomy precision reached: {precision}") in caplog.record_tuples
