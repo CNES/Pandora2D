@@ -45,7 +45,9 @@ class TestPandora2D:
     @staticmethod
     def test_run_pandora(correct_pipeline, false_pipeline_mc, false_pipeline_disp) -> None:
         """
-        Test function for checking user input section
+        Description : Test function for checking user input section
+        Data :
+        Requirement : EX_CONF_08
         """
 
         pandora2d_machine = state_machine.Pandora2DMachine()
