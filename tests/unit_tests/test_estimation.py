@@ -85,7 +85,9 @@ def estimation_class(full_configuration):
 )
 def test_false_check_conf(estimation_method, range_col, range_row, sample_factor, error):
     """
-    test check_conf of estimation with wrongs pipelines
+    Description : test check_conf of estimation with wrongs pipelines
+    Data :
+    Requirement : EX_CONF_08
     """
 
     with pytest.raises(error):
@@ -122,7 +124,11 @@ def test_check_conf():
     ],
 )
 def test_default_parameters_values(full_configuration, parameter, expected_value):
-    """Test default values are the expected ones."""
+    """
+    Description : Test default values are the expected ones.
+    Data :
+    Requirement : EX_CONF_04
+    """
     del full_configuration[parameter]
 
     result = estimation.AbstractEstimation(full_configuration)  # type: ignore[abstract]
