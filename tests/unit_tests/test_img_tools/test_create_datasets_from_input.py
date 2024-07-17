@@ -132,7 +132,13 @@ class TestDisparityChecking:
         ],
     )
     def test_fails_when_disparity_is_missing(self, input_section, missing, message):
-        """Test when disparity is not provided."""
+        """
+        Description : Test when disparity is not provided.
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
+        """
         for key in missing:
             del input_section[key]
         with pytest.raises(KeyError) as exc_info:
@@ -142,7 +148,13 @@ class TestDisparityChecking:
     @pytest.mark.parametrize("disparity", [None, 1, 3.14, "grid_path"])
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
     def test_fails_when_disparities_are_not_lists_or_tuples(self, input_section, disparity_key, disparity):
-        """Test."""
+        """
+        Description : Test if disparities are lists or tuples in the input section
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
+        """
         input_section[disparity_key] = disparity
 
         with pytest.raises(ValueError) as exc_info:
@@ -152,7 +164,13 @@ class TestDisparityChecking:
     @pytest.mark.parametrize("disparity", [None, np.nan, np.inf, float("nan"), float("inf")])
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
     def test_fails_with_bad_disparity_values(self, input_section, disparity_key, disparity):
-        """Test."""
+        """
+        Description : Test if the disparity is iterable of length 2
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
+        """
         input_section[disparity_key] = disparity
 
         with pytest.raises(ValueError) as exc_info:
@@ -161,7 +179,13 @@ class TestDisparityChecking:
 
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
     def test_fails_when_disparity_max_lt_disparity_min(self, input_section, disparity_key):
-        """Test."""
+        """
+        Description : Test if the max disparity is lower than the min one
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
+        """
         input_section[disparity_key] = [8, -10]
         with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(input_section)
