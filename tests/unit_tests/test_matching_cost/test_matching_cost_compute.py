@@ -49,7 +49,17 @@ from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 @pytest.mark.parametrize("col_step", [1, 2, pytest.param(5, id="Step gt image")])
 @pytest.mark.parametrize("row_step", [1, 2, pytest.param(5, id="Step gt image")])
 def test_steps(request, data_fixture_name, col_step, row_step):
-    """We expect step to work."""
+    """
+    Description : We expect step to work.
+    Data :
+    - data_with_null_disparity,
+    - data_with_positive_disparity_in_col,
+    - data_with_positive_disparity_in_row,
+    - data_with_negative_disparity_in_col,
+    - data_with_negative_disparity_in_row,
+    - data_with_disparity_negative_in_row_and_positive_in_col
+    Requirement : EX_STEP_00, EX_STEP_01
+    """
     data = request.getfixturevalue(data_fixture_name)
 
     # sum of squared difference images self.left, self.right, window_size=3
@@ -456,7 +466,11 @@ def test_compute_cv_zncc():
 )
 def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_config, col_expected, row_expected):
     """
-    Test that we have the correct cost_volumes coordinates with a ROI
+    Description : Test that we have the correct cost_volumes coordinates with a ROI
+    Data :
+    - Left image : tmp_path / "left_img.png"
+    - Right image : tmp_path / "right_img.png"
+    Requirement : EX_STEP_00
     """
 
     cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}, "ROI": roi}
@@ -538,7 +552,11 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
 )
 def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config, col_expected, row_expected):
     """
-    Test that we have the correct cost_volumes coordinates without a ROI
+    Description : Test that we have the correct cost_volumes coordinates without a ROI
+    Data :
+    - Left image : tmp_path / "left_img.png"
+    - Right image : tmp_path / "right_img.png"
+    Requirement : EX_STEP_00
     """
 
     cfg = {
