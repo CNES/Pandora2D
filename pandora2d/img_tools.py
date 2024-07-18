@@ -34,7 +34,6 @@ except ImportError:
     from xarray import Coordinate as Coordinates
 
 import copy
-from collections.abc import Sequence
 from typing import List, Dict, Union, NamedTuple, Any
 
 from math import floor
@@ -81,8 +80,8 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None, estimation
     if estimation_cfg is None:
         check_disparities(input_config)
     else:
-        input_config["col_disparity"] = [-9999, -9999]
-        input_config["row_disparity"] = [-9999, -9999]
+        input_config["col_disparity"] = {"init": -9999, "range": 0}
+        input_config["row_disparity"] = {"init": -9999, "range": 0}
 
     return Datasets(
         pandora_img_tools.create_dataset_from_inputs(input_config["left"], roi).pipe(
@@ -106,7 +105,6 @@ def check_disparities(input_config: Dict) -> None:
     check_disparity_presence(input_config)
     for disparity in [input_config["col_disparity"], input_config["row_disparity"]]:
         check_disparity_types(disparity)
-        check_min_max_disparity(disparity)
 
 
 def check_disparity_presence(input_config):
@@ -133,21 +131,12 @@ def check_disparity_types(disparity: Any) -> None:
 
     :raises SystemExit: if it does not meet requirements
     """
-    if disparity is None or not isinstance(disparity, Sequence) or len(disparity) != 2:
-        raise ValueError("Disparity should be iterable of length 2", disparity)
-
-
-def check_min_max_disparity(disparity: List[int]) -> None:
-    """
-    Check that min disparity is lower than max disparity.
-
-    :param disparity: disparity to check
-    :type disparity: List[int]
-
-    :raises SystemExit: if min > max
-    """
-    if disparity[0] > disparity[1]:
-        raise ValueError(f"Min disparity ({disparity[0]}) should be lower than Max disparity ({disparity[1]})")
+    if disparity is None or not isinstance(disparity, Dict) or ("init" and "range") not in disparity:
+        raise ValueError("Disparity should be a dictionnary with keys : init and range", disparity)
+    if not isinstance(disparity["init"], int):
+        raise ValueError("Disparity init should be an integer")
+    if disparity["range"] < 0 or not isinstance(disparity["range"], int):
+        raise ValueError("Disparity range should be an integer greater or equal to 0")
 
 
 def add_left_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Dataset:
@@ -163,6 +152,7 @@ def add_left_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Data
     """
     col_disparity = configuration["col_disparity"]
     row_disparity = configuration["row_disparity"]
+
     return add_disparity_grid(dataset, col_disparity, row_disparity)
 
 
@@ -177,27 +167,33 @@ def add_right_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Dat
     :return: dataset : updated dataset
     :rtype: xr.Dataset
     """
-    col_disparity = sorted(-1 * value for value in configuration["col_disparity"])
-    row_disparity = sorted(-1 * value for value in configuration["row_disparity"])
+    col_disparity = configuration["col_disparity"].copy()
+    row_disparity = configuration["row_disparity"].copy()
+
+    col_disparity["init"] = -col_disparity["init"]
+    row_disparity["init"] = -row_disparity["init"]
+
     return add_disparity_grid(dataset, col_disparity, row_disparity)
 
 
-def add_disparity_grid(dataset: xr.Dataset, col_disparity: List[int], row_disparity: List[int]) -> xr.Dataset:
+def add_disparity_grid(dataset: xr.Dataset, col_disparity: Dict, row_disparity: Dict) -> xr.Dataset:
     """
     Add disparity to dataset
 
     :param dataset: xarray dataset
     :type dataset: xr.Dataset
     :param col_disparity: Disparity interval for columns
-    :type col_disparity: List of ints
+    :type col_disparity: Dict
     :param row_disparity: Disparity interval for rows
-    :type row_disparity: List of ints
+    :type row_disparity: Dict
 
     :return: dataset : updated dataset
     :rtype: xr.Dataset
     """
+    col_disp_min_max = [col_disparity["init"] - col_disparity["range"], col_disparity["init"] + col_disparity["range"]]
+    row_disp_min_max = [row_disparity["init"] - row_disparity["range"], row_disparity["init"] + row_disparity["range"]]
     shape = (dataset.sizes["row"], dataset.sizes["col"])
-    for key, disparity_interval in zip(["col_disparity", "row_disparity"], [col_disparity, row_disparity]):
+    for key, disparity_interval in zip(["col_disparity", "row_disparity"], [col_disp_min_max, row_disp_min_max]):
         dataset[key] = xr.DataArray(
             np.array([np.full(shape, disparity) for disparity in disparity_interval]),
             dims=["band_disp", "row", "col"],
@@ -246,7 +242,7 @@ def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     return img_right_shift
 
 
-def get_roi_processing(roi: dict, col_disparity: List[int], row_disparity: List[int]) -> dict:
+def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> dict:
     """
     Return a roi which takes disparities into account.
     Update cfg roi with new margins.
@@ -258,19 +254,19 @@ def get_roi_processing(roi: dict, col_disparity: List[int], row_disparity: List[
         "margins": [<value - int>, <value - int>, <value - int>, <value - int>]
         with margins : left, up, right, down
 
-    :param col_disparity: min and max disparities for columns.
-    :type col_disparity: List[int]
-    :param row_disparity: min and max disparities for rows.
-    :type row_disparity: List[int]
+    :param col_disparity: init and range for disparities in columns.
+    :type col_disparity: Dict
+    :param row_disparity: init and range for disparities in rows.
+    :type row_disparity: Dict
     :type roi: Dict
     """
     new_roi = copy.deepcopy(roi)
 
     new_roi["margins"] = (
-        max(abs(col_disparity[0]), roi["margins"][0]),
-        max(abs(row_disparity[0]), roi["margins"][1]),
-        max(abs(col_disparity[1]), roi["margins"][2]),
-        max(abs(row_disparity[1]), roi["margins"][3]),
+        max(abs(col_disparity["init"] - col_disparity["range"]), roi["margins"][0]),
+        max(abs(row_disparity["init"] - row_disparity["range"]), roi["margins"][1]),
+        max(abs(col_disparity["init"] + col_disparity["range"]), roi["margins"][2]),
+        max(abs(row_disparity["init"] + row_disparity["range"]), roi["margins"][3]),
     )
 
     # Update user ROI with new margins.

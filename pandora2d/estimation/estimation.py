@@ -104,7 +104,7 @@ class AbstractEstimation:
         print(f"{self._estimation_method} estimation measure")
 
     @abstractmethod
-    def compute_estimation(self, img_left: xr.Dataset, img_right: xr.Dataset) -> Tuple[list, list, np.ndarray, dict]:
+    def compute_estimation(self, img_left: xr.Dataset, img_right: xr.Dataset) -> Tuple[Dict, Dict, np.ndarray, dict]:
         """
         Compute the phase cross correlation method
 
@@ -114,26 +114,26 @@ class AbstractEstimation:
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
         :type img_right: xr.Dataset
-        :return:row disparity: list
-                col disparity: list
+        :return:row disparity: Dict
+                col disparity: Dict
                 Calculated shifts: list
                 Extra information about estimation : dict
-        :rtype: list, list, np.ndarray, dict
+        :rtype: dict, dict, np.ndarray, dict
         """
 
     @staticmethod
     def update_cfg_with_estimation(
-        cfg: Dict, disp_col: list, disp_row: list, shifts: np.ndarray, extra_dict: dict = None
+        cfg: Dict, disp_col: Dict, disp_row: Dict, shifts: np.ndarray, extra_dict: dict = None
     ) -> Dict:
         """
         Save calculated shifts in a configuration dictionary
 
         :param cfg: user configuration
         :type cfg: dict
-        :param disp_col: list of min and max disparity in column
-        :type disp_col: [int, int]
-        :param disp_row: list of min and max disparity in row
-        :type disp_row: [int, int]
+        :param disp_col: dict with init and range for disparity in column
+        :type disp_col: {"init" : int, "range" : int >= 0}
+        :param disp_row: dict with init and range for disparity in row
+        :type disp_row: {"init" : int, "range" : int >= 0}
         :param shifts: computed global shifts between left and right
         :type shifts: [np.float32, np.float32]
         :param extra_dict: Dictionary containing extra information about estimation
