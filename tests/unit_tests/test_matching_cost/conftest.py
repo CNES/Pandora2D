@@ -81,8 +81,8 @@ def input_config(left_image, right_image):
             "img": right_image,
             "nodata": -9999,
         },
-        "col_disparity": [0, 1],
-        "row_disparity": [-1, 1],
+        "col_disparity": {"init": 1, "range": 1},
+        "row_disparity": {"init": 1, "range": 2},
     }
 
 
@@ -231,8 +231,8 @@ def data_with_null_disparity(left_zncc, right_zncc, null_disparity_grid):
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = [0, 0]
-    left_zncc.attrs["row_disparity_source"] = [0, 0]
+    left_zncc.attrs["col_disparity_source"] = {"init": 0, "range": 0}
+    left_zncc.attrs["row_disparity_source"] = {"init": 0, "range": 0}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -281,8 +281,8 @@ def data_with_positive_disparity_in_col(left_zncc, right_zncc, null_disparity_gr
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = [0, 1]
-    left_zncc.attrs["row_disparity_source"] = [0, 0]
+    left_zncc.attrs["col_disparity_source"] = {"init": 1, "range": 1}
+    left_zncc.attrs["row_disparity_source"] = {"init": 0, "range": 0}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -313,8 +313,8 @@ def data_with_positive_disparity_in_row(left_zncc, right_zncc, null_disparity_gr
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = [0, 0]
-    left_zncc.attrs["row_disparity_source"] = [0, 1]
+    left_zncc.attrs["col_disparity_source"] = {"init": 0, "range": 0}
+    left_zncc.attrs["row_disparity_source"] = {"init": 1, "range": 1}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -363,8 +363,8 @@ def data_with_negative_disparity_in_col(left_zncc, right_zncc, null_disparity_gr
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = [-1, 0]
-    left_zncc.attrs["row_disparity_source"] = [0, 0]
+    left_zncc.attrs["col_disparity_source"] = {"init": -1, "range": 1}
+    left_zncc.attrs["row_disparity_source"] = {"init": 0, "range": 0}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -395,8 +395,8 @@ def data_with_negative_disparity_in_row(left_zncc, right_zncc, null_disparity_gr
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = [0, 0]
-    left_zncc.attrs["row_disparity_source"] = [-1, 0]
+    left_zncc.attrs["col_disparity_source"] = {"init": 0, "range": 0}
+    left_zncc.attrs["row_disparity_source"] = {"init": -1, "range": 1}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -453,8 +453,8 @@ def data_with_disparity_negative_in_row_and_positive_in_col(
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = [0, 1]
-    left_zncc.attrs["row_disparity_source"] = [-1, 0]
+    left_zncc.attrs["col_disparity_source"] = {"init": 1, "range": 1}
+    left_zncc.attrs["row_disparity_source"] = {"init": -1, "range": 1}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )

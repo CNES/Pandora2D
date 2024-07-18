@@ -166,8 +166,8 @@ def test_compute_cv_mc_cnn():
         "no_data_mask": 1,
         "crs": None,
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": [-1, 1],
-        "row_disparity_source": [-1, 1],
+        "col_disparity_source": {"init": 0, "range": 1},
+        "row_disparity_source": {"init": 0, "range": 1},
     }
 
     matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
@@ -272,8 +272,8 @@ def test_compute_cv_zncc():
         "no_data_mask": 1,
         "crs": None,
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": [0, 1],
-        "row_disparity_source": [-1, 0],
+        "col_disparity_source": {"init": 1, "range": 1},
+        "row_disparity_source": {"init": -1, "range": 1},
     }
 
     data = np.array(
@@ -334,7 +334,7 @@ def test_compute_cv_zncc():
         img_left=left_zncc,
         img_right=right_zncc,
         grid_min_col=np.full((3, 3), 0),
-        grid_max_col=np.full((3, 3), 1),
+        grid_max_col=np.full((3, 3), 2),
         cfg=cfg,
     )
     # compute cost volumes
@@ -342,16 +342,16 @@ def test_compute_cv_zncc():
         img_left=left_zncc,
         img_right=right_zncc,
         grid_min_col=np.full((3, 3), 0),
-        grid_max_col=np.full((3, 3), 1),
-        grid_min_row=np.full((3, 3), -1),
+        grid_max_col=np.full((3, 3), 2),
+        grid_min_row=np.full((3, 3), -2),
         grid_max_row=np.full((3, 3), 0),
     )
+    print(zncc["cost_volumes"].data[1, 1, 0, 2])
     # check that the generated cost_volumes is equal to ground truth
-
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 0], ad_ground_truth_1_1_0_1, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 1], ad_ground_truth_2_2_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 0], ad_ground_truth_2_2_0_1, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 2], ad_ground_truth_1_1_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_1, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 2], ad_ground_truth_2_2_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 1], ad_ground_truth_2_2_0_1, rtol=1e-06)
 
 
 @pytest.mark.parametrize(
@@ -689,16 +689,16 @@ class TestSubpix:
                 coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
             )
 
-            add_disparity_grid(img, disp_col, disp_row)
+            img.pipe(add_disparity_grid, disp_col, disp_row)
 
-            img.attrs = {
-                "no_data_img": -9999,
-                "valid_pixels": 0,
-                "no_data_mask": 1,
-                "crs": None,
-                "col_disparity_source": disp_col,
-                "row_disparity_source": disp_row,
-            }
+            img.attrs.update(
+                {
+                    "no_data_img": -9999,
+                    "valid_pixels": 0,
+                    "no_data_mask": 1,
+                    "crs": None,
+                }
+            )
 
             return img
 
@@ -732,18 +732,30 @@ class TestSubpix:
         matching_cost_.allocate_cost_volume_pandora(
             img_left=img_left,
             img_right=img_right,
-            grid_min_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[0]),
-            grid_max_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[1]),
+            grid_min_col=np.full(
+                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][0]
+            ),
+            grid_max_col=np.full(
+                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][1]
+            ),
             cfg=cfg,
         )
 
         cost_volumes = matching_cost_.compute_cost_volumes(
             img_left=img_left,
             img_right=img_right,
-            grid_min_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[0]),
-            grid_max_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[1]),
-            grid_min_row=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_row[0]),
-            grid_max_row=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_row[1]),
+            grid_min_col=np.full(
+                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][0]
+            ),
+            grid_max_col=np.full(
+                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][1]
+            ),
+            grid_min_row=np.full(
+                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["row_disparity_source"][0]
+            ),
+            grid_max_row=np.full(
+                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["row_disparity_source"][1]
+            ),
         )
 
         return cost_volumes
@@ -755,13 +767,13 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 1,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 5, 4),  # (row, col, disp_col, disp_row)
-                np.arange(4),  # [0, 1, 2, 3]
+                (10, 10, 5, 3),  # (row, col, disp_col, disp_row)
+                np.arange(3),  # [0, 1, 2]
                 np.arange(-2, 3),  # [-2, -1, 0, 1, 2]
                 id="subpix=1, step_row=1 and step_col=1",
             ),
@@ -769,13 +781,13 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 9, 7),  # (row, col, disp_col, disp_row)
-                np.arange(0, 3.5, 0.5),  # [0, 0.5, 1, 1.5, 2, 2.5, 3]
+                (10, 10, 9, 5),  # (row, col, disp_col, disp_row)
+                np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2]
                 np.arange(-2, 2.5, 0.5),  # [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
                 id="subpix=2, step_row=1 and step_col=1",
             ),
@@ -783,13 +795,13 @@ class TestSubpix:
                 {
                     "step": [2, 3],
                     "subpix": 2,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (5, 4, 9, 7),  # (row, col, disp_col, disp_row)
-                np.arange(0, 3.5, 0.5),  # [0, 0.5, 1, 1.5, 2, 2.5, 3] # step has no influence on subpix disparity range
+                (5, 4, 9, 5),  # (row, col, disp_col, disp_row)
+                np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2] # step has no influence on subpix disparity range
                 np.arange(-2, 2.5, 0.5),  # [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
                 id="subpix=2, step_row=2 and step_col=3",
             ),
@@ -797,13 +809,13 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 17, 13),  # (row, col, disp_col, disp_row)
-                np.arange(0, 3.25, 0.25),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
+                (10, 10, 17, 9),  # (row, col, disp_col, disp_row)
+                np.arange(0, 2.25, 0.25),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
                 np.arange(
                     -2, 2.25, 0.25
                 ),  # [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -813,15 +825,15 @@ class TestSubpix:
                 {
                     "step": [3, 2],
                     "subpix": 4,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (4, 5, 17, 13),  # (row, col, disp_col, disp_row)
+                (4, 5, 17, 9),  # (row, col, disp_col, disp_row)
                 np.arange(
-                    0, 3.25, 0.25  # step has no influence on subpix disparity range
-                ),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
+                    0, 2.25, 0.25  # step has no influence on subpix disparity range
+                ),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
                 np.arange(
                     -2, 2.25, 0.25
                 ),  # [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -851,8 +863,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -875,8 +887,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -899,8 +911,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -952,8 +964,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -976,8 +988,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -1000,8 +1012,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -1053,8 +1065,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1077,8 +1089,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1101,8 +1113,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1154,8 +1166,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1178,8 +1190,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1202,8 +1214,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1255,8 +1267,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 1,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -1307,8 +1319,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 1,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1370,16 +1382,16 @@ class TestDisparityMargins:
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
 
-        add_disparity_grid(left, [0, 1], [-1, 0])
+        left.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
 
-        left.attrs = {
-            "no_data_img": -9999,
-            "valid_pixels": 0,
-            "no_data_mask": 1,
-            "crs": None,
-            "col_disparity_source": [0, 1],
-            "row_disparity_source": [-1, 0],
-        }
+        left.attrs.update(
+            {
+                "no_data_img": -9999,
+                "valid_pixels": 0,
+                "no_data_mask": 1,
+                "crs": None,
+            }
+        )
 
         data = np.full((5, 5), 1)
         right = xr.Dataset(
@@ -1392,8 +1404,8 @@ class TestDisparityMargins:
             "valid_pixels": 0,
             "no_data_mask": 1,
             "crs": None,
-            "col_disparity_source": [0, 1],
-            "row_disparity_source": [-1, 0],
+            "disp_row": {"init": 1, "range": 1},
+            "disp_col": {"init": -1, "range": 1},
         }
 
         return left, right
