@@ -98,8 +98,8 @@ def test_roi_georeferencement(run_pipeline, left_path, right_path, crs, transfor
             "right": {
                 "img": str(right_path),
             },
-            "col_disparity": [-1, 3],
-            "row_disparity": [-1, 3],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         },
         "ROI": {
             "col": {"first": 3, "last": 7},
