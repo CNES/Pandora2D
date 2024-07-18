@@ -64,13 +64,18 @@ def optical_flow_cfg():
 
 def test_check_conf_passes(optical_flow_cfg):
     """
-    Test the check_conf function
+    Description : Test the check_conf function
+    Data :
+    Requirement : EX_REF_01, EX_REF_FO_00
     """
     refinement.AbstractRefinement(optical_flow_cfg)  # type: ignore[abstract]
 
 
 class TestIterations:
-    """Test Iteration parameter."""
+    """
+    Description : Test Iteration parameter.
+    Requirement : EX_REF_FO_01
+    """
 
     def test_iterations_is_not_mandatory(self):
         """Should not raise error."""
@@ -85,7 +90,11 @@ class TestIterations:
         ],
     )
     def test_fails_with_invalid_iteration_value(self, value):
-        """Iteration should be only positive integer."""
+        """
+        Description : Iteration should be only positive integer.
+        Data :
+        Requirement : EX_CONF_08
+        """
         with pytest.raises((KeyError, DictCheckerError)):
             refinement.optical_flow.OpticalFlow({"refinement_method": "optical_flow", "iterations": value})
 
@@ -144,7 +153,11 @@ class TestWindowSize:
         ],
     )
     def test_check_conf_fails_with_wrong_window_size(self, optical_flow_cfg, window_size):
-        """Wrong value of window_size"""
+        """
+        Description : Wrong value of window_size
+        Data :
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(DictCheckerError) as err:
             refinement.AbstractRefinement(optical_flow_cfg, [1, 1], window_size)  # type: ignore[abstract]
         assert "window_size" in err.value.args[0]
@@ -177,7 +190,11 @@ class TestStep:
         ],
     )
     def test_check_conf_fails_with_wrong_step(self, optical_flow_cfg, step):
-        """Wrong value of step"""
+        """
+        Description : Wrong value of step
+        Data :
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(DictCheckerError) as err:
             refinement.AbstractRefinement(optical_flow_cfg, step)  # type: ignore[abstract]
         assert "step" in err.value.args[0]
@@ -190,7 +207,9 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
 
     img = dataset_image
 
-    refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"}, [1, 1], 3)  # type: ignore[abstract]
+    refinement_class = refinement.AbstractRefinement(
+        {"refinement_method": "optical_flow"}, [1, 1], 3
+    )  # type: ignore[abstract]
 
     cv = np.zeros((6, 5, 5, 5))
 
@@ -246,7 +265,9 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
     """
 
     img = dataset_image
-    refinement_class = refinement.AbstractRefinement({"refinement_method": "optical_flow"}, [1, 1], 3)  # type: ignore[abstract]
+    refinement_class = refinement.AbstractRefinement(
+        {"refinement_method": "optical_flow"}, [1, 1], 3
+    )  # type: ignore[abstract]
 
     # Create disparity maps
     col_disp_map = [2, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0]

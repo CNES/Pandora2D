@@ -37,19 +37,30 @@ from pandora2d import matching_cost, disparity
 
 
 class TestCheckConf:
-    """Test check conf."""
+    """
+    Description : Test check conf.
+    Requirement : EX_CONF_04
+    """
 
     def test_nominal_case(self):
         """Should not raise error."""
         disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
 
     def test_disparity_method_is_mandatory(self):
-        """Should raise an error."""
+        """
+        Description : Should raise an error if disparity method isn't specified .
+        Data :
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError):
             disparity.Disparity({"invalid_disparity": "5"})
 
     def test_fails_with_bad_disparity_method_value(self):
-        """Should raise an error."""
+        """
+        Description : Should raise an error if the disparity method isn't correct.
+        Data :
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
             disparity.Disparity({"disparity_method": "WTN"})
 

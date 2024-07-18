@@ -70,6 +70,11 @@ def cv_dataset():
 
 
 def test_checkconf_fails_if_iterations_is_given():
+    """
+    Description : Test fails if iterations is given
+    Data :
+    Requirement : EX_CONF_08
+    """
     with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError):
         refinement.interpolation.Interpolation({"refinement_method": "interpolation", "iterations": 1})
 

@@ -99,7 +99,13 @@ class TestRemoveExtrakeys:
 
 
 def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement):
-    """Test a configuration with monoband images."""
+    """
+    Description : Test a configuration with monoband images.
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    Requirement : EX_CONF_00, EX_CONF_06
+    """
     configuration = {**correct_input_cfg, **correct_pipeline_without_refinement}
     configuration["input"]["left"]["nodata"] = -9999
 
@@ -122,7 +128,13 @@ def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_p
 
 @pytest.mark.xfail(reason="saved nan in nodata is not valid json and is not comparable to nan")
 def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement):
-    """Test a configuration with monoband images and left nodata set to NaN."""
+    """
+    Description : Test a configuration with monoband images and left nodata set to NaN.
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    Requirement : EX_CONF_00, EX_CONF_06
+    """
     configuration = {**correct_input_cfg, **correct_pipeline_without_refinement}
 
     run_dir = run_pipeline(configuration)
@@ -138,7 +150,13 @@ def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipel
 
 @pytest.mark.xfail(reason="Multiband is not managed")
 def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_without_refinement):
-    """Test a configuration with multiband images."""
+    """
+    Description : Test a configuration with multiband images.
+    Data :
+    - Left image : cones/multibands/left.tif
+    - Right image : cones/multibands/right.tif
+    Requirement : EX_CONF_00, EX_CONF_06, EX_CONF_12
+    """
     configuration: Dict[str, Dict] = {**correct_multiband_input_cfg, **correct_pipeline_without_refinement}
 
     run_dir = run_pipeline(configuration)
@@ -153,7 +171,13 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
 
 
 def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pipeline_with_optical_flow):
-    """Test optical_flow configuration has a window_size and a step identical to matching_cost step."""
+    """
+    Description : Test optical_flow configuration has a window_size and a step identical to matching_cost step.
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    Requirement : EX_CONF_00, EX_CONF_06
+    """
     configuration: Dict[str, Dict] = {**correct_input_cfg, **correct_pipeline_with_optical_flow}
     configuration["pipeline"]["refinement"]["iterations"] = 1
 
