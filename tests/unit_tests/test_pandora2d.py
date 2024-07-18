@@ -71,8 +71,8 @@ class TestPandora2D:
         input_config = {
             "left": {"img": left_img_path, "nodata": -9999},
             "right": {"img": right_img_path, "nodata": -9999},
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
         img_left, img_right = create_datasets_from_inputs(input_config=input_config)
 
@@ -82,16 +82,16 @@ class TestPandora2D:
         assert pandora2d_machine.right_img == img_right
         assert pandora2d_machine.completed_cfg == input_config
         np.testing.assert_array_equal(
-            pandora2d_machine.disp_min_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
+            pandora2d_machine.disp_min_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), -1)
         )
         np.testing.assert_array_equal(
-            pandora2d_machine.disp_max_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
+            pandora2d_machine.disp_max_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), 3)
         )
         np.testing.assert_array_equal(
-            pandora2d_machine.disp_min_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
+            pandora2d_machine.disp_min_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), -1)
         )
         np.testing.assert_array_equal(
-            pandora2d_machine.disp_max_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
+            pandora2d_machine.disp_max_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), 3)
         )
 
     @pytest.mark.parametrize(

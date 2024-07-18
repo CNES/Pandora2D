@@ -278,8 +278,8 @@ class TestDatasetDispMaps:
                 "img": right_image,
                 "nodata": -9999,
             },
-            "col_disparity": [0, 4],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 2, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
 
         img_left, img_right = create_datasets_from_inputs(input_cfg, roi=roi)
@@ -312,8 +312,8 @@ class TestDatasetDispMaps:
             img_right=img_right,
             grid_min_col=np.full((3, 3), 0),
             grid_max_col=np.full((3, 3), 4),
-            grid_min_row=np.full((3, 3), -2),
-            grid_max_row=np.full((3, 3), 2),
+            grid_min_row=np.full((3, 3), -1),
+            grid_max_row=np.full((3, 3), 3),
         )
 
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -9999}
@@ -347,7 +347,6 @@ def test_disparity_map_output_georef(correct_pipeline, correct_input_cfg):
     """
     Test outputs georef with crs and transform
     """
-
     img_left, img_right = create_datasets_from_inputs(input_config=correct_input_cfg["input"])
 
     # Stock crs and transform information from input
