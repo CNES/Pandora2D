@@ -49,8 +49,8 @@ def dataset_image():
         "valid_pixels": 0,
         "no_data_mask": 1,
         "crs": None,
-        "col_disparity_source": [-2, 2],
-        "row_disparity_source": [-2, 2],
+        "col_disparity_source": {"init": 1, "range": 2},
+        "row_disparity_source": {"init": 1, "range": 2},
         "invalid_disparity": np.nan,
     }
 
