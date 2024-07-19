@@ -21,6 +21,7 @@
 """
 Test compute_cost_volumes method from Matching cost
 """
+
 import importlib.util
 
 # pylint: disable=redefined-outer-name
@@ -674,91 +675,93 @@ def test_roi_inside_and_margins_inside(  # pylint: disable=too-many-arguments
     )
 
 
-class TestSubpix:
-    """Test subpix parameter"""
+@pytest.fixture()
+def make_image_fixture():
+    """
+    Create image dataset
+    """
 
-    @pytest.fixture()
-    def make_image_fixture(self):
-        """
-        Create image dataset
-        """
+    def make_image(disp_row, disp_col, data):
+        img = xr.Dataset(
+            {"im": (["row", "col"], data)},
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        )
 
-        def make_image(disp_row, disp_col, data):
-            img = xr.Dataset(
-                {"im": (["row", "col"], data)},
-                coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-            )
+        img.pipe(add_disparity_grid, disp_col, disp_row)
 
-            img.pipe(add_disparity_grid, disp_col, disp_row)
+        img.attrs.update(
+            {
+                "no_data_img": -9999,
+                "valid_pixels": 0,
+                "no_data_mask": 1,
+                "crs": None,
+            }
+        )
 
-            img.attrs.update(
-                {
-                    "no_data_img": -9999,
-                    "valid_pixels": 0,
-                    "no_data_mask": 1,
-                    "crs": None,
-                }
-            )
+        return img
 
-            return img
+    return make_image
 
-        return make_image
 
-    @pytest.fixture()
-    def make_cost_volumes(self, make_image_fixture, request):
-        """
-        Instantiate a matching_cost and compute cost_volumes
-        """
+@pytest.fixture()
+def make_cost_volumes(make_image_fixture, request):
+    """
+    Instantiate a matching_cost and compute cost_volumes
+    """
 
-        cfg = {
-            "pipeline": {
-                "matching_cost": {
-                    "matching_cost_method": "ssd",
-                    "window_size": 1,
-                    "step": request.param["step"],
-                    "subpix": request.param["subpix"],
-                }
+    cfg = {
+        "pipeline": {
+            "matching_cost": {
+                "matching_cost_method": "ssd",
+                "window_size": 1,
+                "step": request.param["step"],
+                "subpix": request.param["subpix"],
             }
         }
+    }
 
-        disp_row = request.param["disp_row"]
-        disp_col = request.param["disp_col"]
+    disp_row = request.param["disp_row"]
+    disp_col = request.param["disp_col"]
 
-        img_left = make_image_fixture(disp_row, disp_col, request.param["data_left"])
-        img_right = make_image_fixture(disp_row, disp_col, request.param["data_right"])
+    img_left = make_image_fixture(disp_row, disp_col, request.param["data_left"])
+    img_right = make_image_fixture(disp_row, disp_col, request.param["data_right"])
 
-        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
-        matching_cost_.allocate_cost_volume_pandora(
-            img_left=img_left,
-            img_right=img_right,
-            grid_min_col=np.full(
-                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][0]
-            ),
-            grid_max_col=np.full(
-                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][1]
-            ),
-            cfg=cfg,
-        )
+    matching_cost_.allocate_cost_volume_pandora(
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full(
+            (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][0]
+        ),
+        grid_max_col=np.full(
+            (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][1]
+        ),
+        cfg=cfg,
+    )
 
-        cost_volumes = matching_cost_.compute_cost_volumes(
-            img_left=img_left,
-            img_right=img_right,
-            grid_min_col=np.full(
-                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][0]
-            ),
-            grid_max_col=np.full(
-                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][1]
-            ),
-            grid_min_row=np.full(
-                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["row_disparity_source"][0]
-            ),
-            grid_max_row=np.full(
-                (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["row_disparity_source"][1]
-            ),
-        )
+    cost_volumes = matching_cost_.compute_cost_volumes(
+        img_left=img_left,
+        img_right=img_right,
+        grid_min_col=np.full(
+            (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][0]
+        ),
+        grid_max_col=np.full(
+            (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["col_disparity_source"][1]
+        ),
+        grid_min_row=np.full(
+            (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["row_disparity_source"][0]
+        ),
+        grid_max_row=np.full(
+            (img_left["im"].shape[0], img_left["im"].shape[1]), img_left.attrs["row_disparity_source"][1]
+        ),
+    )
 
-        return cost_volumes
+    return cost_volumes
+
+
+class TestSubpix:
+    """Test subpix parameter"""
 
     @pytest.mark.parametrize(
         ["make_cost_volumes", "shape_expected", "row_disparity", "col_disparity"],
@@ -832,7 +835,9 @@ class TestSubpix:
                 },
                 (4, 5, 17, 9),  # (row, col, disp_col, disp_row)
                 np.arange(
-                    0, 2.25, 0.25  # step has no influence on subpix disparity range
+                    0,
+                    2.25,
+                    0.25,  # step has no influence on subpix disparity range
                 ),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
                 np.arange(
                     -2, 2.25, 0.25
@@ -949,7 +954,6 @@ class TestSubpix:
         # If the shift is positive, we test all the rows expect the last one for which the shift is equal to 0.
         for col in range(cost_volumes["cost_volumes"].shape[1]):
             for row in range(cost_volumes["cost_volumes"].shape[0] - 1):
-
                 # index_min = all minimum value indexes
                 index_min = np.where(
                     cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :]
@@ -1050,7 +1054,6 @@ class TestSubpix:
         # If the shift is negative, we test all the rows expect the first one for which the shift is equal to 0.
         for col in range(cost_volumes["cost_volumes"].shape[1]):
             for row in range(1, cost_volumes["cost_volumes"].shape[0]):
-
                 # index_min = all minimum value indexes
                 index_min = np.where(
                     cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :]
@@ -1151,7 +1154,6 @@ class TestSubpix:
         # If the shift is positive, we test all the columns expect the last one for which the shift is equal to 0.
         for col in range(cost_volumes["cost_volumes"].shape[1] - 1):
             for row in range(cost_volumes["cost_volumes"].shape[0]):
-
                 # index_min = all minimum value indexes
                 index_min = np.where(
                     cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero]
@@ -1252,7 +1254,6 @@ class TestSubpix:
         # If the shift is negative, we test all the columns expect the first one for which the shift is equal to 0.
         for col in range(1, cost_volumes["cost_volumes"].shape[1]):
             for row in range(cost_volumes["cost_volumes"].shape[0]):
-
                 # index_min = all minimum value indexes
                 index_min = np.where(
                     cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero]
