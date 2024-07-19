@@ -128,8 +128,8 @@ def correct_input_cfg(left_img_path, right_img_path):
             "right": {
                 "img": right_img_path,
             },
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
     }
 
@@ -145,7 +145,7 @@ def correct_multiband_input_cfg(left_rgb_path, right_rgb_path):
             "right": {
                 "img": right_rgb_path,
             },
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
     }
