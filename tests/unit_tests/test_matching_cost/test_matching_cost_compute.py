@@ -760,6 +760,95 @@ def make_cost_volumes(make_image_fixture, request):
     return cost_volumes
 
 
+class TestDisparityGrid:
+    """Test effect of disparity grids."""
+
+    @pytest.fixture()
+    def cost_volumes(self):
+        """cost_volumes full of zeros."""
+        nb_cols = 4
+        nb_rows = 5
+        nb_disp_cols = 6
+        nb_disp_rows = 7
+        # only need because allocate_cost_volumes delete it
+        fake_pandora_attrs = {"col_to_compute": 1, "sampling_interval": 1}
+        return matching_cost.MatchingCost.allocate_cost_volumes(
+            fake_pandora_attrs,
+            row=np.arange(nb_rows),
+            col=np.arange(nb_cols),
+            disp_range_col=np.arange(2, 2 + nb_disp_cols),
+            disp_range_row=np.arange(-5, -5 + nb_disp_rows),
+        )
+
+    @pytest.fixture()
+    def min_disp_grid(self, cost_volumes):
+        return np.full((cost_volumes.sizes["row"], cost_volumes.sizes["col"]), cost_volumes.coords["disp_row"].data[0])
+
+    @pytest.fixture()
+    def max_disp_grid(self, cost_volumes):
+        return np.full((cost_volumes.sizes["row"], cost_volumes.sizes["col"]), cost_volumes.coords["disp_row"].data[-1])
+
+    def test_homogeneous_grids(self, cost_volumes, min_disp_grid, max_disp_grid):
+        """With grids set to extreme disparities, cost_volumes should be left untouched."""
+        # As set_out_of_disparity_range_to_nan modify cost_volumes in place we do a copy to be able to make the
+        # comparison latter.
+        make_cv_copy = cost_volumes.copy(deep=True)
+        matching_cost.matching_cost.set_out_of_disparity_range_to_nan(cost_volumes, min_disp_grid, max_disp_grid)
+
+        xr.testing.assert_equal(cost_volumes, make_cv_copy)
+
+    def test_variable_min(self, cost_volumes, min_disp_grid, max_disp_grid):
+        """Check NaN below min disparities."""
+        min_disp_index = 1
+        min_disp_grid[::2] = cost_volumes.coords["disp_row"].data[min_disp_index]
+
+        matching_cost.matching_cost.set_out_of_disparity_range_to_nan(cost_volumes, min_disp_grid, max_disp_grid)
+
+        expected_nans = cost_volumes["cost_volumes"].data[::2, ..., :min_disp_index]
+        expected_zeros_on_odd_lines = cost_volumes["cost_volumes"].data[1::2, ...]
+        expected_zeros_on_even_lines = cost_volumes["cost_volumes"].data[::2, ..., min_disp_index:]
+
+        assert np.all(np.isnan(expected_nans))
+        assert np.all(expected_zeros_on_odd_lines == 0)
+        assert np.all(expected_zeros_on_even_lines == 0)
+
+    def test_variable_max(self, cost_volumes, min_disp_grid, max_disp_grid):
+        """Check NaNs above max disparities."""
+        max_disp_index = 1
+        max_disp_grid[::2] = cost_volumes.coords["disp_row"].data[max_disp_index]
+
+        matching_cost.matching_cost.set_out_of_disparity_range_to_nan(cost_volumes, min_disp_grid, max_disp_grid)
+
+        expected_nans = cost_volumes["cost_volumes"].data[::2, ..., (max_disp_index + 1) :]
+        expected_zeros_on_odd_lines = cost_volumes["cost_volumes"].data[1::2, ...]
+        expected_zeros_on_even_lines = cost_volumes["cost_volumes"].data[::2, ..., : (max_disp_index + 1)]
+
+        assert np.all(np.isnan(expected_nans))
+        assert np.all(expected_zeros_on_odd_lines == 0)
+        assert np.all(expected_zeros_on_even_lines == 0)
+
+    def test_variable_min_and_max(self, cost_volumes, min_disp_grid, max_disp_grid):
+        """Check NaNs below min and above max disparities."""
+        min_disp_index = 1
+        min_disp_grid[::2] = cost_volumes.coords["disp_row"].data[min_disp_index]
+        max_disp_index = 2
+        max_disp_grid[::2] = cost_volumes.coords["disp_row"].data[max_disp_index]
+
+        matching_cost.matching_cost.set_out_of_disparity_range_to_nan(cost_volumes, min_disp_grid, max_disp_grid)
+
+        expected_below_min_nans = cost_volumes["cost_volumes"].data[::2, ..., :min_disp_index]
+        expected_above_max_nans = cost_volumes["cost_volumes"].data[::2, ..., (max_disp_index + 1) :]
+        expected_zeros_on_odd_lines = cost_volumes["cost_volumes"].data[1::2, ...]
+        expected_zeros_on_even_lines = cost_volumes["cost_volumes"].data[
+            ::2, ..., min_disp_index : (max_disp_index + 1)
+        ]
+
+        assert np.all(np.isnan(expected_below_min_nans))
+        assert np.all(np.isnan(expected_above_max_nans))
+        assert np.all(expected_zeros_on_odd_lines == 0)
+        assert np.all(expected_zeros_on_even_lines == 0)
+
+
 class TestSubpix:
     """Test subpix parameter"""
 

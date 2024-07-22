@@ -23,12 +23,15 @@
 """
 This module contains functions associated to the matching cost computation step.
 """
+
 import copy
 from typing import Dict, List, cast, Union
 from json_checker import And, Checker
 
 import xarray as xr
 import numpy as np
+
+from numpy.typing import NDArray
 
 from pandora import matching_cost
 from pandora.criteria import validity_mask
@@ -394,3 +397,31 @@ class MatchingCost:
         del cost_volumes.attrs["ROI_margins_for_cv"]
 
         return cost_volumes
+
+
+def set_out_of_disparity_range_to_nan(
+    cost_volumes: xr.Dataset, min_disp_grid: NDArray[np.floating], max_disp_grid: NDArray[np.floating]
+):
+    """
+    Put NaNs in cost_volumes where the disparity is out of the range defined by disparity grids.
+
+    The operation is done inplace.
+
+    :param cost_volumes: cost_volumes to modify.
+    :type cost_volumes: xr.Dataset
+    :param min_disp_grid: grid of min below which cost_volumes will be set to NaN.
+    :type min_disp_grid: NDArray[np.floating]
+    :param max_disp_grid: grid of max above which cost_volumes will be set to NaN.
+    :type max_disp_grid: NDArray[np.floating]
+    """
+    # WARNING: if one day we switch dis_row with disp_col index should be -2
+    ndisp_row = cost_volumes["cost_volumes"].shape[-1]
+
+    for disp_row in range(ndisp_row):
+        masking = np.nonzero(
+            np.logical_or(
+                cost_volumes.coords["disp_row"].data[disp_row] < min_disp_grid,
+                cost_volumes.coords["disp_row"].data[disp_row] > max_disp_grid,
+            )
+        )
+        cost_volumes["cost_volumes"].data[masking[0], masking[1], :, disp_row] = np.nan
