@@ -30,18 +30,18 @@ Input section is composed of the following keys:
       -
       - Yes
     * - *col_disparity*
-      - Minimal and Maximal disparities for columns
-      - [int, int]
+      - The init and the range of the disparities for columns
+      - {"init": int, "range": int >= 0}
       -
       - If the estimation step is not present
     * - *row_disparity*
-      - Minimal and Maximal disparities for rows
-      - [int, int]
+      - The init and the range of the disparities for rows
+      - {"init": int, "range": int >= 0}
       -
       - If the estimation step is not present
 
 .. warning::
-    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 5. 
+    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 2. 
 
 
 Left and Right properties are composed of the following keys:
@@ -84,8 +84,8 @@ Left and Right properties are composed of the following keys:
                 "img": "/data/right.tif",
                 "nodata": -9999
             },
-            "col_disparity": [-3, 3],
-            "row_disparity": [-3, 3]
+            "col_disparity": {"init": 0, "range": 3},
+            "row_disparity": {"init": 0, "range": 3}
         }
         ,
         "pipeline" :

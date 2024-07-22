@@ -9,8 +9,7 @@ There are two available methods to do this.
 Setting an interval
 -------------------
 
-In the configuration file, the user is required to enter disparity range, as a list with two elements each, indicating
-the minimum and maximum values for both row and columns disparity.
+In the configuration file, the user is required to enter disparity range for rows and columns, as a dictionary with 2 keys "init" and "range".
 
 .. code:: json
     :name: Setting disparity ranges example
@@ -18,12 +17,20 @@ the minimum and maximum values for both row and columns disparity.
     {
         "input":
             {
-                "col_disparity": [-2, 2],
-                "row_disparity": [-2, 2]
+                "col_disparity": {"init": 0, "range": 2},
+                "row_disparity": {"init": 0, "range": 2}
         }
     }
 
+The min and max disparity would then be equal to (example for columns): 
 
+.. code:: python
+    :name: Calculating the min and the max of the disparity
+	
+    min_col_disparity = col_disparity["init"] - col_disparity["range"]
+    max_col_disparity = col_disparity["init"] + col_disparity["range"]
+    
+    
 .. figure:: ../Images/range_schema.png
 
 

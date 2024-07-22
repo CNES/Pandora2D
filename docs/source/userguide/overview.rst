@@ -103,8 +103,8 @@ Example
             "img": "./data/right.tif",
             "nodata": -9999
         },
-        "col_disparity": [-2, 2],
-        "row_disparity": [-2, 2]
+        "col_disparity": {"init": 0, "range": 2},
+        "row_disparity": {"init": 0, "range": 2}
       },
       "pipeline": {
         "matching_cost": {

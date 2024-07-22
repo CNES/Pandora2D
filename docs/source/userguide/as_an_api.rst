@@ -34,8 +34,8 @@ Pandora2D provides a full python API which can be used to compute disparity maps
                 'img': img_right_path,
                 'nodata': np.nan,
             },
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
         },
         # define pipeline configuration
          'pipeline':{

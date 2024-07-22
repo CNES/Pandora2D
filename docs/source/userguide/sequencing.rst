@@ -48,8 +48,8 @@ interpolation method.
             "right": {
                 "img": "img_left.png"
             },
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2]
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2}
         },
         "pipeline":
         {
