@@ -43,7 +43,6 @@ class AbstractRefinement:
 
     refinement_methods_avail: Dict = {}
     _refinement_method = None
-    cfg = None
     margins = NullMargins()
 
     schema: Dict  # This will raise an AttributeError if not override in subclasses
