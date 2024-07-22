@@ -56,9 +56,11 @@ def pytest_html_results_table_header(cells):
 
     1. Category : with values {'TU', 'TF', 'TP', 'TR'}
     2. Function tested : basename of python test file
+    3. Requirement : validating the Pandora2D tool, string with EX_*
     """
     cells.insert(1, "<th>Category</th>")
     cells.insert(2, "<th>Function tested</th>")
+    cells.insert(3, "<th>Requirement</th>")
 
 
 def pytest_html_results_table_row(report, cells):
@@ -69,12 +71,25 @@ def pytest_html_results_table_row(report, cells):
 
     1. CATEGORY : with values {'TU', 'TF', 'TP', 'TR'}
     2. FUNCTION : basename of python test file
+    3. REQUIREMENT : with values EX_*
     """
     type_dict = {"unit": "TU", "functional": "TF", "resource": "TR", "performance": "TP"}
     pattern = r"tests/(?P<type>\w+)_tests.*test_(?P<function>\w+)\.py"
     match = re.match(pattern, report.nodeid)
     cells.insert(1, f"<td>{type_dict[match.groupdict()['type']]}</td>")
     cells.insert(2, f"<td>{match.groupdict()['function']}</td>")
+    cells.insert(3, f"<td>{'<br>'.join(report.requirement)}</td>")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
+    """
+    Parse test docstrings and retrieve strings in EX_*.
+    """
+    outcome = yield
+    report = outcome.get_result()
+    pattern = r"(EX_\w*)"
+    report.requirement = re.findall(pattern, str(item.function.__doc__))
 
 
 @pytest.fixture()
