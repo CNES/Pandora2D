@@ -45,8 +45,6 @@ class Dichotomy(refinement.AbstractRefinement):
         "filter": And(str, lambda x: x in ["sinc", "bicubic"]),
     }
 
-    _filter = None
-
     def __init__(self, cfg: dict = None, _: list = None, __: int = 5) -> None:
         """
         :param cfg: optional configuration, {}

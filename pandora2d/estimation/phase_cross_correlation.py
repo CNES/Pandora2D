@@ -39,10 +39,6 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
     PhaseCrossCorrelation class allows to perform estimation
     """
 
-    _range_col = None
-    _range_row = None
-    _sample_factor = None
-
     # Default configuration, do not change these values
     _RANGE_COL = 5
     _RANGE_ROW = 5

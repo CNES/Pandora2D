@@ -39,7 +39,6 @@ class OpticalFlow(refinement.AbstractRefinement):
     OpticalFLow class allows to perform the subpixel cost refinement step
     """
 
-    _iterations = None
     _invalid_disp = None
 
     _ITERATIONS = 4
