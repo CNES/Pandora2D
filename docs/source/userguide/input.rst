@@ -30,40 +30,65 @@ Input section is composed of the following keys:
       -
       - Yes
     * - *col_disparity*
-      - Minimal and Maximal disparities for columns
-      - [int, int]
+      - The disparities for columns (see description below)
+      - dict
       -
       - If the estimation step is not present
     * - *row_disparity*
-      - Minimal and Maximal disparities for rows
-      - [int, int]
+      - The disparities for rows (see description below)
+      - dict
       -
       - If the estimation step is not present
 
 .. warning::
-    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 5. 
+    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 2. 
 
 
-Left and Right properties are composed of the following keys:
+Image (left and right) and disparity (col_disparity and row_disparity) properties are composed of the following keys:
 
-.. list-table:: Left and Right properties
-    :header-rows: 1
+.. tabs::
 
-    * - Name
-      - Description
-      - Type
-      - Default value
-      - Required
-    * - *img*
-      - Path to the image
-      - string
-      -
-      - Yes
-    * - *nodata*
-      - Nodata value of the image
-      - int, "NaN" or "inf"
-      - -9999
-      - No
+  .. tab:: Image properties
+
+    .. list-table:: 
+        :header-rows: 1
+
+        * - Name
+          - Description
+          - Type
+          - Default value
+          - Required
+        * - *img*
+          - Path to the image
+          - string
+          -
+          - Yes
+        * - *nodata*
+          - Nodata value of the image
+          - int, "NaN" or "inf"
+          - -9999
+          - No
+
+  .. tab:: Disparity properties
+
+    .. list-table:: 
+        :header-rows: 1
+
+        * - Name
+          - Description
+          - Type
+          - Default value
+          - Required
+        * - *init*
+          - Initial point
+          - int
+          -
+          - Yes
+        * - *range*
+          - The search radius (see :ref:`initial_disparity`)
+          - int >= 0
+          - 
+          - Yes
 
 .. warning::
     With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`) , `nodata` only accepts `int` type.
@@ -84,8 +109,8 @@ Left and Right properties are composed of the following keys:
                 "img": "/data/right.tif",
                 "nodata": -9999
             },
-            "col_disparity": [-3, 3],
-            "row_disparity": [-3, 3]
+            "col_disparity": {"init": 0, "range": 3},
+            "row_disparity": {"init": 0, "range": 3}
         }
         ,
         "pipeline" :

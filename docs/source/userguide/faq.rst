@@ -22,8 +22,8 @@ It is possible to add a step parameter in the configuration file. This parameter
                 "img": img_right_path,
                 "nodata": "NaN",
             },
-            "col_disparity": [-3, 3],
-            "row_disparity": [-3, 3],
+            "col_disparity": {"init": 0, "range": 3},
+            "row_disparity": {"init": 0, "range": 3},
         },
         "pipeline": {
             "matching_cost": {
@@ -60,8 +60,8 @@ It is possible to work on only one section of the image with an ROI. For this, t
                 "img": img_right_path,
                 "nodata": "NaN",
             },
-            "col_disparity": [-3, 3],
-            "row_disparity": [-3, 3],
+            "col_disparity": {"init": 0, "range": 3},
+            "row_disparity": {"init": 0, "range": 3},
         },
         "ROI": {
             "col": {"first": 10, "last": 100},
