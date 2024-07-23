@@ -42,7 +42,7 @@ class Dichotomy(refinement.AbstractRefinement):
     schema = {
         "refinement_method": And(str, lambda x: x in ["dichotomy"]),
         "iterations": And(int, lambda it: it > 0),
-        "filter": And(str, lambda x: x in ["sinc", "bicubic"]),
+        "filter": And(dict, lambda x: x["method"] in AbstractFilter.interpolation_filter_methods_avail),
     }
 
     def __init__(self, cfg: dict = None, _: list = None, __: int = 5) -> None:
@@ -53,9 +53,9 @@ class Dichotomy(refinement.AbstractRefinement):
         """
 
         super().__init__(cfg)
-
-        self._filter = AbstractFilter(  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
-            self.cfg["filter"]
+        fractional_shift = 2 ** -self.cfg["iterations"]
+        self.filter = AbstractFilter(  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
+            self.cfg["filter"], fractional_shift=fractional_shift
         )
 
     @classmethod
@@ -88,7 +88,7 @@ class Dichotomy(refinement.AbstractRefinement):
         It will be used for ROI and for dichotomy window extraction from cost volumes.
         """
 
-        return self._filter.margins
+        return self.filter.margins
 
     def refinement_method(
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
@@ -211,7 +211,7 @@ class Dichotomy(refinement.AbstractRefinement):
                             (disp_row_init, disp_col_init),  # type: ignore # Reason: is 0 dim array
                             (pos_disp_row_init, pos_disp_col_init),
                             cost_value,  # type: ignore # Reason: is 0 dim array
-                            self._filter,
+                            self.filter,
                             cost_selection_method,
                         )
                     )

@@ -30,7 +30,7 @@ import pandora2d.interpolation_filter
 @pytest.fixture()
 def filter_instance():
     return pandora2d.interpolation_filter.AbstractFilter(  # pylint: disable=abstract-class-instantiated
-        filter_method="bicubic",
+        cfg={"method": "bicubic"},
     )  # type: ignore[abstract]
 
 

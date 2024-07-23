@@ -165,7 +165,7 @@ def config(iterations, filter_name):
     return {
         "refinement_method": "dichotomy",
         "iterations": iterations,
-        "filter": filter_name,
+        "filter": {"method": filter_name},
     }
 
 
@@ -225,10 +225,62 @@ class TestCheckConf:
         """It should not fail."""
         assert dichotomy_instance.cfg["iterations"] == iterations
 
-    @pytest.mark.parametrize("filter_name", ["bicubic"])
-    def test_valid_filter_names(self, filter_name, dichotomy_instance):
+    @pytest.mark.parametrize(
+        ["config"],
+        [
+            pytest.param(
+                {
+                    "refinement_method": "dichotomy",
+                    "iterations": 1,
+                    "filter": {"method": "bicubic"},
+                },
+                id="bicubic",
+            ),
+            pytest.param(
+                {
+                    "refinement_method": "dichotomy",
+                    "iterations": 1,
+                    "filter": {"method": "sinc"},
+                },
+                id="sinc",
+            ),
+        ],
+    )
+    def test_valid_filter_names(self, config, dichotomy_instance):
+        """
+        Description : Test accepted filter names.
+        Data :
+        Requirement :
+               * EX_REF_BCO_00
+               * EX_REF_SINC_00
+        """
+
+        assert dichotomy_instance.cfg["filter"] == config["filter"]
+
+    @pytest.mark.parametrize(
+        ["config"],
+        [
+            pytest.param(
+                {
+                    "refinement_method": "dichotomy",
+                    "iterations": 1,
+                    "filter": {"method": "sinc", "size": 42},
+                },
+                id="sinc",
+            ),
+        ],
+    )
+    def test_fails_with_bad_filter_configuration(self, config):
         """Test accepted filter names."""
-        assert dichotomy_instance.cfg["filter"] == filter_name
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
+            refinement.dichotomy.Dichotomy(config)
+        assert "size" in err.value.args[0]
+
+    @pytest.mark.parametrize("filter_name", ["invalid_name"])
+    def test_faild_with_invalid_filter_name(self, config):
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
+            refinement.dichotomy.Dichotomy(config)
+        assert "filter" in err.value.args[0]
 
     @pytest.mark.parametrize("missing", ["refinement_method", "iterations", "filter"])
     def test_fails_on_missing_keys(self, config, missing):
@@ -466,12 +518,46 @@ class TestRefinementMethod:
         )
 
 
-@pytest.mark.parametrize("filter_name", ["bicubic"])
-def test_margins(dichotomy_instance):
+@pytest.mark.parametrize(
+    ["filter_name", "iterations", "expected"],
+    [
+        pytest.param("sinc", 1, [0, 0.5], id="sinc - 1 iteration"),
+        pytest.param("sinc", 2, [0, 0.25, 0.5, 0.75], id="sinc - 2 iteration"),
+    ],
+)
+def test_pre_computed_filter_fractional_shifts(dichotomy_instance, expected):
+    """Test filter.fractional_shifts is consistent with dichotomy iteration number."""
+    np.testing.assert_array_equal(dichotomy_instance.filter.fractional_shifts, expected)
+
+
+@pytest.mark.parametrize(
+    ["config", "expected"],
+    [
+        pytest.param(
+            {
+                "refinement_method": "dichotomy",
+                "iterations": 1,
+                "filter": {"method": "bicubic"},
+            },
+            Margins(1, 1, 2, 2),
+            id="bicubic",
+        ),
+        pytest.param(
+            {
+                "refinement_method": "dichotomy",
+                "iterations": 1,
+                "filter": {"method": "sinc", "size": 7},
+            },
+            Margins(7, 7, 7, 7),
+            id="sinc",
+        ),
+    ],
+)
+def test_margins(dichotomy_instance, expected):
     """
     Test margins of Dichotomy.
     """
-    assert dichotomy_instance.margins == Margins(1, 1, 2, 2)
+    assert dichotomy_instance.margins == expected
 
 
 class TestCostSurfaces:
@@ -722,7 +808,7 @@ class TestCostSurfaces:
 def test_search_new_best_point(cost_surface, precision, initial_disparity, initial_position, initial_value, expected):
     """Test we get new coordinates as expected."""
 
-    filter_dicho = Bicubic("bicubic")
+    filter_dicho = Bicubic({"method": "bicubic"})
 
     cost_selection_method = np.nanargmax
 

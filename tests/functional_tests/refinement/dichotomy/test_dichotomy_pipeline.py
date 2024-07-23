@@ -26,11 +26,18 @@ import numpy as np
 import pandora2d
 
 
+@pytest.mark.parametrize("method", ["bicubic", "sinc"])
 @pytest.mark.parametrize("subpix", [1, 2, 4])
 @pytest.mark.parametrize("iterations", [1, 2])
-def test_dichotomy_execution(left_img_path, right_img_path, subpix, iterations):
+def test_dichotomy_execution(left_img_path, right_img_path, method, subpix, iterations):
     """
-    Test that execution of Pandora2d with a dichotomy refinement does not fail.
+    Description : Test that execution of Pandora2d with a dichotomy refinement does not fail.
+    Data :
+           * Left_img : cones/monoband/left.png
+           * Right_img : cones/monoband/right.png
+    Requirement :
+           * EX_REF_BCO_00
+           * EX_REF_SINC_00
     """
     pandora2d_machine = pandora2d.state_machine.Pandora2DMachine()
     user_cfg = {
@@ -60,7 +67,7 @@ def test_dichotomy_execution(left_img_path, right_img_path, subpix, iterations):
             "refinement": {
                 "refinement_method": "dichotomy",
                 "iterations": iterations,
-                "filter": "bicubic",
+                "filter": {"method": method},
             },
         },
     }
