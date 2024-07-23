@@ -75,8 +75,8 @@ def correct_input_cfg(left_img_path, right_img_path):
                 "nodata": -9999,
             },
             "right": {"img": right_img_path, "nodata": -9999},
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
     }
 
@@ -92,24 +92,8 @@ def false_input_path_image(right_img_path):
             "right": {
                 "img": right_img_path,
             },
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
-        }
-    }
-
-
-@pytest.fixture
-def false_input_disp(left_img_path, right_img_path):
-    return {
-        "input": {
-            "left": {
-                "img": left_img_path,
-            },
-            "right": {
-                "img": right_img_path,
-            },
-            "col_disparity": [7, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
     }
 
@@ -194,8 +178,8 @@ def left_stereo_object():
         "valid_pixels": 0,
         "no_data_mask": 1,
         "crs": None,
-        "col_disparity_source": [0, 1],
-        "row_disparity_source": [-1, 0],
+        "col_disparity_source": {"init": 1, "range": 1},
+        "row_disparity_source": {"init": -1, "range": 1},
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
     }
 
@@ -249,8 +233,8 @@ def stereo_object_with_args():
         "valid_pixels": 0,
         "no_data_mask": 1,
         "crs": None,
-        "col_disparity_source": [0, 1],
-        "row_disparity_source": [-1, 0],
+        "col_disparity_source": {"init": 1, "range": 1},
+        "row_disparity_source": {"init": -1, "range": 1},
     }
 
     data = np.array(

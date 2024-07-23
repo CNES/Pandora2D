@@ -44,8 +44,8 @@ def _make_input_section(left_img_path, right_img_path):
             "img": right_img_path,
             "nodata": -9999,
         },
-        "col_disparity": [-2, 2],
-        "row_disparity": [-3, 4],
+        "col_disparity": {"init": 0, "range": 2},
+        "row_disparity": {"init": 1, "range": 3},
     }
 
 
@@ -97,10 +97,11 @@ class TestReturnedValue:
 
     def test_disparity_source(self, result):
         """Test."""
+
         assert result.left.attrs["col_disparity_source"] == [-2, 2]
-        assert result.left.attrs["row_disparity_source"] == [-3, 4]
+        assert result.left.attrs["row_disparity_source"] == [-2, 4]
         assert result.right.attrs["col_disparity_source"] == [-2, 2]
-        assert result.right.attrs["row_disparity_source"] == [-4, 3]
+        assert result.right.attrs["row_disparity_source"] == [-4, 2]
 
     def test_resulting_disparity_grids(self, result):
         """
@@ -108,9 +109,9 @@ class TestReturnedValue:
 
         """
         expected_left_col_disparity = np.array([np.full((375, 450), -2), np.full((375, 450), 2)])
-        expected_left_row_disparity = np.array([np.full((375, 450), -3), np.full((375, 450), 4)])
+        expected_left_row_disparity = np.array([np.full((375, 450), -2), np.full((375, 450), 4)])
         expected_right_col_disparity = np.array([np.full((375, 450), -2), np.full((375, 450), 2)])
-        expected_right_row_disparity = np.array([np.full((375, 450), -4), np.full((375, 450), 3)])
+        expected_right_row_disparity = np.array([np.full((375, 450), -4), np.full((375, 450), 2)])
 
         np.testing.assert_array_equal(result.left["col_disparity"], expected_left_col_disparity)
         np.testing.assert_array_equal(result.left["row_disparity"], expected_left_row_disparity)
@@ -145,11 +146,11 @@ class TestDisparityChecking:
             img_tools.create_datasets_from_inputs(input_section)
         assert exc_info.value.args[0] == message
 
-    @pytest.mark.parametrize("disparity", [None, 1, 3.14, "grid_path"])
+    @pytest.mark.parametrize("disparity", [None, 1, 3.14, "grid_path", [-2, 2]])
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
-    def test_fails_when_disparities_are_not_lists_or_tuples(self, input_section, disparity_key, disparity):
+    def test_fails_when_disparities_are_not_dictionaries(self, input_section, disparity_key, disparity):
         """
-        Description : Test if disparities are lists or tuples in the input section
+        Description : Test if disparities are dictionaries in the input section
         Data :
         - Left image : cones/monoband/left.png
         - Right image : cones/monoband/right.png
@@ -159,13 +160,47 @@ class TestDisparityChecking:
 
         with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(input_section)
-        assert exc_info.value.args[0] == "Disparity should be iterable of length 2"
+        assert exc_info.value.args[0] == "Disparity should be a dictionnary with keys : init and range"
+
+    @pytest.mark.parametrize("disparity", [{"init": 2.0, "range": 2}])
+    @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
+    def test_fails_when_init_is_a_float(self, input_section, disparity_key, disparity):
+        """
+        Description : Test if init is a float
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
+        """
+        input_section[disparity_key] = disparity
+
+        with pytest.raises(ValueError) as exc_info:
+            img_tools.create_datasets_from_inputs(input_section)
+
+        assert exc_info.value.args[0] == "Disparity init should be an integer"
+
+    @pytest.mark.parametrize("disparity", [{"init": 2, "range": -2}])
+    @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
+    def test_fails_when_range_is_lt_0(self, input_section, disparity_key, disparity):
+        """
+        Description : Test if range is lower than 0
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
+        """
+        input_section[disparity_key] = disparity
+
+        with pytest.raises(ValueError) as exc_info:
+            img_tools.create_datasets_from_inputs(input_section)
+
+        assert exc_info.value.args[0] == "Disparity range should be an integer greater or equal to 0"
 
     @pytest.mark.parametrize("disparity", [None, np.nan, np.inf, float("nan"), float("inf")])
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
     def test_fails_with_bad_disparity_values(self, input_section, disparity_key, disparity):
         """
-        Description : Test if the disparity is iterable of length 2
+        Description : Test if the disparity is a dictionary
         Data :
         - Left image : cones/monoband/left.png
         - Right image : cones/monoband/right.png
@@ -175,21 +210,7 @@ class TestDisparityChecking:
 
         with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(input_section)
-        assert exc_info.value.args[0] == "Disparity should be iterable of length 2"
-
-    @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
-    def test_fails_when_disparity_max_lt_disparity_min(self, input_section, disparity_key):
-        """
-        Description : Test if the max disparity is lower than the min one
-        Data :
-        - Left image : cones/monoband/left.png
-        - Right image : cones/monoband/right.png
-        Requirement : EX_CONF_08
-        """
-        input_section[disparity_key] = [8, -10]
-        with pytest.raises(ValueError) as exc_info:
-            img_tools.create_datasets_from_inputs(input_section)
-        assert exc_info.value.args[0] == "Min disparity (8) should be lower than Max disparity (-10)"
+        assert exc_info.value.args[0] == "Disparity should be a dictionnary with keys : init and range"
 
     def test_create_dataset_from_inputs_with_estimation_step(self, input_section):
         """

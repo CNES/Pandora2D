@@ -25,7 +25,7 @@ This module contains functions allowing to check the configuration given to Pand
 
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 import xarray as xr
@@ -34,7 +34,6 @@ from json_checker import And, Checker, Or
 from pandora.img_tools import get_metadata
 from pandora.check_configuration import (
     check_dataset,
-    check_disparities_from_input,
     check_images,
     concat_conf,
     get_config_input,
@@ -101,8 +100,6 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
     check_images(cfg["input"])
 
     if estimation_config is None:
-        check_disparities_from_input(cfg["input"]["col_disparity"], None)
-        check_disparities_from_input(cfg["input"]["row_disparity"], None)
         left_image_metadata = get_metadata(cfg["input"]["left"]["img"])
         check_disparity_ranges_are_inside_image(
             left_image_metadata, cfg["input"]["row_disparity"], cfg["input"]["col_disparity"]
@@ -112,24 +109,24 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
 
 
 def check_disparity_ranges_are_inside_image(
-    image_metadata: xr.Dataset, row_disparity_range: List, col_disparity_range: List
+    image_metadata: xr.Dataset, row_disparity: Dict, col_disparity: Dict
 ) -> None:
     """
     Raise an error if disparity ranges are out off image.
 
     :param image_metadata:
     :type image_metadata: xr.Dataset
-    :param row_disparity_range:
-    :type row_disparity_range: List
-    :param col_disparity_range:
-    :type col_disparity_range: List
+    :param row_disparity:
+    :type row_disparity: Dict
+    :param col_disparity:
+    :type col_disparity: Dict
     :return: None
     :rtype: None
     :raises: ValueError
     """
-    if np.abs(row_disparity_range).min() > image_metadata.sizes["row"]:
+    if np.abs(row_disparity["init"]) - row_disparity["range"] > image_metadata.sizes["row"]:
         raise ValueError("Row disparity range out of image")
-    if np.abs(col_disparity_range).min() > image_metadata.sizes["col"]:
+    if np.abs(col_disparity["init"]) - col_disparity["range"] > image_metadata.sizes["col"]:
         raise ValueError("Column disparity range out of image")
 
 
@@ -251,20 +248,21 @@ def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
         )
 
 
-def check_disparity_range_size(disparity: list[int] | str, title: str) -> None:
+def check_disparity_range_size(disparity: Dict | str, title: str) -> None:
     """
-    Check that disparity ranges with a size < 5 are not allowed for interpolation refinement method.
+    Check that disparity ranges (dmax - dmin) with a size < 5 are not allowed for interpolation refinement method.
 
     :param disparity: disparity range
-    :type disparity: list[int] | str
+    :type disparity: Dict | str
     :param cfg_pipeline: pipeline section of configuration
     :type cfg_pipeline: Dict
     """
 
-    if isinstance(disparity, list):
-        if (abs(disparity[1] - disparity[0]) + 1) < 5:
+    if isinstance(disparity, Dict):
+        if disparity["range"] < 2:
             raise ValueError(
-                title + " disparity range with a size < 5 are not allowed with interpolation refinement method"
+                title + " disparity range (dmax - dmin) with a size < 5 are not allowed "
+                "with interpolation refinement method"
             )
 
     if isinstance(disparity, str):
@@ -311,8 +309,8 @@ input_configuration_schema = {
         "img": And(str, rasterio_can_open_mandatory),
         "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
     },
-    "col_disparity": [int, int],
-    "row_disparity": [int, int],
+    "col_disparity": {"init": int, "range": And(int, lambda x: x >= 0)},
+    "row_disparity": {"init": int, "range": And(int, lambda x: x >= 0)},
 }
 
 default_short_configuration_input = {
@@ -326,7 +324,9 @@ default_short_configuration_input = {
     }
 }
 
-default_configuration_disp = {"input": {"col_disparity": [-9999, -9995], "row_disparity": [-9999, -9995]}}
+default_configuration_disp = {
+    "input": {"col_disparity": {"init": -9997, "range": 2}, "row_disparity": {"init": -9997, "range": 2}}
+}
 
 roi_configuration_schema = {
     "row": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},

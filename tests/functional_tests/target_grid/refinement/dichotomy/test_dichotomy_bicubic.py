@@ -43,8 +43,8 @@ def test_dichotomy_execution(left_img_path, right_img_path, subpix, iterations):
                 "img": str(right_img_path),
                 "nodata": "NaN",
             },
-            "col_disparity": [-3, 3],
-            "row_disparity": [-3, 3],
+            "col_disparity": {"init": 0, "range": 3},
+            "row_disparity": {"init": 0, "range": 3},
         },
         "ROI": {"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}},
         "pipeline": {

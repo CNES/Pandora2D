@@ -26,13 +26,14 @@ Test configuration
 
 import random
 import string
-
+import re
 import pytest
 import transitions
 import numpy as np
 import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
 from skimage.io import imsave
+
 
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 from pandora2d import check_configuration
@@ -47,8 +48,8 @@ class TestCheckDatasets:
         input_cfg = {
             "left": {"img": left_img_path, "nodata": -9999},
             "right": {"img": right_img_path, "nodata": -9999},
-            "col_disparity": [-2, 2],
-            "row_disparity": [-3, 3],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 3},
         }
         return create_datasets_from_inputs(input_cfg)
 
@@ -80,13 +81,13 @@ class TestCheckDatasets:
             {"im": (["row", "col"], data_left)},
             coords={"row": np.arange(data_left.shape[0]), "col": np.arange(data_left.shape[1])},
             attrs=attributs,
-        ).pipe(add_disparity_grid, [0, 1], [-1, 0])
+        ).pipe(add_disparity_grid, {"init": -1, "range": 2}, {"init": -1, "range": 3})
 
         dataset_right = xr.Dataset(
             {"im": (["row", "col"], data_right)},
             coords={"row": np.arange(data_right.shape[0]), "col": np.arange(data_right.shape[1])},
             attrs=attributs,
-        ).pipe(add_disparity_grid, [-2, 2], [-3, 3])
+        ).pipe(add_disparity_grid, {"init": 1, "range": 2}, {"init": 1, "range": 3})
 
         with pytest.raises(ValueError) as exc_info:
             check_configuration.check_datasets(dataset_left, dataset_right)
@@ -139,17 +140,6 @@ class TestCheckInputSection:
         """
         with pytest.raises(KeyError, match="input key is missing"):
             check_configuration.check_input_section({})
-
-    def test_false_input_disp_should_exit(self, false_input_disp):
-        """
-        Description : Exit if the input disp isn't correct
-        Data :
-        - Left image : cones/monoband/left.png
-        - Right image : cones/monoband/right.png
-        Requirement : EX_CONF_08
-        """
-        with pytest.raises(ValueError, match="disp_max must be bigger than disp_min"):
-            check_configuration.check_input_section(false_input_disp)
 
     def test_false_input_path_image_should_raise_error(self, false_input_path_image):
         """
@@ -276,8 +266,8 @@ class TestCheckPipelineSection:
             "right": {
                 "img": right_rgb_path,
             },
-            "col_disparity": [-60, 0],
-            "row_disparity": [-60, 0],
+            "col_disparity": {"init": -30, "range": 30},
+            "row_disparity": {"init": -30, "range": 30},
         }
         cfg = {
             "input": input_multiband_cfg,
@@ -309,9 +299,11 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         ["col_disparity", "row_disparity"],
         [
-            pytest.param([0, 2], [-2, 2], id="col_disparity range too small"),
-            pytest.param([-2, 2], [1, 4], id="row_disparity range too small"),
-            pytest.param([0, 2], [1, 4], id="col_disparity & row_disparity range too small"),
+            pytest.param({"init": 1, "range": 1}, {"init": 1, "range": 2}, id="col_disparity range too small"),
+            pytest.param({"init": 1, "range": 2}, {"init": 2, "range": 1}, id="row_disparity range too small"),
+            pytest.param(
+                {"init": 1, "range": 1}, {"init": 3, "range": 1}, id="col_disparity & row_disparity range too small"
+            ),
         ],
     )
     def test_fails_with_wrong_disparity_range_and_interpolation_step(
@@ -330,7 +322,8 @@ class TestCheckConf:
         with pytest.raises(ValueError) as err:
             check_configuration.check_conf(user_cfg, pandora2d_machine)
         assert (
-            "disparity range with a size < 5 are not allowed with interpolation refinement method" in err.value.args[0]
+            " disparity range (dmax - dmin) with a size < 5 are not allowed "
+            "with interpolation refinement method" in err.value.args[0]
         )
 
 
@@ -490,8 +483,8 @@ class TestCheckConfMatchingCostNodataCondition:
                     "img": right_img_path,
                     "nodata": right_nodata,
                 },
-                "col_disparity": [-2, 2],
-                "row_disparity": [-2, 2],
+                "col_disparity": {"init": 1, "range": 2},
+                "row_disparity": {"init": 1, "range": 2},
             },
             "pipeline": {
                 "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 1},
@@ -544,15 +537,17 @@ class TestCheckDisparityRangeSize:
         ["disparity", "title", "string_match"],
         [
             pytest.param(
-                [-1, 1],
+                {"init": 1, "range": 1},
                 "Column",
-                "Column disparity range with a size < 5 are not allowed with interpolation refinement method",
+                "Column disparity range (dmax - dmin) with a size < 5 are not allowed "
+                "with interpolation refinement method",
                 id="Column disparity range < 5",
             ),
             pytest.param(
-                [-3, -1],
+                {"init": -1, "range": 1},
                 "Row",
-                "Row disparity range with a size < 5 are not allowed with interpolation refinement method",
+                "Row disparity range (dmax - dmin) with a size < 5 are not allowed "
+                "with interpolation refinement method",
                 id="Row disparity range < 5",
             ),
         ],
@@ -564,7 +559,7 @@ class TestCheckDisparityRangeSize:
         Data :
         Requirement : EX_CONF_08
         """
-        with pytest.raises(ValueError, match=string_match):
+        with pytest.raises(ValueError, match=re.escape(string_match)):
             check_configuration.check_disparity_range_size(disparity, title)
 
     @pytest.mark.parametrize(
@@ -590,8 +585,8 @@ class TestCheckDisparityRangeSize:
     @pytest.mark.parametrize(
         ["disparity", "title"],
         [
-            pytest.param([-2, 2], "Col", id="Column disparity range greater than or equal to 5"),
-            pytest.param([1, 5], "Row", id="Row disparity range greater than or equal to 5"),
+            pytest.param({"init": 1, "range": 2}, "Col", id="Column disparity range greater than or equal to 5"),
+            pytest.param({"init": 3, "range": 2}, "Row", id="Row disparity range greater than or equal to 5"),
         ],
     )
     def test_passes_with_disparity_ranges_equal_5(self, disparity, title):
@@ -611,11 +606,11 @@ class TestDisparityRangeAgainstImageSize:
 
     @pytest.fixture()
     def row_disparity(self):
-        return [-4, 1]
+        return {"init": -2, "range": 2}
 
     @pytest.fixture()
     def col_disparity(self):
-        return [-3, 2]
+        return {"init": -1, "range": 2}
 
     @pytest.fixture()
     def configuration(self, image_path, row_disparity, col_disparity):
@@ -640,8 +635,8 @@ class TestDisparityRangeAgainstImageSize:
     @pytest.mark.parametrize(
         "row_disparity",
         [
-            pytest.param([-460, -451], id="Out on left"),
-            pytest.param([451, 460], id="Out on right"),
+            pytest.param({"init": -456, "range": 5}, id="Out on left"),
+            pytest.param({"init": 456, "range": 5}, id="Out on right"),
         ],
     )
     def test_row_disparity_totally_out(self, pandora2d_machine, configuration):
@@ -656,8 +651,8 @@ class TestDisparityRangeAgainstImageSize:
     @pytest.mark.parametrize(
         "col_disparity",
         [
-            pytest.param([-460, -451], id="Out on top"),
-            pytest.param([451, 460], id="Out on bottom"),
+            pytest.param({"init": -456, "range": 5}, id="Out on top"),
+            pytest.param({"init": 456, "range": 5}, id="Out on bottom"),
         ],
     )
     def test_column_disparity_totally_out(self, pandora2d_machine, configuration):
@@ -672,10 +667,10 @@ class TestDisparityRangeAgainstImageSize:
     @pytest.mark.parametrize(
         ["row_disparity", "col_disparity"],
         [
-            pytest.param([-460, -450], [100, 200], id="Partially out on left"),
-            pytest.param([450, 460], [100, 200], id="Partially out on right"),
-            pytest.param([100, 200], [-460, -450], id="Partially out on top"),
-            pytest.param([100, 200], [450, 460], id="Partially out on bottom"),
+            pytest.param({"init": -455, "range": 5}, {"init": 150, "range": 50}, id="Partially out on left"),
+            pytest.param({"init": 455, "range": 5}, {"init": 150, "range": 50}, id="Partially out on right"),
+            pytest.param({"init": 150, "range": 50}, {"init": -455, "range": 5}, id="Partially out on top"),
+            pytest.param({"init": 150, "range": 50}, {"init": 455, "range": 5}, id="Partially out on bottom"),
         ],
     )
     def test_disparity_partially_out(self, pandora2d_machine, configuration):

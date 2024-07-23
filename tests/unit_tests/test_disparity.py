@@ -223,8 +223,8 @@ def test_compute_disparity_map_row(margins):
         "no_data_mask": 1,
         "crs": None,
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": [-2, 2],
-        "row_disparity_source": [-2, 2],
+        "col_disparity_source": {"init": 0, "range": 2},
+        "row_disparity_source": {"init": 0, "range": 2},
     }
 
     data = np.array(
@@ -311,8 +311,8 @@ def test_compute_disparity_map_col(margins):
         "no_data_mask": 1,
         "crs": None,
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": [-3, 3],
-        "row_disparity_source": [-3, 3],
+        "col_disparity_source": {"init": 0, "range": 3},
+        "row_disparity_source": {"init": 0, "range": 3},
     }
 
     data = np.array(
@@ -398,8 +398,8 @@ def test_compute_disparity_map_col_row(margins):
         "no_data_mask": 1,
         "crs": None,
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": [-3, 3],
-        "row_disparity_source": [-3, 3],
+        "col_disparity_source": {"init": 0, "range": 3},
+        "row_disparity_source": {"init": 0, "range": 3},
     }
 
     data = np.array(

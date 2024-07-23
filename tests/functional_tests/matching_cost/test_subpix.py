@@ -46,15 +46,15 @@ class TestSubpix:
             coords={"row": np.arange(data_left.shape[0]), "col": np.arange(data_left.shape[1])},
         )
 
-        add_disparity_grid(left, [-2, 2], [-2, 2])
+        add_disparity_grid(left, {"init": 1, "range": 2}, {"init": 1, "range": 2})
 
         left.attrs = {
             "no_data_img": -9999,
             "valid_pixels": 0,
             "no_data_mask": 1,
             "crs": None,
-            "col_disparity_source": [-2, 2],
-            "row_disparity_source": [-2, 2],
+            "col_disparity_source": {"init": 1, "range": 2},
+            "row_disparity_source": {"init": 1, "range": 2},
             "transform": None,
         }
 
