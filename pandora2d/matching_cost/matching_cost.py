@@ -354,7 +354,7 @@ class MatchingCost:
             self.pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, grid_min_col, grid_max_col)
             # If first iteration, initialize cost_volumes dataset
             if idx == 0:
-                img_row_coordinates = img_left["im"].coords["row"]
+                img_row_coordinates = img_left["im"].coords["row"].values
 
                 # Case without a ROI: we only take the step into account to compute row coordinates.
                 if self.grid_.attrs["ROI_margins_for_cv"] is None:
