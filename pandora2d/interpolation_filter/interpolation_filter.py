@@ -39,7 +39,6 @@ class AbstractFilter(ABC):
 
     interpolation_filter_methods_avail: Dict = {}
     _interpolation_filter_method = None
-    cfg = None
     margins = NullMargins()
     _SIZE = 4
     schema = {}
