@@ -59,6 +59,7 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.imgmath",
     "autoapi.extension",
+    "sphinx_tabs.tabs",
 ]
 
 autoapi_dirs = ["../../pandora2d"]
