@@ -41,16 +41,16 @@ Input section is composed of the following keys:
       - If the estimation step is not present
 
 .. warning::
-    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 2. 
+    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 2.
 
 
 Image (left and right) and disparity (col_disparity and row_disparity) properties are composed of the following keys:
 
 .. tabs::
 
-  .. tab:: Image properties
+   .. tab:: Image properties
 
-    .. list-table:: 
+    .. list-table::
         :header-rows: 1
 
         * - Name
@@ -68,10 +68,15 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
           - int, "NaN" or "inf"
           - -9999
           - No
+        * - *mask*
+          - Path to the mask
+          - string
+          - none
+          - No
 
   .. tab:: Disparity properties
 
-    .. list-table:: 
+    .. list-table::
         :header-rows: 1
 
         * - Name
@@ -87,11 +92,17 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
         * - *range*
           - The search radius (see :ref:`initial_disparity`)
           - int >= 0
-          - 
+          -
           - Yes
 
 .. warning::
     With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`) , `nodata` only accepts `int` type.
+
+.. note::
+    Only one-band masks are accepted by pandora2d. Mask must comply with the following convention :
+     - Value equal to 0 for valid pixel
+     - Value not equal to 0 for invalid pixel
+
 
 **Example**
 
@@ -103,7 +114,8 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
         {
             "left": {
                 "img": "./data/left.tif",
-                "nodata": -9999
+                "nodata": -9999,
+                "mask": "./data/mask_left.tif"
             },
             "right": {
                 "img": "/data/right.tif",
