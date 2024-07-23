@@ -26,6 +26,9 @@ import pathlib
 import re
 
 import pytest
+import rasterio
+from pandora.common import write_data_array
+import xarray as xr
 
 
 def pytest_collection_modifyitems(config, items):
@@ -147,5 +150,55 @@ def correct_multiband_input_cfg(left_rgb_path, right_rgb_path):
             },
             "col_disparity": {"init": 1, "range": 2},
             "row_disparity": {"init": 1, "range": 2},
+        }
+    }
+
+
+@pytest.fixture
+def mask_path(left_img_path, tmp_path):
+    """Create a mask and save it in tmp"""
+
+    with rasterio.open(left_img_path) as src:
+        width = src.width
+        height = src.height
+
+    mask = xr.DataArray(data=0, dims=["height", "width"], coords={"height": range(height), "width": range(width)})
+    mask[0 : int(height / 2), 0 : int(width / 2)] = 1
+
+    path = tmp_path / "mask_left.tif"
+
+    write_data_array(
+        data_array=mask,
+        filename=str(path),
+    )
+
+    return path
+
+
+@pytest.fixture
+def correct_input_with_left_mask(left_img_path, right_img_path, mask_path):
+    return {
+        "input": {
+            "left": {"img": left_img_path, "nodata": -9999, "mask": str(mask_path)},
+            "right": {
+                "img": right_img_path,
+            },
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
+        }
+    }
+
+
+@pytest.fixture
+def correct_input_with_right_mask(left_img_path, right_img_path, mask_path):
+    return {
+        "input": {
+            "left": {
+                "img": left_img_path,
+                "nodata": -9999,
+            },
+            "right": {"img": right_img_path, "mask": str(mask_path)},
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
         }
     }

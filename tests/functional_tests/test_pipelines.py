@@ -192,3 +192,29 @@ def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pip
     # Check window_size and step parameters
     assert matching_cost_cfg["window_size"] == refinement_cfg["window_size"]
     assert matching_cost_cfg["step"] == refinement_cfg["step"]
+
+
+@pytest.mark.parametrize("input_cfg", ["correct_input_with_left_mask", "correct_input_with_right_mask"])
+def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_without_refinement, request):
+    """
+    Description : Test mask configuration
+    """
+    input_cfg = request.getfixturevalue(input_cfg)
+
+    configuration = {**input_cfg, **correct_pipeline_without_refinement}
+
+    run_dir = run_pipeline(configuration)
+
+    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+        output_config = json.load(output_file)
+
+    result = remove_extra_keys(output_config, configuration)
+
+    assert result == configuration
+    assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
+
+    # Test for report
+    with open(run_dir / "output" / "report.json", encoding="utf8") as report_file:
+        report = json.load(report_file)
+
+    assert report["statistics"]["disparity"].keys() == {"row", "col"}
