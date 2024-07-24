@@ -869,7 +869,13 @@ class TestDisparityGrid:
         return nb_cols // 2
 
     @pytest.fixture()
-    def disparity_maps(self, make_image_fixture, random_generator, nb_rows, nb_cols, row_index, col_index):
+    def disparity_to_alter(self):
+        return "row_disparity"
+
+    @pytest.fixture()
+    def disparity_maps(
+        self, make_image_fixture, random_generator, nb_rows, nb_cols, row_index, col_index, disparity_to_alter
+    ):
         """Compute disparity maps and return disp_map_row and disp_map_col."""
         image = make_image_fixture(
             disp_col={"init": 0, "range": 2},
@@ -877,7 +883,7 @@ class TestDisparityGrid:
             data=random_generator.integers(0, 255, (nb_rows, nb_cols), endpoint=True),
         )
         # Make disparity search out of truth for one point
-        image["row_disparity"].loc[
+        image[disparity_to_alter].loc[
             {
                 "band_disp": "min",
                 "row": row_index,
@@ -922,21 +928,24 @@ class TestDisparityGrid:
         disparity_matcher = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -99})
 
         disp_map_col, disp_map_row, _ = disparity_matcher.compute_disp_maps(cost_volumes)
-        return disp_map_row, disp_map_col
+        return {"row_disparity": disp_map_row, "col_disparity": disp_map_col}
 
-    def test_effect_on_compute_cost_volume(self, disparity_maps, row_index, col_index):
+    @pytest.mark.parametrize("disparity_to_alter", ["row_disparity", "col_disparity"])
+    def test_effect_on_compute_cost_volume(self, disparity_maps, disparity_to_alter, row_index, col_index):
         """Check best candidate out of disparity range is not chosen by wta.
 
         As we use the very same images, WTA should find a 0 disparity everywhere except for the point where we set a
         disparity range that did not include 0.
-        """
-        disp_map_row = disparity_maps[0]
 
-        assert disp_map_row[row_index, col_index] != 0
-        assert np.all(disp_map_row[:row_index, :] == 0)
-        assert np.all(disp_map_row[row_index + 1 :, :] == 0)
-        assert np.all(disp_map_row[:, :col_index] == 0)
-        assert np.all(disp_map_row[:, col_index + 1 :] == 0)
+        Note: `col_disparity` is done by Pandora.
+        """
+        result = disparity_maps[disparity_to_alter]
+
+        assert result[row_index, col_index] != 0
+        assert np.all(result[:row_index, :] == 0)
+        assert np.all(result[row_index + 1 :, :] == 0)
+        assert np.all(result[:, :col_index] == 0)
+        assert np.all(result[:, col_index + 1 :] == 0)
 
 
 class TestSubpix:
