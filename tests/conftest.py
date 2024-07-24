@@ -25,6 +25,7 @@ Module with global test fixtures.
 import pathlib
 import re
 
+import numpy as np
 import pytest
 import rasterio
 from pandora.common import write_data_array
@@ -202,3 +203,19 @@ def correct_input_with_right_mask(left_img_path, right_img_path, mask_path):
             "row_disparity": {"init": 0, "range": 2},
         }
     }
+
+
+@pytest.fixture()
+def random_seed():
+    """
+    Seed generated with:
+
+    >>> import secrets
+    >>> secrets.randbits(128)
+    """
+    return 160187526967402499820683775418299155210
+
+
+@pytest.fixture()
+def random_generator(random_seed):
+    return np.random.default_rng(random_seed)

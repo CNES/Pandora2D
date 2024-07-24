@@ -395,6 +395,7 @@ class MatchingCost:
 
         # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
         del cost_volumes.attrs["ROI_margins_for_cv"]
+        set_out_of_disparity_range_to_nan(cost_volumes, grid_min_row, grid_max_row)
 
         return cost_volumes
 

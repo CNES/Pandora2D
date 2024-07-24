@@ -32,7 +32,7 @@ from rasterio import Affine
 
 import pytest
 from pandora.margins import Margins
-from pandora2d import matching_cost
+from pandora2d import matching_cost, disparity
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 
 
@@ -764,12 +764,24 @@ class TestDisparityGrid:
     """Test effect of disparity grids."""
 
     @pytest.fixture()
-    def cost_volumes(self):
+    def nb_rows(self):
+        return 5
+
+    @pytest.fixture()
+    def nb_cols(self):
+        return 4
+
+    @pytest.fixture()
+    def nb_disp_rows(self):
+        return 6
+
+    @pytest.fixture()
+    def nb_disp_cols(self):
+        return 7
+
+    @pytest.fixture()
+    def cost_volumes(self, nb_rows, nb_cols, nb_disp_rows, nb_disp_cols):
         """cost_volumes full of zeros."""
-        nb_cols = 4
-        nb_rows = 5
-        nb_disp_cols = 6
-        nb_disp_rows = 7
         # only need because allocate_cost_volumes delete it
         fake_pandora_attrs = {"col_to_compute": 1, "sampling_interval": 1}
         return matching_cost.MatchingCost.allocate_cost_volumes(
@@ -781,12 +793,12 @@ class TestDisparityGrid:
         )
 
     @pytest.fixture()
-    def min_disp_grid(self, cost_volumes):
-        return np.full((cost_volumes.sizes["row"], cost_volumes.sizes["col"]), cost_volumes.coords["disp_row"].data[0])
+    def min_disp_grid(self, cost_volumes, nb_rows, nb_cols):
+        return np.full((nb_rows, nb_cols), cost_volumes.coords["disp_row"].data[0])
 
     @pytest.fixture()
-    def max_disp_grid(self, cost_volumes):
-        return np.full((cost_volumes.sizes["row"], cost_volumes.sizes["col"]), cost_volumes.coords["disp_row"].data[-1])
+    def max_disp_grid(self, cost_volumes, nb_rows, nb_cols):
+        return np.full((nb_rows, nb_cols), cost_volumes.coords["disp_row"].data[-1])
 
     def test_homogeneous_grids(self, cost_volumes, min_disp_grid, max_disp_grid):
         """With grids set to extreme disparities, cost_volumes should be left untouched."""
@@ -847,6 +859,84 @@ class TestDisparityGrid:
         assert np.all(np.isnan(expected_above_max_nans))
         assert np.all(expected_zeros_on_odd_lines == 0)
         assert np.all(expected_zeros_on_even_lines == 0)
+
+    @pytest.fixture()
+    def row_index(self, nb_rows):
+        return nb_rows // 2
+
+    @pytest.fixture()
+    def col_index(self, nb_cols):
+        return nb_cols // 2
+
+    @pytest.fixture()
+    def disparity_maps(self, make_image_fixture, random_generator, nb_rows, nb_cols, row_index, col_index):
+        """Compute disparity maps and return disp_map_row and disp_map_col."""
+        image = make_image_fixture(
+            disp_col={"init": 0, "range": 2},
+            disp_row={"init": 0, "range": 2},
+            data=random_generator.integers(0, 255, (nb_rows, nb_cols), endpoint=True),
+        )
+        # Make disparity search out of truth for one point
+        image["row_disparity"].loc[
+            {
+                "band_disp": "min",
+                "row": row_index,
+                "col": col_index,
+            }
+        ] = 1
+
+        cfg = {
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": "ssd",
+                    "window_size": 1,
+                    "step": [1, 1],
+                    "subpix": 1,
+                }
+            }
+        }
+        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+
+        grid_min_col = image["col_disparity"].sel(band_disp="min").data
+        grid_max_col = image["col_disparity"].sel(band_disp="max").data
+        grid_min_row = image["row_disparity"].sel(band_disp="min").data
+        grid_max_row = image["row_disparity"].sel(band_disp="max").data
+
+        matching_cost_.allocate_cost_volume_pandora(
+            img_left=image,
+            img_right=image,
+            grid_min_col=grid_min_col,
+            grid_max_col=grid_max_col,
+            cfg=cfg,
+        )
+
+        cost_volumes = matching_cost_.compute_cost_volumes(
+            img_left=image,
+            img_right=image,
+            grid_min_col=grid_min_col,
+            grid_max_col=grid_max_col,
+            grid_min_row=grid_min_row,
+            grid_max_row=grid_max_row,
+        )
+
+        disparity_matcher = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -99})
+
+        disp_map_col, disp_map_row, _ = disparity_matcher.compute_disp_maps(cost_volumes)
+        return disp_map_row, disp_map_col
+
+    def test_effect_on_compute_cost_volume(self, disparity_maps, row_index, col_index):
+        """Check best candidate out of disparity range is not chosen by wta.
+
+        As we use the very same images, WTA should find a 0 disparity everywhere except for the point where we set a
+        disparity range that did not include 0.
+        """
+        disp_map_row = disparity_maps[0]
+
+        assert disp_map_row[row_index, col_index] != 0
+        assert np.all(disp_map_row[:row_index, :] == 0)
+        assert np.all(disp_map_row[row_index + 1 :, :] == 0)
+        assert np.all(disp_map_row[:, :col_index] == 0)
+        assert np.all(disp_map_row[:, col_index + 1 :] == 0)
 
 
 class TestSubpix:
