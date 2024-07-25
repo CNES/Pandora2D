@@ -28,6 +28,7 @@ import importlib.util
 # pylint: disable=too-many-lines
 import numpy as np
 import xarray as xr
+from pytest_mock import MockerFixture
 from rasterio import Affine
 
 import pytest
@@ -516,7 +517,7 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
         pytest.param(
             [2, 1],
             np.arange(10),
-            np.arange(0, 10, 2),  #   1 < step_row < len(cost_volume["cost_volumes"].coords["row"])
+            np.arange(0, 10, 2),  # 1 < step_row < len(cost_volume["cost_volumes"].coords["row"])
             id="No ROI, step_row=2 and step_col=1",
         ),
         pytest.param(
@@ -527,7 +528,7 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
         ),
         pytest.param(
             [1, 3],
-            np.arange(0, 10, 3),  #   1 < step_col < len(cost_volume["cost_volumes"].coords["col"])
+            np.arange(0, 10, 3),  # 1 < step_col < len(cost_volume["cost_volumes"].coords["col"])
             np.arange(10),
             id="No ROI, step_row=1 and step_col=3",
         ),
@@ -873,9 +874,42 @@ class TestDisparityGrid:
         return "row_disparity"
 
     @pytest.fixture()
+    def mock_type(self):
+        return "used"
+
+    @pytest.fixture()
+    def mock_set_out_of_disparity_range_to_nan(self, mock_type, mocker: MockerFixture):
+        """
+        Used or bypass set_out_of_disparity_range_to_nan.
+
+        :param mock_type: `used` or `not used`
+        :type mock_type: str
+        :param mocker:
+        :type mocker:
+        :return: Mock if mock_type is `use`
+        :rtype: Mock or None
+        :raises: ValueError if mock_type is neither `used` or `not used`
+        """
+        if mock_type == "not used":
+            return mocker.patch(
+                "pandora2d.matching_cost.matching_cost.set_out_of_disparity_range_to_nan",
+                side_effect=lambda x, y, z: x,
+            )
+        if mock_type != "used":
+            raise ValueError(f"Expected mock_type to be 'used' or 'not used', got {mock_type}.")
+
+    @pytest.fixture()
     def disparity_maps(
-        self, make_image_fixture, random_generator, nb_rows, nb_cols, row_index, col_index, disparity_to_alter
-    ):
+        self,
+        make_image_fixture,
+        random_generator,
+        nb_rows,
+        nb_cols,
+        row_index,
+        col_index,
+        disparity_to_alter,
+        mock_set_out_of_disparity_range_to_nan,
+    ):  # pylint: disable=too-many-arguments,unused-argument
         """Compute disparity maps and return disp_map_row and disp_map_col."""
         image = make_image_fixture(
             disp_col={"init": 0, "range": 2},
@@ -946,6 +980,18 @@ class TestDisparityGrid:
         assert np.all(result[row_index + 1 :, :] == 0)
         assert np.all(result[:, :col_index] == 0)
         assert np.all(result[:, col_index + 1 :] == 0)
+
+    @pytest.mark.parametrize("mock_type", ["not used"])
+    def test_when_not_taken_into_account(
+        self, disparity_maps, disparity_to_alter, mock_set_out_of_disparity_range_to_nan
+    ):  # pylint: disable=unused-argument
+        """Check best candidate out of disparity range is not chosen by wta.
+
+        Note: `col_disparity` is done by Pandora.
+        """
+        result = disparity_maps[disparity_to_alter]
+
+        assert np.all(result == 0)
 
 
 class TestSubpix:
