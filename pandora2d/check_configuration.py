@@ -41,6 +41,7 @@ from pandora.check_configuration import (
     update_conf,
 )
 
+from pandora.check_configuration import rasterio_can_open
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -304,10 +305,12 @@ input_configuration_schema = {
     "left": {
         "img": And(str, rasterio_can_open_mandatory),
         "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+        "mask": And(Or(str, lambda input: input is None), rasterio_can_open),
     },
     "right": {
         "img": And(str, rasterio_can_open_mandatory),
         "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+        "mask": And(Or(str, lambda input: input is None), rasterio_can_open),
     },
     "col_disparity": {"init": int, "range": And(int, lambda x: x >= 0)},
     "row_disparity": {"init": int, "range": And(int, lambda x: x >= 0)},
@@ -317,9 +320,11 @@ default_short_configuration_input = {
     "input": {
         "left": {
             "nodata": -9999,
+            "mask": None,
         },
         "right": {
             "nodata": -9999,
+            "mask": None,
         },
     }
 }
