@@ -33,7 +33,7 @@ from skimage.io import imsave
 from pandora import import_plugin
 from pandora2d import matching_cost
 
-from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 
 
 @pytest.fixture()
@@ -143,7 +143,7 @@ def create_image():
 
 @pytest.fixture()
 def left_zncc(create_image):
-    """Left image for Znnc."""
+    """Left image for Zncc."""
     data = np.array(
         [
             [1, 1, 1, 1, 1],
@@ -159,7 +159,7 @@ def left_zncc(create_image):
 
 @pytest.fixture()
 def right_zncc(create_image):
-    """Right image for Znnc."""
+    """Right image for Zncc."""
     data = np.array(
         (
             [
@@ -182,12 +182,12 @@ def null_disparity_grid():
 
 @pytest.fixture()
 def positive_disparity_grid():
-    return np.full((3, 3), 1)
+    return np.full((3, 3), 2)
 
 
 @pytest.fixture()
 def negative_disparity_grid():
-    return np.full((3, 3), -1)
+    return np.full((3, 3), -2)
 
 
 class DisparityGrids(NamedTuple):
@@ -215,6 +215,10 @@ def data_with_null_disparity(left_zncc, right_zncc, null_disparity_grid):
     """
     Coherent Data for test_step.
     """
+    col_disparity_cfg = {"init": 0, "range": 0}
+    row_disparity_cfg = {"init": 0, "range": 0}
+    left_zncc.pipe(add_disparity_grid, col_disparity_cfg, row_disparity_cfg)
+
     disparity_grids = DisparityGrids(
         col_min=null_disparity_grid,
         col_max=null_disparity_grid,
@@ -231,8 +235,6 @@ def data_with_null_disparity(left_zncc, right_zncc, null_disparity_grid):
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = {"init": 0, "range": 0}
-    left_zncc.attrs["row_disparity_source"] = {"init": 0, "range": 0}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -241,6 +243,10 @@ def data_with_null_disparity(left_zncc, right_zncc, null_disparity_grid):
 @pytest.fixture()
 def data_with_positive_disparity_in_col(left_zncc, right_zncc, null_disparity_grid, positive_disparity_grid):
     """Coherent Data for test_step."""
+    col_disparity_cfg = {"init": 1, "range": 1}
+    row_disparity_cfg = {"init": 0, "range": 0}
+    left_zncc.pipe(add_disparity_grid, col_disparity_cfg, row_disparity_cfg)
+
     disparity_grids = DisparityGrids(
         col_min=null_disparity_grid,
         col_max=positive_disparity_grid,
@@ -250,39 +256,43 @@ def data_with_positive_disparity_in_col(left_zncc, right_zncc, null_disparity_gr
     full_matching_cost = np.array(
         [
             [
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan], [np.nan]],
-                [[-0.45], [-0.460179]],
-                [[-0.47058824], [-0.4756515]],
-                [[-0.48076922], [np.nan]],
-                [[np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[-0.45], [-0.460179], [-0.46513027]],
+                [[-0.47058824], [-0.4756515], [np.nan]],
+                [[-0.48076922], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan], [np.nan]],
-                [[-0.45], [-0.460179]],
-                [[-0.47058824], [-0.4756515]],
-                [[-0.48076922], [np.nan]],
-                [[np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[-0.45], [-0.460179], [-0.46513027]],
+                [[-0.47058824], [-0.4756515], [np.nan]],
+                [[-0.48076922], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
-            [[[np.nan], [np.nan]], [[0.0], [0.0]], [[0.0], [0.0]], [[0.0], [np.nan]], [[np.nan], [np.nan]]],
             [
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[0.0], [0.0], [0.0]],
+                [[0.0], [0.0], [np.nan]],
+                [[0.0], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+            ],
+            [
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = {"init": 1, "range": 1}
-    left_zncc.attrs["row_disparity_source"] = {"init": 0, "range": 0}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -291,6 +301,10 @@ def data_with_positive_disparity_in_col(left_zncc, right_zncc, null_disparity_gr
 @pytest.fixture()
 def data_with_positive_disparity_in_row(left_zncc, right_zncc, null_disparity_grid, positive_disparity_grid):
     """Coherent Data for test_step."""
+    col_disparity_cfg = {"init": 0, "range": 0}
+    row_disparity_cfg = {"init": 1, "range": 1}
+    left_zncc.pipe(add_disparity_grid, col_disparity_cfg, row_disparity_cfg)
+
     disparity_grids = DisparityGrids(
         col_min=null_disparity_grid,
         col_max=null_disparity_grid,
@@ -299,22 +313,44 @@ def data_with_positive_disparity_in_row(left_zncc, right_zncc, null_disparity_gr
     )
     full_matching_cost = np.array(
         [
-            [[[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]]],
             [
-                [[np.nan, np.nan]],
-                [[-0.45, -0.45]],
-                [[-0.47058824, -0.47058824]],
-                [[-0.48076922, -0.48076922]],
-                [[np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
-            [[[np.nan, np.nan]], [[-0.45, 0.0]], [[-0.47058824, 0.0]], [[-0.48076922, 0.0]], [[np.nan, np.nan]]],
-            [[[np.nan, np.nan]], [[0.0, np.nan]], [[0.0, np.nan]], [[0.0, np.nan]], [[np.nan, np.nan]]],
-            [[[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]]],
+            [
+                [[np.nan, np.nan, np.nan]],
+                [[-0.45, -0.45, 0.0]],
+                [[-0.47058824, -0.47058824, 0.0]],
+                [[-0.48076922, -0.48076922, 0.0]],
+                [[np.nan, np.nan, np.nan]],
+            ],
+            [
+                [[np.nan, np.nan, np.nan]],
+                [[-0.45, 0.0, np.nan]],
+                [[-0.47058824, 0.0, np.nan]],
+                [[-0.48076922, 0.0, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+            ],
+            [
+                [[np.nan, np.nan, np.nan]],
+                [[0.0, np.nan, np.nan]],
+                [[0.0, np.nan, np.nan]],
+                [[0.0, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+            ],
+            [
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+            ],
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = {"init": 0, "range": 0}
-    left_zncc.attrs["row_disparity_source"] = {"init": 1, "range": 1}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -323,6 +359,10 @@ def data_with_positive_disparity_in_row(left_zncc, right_zncc, null_disparity_gr
 @pytest.fixture()
 def data_with_negative_disparity_in_col(left_zncc, right_zncc, null_disparity_grid, negative_disparity_grid):
     """Coherent Data for test_step."""
+    col_disparity_cfg = {"init": -1, "range": 1}
+    row_disparity_cfg = {"init": 0, "range": 0}
+    left_zncc.pipe(add_disparity_grid, col_disparity_cfg, row_disparity_cfg)
+
     disparity_grids = DisparityGrids(
         col_min=negative_disparity_grid,
         col_max=null_disparity_grid,
@@ -332,39 +372,43 @@ def data_with_negative_disparity_in_col(left_zncc, right_zncc, null_disparity_gr
     full_matching_cost = np.array(
         [
             [
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan], [np.nan]],
-                [[np.nan], [-0.45]],
-                [[-0.460179], [-0.47058824]],
-                [[-0.4756515], [-0.48076922]],
-                [[np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [-0.45]],
+                [[np.nan], [-0.460179], [-0.47058824]],
+                [[-0.46513027], [-0.4756515], [-0.48076922]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan], [np.nan]],
-                [[np.nan], [-0.45]],
-                [[-0.460179], [-0.47058824]],
-                [[-0.4756515], [-0.48076922]],
-                [[np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [-0.45]],
+                [[np.nan], [-0.460179], [-0.47058824]],
+                [[-0.46513027], [-0.4756515], [-0.48076922]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
-            [[[np.nan], [np.nan]], [[np.nan], [0.0]], [[0.0], [0.0]], [[0.0], [0.0]], [[np.nan], [np.nan]]],
             [
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
-                [[np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [0.0]],
+                [[np.nan], [0.0], [0.0]],
+                [[0.0], [0.0], [0.0]],
+                [[np.nan], [np.nan], [np.nan]],
+            ],
+            [
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = {"init": -1, "range": 1}
-    left_zncc.attrs["row_disparity_source"] = {"init": 0, "range": 0}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -373,6 +417,10 @@ def data_with_negative_disparity_in_col(left_zncc, right_zncc, null_disparity_gr
 @pytest.fixture()
 def data_with_negative_disparity_in_row(left_zncc, right_zncc, null_disparity_grid, negative_disparity_grid):
     """Coherent Data for test_step."""
+    col_disparity_cfg = {"init": 0, "range": 0}
+    row_disparity_cfg = {"init": -1, "range": 1}
+    left_zncc.pipe(add_disparity_grid, col_disparity_cfg, row_disparity_cfg)
+
     disparity_grids = DisparityGrids(
         col_min=null_disparity_grid,
         col_max=null_disparity_grid,
@@ -381,22 +429,44 @@ def data_with_negative_disparity_in_row(left_zncc, right_zncc, null_disparity_gr
     )
     full_matching_cost = np.array(
         [
-            [[[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]]],
             [
-                [[np.nan, np.nan]],
-                [[np.nan, -0.45]],
-                [[np.nan, -0.47058824]],
-                [[np.nan, -0.48076922]],
-                [[np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
-            [[[np.nan, np.nan]], [[1.0, -0.45]], [[1.0, -0.47058824]], [[1.0, -0.48076922]], [[np.nan, np.nan]]],
-            [[[np.nan, np.nan]], [[1.0, 0.0]], [[1.0, 0.0]], [[1.0, 0.0]], [[np.nan, np.nan]]],
-            [[[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]], [[np.nan, np.nan]]],
+            [
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, -0.45]],
+                [[np.nan, np.nan, -0.47058824]],
+                [[np.nan, np.nan, -0.48076922]],
+                [[np.nan, np.nan, np.nan]],
+            ],
+            [
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, 1.0, -0.45]],
+                [[np.nan, 1.0, -0.47058824]],
+                [[np.nan, 1.0, -0.48076922]],
+                [[np.nan, np.nan, np.nan]],
+            ],
+            [
+                [[np.nan, np.nan, np.nan]],
+                [[-0.45, 1.0, 0.0]],
+                [[-0.47058824, 1.0, 0.0]],
+                [[-0.48076922, 1.0, 0.0]],
+                [[np.nan, np.nan, np.nan]],
+            ],
+            [
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+            ],
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = {"init": 0, "range": 0}
-    left_zncc.attrs["row_disparity_source"] = {"init": -1, "range": 1}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -407,6 +477,10 @@ def data_with_disparity_negative_in_row_and_positive_in_col(
     left_zncc, right_zncc, null_disparity_grid, positive_disparity_grid, negative_disparity_grid
 ):
     """Coherent Data for test_step."""
+    col_disparity_cfg = {"init": 1, "range": 1}
+    row_disparity_cfg = {"init": -1, "range": 1}
+    left_zncc.pipe(add_disparity_grid, col_disparity_cfg, row_disparity_cfg)
+
     disparity_grids = DisparityGrids(
         col_min=null_disparity_grid,
         col_max=positive_disparity_grid,
@@ -416,45 +490,43 @@ def data_with_disparity_negative_in_row_and_positive_in_col(
     full_matching_cost = np.array(
         [
             [
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, -0.45], [np.nan, -0.460179]],
-                [[np.nan, -0.47058824], [np.nan, -0.4756515]],
-                [[np.nan, -0.48076922], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, -0.45], [np.nan, np.nan, -0.460179], [np.nan, np.nan, -0.46513027]],
+                [[np.nan, np.nan, -0.47058824], [np.nan, np.nan, -0.4756515], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, -0.48076922], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[1.0, -0.45], [0.99705446, -0.460179]],
-                [[1.0, -0.47058824], [0.99886817, -0.4756515]],
-                [[1.0, -0.48076922], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, 1.0, -0.45], [np.nan, 0.99705446, -0.460179], [np.nan, 0.99227786, -0.46513027]],
+                [[np.nan, 1.0, -0.47058824], [np.nan, 0.99886817, -0.4756515], [np.nan, np.nan, np.nan]],
+                [[np.nan, 1.0, -0.48076922], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[1.0, 0.0], [0.99705446, 0.0]],
-                [[1.0, 0.0], [0.99886817, 0.0]],
-                [[1.0, 0.0], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[-0.45, 1.0, 0.0], [-0.460179, 0.99705446, 0.0], [-0.46513027, 0.99227786, 0.0]],
+                [[-0.47058824, 1.0, 0.0], [-0.4756515, 0.99886817, 0.0], [np.nan, np.nan, np.nan]],
+                [[-0.48076922, 1.0, 0.0], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
-                [[np.nan, np.nan], [np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
             ],
         ],
         dtype=np.float32,
     )
-    left_zncc.attrs["col_disparity_source"] = {"init": 1, "range": 1}
-    left_zncc.attrs["row_disparity_source"] = {"init": -1, "range": 1}
     return StepData(
         left=left_zncc, right=right_zncc, full_matching_cost=full_matching_cost, disparity_grids=disparity_grids
     )
@@ -490,23 +562,10 @@ def cost_volumes(input_config, matching_cost_matcher, configuration):
     """Create cost_volumes."""
     img_left, img_right = create_datasets_from_inputs(input_config, roi=None)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=img_left,
-        img_right=img_right,
-        grid_min_col=np.full((5, 5), 0),
-        grid_max_col=np.full((5, 5), 1),
-        cfg=configuration,
-    )
+    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=configuration)
 
     # compute cost volumes
-    return matching_cost_matcher.compute_cost_volumes(
-        img_left=img_left,
-        img_right=img_right,
-        grid_min_col=np.full((5, 5), 0),
-        grid_max_col=np.full((5, 5), 1),
-        grid_min_row=np.full((5, 5), -1),
-        grid_max_row=np.full((5, 5), 0),
-    )
+    return matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
 
 @pytest.fixture()

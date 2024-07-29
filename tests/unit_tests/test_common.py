@@ -301,20 +301,11 @@ class TestDatasetDispMaps:
         matching_cost_matcher.allocate_cost_volume_pandora(
             img_left=img_left,
             img_right=img_right,
-            grid_min_col=np.full((3, 3), 0),
-            grid_max_col=np.full((3, 3), 4),
             cfg=cfg,
         )
 
         # compute cost volumes
-        cvs = matching_cost_matcher.compute_cost_volumes(
-            img_left=img_left,
-            img_right=img_right,
-            grid_min_col=np.full((3, 3), 0),
-            grid_max_col=np.full((3, 3), 4),
-            grid_min_row=np.full((3, 3), -1),
-            grid_max_row=np.full((3, 3), 3),
-        )
+        cvs = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -9999}
         disparity_matcher = disparity.Disparity(cfg_disp)

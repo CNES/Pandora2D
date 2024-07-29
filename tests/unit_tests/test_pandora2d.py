@@ -82,18 +82,6 @@ class TestPandora2D:
         assert pandora2d_machine.left_img == img_left
         assert pandora2d_machine.right_img == img_right
         assert pandora2d_machine.completed_cfg == input_config
-        np.testing.assert_array_equal(
-            pandora2d_machine.disp_min_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), -1)
-        )
-        np.testing.assert_array_equal(
-            pandora2d_machine.disp_max_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), 3)
-        )
-        np.testing.assert_array_equal(
-            pandora2d_machine.disp_min_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), -1)
-        )
-        np.testing.assert_array_equal(
-            pandora2d_machine.disp_max_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), 3)
-        )
 
     @pytest.mark.parametrize(
         ["refinement_config", "expected"],

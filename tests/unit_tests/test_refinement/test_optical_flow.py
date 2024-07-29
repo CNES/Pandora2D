@@ -31,6 +31,7 @@ from json_checker.core.exceptions import DictCheckerError
 from pandora.margins import Margins
 from pandora2d import refinement, common, matching_cost, disparity
 from pandora2d.refinement.optical_flow import OpticalFlow
+from pandora2d.img_tools import add_disparity_grid
 
 
 @pytest.fixture()
@@ -457,11 +458,9 @@ def make_img_dataset(data, shift=0):
             "valid_pixels": 0,
             "no_data_mask": 1,
             "crs": None,
-            "col_disparity_source": [-2, 2],
-            "row_disparity_source": [-2, 2],
             "invalid_disparity": np.nan,
         },
-    )
+    ).pipe(add_disparity_grid, {"init": 0, "range": 2}, {"init": 0, "range": 2})
 
 
 @pytest.fixture()
@@ -475,22 +474,14 @@ def make_cv_dataset(dataset_img, dataset_img_shift, cfg_mc):
     Instantiate a cost volume dataset
     """
     matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
-    grid_min_col = np.full((3, 3), -2)
-    grid_max_col = np.full((3, 3), 2)
-    grid_min_row = np.full((3, 3), -2)
-    grid_max_row = np.full((3, 3), 2)
 
     matching_cost_matcher.allocate_cost_volume_pandora(
         img_left=dataset_img,
         img_right=dataset_img_shift,
-        grid_min_col=grid_min_col,
-        grid_max_col=grid_max_col,
         cfg=cfg_mc,
     )
 
-    dataset_cv = matching_cost_matcher.compute_cost_volumes(
-        dataset_img, dataset_img_shift, grid_min_col, grid_max_col, grid_min_row, grid_max_row
-    )
+    dataset_cv = matching_cost_matcher.compute_cost_volumes(dataset_img, dataset_img_shift)
     return dataset_cv
 
 
