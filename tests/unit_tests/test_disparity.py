@@ -34,6 +34,7 @@ import json_checker
 
 from pandora.margins import Margins
 from pandora2d import matching_cost, disparity
+from pandora2d.img_tools import add_left_disparity_grid
 
 
 class TestCheckConf:
@@ -113,21 +114,14 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
     """
     Test the min_split function
     """
-
-    left, right = left_stereo_object, right_stereo_object
-
     # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min -1, dispy_max 0
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 1}}}
     matching_cost_test = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
-    grid_min_col = np.full((3, 3), 0)
-    grid_max_col = np.full((3, 3), 1)
-    grid_min_row = np.full((3, 3), -1)
-    grid_max_row = np.full((3, 3), 0)
-    matching_cost_test.allocate_cost_volume_pandora(
-        img_left=left, img_right=right, grid_min_col=grid_min_col, grid_max_col=grid_max_col, cfg=cfg
-    )
-    cvs = matching_cost_test.compute_cost_volumes(left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row)
+    left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 1)
+    left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
+    matching_cost_test.allocate_cost_volume_pandora(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
+    cvs = matching_cost_test.compute_cost_volumes(left_stereo_object, right_stereo_object)
 
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
     # searching along dispy axis
@@ -166,20 +160,14 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
 
     matching_cost_test = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
-    grid_min_col = np.full((3, 3), 0)
-    grid_max_col = np.full((3, 3), 1)
-    grid_min_row = np.full((3, 3), -1)
-    grid_max_row = np.full((3, 3), 0)
+    left_arg["col_disparity"][1, :, :] = np.full((5, 5), 1)
+    left_arg["row_disparity"][0, :, :] = np.full((5, 5), -1)
     matching_cost_test.allocate_cost_volume_pandora(
         img_left=left_arg,
         img_right=right_arg,
-        grid_min_col=grid_min_col,
-        grid_max_col=grid_max_col,
         cfg=cfg,
     )
-    cvs = matching_cost_test.compute_cost_volumes(
-        left_arg, right_arg, grid_min_col, grid_max_col, grid_min_row, grid_max_row
-    )
+    cvs = matching_cost_test.compute_cost_volumes(left_arg, right_arg)
 
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
     # searching along dispy axis
@@ -189,153 +177,99 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
     np.testing.assert_allclose(min_tensor, expected_result, atol=1e-06)
 
 
+@pytest.fixture()
+def default_attributs():
+    return {
+        "no_data_img": -9999,
+        "valid_pixels": 0,
+        "no_data_mask": 1,
+        "crs": None,
+        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+    }
+
+
+@pytest.fixture()
+def cfg_mc():
+    # create matching_cost object with measure = ssd, window_size = 1
+    return {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
+
+
+def matching_cost_obj(cfg):
+    return matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+
+
+@pytest.fixture()
+def disparity_matcher():
+    # create disparity object with WTA method
+    cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
+    return disparity.Disparity(cfg_disp)
+
+
+@pytest.fixture()
+def img_left(default_attributs, data_left, disparity_cfg):
+    left = xr.Dataset(
+        {"im": (["row", "col"], data_left)},
+        coords={"row": np.arange(data_left.shape[0]), "col": np.arange(data_left.shape[1])},
+    )
+    left.attrs = default_attributs
+    left.pipe(add_left_disparity_grid, disparity_cfg)
+    return left
+
+
+@pytest.fixture()
+def img_right(default_attributs, data_right):
+    right = xr.Dataset(
+        {"im": (["row", "col"], data_right)},
+        coords={"row": np.arange(data_right.shape[0]), "col": np.arange(data_right.shape[1])},
+    )
+    right.attrs = default_attributs
+    return right
+
+
 @pytest.mark.parametrize(
     "margins",
     [
         None,
         Margins(0, 0, 0, 0),
-        Margins(0, 0, 1, 1),
+        Margins(1, 0, 1, 0),
         Margins(1, 1, 1, 1),
-        pytest.param(
-            Margins(3, 3, 3, 3),
-        ),
-        pytest.param(
-            Margins(1, 2, 3, 4),
-        ),
+        Margins(3, 3, 3, 3),
+        Margins(1, 2, 3, 4),
     ],
 )
-def test_compute_disparity_map_row(margins):
-    """
-    Test function for disparity computation
-    """
-    data = np.array(
-        ([[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]),
-        dtype=np.float64,
-    )
-    mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
-    left = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    left.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": {"init": 0, "range": 2},
-        "row_disparity_source": {"init": 0, "range": 2},
-    }
-
-    data = np.array(
-        [[5, 6, 7, 8], [1, 2, 3, 4], [9, 10, 11, 12]],
-        dtype=np.float64,
-    )
-    mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
-    right = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    right.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-    }
-
-    ground_truth_col = np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
-
-    ground_truth_row = np.array([[2, 2, 2, 2], [-1, -1, -1, -1], [-1, -1, -1, -1]])
-
-    # create matching_cost object with measure = ssd, window_size = 1
-    cfg_mc = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
-
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
-    # create disparity object with WTA method
-    cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
-    disparity_matcher = disparity.Disparity(cfg_disp)
-
-    grid_min_col = np.full((3, 4), -2)
-    grid_max_col = np.full((3, 4), 2)
-    grid_min_row = np.full((3, 4), -2)
-    grid_max_row = np.full((3, 4), 2)
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left,
-        img_right=right,
-        grid_min_col=grid_min_col,
-        grid_max_col=grid_max_col,
-        cfg=cfg_mc,
-        margins=margins,
-    )
-    cvs = matching_cost_matcher.compute_cost_volumes(
-        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, margins
-    )
-
-    delta_x, delta_y, _ = disparity_matcher.compute_disp_maps(cvs)
-
-    np.testing.assert_array_equal(ground_truth_col, delta_x)
-    np.testing.assert_array_equal(ground_truth_row, delta_y)
-
-
 @pytest.mark.parametrize(
-    "margins",
+    ["data_left", "data_right", "ground_truth_row", "ground_truth_col", "disparity_cfg"],
     [
-        None,
-        Margins(0, 0, 0, 0),
-        Margins(1, 0, 1, 0),
         pytest.param(
-            Margins(3, 3, 3, 3),
+            np.array(([[5, 6, 7, 8], [1, 2, 3, 4], [9, 10, 11, 12]]), dtype=np.float64),
+            np.array(([[8, 5, 6, 7], [4, 1, 2, 3], [12, 9, 10, 11]]), dtype=np.float64),
+            np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            np.array([[1, 1, 1, -3], [1, 1, 1, -3], [1, 1, 1, -3]]),
+            {"col_disparity": {"init": 0, "range": 3}, "row_disparity": {"init": 0, "range": 3}},
+            id="disparity_map_col",
         ),
         pytest.param(
-            Margins(1, 2, 3, 4),
+            np.array(([[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]), dtype=np.float64),
+            np.array(([[5, 6, 7, 8], [1, 2, 3, 4], [9, 10, 11, 12]]), dtype=np.float64),
+            np.array([[2, 2, 2, 2], [-1, -1, -1, -1], [-1, -1, -1, -1]]),
+            np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            {"col_disparity": {"init": 0, "range": 2}, "row_disparity": {"init": 0, "range": 2}},
+            id="disparity_map_row",
+        ),
+        pytest.param(
+            np.array(([[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]), dtype=np.float64),
+            np.array(([[8, 5, 6, 7], [4, 1, 2, 3], [12, 9, 10, 11]]), dtype=np.float64),
+            np.array([[2, 2, 2, 2], [-1, -1, -1, -1], [-1, -1, -1, -1]]),
+            np.array([[1, 1, 1, -3], [1, 1, 1, -3], [1, 1, 1, -3]]),
+            {"col_disparity": {"init": 0, "range": 3}, "row_disparity": {"init": 0, "range": 3}},
+            id="disparity_map_col_row",
         ),
     ],
 )
-def test_compute_disparity_map_col(margins):
+def test_compute_disparity_map(margins, img_left, img_right, ground_truth_row, ground_truth_col):
     """
     Test function for disparity computation
     """
-    data = np.array(
-        ([[5, 6, 7, 8], [1, 2, 3, 4], [9, 10, 11, 12]]),
-        dtype=np.float64,
-    )
-    mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
-    left = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    left.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": {"init": 0, "range": 3},
-        "row_disparity_source": {"init": 0, "range": 3},
-    }
-
-    data = np.array(
-        [[8, 5, 6, 7], [4, 1, 2, 3], [12, 9, 10, 11]],
-        dtype=np.float64,
-    )
-    mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
-    right = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    right.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-    }
-
-    ground_truth_row = np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
-
-    ground_truth_col = np.array([[1, 1, 1, -3], [1, 1, 1, -3], [1, 1, 1, -3]])
-
     # create matching_cost object with measure = ssd, window_size = 1
     cfg_mc = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
     matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
@@ -343,108 +277,13 @@ def test_compute_disparity_map_col(margins):
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
 
-    grid_min_col = np.full((3, 4), -3)
-    grid_max_col = np.full((3, 4), 3)
-    grid_min_row = np.full((3, 4), -3)
-    grid_max_row = np.full((3, 4), 3)
     matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left,
-        img_right=right,
-        grid_min_col=grid_min_col,
-        grid_max_col=grid_max_col,
+        img_left=img_left,
+        img_right=img_right,
         cfg=cfg_mc,
         margins=margins,
     )
-    cvs = matching_cost_matcher.compute_cost_volumes(
-        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, margins
-    )
-
-    delta_x, delta_y, _ = disparity_matcher.compute_disp_maps(cvs)
-
-    np.testing.assert_array_equal(ground_truth_col, delta_x)
-    np.testing.assert_array_equal(ground_truth_row, delta_y)
-
-
-@pytest.mark.parametrize(
-    "margins",
-    [
-        None,
-        Margins(0, 0, 0, 0),
-        Margins(1, 0, 1, 0),
-        pytest.param(
-            Margins(3, 3, 3, 3),
-        ),
-        pytest.param(
-            Margins(1, 2, 3, 4),
-        ),
-    ],
-)
-def test_compute_disparity_map_col_row(margins):
-    """
-    Test function for disparity computation
-    """
-    data = np.array(
-        ([[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]),
-        dtype=np.float64,
-    )
-    mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
-    left = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    left.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": {"init": 0, "range": 3},
-        "row_disparity_source": {"init": 0, "range": 3},
-    }
-
-    data = np.array(
-        [[8, 5, 6, 7], [4, 1, 2, 3], [12, 9, 10, 11]],
-        dtype=np.float64,
-    )
-    mask = np.array(([0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]), dtype=np.int16)
-    right = xr.Dataset(
-        {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-    )
-    right.attrs = {
-        "no_data_img": -9999,
-        "valid_pixels": 0,
-        "no_data_mask": 1,
-        "crs": None,
-        "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-    }
-
-    ground_truth_row = np.array([[2, 2, 2, 2], [-1, -1, -1, -1], [-1, -1, -1, -1]])
-
-    ground_truth_col = np.array([[1, 1, 1, -3], [1, 1, 1, -3], [1, 1, 1, -3]])
-
-    # create matching_cost object with measure = ssd, window_size = 1
-    cfg_mc = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
-    # create disparity object with WTA method
-    cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
-    disparity_matcher = disparity.Disparity(cfg_disp)
-
-    grid_min_col = np.full((3, 4), -3)
-    grid_max_col = np.full((3, 4), 3)
-    grid_min_row = np.full((3, 4), -3)
-    grid_max_row = np.full((3, 4), 3)
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left,
-        img_right=right,
-        grid_min_col=grid_min_col,
-        grid_max_col=grid_max_col,
-        cfg=cfg_mc,
-        margins=margins,
-    )
-    cvs = matching_cost_matcher.compute_cost_volumes(
-        left, right, grid_min_col, grid_max_col, grid_min_row, grid_max_row, margins
-    )
+    cvs = matching_cost_matcher.compute_cost_volumes(img_left, img_right, margins)
 
     delta_x, delta_y, _ = disparity_matcher.compute_disp_maps(cvs)
 
