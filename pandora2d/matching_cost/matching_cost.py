@@ -207,8 +207,6 @@ class MatchingCost:
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        grid_min_col: np.ndarray,
-        grid_max_col: np.ndarray,
         cfg: Dict,
         margins: Margins = None,
     ) -> None:
@@ -220,10 +218,6 @@ class MatchingCost:
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_left: xr.Dataset
-        :param grid_min_col: grid containing min disparities for columns.
-        :type grid_min_col: np.ndarray
-        :param grid_max_col: grid containing max disparities for columns.
-        :type grid_max_col: np.ndarray
         :param cfg: matching_cost computation configuration
         :type cfg: Dict
         :param margins: refinement margins
@@ -232,6 +226,8 @@ class MatchingCost:
         """
         # Adapt Pandora matching cost configuration
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
+        grid_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
+        grid_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
 
         if margins is not None:
             grid_min_col -= margins.left
@@ -276,10 +272,6 @@ class MatchingCost:
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        grid_min_col: np.ndarray,
-        grid_max_col: np.ndarray,
-        grid_min_row: np.ndarray,
-        grid_max_row: np.ndarray,
         margins: Margins = None,
     ) -> xr.Dataset:
         """
@@ -312,8 +304,14 @@ class MatchingCost:
 
         # Adapt Pandora matching cost configuration
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
+        grid_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
+        grid_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
+        grid_min_row = img_left["row_disparity"].sel(band_disp="min").data.copy()
+        grid_max_row = img_left["row_disparity"].sel(band_disp="max").data.copy()
 
         if margins is not None:
+            grid_min_col -= margins.left
+            grid_max_col += margins.right
             grid_min_row -= margins.up
             grid_max_row += margins.down
 
