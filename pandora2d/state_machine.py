@@ -27,7 +27,6 @@ import copy
 import logging
 from typing import TYPE_CHECKING, Dict, List, Literal, Optional, TypedDict, Union
 
-import numpy as np
 import xarray as xr
 from typing_extensions import Annotated
 
@@ -109,12 +108,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.left_img: Optional[xr.Dataset] = None
         # Right image
         self.right_img: Optional[xr.Dataset] = None
-        # Column's min, max disparities
-        self.disp_min_col: np.ndarray = None
-        self.disp_max_col: np.ndarray = None
-        # Row's min, max disparities
-        self.disp_min_row: np.ndarray = None
-        self.disp_max_row: np.ndarray = None
 
         self.pipeline_cfg: Dict = {"pipeline": {}}
         self.completed_cfg: Dict = {}
@@ -162,12 +155,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         self.left_img = img_left
         self.right_img = img_right
-        # Column's min, max disparities
-        self.disp_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
-        self.disp_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
-        # Row's min, max disparities
-        self.disp_min_row = img_left["row_disparity"].sel(band_disp="min").data.copy()
-        self.disp_max_row = img_left["row_disparity"].sel(band_disp="max").data.copy()
         self.completed_cfg = copy.copy(cfg)
 
         self.add_transitions(self._transitions_run)
@@ -320,7 +307,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
 
         self.matching_cost_.allocate_cost_volume_pandora(
-            self.left_img, self.right_img, self.disp_min_col, self.disp_max_col, cfg, self.margins.get("refinement")
+            self.left_img, self.right_img, cfg, self.margins.get("refinement")
         )
 
     def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
@@ -340,12 +327,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         row_disparity, col_disparity, shifts, extra_dict = estimation_.compute_estimation(self.left_img, self.right_img)
 
         self.left_img = img_tools.add_disparity_grid(self.left_img, col_disparity, row_disparity)
-        # Column's min, max disparities
-        self.disp_min_col = self.left_img["col_disparity"].sel(band_disp="min").data
-        self.disp_max_col = self.left_img["col_disparity"].sel(band_disp="max").data
-        # Row's min, max disparities
-        self.disp_min_row = self.left_img["row_disparity"].sel(band_disp="min").data
-        self.disp_max_row = self.left_img["row_disparity"].sel(band_disp="max").data
 
         self.completed_cfg = estimation_.update_cfg_with_estimation(
             cfg, col_disparity, row_disparity, shifts, extra_dict
@@ -363,10 +344,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.cost_volumes = self.matching_cost_.compute_cost_volumes(
             self.left_img,
             self.right_img,
-            self.disp_min_col,
-            self.disp_max_col,
-            self.disp_min_row,
-            self.disp_max_row,
             self.margins.get("refinement"),
         )
 

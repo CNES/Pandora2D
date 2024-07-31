@@ -27,6 +27,7 @@ import pytest
 from skimage.io import imsave
 
 from pandora2d import Pandora2DMachine
+from pandora2d.img_tools import add_left_disparity_grid
 
 
 @pytest.fixture()
@@ -178,12 +179,12 @@ def left_stereo_object():
         "valid_pixels": 0,
         "no_data_mask": 1,
         "crs": None,
-        "col_disparity_source": {"init": 1, "range": 1},
-        "row_disparity_source": {"init": -1, "range": 1},
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
     }
 
-    return left
+    return left.pipe(
+        add_left_disparity_grid, {"col_disparity": {"init": 1, "range": 1}, "row_disparity": {"init": -1, "range": 1}}
+    )
 
 
 @pytest.fixture()
@@ -233,8 +234,6 @@ def stereo_object_with_args():
         "valid_pixels": 0,
         "no_data_mask": 1,
         "crs": None,
-        "col_disparity_source": {"init": 1, "range": 1},
-        "row_disparity_source": {"init": -1, "range": 1},
     }
 
     data = np.array(
@@ -255,4 +254,10 @@ def stereo_object_with_args():
         "crs": None,
     }
 
-    return left_arg, right_arg
+    return (
+        left_arg.pipe(
+            add_left_disparity_grid,
+            {"col_disparity": {"init": 1, "range": 1}, "row_disparity": {"init": -1, "range": 1}},
+        ),
+        right_arg,
+    )
