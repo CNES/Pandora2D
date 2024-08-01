@@ -38,6 +38,7 @@ from pandora2d.interpolation_filter.bicubic import Bicubic
 
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
+# pylint: disable=too-many-lines
 
 
 @pytest.fixture()
@@ -78,6 +79,55 @@ def type_measure():
 @pytest.fixture()
 def subpixel():
     return 1
+
+
+# Once the criteria for identifying extremas at the edge of disparity ranges has been implemented,
+# this fixture could possibly be removed.
+@pytest.fixture()
+def left_img(rows, cols, min_disparity_row, max_disparity_row, min_disparity_col, max_disparity_col):
+    """
+    Creates a left image dataset
+    """
+
+    img = xr.Dataset(
+        {"im": (["row", "col"], np.full((rows.size, cols.size), 0))},
+        coords={"row": rows, "col": cols},
+    )
+
+    d_min_col = np.full((rows.size, cols.size), min_disparity_col)
+    d_max_col = np.full((rows.size, cols.size), max_disparity_col)
+    d_min_row = np.full((rows.size, cols.size), min_disparity_row)
+    d_max_row = np.full((rows.size, cols.size), max_disparity_row)
+
+    # Once the variable disparity grids have been introduced into pandora2d,
+    # it will be possible to call a method such as add_disparity_grid
+    # to complete img with uniform or non-uniform disparity grids.
+
+    # Here, it is completed by hand because the disparity range is even.
+    img["col_disparity"] = xr.DataArray(
+        np.array([d_min_col, d_max_col]),
+        dims=["band_disp", "row", "col"],
+        coords={"band_disp": ["min", "max"]},
+    )
+
+    img["row_disparity"] = xr.DataArray(
+        np.array([d_min_row, d_max_row]),
+        dims=["band_disp", "row", "col"],
+        coords={"band_disp": ["min", "max"]},
+    )
+
+    img.attrs.update(
+        {
+            "no_data_img": -9999,
+            "valid_pixels": 0,
+            "no_data_mask": 1,
+            "crs": None,
+            "row_disparity_source": [np.min(d_min_row), np.max(d_max_row)],
+            "col_disparity_source": [np.min(d_min_col), np.max(d_max_col)],
+        }
+    )
+
+    return img
 
 
 @pytest.fixture()
@@ -344,7 +394,7 @@ class TestRefinementMethod:
     @pytest.mark.parametrize("subpixel", [1, 2])
     @pytest.mark.parametrize(["iterations", "precision"], [[1, 0.5], [2, 0.25], [3, 0.125]])
     def test_precision_is_logged(
-        self, cost_volumes, disp_map, dichotomy_instance, precision, mocker: MockerFixture, caplog
+        self, cost_volumes, disp_map, dichotomy_instance, precision, left_img, mocker: MockerFixture, caplog
     ):
         """
         Description : Precision should be logged.
@@ -352,7 +402,7 @@ class TestRefinementMethod:
         Requirement : EX_REF_DICH_01
         """
         with caplog.at_level(logging.INFO):
-            dichotomy_instance.refinement_method(cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY)
+            dichotomy_instance.refinement_method(cost_volumes, disp_map, left_img, img_right=mocker.ANY)
         assert ("root", logging.INFO, f"Dichotomy precision reached: {precision}") in caplog.record_tuples
 
     @pytest.mark.parametrize(
@@ -363,7 +413,7 @@ class TestRefinementMethod:
         ],
     )
     def test_which_cost_selection_method_is_used(
-        self, dichotomy_instance, cost_volumes, disp_map, type_measure, expected, mocker: MockerFixture
+        self, dichotomy_instance, cost_volumes, disp_map, left_img, type_measure, expected, mocker: MockerFixture
     ):
         """Test cost_volume's type_measure attrs determines which cost_selection_method is used."""
         cost_volumes.attrs["type_measure"] = type_measure
@@ -373,7 +423,7 @@ class TestRefinementMethod:
             return_value=(refinement.dichotomy.Point(0, 0), 0, 0, 0),
         )
 
-        dichotomy_instance.refinement_method(cost_volumes, disp_map, img_left=mocker.ANY, img_right=mocker.ANY)
+        dichotomy_instance.refinement_method(cost_volumes, disp_map, left_img, img_right=mocker.ANY)
 
         mocked_search_new_best_point.assert_called_with(
             cost_surface=mocker.ANY,
@@ -385,13 +435,13 @@ class TestRefinementMethod:
             cost_selection_method=expected,
         )
 
-    def test_result_of_one_iteration(self, dichotomy_instance, cost_volumes, disp_map, mocker: MockerFixture):
+    def test_result_of_one_iteration(self, dichotomy_instance, cost_volumes, disp_map, left_img, mocker: MockerFixture):
         """Test result of refinement method is as expected."""
 
         copy_disp_map = copy.deepcopy(disp_map)
 
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, img_left=mocker.ANY, img_right=mocker.ANY
+            cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
         )
 
         assert result_disp_col[0, 2] == disp_map["col_map"][0, 2] + 0.5
@@ -400,13 +450,15 @@ class TestRefinementMethod:
         assert result_disp_col[1, 0] == disp_map["col_map"][1, 0] - 0.5
 
     @pytest.mark.parametrize("iterations", [2])
-    def test_result_of_two_iterations(self, dichotomy_instance, cost_volumes, disp_map, mocker: MockerFixture):
+    def test_result_of_two_iterations(
+        self, dichotomy_instance, cost_volumes, left_img, disp_map, mocker: MockerFixture
+    ):
         """Test result of refinement method is as expected."""
 
         copy_disp_map = copy.deepcopy(disp_map)
 
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, img_left=mocker.ANY, img_right=mocker.ANY
+            cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
         )
 
         # Different results from the spline filter
@@ -415,7 +467,7 @@ class TestRefinementMethod:
         assert result_disp_row[1, 0] == disp_map["row_map"][1, 0]
         assert result_disp_col[1, 0] == disp_map["col_map"][1, 0] - 0.25
 
-    def test_with_nans_in_disp_map(self, dichotomy_instance, cost_volumes, disp_map, mocker: MockerFixture):
+    def test_with_nans_in_disp_map(self, dichotomy_instance, cost_volumes, disp_map, left_img, mocker: MockerFixture):
         """Test that even with NaNs in disparity maps we can extract values from cost_volumes."""
         # Convert disp_map to float so that it can store NaNs:
         disp_map = disp_map.astype(np.float32)
@@ -425,7 +477,7 @@ class TestRefinementMethod:
         copy_disp_map = copy.deepcopy(disp_map)
 
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, img_left=mocker.ANY, img_right=mocker.ANY
+            cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
         )
 
         assert result_disp_row[0, 2] == disp_map["row_map"][0, 2] - 0.5
@@ -435,7 +487,7 @@ class TestRefinementMethod:
 
     @pytest.mark.parametrize("invalid_disparity", [-9999])
     def test_with_invalid_values_in_disp_map(
-        self, dichotomy_instance, cost_volumes, disp_map, invalid_disparity, mocker: MockerFixture
+        self, dichotomy_instance, cost_volumes, disp_map, left_img, invalid_disparity, mocker: MockerFixture
     ):
         """Test that even with invalid values in disparity maps we can extract other values from cost_volumes."""
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
@@ -447,7 +499,7 @@ class TestRefinementMethod:
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
             cost_volumes,
             copy_disp_map,
-            img_left=mocker.ANY,
+            left_img,
             img_right=mocker.ANY,
         )
 
@@ -463,6 +515,7 @@ class TestRefinementMethod:
         dichotomy_instance,
         cost_volumes,
         disp_map,
+        left_img,
         min_disparity_row,
         min_disparity_col,
         max_disparity_row,
@@ -479,7 +532,7 @@ class TestRefinementMethod:
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
             cost_volumes,
             disp_map,
-            img_left=mocker.ANY,
+            left_img,
             img_right=mocker.ANY,
         )
 
@@ -497,8 +550,16 @@ class TestRefinementMethod:
             pytest.param(8, 3, 3),
         ],
     )
-    def test_skip_iterations_with_subpixel(
-        self, dichotomy_instance, cost_volumes, disp_map, subpixel, nb_of_skipped, caplog, mocker: MockerFixture
+    def test_skip_iterations_with_subpixel(  # pylint: disable=too-many-arguments
+        self,
+        dichotomy_instance,
+        cost_volumes,
+        disp_map,
+        left_img,
+        subpixel,
+        nb_of_skipped,
+        caplog,
+        mocker: MockerFixture,
     ):
         """First iterations must be skipped since precision is already reached by subpixel."""
         result_disp_map = copy.deepcopy(disp_map)
@@ -506,7 +567,7 @@ class TestRefinementMethod:
             result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
                 cost_volumes,
                 result_disp_map,
-                img_left=mocker.ANY,
+                img_left=left_img,
                 img_right=mocker.ANY,
             )
 
