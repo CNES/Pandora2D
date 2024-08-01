@@ -34,14 +34,16 @@ except ImportError:
     from xarray import Coordinate as Coordinates
 
 import os
-from typing import Dict
+from typing import Dict, Union
 import xarray as xr
 import numpy as np
+from numpy.typing import NDArray
 
 from rasterio import Affine
 
 from pandora.common import mkdir_p, write_data_array
 from pandora2d.img_tools import remove_roi_margins
+from pandora2d.constants import Criteria
 
 
 def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
@@ -145,3 +147,77 @@ def dataset_disp_maps(
         dataset.attrs = attributes
 
     return dataset
+
+
+def set_out_of_row_disparity_range_to_other_value(
+    data: xr.Dataset,
+    min_disp_grid: NDArray[np.floating],
+    max_disp_grid: NDArray[np.floating],
+    value: Union[int, float, Criteria],
+    data_var_name: str,
+):
+    """
+    Put special value in data (cost_volumes or criteria_dataset) where the disparity is out of the range defined
+    by disparity grids.
+
+    The operation is done inplace.
+
+    :param data: cost_volumes or criteria_dataset to modify.
+    :type data: xr.Dataset 4D
+    :param min_disp_grid: grid of min disparity.
+    :type min_disp_grid: NDArray[np.floating]
+    :param max_disp_grid: grid of max disparity.
+    :type max_disp_grid: NDArray[np.floating]
+    :param value: value to set on data.
+    :type value: Union[int, float, Criteria]
+    :param data_var_name: name of xarray.DataArray to set new value.
+    :type data_var_name: str
+    """
+    # WARNING: if one day we switch disp_row with disp_col index should be -2
+    ndisp_row = data[data_var_name].shape[-1]
+
+    for disp_row in range(ndisp_row):
+        masking = np.nonzero(
+            np.logical_or(
+                data.coords["disp_row"].data[disp_row] < min_disp_grid,
+                data.coords["disp_row"].data[disp_row] > max_disp_grid,
+            )
+        )
+        data[data_var_name].data[masking[0], masking[1], :, disp_row] = value
+
+
+def set_out_of_col_disparity_range_to_other_value(
+    data: xr.Dataset,
+    min_disp_grid: NDArray[np.floating],
+    max_disp_grid: NDArray[np.floating],
+    value: Union[int, float, Criteria],
+    data_var_name: str,
+):
+    """
+    Put special value in data (cost_volumes or criteria_dataset) where the disparity is out of the range defined
+    by disparity grids.
+
+    The operation is done inplace.
+
+    :param data: cost_volumes or criteria_dataset to modify.
+    :type data: xr.Dataset 4D
+    :param min_disp_grid: grid of min disparity.
+    :type min_disp_grid: NDArray[np.floating]
+    :param max_disp_grid: grid of max disparity.
+    :type max_disp_grid: NDArray[np.floating]
+    :param value: value to set on data.
+    :type value: Union[int, float, Criteria]
+    :param data_var_name: name of xarray.DataArray to set new value.
+    :type data_var_name: str
+    """
+    # WARNING: if one day we switch disp_row with disp_col index should be -1
+    ndisp_col = data[data_var_name].shape[-2]
+
+    for disp_col in range(ndisp_col):
+        masking = np.nonzero(
+            np.logical_or(
+                data.coords["disp_col"].data[disp_col] < min_disp_grid,
+                data.coords["disp_col"].data[disp_col] > max_disp_grid,
+            )
+        )
+        data[data_var_name].data[masking[0], masking[1], disp_col, :] = value
