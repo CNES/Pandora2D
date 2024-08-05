@@ -50,14 +50,14 @@ class TestDisparityMargins:
 
         add_disparity_grid(left, {"init": 2, "range": 1}, {"init": 0, "range": 2})
 
-        left.attrs = {
-            "no_data_img": -9999,
-            "valid_pixels": 0,
-            "no_data_mask": 1,
-            "crs": None,
-            "col_disparity_source": {"init": 2, "range": 1},
-            "row_disparity_source": {"init": 0, "range": 2},
-        }
+        left.attrs.update(
+            {
+                "no_data_img": -9999,
+                "valid_pixels": 0,
+                "no_data_mask": 1,
+                "crs": None,
+            }
+        )
 
         data = np.full((10, 10), 1)
         right = xr.Dataset(
@@ -70,8 +70,6 @@ class TestDisparityMargins:
             "valid_pixels": 0,
             "no_data_mask": 1,
             "crs": None,
-            "col_disparity_source": {"init": 2, "range": 1},
-            "row_disparity_source": {"init": 0, "range": 2},
         }
 
         return left, right
