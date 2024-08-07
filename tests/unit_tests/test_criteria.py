@@ -242,3 +242,89 @@ class TestMaskBorder:
         assert np.all(criteria_dataset.criteria.data[-offset:, :, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
         assert np.all(criteria_dataset.criteria.data[:, :offset, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
         assert np.all(criteria_dataset.criteria.data[:, -offset:, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
+
+
+class TestMaskDisparityOutsideRightImage:
+    """Test mask_disparity_outside_right_image method."""
+
+    @pytest.fixture()
+    def offset(self, cost_volumes):
+        return cost_volumes.offset_row_col
+
+    @pytest.fixture()
+    def ground_truth_null_disparity(self, offset, img_size):
+        """Make ground_truth of criteria dataset for null disparity"""
+        data = np.full(img_size, Criteria.VALID)
+        if offset > 0:
+            data[:offset, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[-offset:, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[:, :offset] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[:, -offset:] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        return data
+
+    @pytest.fixture()
+    def ground_truth_first_disparity(self, cost_volumes, offset, img_size):
+        """
+        Make ground_truth of criteria dataset for first disparity (disp_col=-5 and disp_row=-1)
+
+        Example for window_size = 3 -> offset = 1, disp_col=-5 & disp_row=-1 & img_size = (10, 13)
+        data = ([
+                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+                [8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0]
+            ])
+
+        Example for window_size = 5 -> offset = 2, disp_col=-5 & disp_row=-1 & img_size = (10, 13)
+        data = ([
+                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+                [8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0],
+                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
+            ])
+        """
+        data = np.full(img_size, Criteria.VALID)
+        # Update row
+        delta_row_start = offset + abs(cost_volumes.disp_row.values[0])
+        delta_row_end = offset + cost_volumes.disp_row.values[0]
+        data[:delta_row_start, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        if delta_row_end > 0:
+            data[-delta_row_end:, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        # Udpate col
+        delta_col_start = offset + abs(cost_volumes.disp_col.values[0])
+        delta_col_end = offset + cost_volumes.disp_col.values[0]
+        data[:, :delta_col_start] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        if delta_col_end > 0:
+            data[:, -delta_col_end:] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        return data
+
+    @pytest.mark.parametrize(
+        "window_size",
+        [
+            pytest.param(1, id="offset nul"),
+            pytest.param(3, id="offset == 1"),
+            pytest.param(5, id="offset == 2"),
+            pytest.param(7, id="offset == 3"),
+            pytest.param(99, id="offset > dimension"),
+        ],
+    )
+    def test_nominal(self, cost_volumes, criteria_dataset, ground_truth_null_disparity, ground_truth_first_disparity):
+        """
+        Test mask_disparity_outside_right_image
+        """
+        criteria.mask_disparity_outside_right_image(cost_volumes, criteria_dataset)
+
+        np.testing.assert_array_equal(criteria_dataset.criteria.values[:, :, 5, 1], ground_truth_null_disparity)
+        np.testing.assert_array_equal(criteria_dataset.criteria.values[:, :, 0, 0], ground_truth_first_disparity)
