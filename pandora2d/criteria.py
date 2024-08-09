@@ -102,12 +102,42 @@ def mask_border(cost_volumes: xr.Dataset, criteria_dataset: xr.Dataset):
     :type criteria_dataset: 4D xarray.Dataset
     """
 
-    offset = cost_volumes.attrs["offset_row_col"]
-
+    offset = cost_volumes.offset_row_col
     if offset > 0:
 
         # Raise criteria 0 on border of criteria_disp_col according to offset value
-        criteria_dataset["criteria"].data[:offset, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataset["criteria"].data[-offset:, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataset["criteria"].data[:, :offset, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataset["criteria"].data[:, -offset:, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataset.criteria.data[:offset, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataset.criteria.data[-offset:, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataset.criteria.data[:, :offset, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataset.criteria.data[:, -offset:, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+
+
+def mask_disparity_outside_right_image(cost_volumes: xr.Dataset, criteria_dataset: xr.Dataset):
+    """
+    This method raises PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE criteria for points with disparity dimension outside
+    the right image
+
+    :param cost_volumes: 4D xarray.Dataset
+    :type cost_volumes: 4D xarray.Dataset
+    :param criteria_dataset: 4D xarray.Dataset with all criteria
+    :type criteria_dataset: 4D xarray.Dataset
+    """
+    offset = cost_volumes.offset_row_col
+    col_coords = criteria_dataset.col.values
+    row_coords = criteria_dataset.row.values
+
+    # Condition where the window is outside the image
+    condition = (
+        (criteria_dataset.row + criteria_dataset.disp_row < row_coords[0] + offset)
+        | (criteria_dataset.row + criteria_dataset.disp_row > row_coords[-1] - offset)
+        | (criteria_dataset.col + criteria_dataset.disp_col < col_coords[0] + offset)
+        | (criteria_dataset.col + criteria_dataset.disp_col > col_coords[-1] - offset)
+    )
+
+    # Swapaxes to have same shape as cost_volumes and criteria_dataset
+    condition_swap = condition.data.swapaxes(1, 3).swapaxes(1, 2)
+
+    # Update criteria dataset
+    criteria_dataset.criteria.data[condition_swap] = (
+        criteria_dataset.criteria.data[condition_swap] | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    )
