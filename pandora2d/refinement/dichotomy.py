@@ -90,7 +90,7 @@ class Dichotomy(refinement.AbstractRefinement):
 
         return self.filter.margins
 
-    def refinement_method(
+    def refinement_method(  # pylint: disable=too-many-locals
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -137,9 +137,13 @@ class Dichotomy(refinement.AbstractRefinement):
         invalid_disparity_map_mask = invalid_row_disparity_map_mask | invalid_col_disparity_map_mask
         cost_values[invalid_disparity_map_mask] = np.nan
 
-        # row_disparity_source and col_disparity_sources contain the user disparity range
-        row_disparity_source = cost_volumes.attrs["row_disparity_source"]
-        col_disparity_source = cost_volumes.attrs["col_disparity_source"]
+        # Get disparities grid
+        # Column's min, max disparities
+        disp_min_col = img_left["col_disparity"].sel(band_disp="min").data
+        disp_max_col = img_left["col_disparity"].sel(band_disp="max").data
+        # Row's min, max disparities
+        disp_min_row = img_left["row_disparity"].sel(band_disp="min").data
+        disp_max_row = img_left["row_disparity"].sel(band_disp="max").data
 
         # start iterations after subpixel precision: `subpixel.bit_length() - 1` found which power of 2 subpixel is,
         # and we add 1 to start at next iteration
@@ -159,17 +163,39 @@ class Dichotomy(refinement.AbstractRefinement):
         # See usage of np.nditer:
         # https://numpy.org/doc/stable/reference/arrays.nditer.html#modifying-array-values
         with np.nditer(
-            [cost_values, row_map, col_map],
-            op_flags=[["readwrite"], ["readwrite"], ["readwrite"]],
+            [cost_values, row_map, col_map, disp_min_row, disp_max_row, disp_min_col, disp_max_col],
+            op_flags=[
+                ["readwrite"],
+                ["readwrite"],
+                ["readwrite"],
+                ["readonly"],
+                ["readonly"],
+                ["readonly"],
+                ["readonly"],
+            ],
         ) as iterators:
-            for cost_surface, (cost_value, disp_row_init, disp_col_init) in zip(cost_surfaces, iterators):
+            for cost_surface, (
+                cost_value,
+                disp_row_init,
+                disp_col_init,
+                d_row_min,
+                d_row_max,
+                d_col_min,
+                d_col_max,
+            ) in zip(cost_surfaces, iterators):
+
                 # Invalid value
                 if np.isnan(cost_value):
                     continue
 
-                # If the best candidate found at the disparity step is at the edge of the disparity range
+                # If the best candidate found at the disparity step is at the edge of the row disparity range
                 # we do no enter the dichotomy loop
-                if (disp_row_init in row_disparity_source) or (disp_col_init in col_disparity_source):
+                if disp_row_init in (d_row_min, d_row_max):
+                    continue
+
+                # If the best candidate found at the disparity step is at the edge of the col disparity range
+                # we do no enter the dichotomy loop
+                if disp_col_init in (d_col_min, d_col_max):
                     continue
 
                 # pos_disp_col_init corresponds to the position in the cost surface

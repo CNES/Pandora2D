@@ -21,7 +21,7 @@
 Test refinement step
 """
 
-# pylint: disable=redefined-outer-name, protected-access
+# pylint: disable=redefined-outer-name, protected-access, unused-argument
 # mypy: disable-error-code=attr-defined
 
 import numpy as np
@@ -50,8 +50,8 @@ def dataset_image():
         "valid_pixels": 0,
         "no_data_mask": 1,
         "crs": None,
-        "col_disparity_source": {"init": 1, "range": 2},
-        "row_disparity_source": {"init": 1, "range": 2},
+        "col_disparity_source": [-1, 3],
+        "row_disparity_source": [-1, 3],
         "invalid_disparity": np.nan,
     }
 
