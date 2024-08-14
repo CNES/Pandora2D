@@ -712,8 +712,8 @@ class TestDisparityGrid:
         """
         if mock_type == "not used":
             return mocker.patch(
-                "pandora2d.common.set_out_of_row_disparity_range_to_other_value",
-                side_effect=lambda x, y, z, k: x,
+                "pandora2d.matching_cost.matching_cost.set_out_of_row_disparity_range_to_other_value",
+                side_effect=lambda x, y, z, k, p: x,
             )
         if mock_type != "used":
             raise ValueError(f"Expected mock_type to be 'used' or 'not used', got {mock_type}.")
@@ -783,7 +783,6 @@ class TestDisparityGrid:
         assert np.all(result[:, :col_index] == 0)
         assert np.all(result[:, col_index + 1 :] == 0)
 
-    @pytest.mark.skip(reason="mocker does not work")
     @pytest.mark.parametrize("mock_type", ["not used"])
     def test_when_not_taken_into_account(
         self, disparity_maps, disparity_to_alter, mock_set_out_of_disparity_range_to_nan
@@ -795,6 +794,7 @@ class TestDisparityGrid:
         result = disparity_maps[disparity_to_alter]
 
         assert np.all(result == 0)
+        assert mock_set_out_of_disparity_range_to_nan.called
 
 
 class TestSubpix:
