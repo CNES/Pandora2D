@@ -40,9 +40,6 @@ Input section is composed of the following keys:
       -
       - If the estimation step is not present
 
-.. warning::
-    If interpolation is used as refinement method, row_disparity and col_disparity ranges must have a size greater than or equal to 2.
-
 
 Image (left and right) and disparity (col_disparity and row_disparity) properties are composed of the following keys:
 

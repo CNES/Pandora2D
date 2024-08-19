@@ -26,7 +26,6 @@ Test configuration
 
 import random
 import string
-import re
 import pytest
 import transitions
 import numpy as np
@@ -280,7 +279,7 @@ class TestCheckPipelineSection:
         check_configuration.check_conf(cfg, pandora2d_machine)
 
 
-class TestCheckConf:
+class TestCheckConf:  # pylint: disable=too-few-public-methods
     """Test check_conf method."""
 
     def test_passes_with_good_disparity_range_and_interpolation_step(
@@ -295,36 +294,6 @@ class TestCheckConf:
         """
         user_cfg = {**correct_input_cfg, **correct_pipeline}
         check_configuration.check_conf(user_cfg, pandora2d_machine)
-
-    @pytest.mark.parametrize(
-        ["col_disparity", "row_disparity"],
-        [
-            pytest.param({"init": 1, "range": 1}, {"init": 1, "range": 2}, id="col_disparity range too small"),
-            pytest.param({"init": 1, "range": 2}, {"init": 2, "range": 1}, id="row_disparity range too small"),
-            pytest.param(
-                {"init": 1, "range": 1}, {"init": 3, "range": 1}, id="col_disparity & row_disparity range too small"
-            ),
-        ],
-    )
-    def test_fails_with_wrong_disparity_range_and_interpolation_step(
-        self, correct_input_cfg, correct_pipeline, pandora2d_machine, col_disparity, row_disparity
-    ):
-        """
-        Description : Test wrong col_disparity & row_disparity range with interpolation step in user configuration
-        Data :
-        - Left image : cones/monoband/left.png
-        - Right image : cones/monoband/right.png
-        Requirement : EX_CONF_08
-        """
-        correct_input_cfg["input"]["col_disparity"] = col_disparity
-        correct_input_cfg["input"]["row_disparity"] = row_disparity
-        user_cfg = {**correct_input_cfg, **correct_pipeline}
-        with pytest.raises(ValueError) as err:
-            check_configuration.check_conf(user_cfg, pandora2d_machine)
-        assert (
-            " disparity range (dmax - dmin) with a size < 5 are not allowed "
-            "with interpolation refinement method" in err.value.args[0]
-        )
 
 
 class TestCheckRoiSection:
@@ -528,71 +497,6 @@ class TestCheckConfMatchingCostNodataCondition:
         """
         with pytest.raises((ValueError, DictCheckerError)):
             check_configuration.check_conf(configuration, pandora2d_machine)
-
-
-class TestCheckDisparityRangeSize:
-    """Test check_disparity_range_size method."""
-
-    @pytest.mark.parametrize(
-        ["disparity", "title", "string_match"],
-        [
-            pytest.param(
-                {"init": 1, "range": 1},
-                "Column",
-                "Column disparity range (dmax - dmin) with a size < 5 are not allowed "
-                "with interpolation refinement method",
-                id="Column disparity range < 5",
-            ),
-            pytest.param(
-                {"init": -1, "range": 1},
-                "Row",
-                "Row disparity range (dmax - dmin) with a size < 5 are not allowed "
-                "with interpolation refinement method",
-                id="Row disparity range < 5",
-            ),
-        ],
-    )
-    def test_fails_with_disparity_ranges_lower_5(self, disparity, title, string_match):
-        """
-        Description : Disparity range size must be greater than or equal to 5 when interpolation
-        is used as refinement method
-        Data :
-        Requirement : EX_CONF_08
-        """
-        with pytest.raises(ValueError, match=re.escape(string_match)):
-            check_configuration.check_disparity_range_size(disparity, title)
-
-    @pytest.mark.parametrize(
-        ["disparity", "title", "string_match"],
-        [
-            pytest.param(
-                "disparity_grid_test",
-                "Column",
-                "Grid disparities are not yet handled by Pandora2D",
-                id="Grid disparity",
-            ),
-        ],
-    )
-    def test_fails_with_grid_disparity(self, disparity, title, string_match):
-        """
-        Description : Disparity grid is not handled yet by Pandora2D
-        Data :
-        Requirement : EX_CONF_08
-        """
-        with pytest.raises(TypeError, match=string_match):
-            check_configuration.check_disparity_range_size(disparity, title)
-
-    @pytest.mark.parametrize(
-        ["disparity", "title"],
-        [
-            pytest.param({"init": 1, "range": 2}, "Col", id="Column disparity range greater than or equal to 5"),
-            pytest.param({"init": 3, "range": 2}, "Row", id="Row disparity range greater than or equal to 5"),
-        ],
-    )
-    def test_passes_with_disparity_ranges_equal_5(self, disparity, title):
-        """Disparity range size is correct"""
-
-        check_configuration.check_disparity_range_size(disparity, title)
 
 
 class TestDisparityRangeAgainstImageSize:

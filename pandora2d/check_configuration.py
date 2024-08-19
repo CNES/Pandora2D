@@ -219,14 +219,6 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     if "matching_cost" in cfg_pipeline["pipeline"]:
         check_right_nodata_condition(cfg_input, cfg_pipeline)
 
-    # The refinement step with interpolation method is not allowed with disparity ranges of size lower than 5
-    if (
-        "refinement" in cfg_pipeline["pipeline"]
-        and cfg_pipeline["pipeline"]["refinement"]["refinement_method"] == "interpolation"
-    ):
-        check_disparity_range_size(cfg_input["input"]["col_disparity"], "Column")
-        check_disparity_range_size(cfg_input["input"]["row_disparity"], "Row")
-
     cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline])
 
     return cfg
@@ -247,27 +239,6 @@ def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
         raise ValueError(
             "nodata of right image must be of type integer with sad or ssd matching_cost_method (ex: 9999)"
         )
-
-
-def check_disparity_range_size(disparity: Dict | str, title: str) -> None:
-    """
-    Check that disparity ranges (dmax - dmin) with a size < 5 are not allowed for interpolation refinement method.
-
-    :param disparity: disparity range
-    :type disparity: Dict | str
-    :param cfg_pipeline: pipeline section of configuration
-    :type cfg_pipeline: Dict
-    """
-
-    if isinstance(disparity, Dict):
-        if disparity["range"] < 2:
-            raise ValueError(
-                title + " disparity range (dmax - dmin) with a size < 5 are not allowed "
-                "with interpolation refinement method"
-            )
-
-    if isinstance(disparity, str):
-        raise TypeError("Grid disparities are not yet handled by Pandora2D")
 
 
 def check_roi_coherence(roi_cfg: dict) -> None:
