@@ -21,6 +21,8 @@
 Test refinement step
 """
 
+from typing import Dict
+
 # pylint: disable=redefined-outer-name, protected-access, unused-argument
 # mypy: disable-error-code=attr-defined
 
@@ -584,3 +586,167 @@ def test_window_size_refinement_method(make_left_right_images, row, col, step_ro
     assert np.array_equal(row, delta_row.shape[1])
     assert np.array_equal(col, delta_col.shape[0])
     assert np.array_equal(col, delta_col.shape[1])
+
+
+class TestDisparityGrids:
+    """Test influence of disparity grids."""
+
+    @pytest.fixture()
+    def nb_rows(self) -> int:
+        return 10
+
+    @pytest.fixture()
+    def nb_cols(self) -> int:
+        return 8
+
+    @pytest.fixture()
+    def image(
+        self,
+        random_generator: np.random.Generator,
+        nb_rows: int,
+        nb_cols: int,
+        min_row: bool,
+        max_row: bool,
+        min_col: bool,
+        max_col: bool,
+    ) -> xr.Dataset:
+        """
+        Create random image dataset with disparity grids with a range of 3 or 7.
+
+        :param random_generator:
+        :type random_generator: np.random.Generator
+        :param nb_rows: number of rows in the image
+        :type nb_rows: int
+        :param nb_cols: number of cols in the image
+        :type nb_cols: int
+        :param min_row: if True, row min disparities will be a mix of 1 and 3 else will be all 1.
+        :type min_row: bool
+        :param max_row: if True, row max disparities will be a mix of 6 and 8 else will be all 6.
+        :type max_row: bool
+        :param min_col: if True, col min disparities will be a mix of 1 and 3 else will be all 1.
+        :type min_col: bool
+        :param max_col: if True, col max disparities will be a mix of 6 and 8 else will be all 6.
+        :type max_col: bool
+        :return: image dataset
+        :rtype: xr.Dataset
+        """
+        shape = (nb_rows, nb_cols)
+        data = random_generator.integers(0, 255, shape, endpoint=True)
+
+        # disparity range must be odd and greater or equal to 5
+        fixed_min = np.ones(shape)
+        random_min = random_generator.choice([1, 3], shape)
+        fixed_max = np.full(shape, 6)  # with min either 1 or 3 we get range 3 or 7
+        random_max = random_min + 5
+
+        row_min_disparity = random_min if min_row else fixed_min
+        col_min_disparity = random_min if min_col else fixed_min
+        row_max_disparity = random_max if max_row else fixed_max
+        col_max_disparity = random_max if max_col else fixed_max
+
+        return xr.Dataset(
+            {
+                "im": (["row", "col"], data),
+                "row_disparity": (["band_disp", "row", "col"], np.array([row_min_disparity, row_max_disparity])),
+                "col_disparity": (["band_disp", "row", "col"], np.array([col_min_disparity, col_max_disparity])),
+            },
+            coords={"row": np.arange(nb_rows), "col": np.arange(nb_cols), "band_disp": ["min", "max"]},
+            attrs={
+                "no_data_img": -9999,
+                "valid_pixels": 0,
+                "no_data_mask": 1,
+                "crs": None,
+                "col_disparity_source": "grid_col",
+                "row_disparity_source": "grid_row",
+            },
+        )
+
+    @pytest.fixture()
+    def cfg(self) -> Dict:
+        return {
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": "ssd",
+                    "window_size": 3,
+                    "step": [1, 1],
+                    "subpix": 1,
+                }
+            }
+        }
+
+    @pytest.fixture()
+    def invalid_value(self) -> int:
+        return -99
+
+    @pytest.fixture()
+    def disparities(self, image: xr.Dataset, cfg: Dict, invalid_value) -> Dict:
+        """Execute refinement method and return disparities."""
+        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+
+        matching_cost_.allocate_cost_volume_pandora(
+            img_left=image,
+            img_right=image,
+            cfg=cfg,
+        )
+
+        cost_volumes = matching_cost_.compute_cost_volumes(
+            img_left=image,
+            img_right=image,
+        )
+
+        disparity_matcher = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": invalid_value})
+
+        disp_map_col, disp_map_row, correlation_score = disparity_matcher.compute_disp_maps(cost_volumes)
+
+        data_variables = {
+            "row_map": (("row", "col"), disp_map_row),
+            "col_map": (("row", "col"), disp_map_col),
+            "correlation_score": (("row", "col"), correlation_score),
+        }
+
+        coords = {"row": image.coords["row"], "col": image.coords["col"]}
+
+        dataset = xr.Dataset(data_variables, coords)
+
+        dataset_disp_map = common.dataset_disp_maps(
+            dataset.row_map,
+            dataset.col_map,
+            dataset.coords,
+            dataset.correlation_score,
+            attributes={"invalid_disp": invalid_value},
+        )
+
+        test = refinement.AbstractRefinement(
+            {"refinement_method": "optical_flow"},
+            cfg["pipeline"]["matching_cost"]["step"],
+            cfg["pipeline"]["matching_cost"]["window_size"],
+        )  # type: ignore[abstract]
+        disparity_col, disparity_row, _ = test.refinement_method(cost_volumes, dataset_disp_map, image, image)
+        return {"row_disparity": disparity_row, "col_disparity": disparity_col}
+
+    @pytest.mark.parametrize("min_row", (True, False))
+    @pytest.mark.parametrize("max_row", (True, False))
+    @pytest.mark.parametrize("min_col", (True, False))
+    @pytest.mark.parametrize("max_col", (True, False))
+    def test_variable_grid(self, image, disparities, invalid_value):
+        """Test resulting disparities are in range defined by grids."""
+        # We want to exclude invalid_values from the comparaison
+        valid_row_mask = disparities["row_disparity"] != invalid_value
+        valid_col_mask = disparities["col_disparity"] != invalid_value
+
+        assert np.all(
+            disparities["row_disparity"][valid_row_mask]
+            >= image["row_disparity"].sel({"band_disp": "min"}).data[valid_row_mask]
+        )
+        assert np.all(
+            disparities["col_disparity"][valid_col_mask]
+            >= image["col_disparity"].sel({"band_disp": "min"}).data[valid_col_mask]
+        )
+        assert np.all(
+            disparities["row_disparity"][valid_row_mask]
+            <= image["row_disparity"].sel({"band_disp": "max"}).data[valid_row_mask]
+        )
+        assert np.all(
+            disparities["col_disparity"][valid_col_mask]
+            <= image["col_disparity"].sel({"band_disp": "max"}).data[valid_col_mask]
+        )

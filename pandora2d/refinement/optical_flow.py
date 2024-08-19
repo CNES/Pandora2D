@@ -21,11 +21,13 @@
 """
 This module contains functions associated to the optical flow method used in the refinement step.
 """
+
 from typing import Dict, Tuple, List
 
 import numpy as np
 import xarray as xr
 from json_checker import And
+from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
 from pandora.margins import Margins
 
@@ -271,7 +273,6 @@ class OpticalFlow(refinement.AbstractRefinement):
         final_dec_col = np.zeros(left_img.shape[2])
 
         for idx in list_idx_to_compute:
-
             left_matching_cost = left_img[:, :, idx]
             right_matching_cost = right_img[:, :, idx]
 
@@ -411,9 +412,22 @@ class OpticalFlow(refinement.AbstractRefinement):
             constant_values=self._invalid_disp,
         )
 
-        delta_col[delta_col <= img_left.attrs["col_disparity_source"][0]] = self._invalid_disp
-        delta_col[delta_col >= img_left.attrs["col_disparity_source"][1]] = self._invalid_disp
-        delta_row[delta_row <= img_left.attrs["row_disparity_source"][0]] = self._invalid_disp
-        delta_row[delta_row >= img_left.attrs["row_disparity_source"][1]] = self._invalid_disp
+        self._invalid_out_of_grid_disparities(cost_volumes.attrs["step"], delta_col, img_left["col_disparity"])
+        self._invalid_out_of_grid_disparities(cost_volumes.attrs["step"], delta_row, img_left["row_disparity"])
 
         return delta_col, delta_row, disp_map["correlation_score"].data
+
+    def _invalid_out_of_grid_disparities(self, step: List, delta: NDArray[np.floating], disparity: xr.DataArray):
+        """
+        Replace delta values by invalid_disp value when it is outside the corresponding disparity range defined by
+        the disparity grid.
+
+        :param step: [row_step, col_step]
+        :type step: list
+        :param delta: refined disparity map
+        :type delta: np.NDArray
+        :param disparity: pixelic disparity grids with min and max `band_disp` coordinates.
+        :type disparity: xr.DataArray
+        """
+        delta[delta <= disparity.sel(band_disp="min").data[:: step[0], :: step[1]]] = self._invalid_disp
+        delta[delta >= disparity.sel(band_disp="max").data[:: step[0], :: step[1]]] = self._invalid_disp
