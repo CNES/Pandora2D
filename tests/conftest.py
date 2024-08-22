@@ -20,8 +20,9 @@
 Module with global test fixtures.
 """
 
-# pylint: disable=redefined-outer-name
+import json
 
+# pylint: disable=redefined-outer-name
 import pathlib
 import re
 
@@ -29,8 +30,10 @@ import json
 import numpy as np
 import pytest
 import rasterio
-from pandora.common import write_data_array
 import xarray as xr
+from pandora.common import write_data_array
+
+import pandora2d
 
 import pandora2d
 
