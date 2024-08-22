@@ -66,3 +66,110 @@ def test_matching_cost_with_estimation_and_disparity(run_pipeline, correct_input
         },
     }
     run_pipeline(configuration)
+
+
+@pytest.mark.parametrize("subpix", [1, 2, 4])
+@pytest.mark.parametrize("matching_cost_method", ["zncc", "sad", "ssd"])
+class TestRefinement:
+    """Test pipelines which include a refinement step."""
+
+    @pytest.fixture()
+    def interpolation_pipeline(self, matching_cost_method, subpix):
+        """Pipeline for an interpolation refinement."""
+        return {
+            "matching_cost": {"matching_cost_method": matching_cost_method, "subpix": subpix},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "refinement": {"refinement_method": "interpolation"},
+        }
+
+    @pytest.fixture()
+    def dichotomy_pipeline(self, matching_cost_method, subpix, iterations, filter_method):
+        """Pipeline for a dichotomy refinement."""
+        return {
+            "matching_cost": {"matching_cost_method": matching_cost_method, "subpix": subpix},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "refinement": {
+                "refinement_method": "dichotomy",
+                "iterations": iterations,
+                "filter": {"method": filter_method},
+            },
+        }
+
+    @pytest.fixture()
+    def optical_flow_pipeline(self, matching_cost_method, subpix, iterations):
+        """Pipeline for an optical flow refinement."""
+        return {
+            "matching_cost": {"matching_cost_method": matching_cost_method, "subpix": subpix},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "refinement": {
+                "refinement_method": "optical_flow",
+                "iterations": iterations,
+            },
+        }
+
+    def test_interpolation(self, run_pipeline, correct_input_cfg, interpolation_pipeline):
+        """Test interpolation."""
+        configuration = {
+            **correct_input_cfg,
+            "pipeline": {**interpolation_pipeline},
+        }
+        run_pipeline(configuration)
+
+    def test_interpolation_with_estimation(self, run_pipeline, correct_input_cfg, interpolation_pipeline):
+        """Test interpolation with estimation."""
+        configuration = {
+            **correct_input_cfg,
+            "pipeline": {
+                "estimation": {"estimation_method": "phase_cross_correlation"},
+                **interpolation_pipeline,
+            },
+        }
+        run_pipeline(configuration)
+
+    @pytest.mark.parametrize("iterations", [1, 4, 9])
+    @pytest.mark.parametrize("filter_method", ["sinc", "bicubic"])
+    def test_dichotomy(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
+        """Test dichotomy."""
+        configuration = {
+            **correct_input_cfg,
+            "pipeline": {
+                **dichotomy_pipeline,
+            },
+        }
+        run_pipeline(configuration)
+
+    @pytest.mark.parametrize("iterations", [1, 4, 9])
+    @pytest.mark.parametrize("filter_method", ["sinc", "bicubic"])
+    def test_dichotomy_with_estimation(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
+        """Test dichotomy with estimation."""
+        configuration = {
+            **correct_input_cfg,
+            "pipeline": {
+                "estimation": {"estimation_method": "phase_cross_correlation"},
+                **dichotomy_pipeline,
+            },
+        }
+        run_pipeline(configuration)
+
+    @pytest.mark.parametrize("iterations", [1, 4, 9])
+    def test_optical_flows(self, run_pipeline, correct_input_cfg, optical_flow_pipeline):
+        """Test optical flows."""
+        configuration = {
+            **correct_input_cfg,
+            "pipeline": {
+                **optical_flow_pipeline,
+            },
+        }
+        run_pipeline(configuration)
+
+    @pytest.mark.parametrize("iterations", [1, 4, 9])
+    def test_optical_flows_with_estimation(self, run_pipeline, correct_input_cfg, optical_flow_pipeline):
+        """Test optical flows with estimation."""
+        configuration = {
+            **correct_input_cfg,
+            "pipeline": {
+                "estimation": {"estimation_method": "phase_cross_correlation"},
+                **optical_flow_pipeline,
+            },
+        }
+        run_pipeline(configuration)
