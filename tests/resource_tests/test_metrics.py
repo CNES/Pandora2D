@@ -40,7 +40,7 @@ class TestResource:
         for metric in read_sqlite_table:
             assert (
                 metric.total_time < metric._TOTAL_TIME_MAX
-            ), f"Test {metric.test_name} does not respect max time : {metric._TOTAL_TIME_MAX} (seconds)"
+            ), f"Test {metric.test_variant} does not respect max time : {metric._TOTAL_TIME_MAX} (seconds)"
 
     def test_cpu_usage(self, read_sqlite_table):
         """
@@ -49,7 +49,7 @@ class TestResource:
         for metric in read_sqlite_table:
             assert (
                 metric.cpu_usage < metric._CPU_USAGE_MAX
-            ), f"Test {metric.test_name} does not cpu usage max : {metric._CPU_USAGE_MAX} (%)"
+            ), f"Test {metric.test_variant} does not cpu usage max : {metric._CPU_USAGE_MAX} (%)"
 
     def test_mem_usage(self, read_sqlite_table):
         """
@@ -58,4 +58,4 @@ class TestResource:
         for metric in read_sqlite_table:
             assert (
                 metric.mem_usage < metric._MEM_USAGE_MAX
-            ), f"Test {metric.test_name} does not respect memory usage max : {metric._MEM_USAGE_MAX} (megabyte)"
+            ), f"Test {metric.test_variant} does not respect memory usage max : {metric._MEM_USAGE_MAX} (megabyte)"

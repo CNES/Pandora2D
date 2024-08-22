@@ -37,9 +37,10 @@ class Metrics:
 
     def __init__(self, items: List) -> None:
         self.test_name = items[0]
-        self.total_time = items[1]
-        self.cpu_usage = items[2]
-        self.mem_usage = items[3]
+        self.test_variant = items[1]
+        self.total_time = items[2]
+        self.cpu_usage = items[3]
+        self.mem_usage = items[4]
 
 
 def pytest_addoption(parser):
@@ -58,7 +59,7 @@ def output_result_path():
 
 @pytest.fixture(name="sqlite_select_query")
 def sqlite_select_query_fixture():
-    return """SELECT ITEM, TOTAL_TIME, CPU_USAGE, MEM_USAGE FROM TEST_METRICS"""
+    return """SELECT ITEM, ITEM_VARIANT, TOTAL_TIME, CPU_USAGE, MEM_USAGE FROM TEST_METRICS"""
 
 
 @pytest.fixture()
