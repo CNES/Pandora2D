@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
@@ -20,21 +18,21 @@
 #
 
 """
-Test example for resources
+Test used resources during execution of a configuration.
 """
 
 import pytest
-import pandora2d
+
+# Mark all test of the module with monitor_test
+pytestmark = pytest.mark.monitor_test
 
 
-@pytest.mark.monitor_test
-class TestConeImage:
-    """Test pandora with cone image."""
-
-    # pylint:disable=too-few-public-methods
-
-    def test_pandora(self, classic_config, output_result_path):
-        """
-        Test run pandora with cone images
-        """
-        pandora2d.main(classic_config, output_result_path, True)
+def test_estimation(run_pipeline, correct_input_cfg):
+    """Test a configuration with only an estimation in the pipeline."""
+    configuration = {
+        **correct_input_cfg,
+        "pipeline": {
+            "estimation": {"estimation_method": "phase_cross_correlation"},
+        },
+    }
+    run_pipeline(configuration)
