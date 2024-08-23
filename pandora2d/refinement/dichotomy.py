@@ -232,7 +232,7 @@ class Dichotomy(refinement.AbstractRefinement):
                     # Syntax disp_row_init[...] is for assign value back to row_map with np.nditer
                     (pos_disp_row_init, pos_disp_col_init), disp_row_init[...], disp_col_init[...], cost_value[...] = (
                         search_new_best_point(
-                            cost_surface.data,
+                            cost_surface,
                             precision,
                             (disp_row_init, disp_col_init),  # type: ignore # Reason: is 0 dim array
                             (pos_disp_row_init, pos_disp_col_init),
@@ -269,6 +269,7 @@ class CostSurfaces:
         :type disparity_margins: Margins
         """
         self.cost_volumes = cost_volumes
+        self.cost_volumes["cost_volumes"].attrs.update({"subpixel": cost_volumes.attrs["subpixel"]})
 
     def __getitem__(self, item):
         """Get cost surface of coordinates item where item is (row, col)."""
@@ -295,7 +296,7 @@ def all_same(sequence):
 
 
 def search_new_best_point(
-    cost_surface: np.ndarray,
+    cost_surface: xr.DataArray,
     precision: float,
     initial_disparity: Union[Tuple[np.floating, np.floating], Tuple[int, int]],
     initial_position: Union[Tuple[np.floating, np.floating], Tuple[int, int]],
@@ -307,8 +308,8 @@ def search_new_best_point(
     Find best position and cost after interpolation of cost surface for given precision.
 
     :param cost_surface: Disparities in rows and cols of a point
-    :type cost_surface: np.ndarray
-    :param precision: subpixellic precision to use
+    :type cost_surface: xr.Dataarray with subpix attribute
+    :param precision: subpixellic disparity precision to use
     :type precision: float
     :param initial_disparity: initial disparities (disp_row, disp_col)
     :type initial_disparity: Union[Tuple[np.floating, np.floating], Tuple[int, int]]
@@ -336,17 +337,32 @@ def search_new_best_point(
     disp_row_shifts = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1], dtype=np.float32) * precision
     disp_col_shifts = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.float32) * precision
 
+    # Whatever the cost_surface.attrs["subpixel"] value, the first precision in the cost surface is always 0.5
+    # Then we multiply by cost_surface.attrs["subpixel"] to get right new_cols and new_rows
+
+    # When there is no subpixel (it equals to 1), precision shift and index shift match:
+    # the precision shift between two points is 1. So shifting from 0.5 precision corresponds to shift index of 0.5.
+    # But when there is a subpixel, they do not match anymore:
+    # in this case, the precision shift between two points is 1/subpix.
+    # So to get the index corresponding to a given precision shift, we need to multiply this value by subpix.
+    # For example when subix equals 2, the precision shift between two points is 0.5 while the index shift is still 1.
+    # So in this case, shifting from 0.5 precision corresponds to shift index of 1
+    # (`index_shift = 1 = 0.5 * 2 = precision_shift * subpix`)
+    # In the same way, shifting from 0.25 precision corresponds to shift index of 0.5
+    # (`index_shift = 0.5 = 0.25 * 2 = precision_shift * subpix`)
+
     # disp_row are along columns in cost_surface, then new_cols are computed from initial_pos_disp_row
-    new_cols = disp_row_shifts + initial_pos_disp_row
+    new_cols = disp_row_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_row
+
     # disp_col are along rows in cost_surface, then new_rows are computed from initial_pos_disp_col
-    new_rows = disp_col_shifts + initial_pos_disp_col
+    new_rows = disp_col_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_col
 
     # New subpixel disparity values
     new_rows_disp = disp_row_shifts + initial_disp_row
     new_cols_disp = disp_col_shifts + initial_disp_col
 
     # Interpolate points at positions (new_rows[i], new_cols[i])
-    candidates = filter_dicho.interpolate(cost_surface, (new_cols, new_rows))
+    candidates = filter_dicho.interpolate(cost_surface.data, (new_cols, new_rows))
 
     # In case a NaN is present in the kernel, candidates will be all-NaNs. Let’s restore initial_position value so
     # that best candidate search will be able to find it.
