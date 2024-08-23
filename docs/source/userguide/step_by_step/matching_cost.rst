@@ -62,6 +62,12 @@ Configuration and parameters
      - 1
      - [1,2,4]
      - No
+   * - spline_order
+     - Spline order used for interpolation when subpix > 1
+     - int
+     - 1
+     - > 0 and < 6
+     - No
 
 
 .. note::
