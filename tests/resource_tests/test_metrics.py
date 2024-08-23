@@ -73,8 +73,9 @@ def pytest_generate_tests(metafunc):
     marks = [mark.name for mark in metafunc.cls.pytestmark]
     if "metrics" in marks:
         metrics = read_sqlite_table(metafunc.config.option.database, query)
-        # Generate test cases based on the metrics list
-        metafunc.parametrize("metric", metrics, ids=lambda x: x.test_variant)
+        if metrics:
+            # Generate test cases based on the metrics list
+            metafunc.parametrize("metric", metrics, ids=lambda x: x.test_variant)
 
 
 @pytest.mark.metrics
