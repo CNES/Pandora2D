@@ -27,6 +27,10 @@ import pytest
 # Mark all test of the module with monitor_test
 pytestmark = pytest.mark.monitor_test
 
+subpix_list = [1, 2, 4]
+matching_cost_methods = ["zncc", "sad", "ssd"]
+iteration_list = [1, 4, 9]
+
 
 def test_estimation(run_pipeline, correct_input_cfg):
     """Test a configuration with only an estimation in the pipeline."""
@@ -39,8 +43,8 @@ def test_estimation(run_pipeline, correct_input_cfg):
     run_pipeline(configuration)
 
 
-@pytest.mark.parametrize("subpix", [1, 2, 4])
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "sad", "ssd"])
+@pytest.mark.parametrize("subpix", subpix_list)
+@pytest.mark.parametrize("matching_cost_method", matching_cost_methods)
 def test_matching_cost_with_disparity(run_pipeline, correct_input_cfg, matching_cost_method, subpix):
     """Test pipeline with a matching_cost and a disparity steps."""
     configuration = {
@@ -53,8 +57,8 @@ def test_matching_cost_with_disparity(run_pipeline, correct_input_cfg, matching_
     run_pipeline(configuration)
 
 
-@pytest.mark.parametrize("subpix", [1, 2, 4])
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "sad", "ssd"])
+@pytest.mark.parametrize("subpix", subpix_list)
+@pytest.mark.parametrize("matching_cost_method", matching_cost_methods)
 def test_matching_cost_with_estimation_and_disparity(run_pipeline, correct_input_cfg, matching_cost_method, subpix):
     """Test pipeline with an estimation, a matching_cost and a disparity steps."""
     configuration = {
@@ -68,8 +72,8 @@ def test_matching_cost_with_estimation_and_disparity(run_pipeline, correct_input
     run_pipeline(configuration)
 
 
-@pytest.mark.parametrize("subpix", [1, 2, 4])
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "sad", "ssd"])
+@pytest.mark.parametrize("subpix", subpix_list)
+@pytest.mark.parametrize("matching_cost_method", matching_cost_methods)
 class TestRefinement:
     """Test pipelines which include a refinement step."""
 
@@ -126,7 +130,7 @@ class TestRefinement:
         }
         run_pipeline(configuration)
 
-    @pytest.mark.parametrize("iterations", [1, 4, 9])
+    @pytest.mark.parametrize("iterations", iteration_list)
     @pytest.mark.parametrize("filter_method", ["sinc", "bicubic"])
     def test_dichotomy(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
         """Test dichotomy."""
@@ -138,7 +142,7 @@ class TestRefinement:
         }
         run_pipeline(configuration)
 
-    @pytest.mark.parametrize("iterations", [1, 4, 9])
+    @pytest.mark.parametrize("iterations", iteration_list)
     @pytest.mark.parametrize("filter_method", ["sinc", "bicubic"])
     def test_dichotomy_with_estimation(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
         """Test dichotomy with estimation."""
@@ -151,7 +155,7 @@ class TestRefinement:
         }
         run_pipeline(configuration)
 
-    @pytest.mark.parametrize("iterations", [1, 4, 9])
+    @pytest.mark.parametrize("iterations", iteration_list)
     def test_optical_flows(self, run_pipeline, correct_input_cfg, optical_flow_pipeline):
         """Test optical flows."""
         configuration = {
@@ -162,7 +166,7 @@ class TestRefinement:
         }
         run_pipeline(configuration)
 
-    @pytest.mark.parametrize("iterations", [1, 4, 9])
+    @pytest.mark.parametrize("iterations", iteration_list)
     def test_optical_flows_with_estimation(self, run_pipeline, correct_input_cfg, optical_flow_pipeline):
         """Test optical flows with estimation."""
         configuration = {
