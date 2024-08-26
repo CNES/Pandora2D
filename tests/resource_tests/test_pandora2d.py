@@ -21,8 +21,11 @@
 Test used resources during execution of a configuration.
 """
 
-import pytest
+# pylint: disable=redefined-outer-name
 
+import numpy as np
+import pytest
+from PIL import Image
 
 # Mark all test of the module with monitor_test
 pytestmark = pytest.mark.monitor_test
@@ -30,6 +33,27 @@ pytestmark = pytest.mark.monitor_test
 subpix_list = [1, 2, 4]
 matching_cost_methods = ["zncc", "sad", "ssd"]
 iteration_list = [1, 4, 9]
+
+
+def reduce_image(input_path, output_path):
+    data = np.asarray(Image.open(input_path))
+    half_row, half_col = data.shape[0] // 2, data.shape[1] // 2
+    image = Image.fromarray(data[half_row - 25 : half_row + 25, half_col - 25 : half_col + 25])
+    image.save(output_path, "png")
+
+
+@pytest.fixture()
+def left_img_path(tmp_path, left_img_path):
+    path = tmp_path / "left.png"
+    reduce_image(left_img_path, path)
+    return str(path)
+
+
+@pytest.fixture()
+def right_img_path(tmp_path, right_img_path):
+    path = tmp_path / "right.png"
+    reduce_image(right_img_path, path)
+    return str(path)
 
 
 def test_estimation(run_pipeline, correct_input_cfg):
