@@ -30,8 +30,9 @@ from typing import Dict
 import numpy as np
 import xarray as xr
 from json_checker import And, Checker, Or
+from rasterio.io import DatasetReader
 
-from pandora.img_tools import get_metadata
+from pandora.img_tools import get_metadata, rasterio_open
 from pandora.check_configuration import (
     check_dataset,
     check_images,
@@ -102,11 +103,97 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
 
     if estimation_config is None:
         left_image_metadata = get_metadata(cfg["input"]["left"]["img"])
-        check_disparity_ranges_are_inside_image(
-            left_image_metadata, cfg["input"]["row_disparity"], cfg["input"]["col_disparity"]
-        )
+        check_disparity(left_image_metadata, cfg["input"])
 
     return cfg
+
+
+def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
+    """
+    All checks on disparity
+
+    :param image_metadata: only metadata on the left image
+    :type image_metadata: xr.Dataset
+    :param input_cfg: input configuration
+    :type input_cfg: Dict
+
+    """
+
+    # Check that disparities are dictionaries or grids
+    if not (isinstance(input_cfg["row_disparity"], dict) and isinstance(input_cfg["col_disparity"], dict)):
+        raise AttributeError("The disparities in rows and columns must be given as 2 dictionaries.")
+
+    if isinstance(input_cfg["row_disparity"]["init"], str) and isinstance(input_cfg["col_disparity"]["init"], str):
+
+        # Read disparity grids
+        disparity_row_reader = rasterio_open(input_cfg["row_disparity"]["init"])
+        disparity_col_reader = rasterio_open(input_cfg["col_disparity"]["init"])
+
+        # Check disparity grids size and number of bands
+        check_disparity_grids(image_metadata, disparity_row_reader)
+        check_disparity_grids(image_metadata, disparity_col_reader)
+
+        # Get correct disparity dictionaries from init disparity grids to give as input of
+        # the check_disparity_ranges_are_inside_image method
+        row_disp_dict = get_dictionary_from_init_grid(disparity_row_reader, input_cfg["row_disparity"]["range"])
+        col_disp_dict = get_dictionary_from_init_grid(disparity_col_reader, input_cfg["col_disparity"]["range"])
+
+    elif isinstance(input_cfg["row_disparity"]["init"], int) and isinstance(input_cfg["col_disparity"]["init"], int):
+        row_disp_dict = input_cfg["row_disparity"]
+        col_disp_dict = input_cfg["col_disparity"]
+
+    else:
+        raise ValueError("Initial columns and row disparity values must be two strings or two integers")
+
+    # Check that disparity ranges are not totally out of the image
+    check_disparity_ranges_are_inside_image(image_metadata, row_disp_dict, col_disp_dict)
+
+
+def check_disparity_grids(image_metadata: xr.Dataset, disparity_reader: DatasetReader) -> None:
+    """
+    Check that disparity grids contains two bands and are
+    the same size as the input image
+
+    :param image_metadata:
+    :type image_metadata: xr.Dataset
+    :param disparity_reader: disparity grids
+    :type disparity_reader: rasterio.io.DatasetReader
+    """
+
+    # Check that disparity grids are 1-channel grids
+    if disparity_reader.count != 1:
+        raise AttributeError("Initial disparity grid must be a 1-channel grid")
+
+    # Check that disparity grids are the same size as the input image
+    if (disparity_reader.height, disparity_reader.width) != (
+        image_metadata.sizes["row"],
+        image_metadata.sizes["col"],
+    ):
+        raise AttributeError("Initial disparity grids and image must have the same size")
+
+
+def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: int) -> Dict:
+    """
+    Get correct dictionaries to give as input of check_disparity_ranges_are_inside_image method
+    from initial disparity grids.
+
+    :param disparity_reader: initial disparity grid
+    :type disparity_reader: rasterio.io.DatasetReader
+    :param disp_range: range of exploration
+    :type disp_range: int
+    :return: a disparity dictionary to give to check_disparity_ranges_are_inside_image() method
+    :rtype: Dict
+    """
+
+    init_disp_grid = disparity_reader.read(1)
+
+    # Get dictionary with integer init value corresponding to the maximum absolute value of init_disp_grid
+    disp_dict = {
+        "init": np.max(np.abs(init_disp_grid)),
+        "range": disp_range,
+    }
+
+    return disp_dict
 
 
 def check_disparity_ranges_are_inside_image(
@@ -283,8 +370,8 @@ input_configuration_schema = {
         "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
         "mask": And(Or(str, lambda input: input is None), rasterio_can_open),
     },
-    "col_disparity": {"init": int, "range": And(int, lambda x: x >= 0)},
-    "row_disparity": {"init": int, "range": And(int, lambda x: x >= 0)},
+    "col_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
+    "row_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
 }
 
 default_short_configuration_input = {
