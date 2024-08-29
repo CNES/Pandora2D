@@ -34,9 +34,10 @@ except ImportError:
     from xarray import Coordinate as Coordinates
 
 import copy
-from typing import List, Dict, Union, NamedTuple, Any
-
+from typing import List, Dict, Union, NamedTuple, Any, Tuple
 from math import floor
+from numpy.typing import NDArray
+
 import xarray as xr
 import numpy as np
 from scipy.ndimage import shift, zoom
@@ -85,10 +86,10 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None, estimation
 
     return Datasets(
         pandora_img_tools.create_dataset_from_inputs(input_config["left"], roi).pipe(
-            add_left_disparity_grid, input_config
+            add_disparity_grid, input_config["col_disparity"], input_config["row_disparity"]
         ),
         pandora_img_tools.create_dataset_from_inputs(input_config["right"], roi).pipe(
-            add_right_disparity_grid, input_config
+            add_disparity_grid, input_config["col_disparity"], input_config["row_disparity"], True
         ),
     )
 
@@ -125,58 +126,35 @@ def check_disparity_presence(input_config):
 
 def check_disparity_types(disparity: Any) -> None:
     """
-    Check that disparity is a Sequence of length 2.
+    Check that disparity a dictionary with keys "init" and range"
+    where "init" is either:
+
+        - a integer
+        - a path to a grid with integer values
+
     :param disparity: disparity to check
     :type disparity: Any
 
     :raises SystemExit: if it does not meet requirements
     """
-    if disparity is None or not isinstance(disparity, Dict) or ("init" and "range") not in disparity:
-        raise ValueError("Disparity should be a dictionnary with keys : init and range", disparity)
-    if not isinstance(disparity["init"], int):
-        raise ValueError("Disparity init should be an integer")
+
+    # Check disparity type
+    if disparity is None or not isinstance(disparity, Dict):
+        raise ValueError("Disparity should be a dictionary")
+
+    # Check that dictionary keys are correct
+    if not set(disparity.keys()) == {"init", "range"}:
+        raise ValueError("Disparity dictionary should contains keys : init and range", disparity)
+    # Check that init is an integer or a path to a grid
+    if not isinstance(disparity["init"], (int, str)):
+        raise ValueError("Disparity init should be an integer or a path to a grid")
+
+    # Check that range value is a postive integer
     if disparity["range"] < 0 or not isinstance(disparity["range"], int):
         raise ValueError("Disparity range should be an integer greater or equal to 0")
 
 
-def add_left_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Dataset:
-    """
-    Add left disparity to dataset.
-
-    :param dataset: dataset to add disparity grid to
-    :type dataset: xr.Dataset
-    :param configuration: configuration with information about disparity
-    :type configuration: Dict
-    :return: dataset : updated dataset
-    :rtype: xr.Dataset
-    """
-    col_disparity = configuration["col_disparity"]
-    row_disparity = configuration["row_disparity"]
-
-    return add_disparity_grid(dataset, col_disparity, row_disparity)
-
-
-def add_right_disparity_grid(dataset: xr.Dataset, configuration: Dict) -> xr.Dataset:
-    """
-    Add right disparity to dataset.
-
-    :param dataset: dataset to add disparity grid to
-    :type dataset: xr.Dataset
-    :param configuration: configuration with information about disparity
-    :type configuration: Dict
-    :return: dataset : updated dataset
-    :rtype: xr.Dataset
-    """
-    col_disparity = configuration["col_disparity"].copy()
-    row_disparity = configuration["row_disparity"].copy()
-
-    col_disparity["init"] = -col_disparity["init"]
-    row_disparity["init"] = -row_disparity["init"]
-
-    return add_disparity_grid(dataset, col_disparity, row_disparity)
-
-
-def add_disparity_grid(dataset: xr.Dataset, col_disparity: Dict, row_disparity: Dict) -> xr.Dataset:
+def add_disparity_grid(dataset: xr.Dataset, col_disparity: Dict, row_disparity: Dict, right=False):
     """
     Add disparity to dataset
 
@@ -186,21 +164,82 @@ def add_disparity_grid(dataset: xr.Dataset, col_disparity: Dict, row_disparity: 
     :type col_disparity: Dict
     :param row_disparity: Disparity interval for rows
     :type row_disparity: Dict
+    :param right: indicates whether the disparity grid is added to the right dataset
+    :type right: bool
 
     :return: dataset : updated dataset
     :rtype: xr.Dataset
     """
-    col_disp_min_max = [col_disparity["init"] - col_disparity["range"], col_disparity["init"] + col_disparity["range"]]
-    row_disp_min_max = [row_disparity["init"] - row_disparity["range"], row_disparity["init"] + row_disparity["range"]]
-    shape = (dataset.sizes["row"], dataset.sizes["col"])
-    for key, disparity_interval in zip(["col_disparity", "row_disparity"], [col_disp_min_max, row_disp_min_max]):
+
+    # Creates min and max disparity grids
+    col_disp_min_max, col_disp_interval = get_min_max_disp_from_dicts(dataset, col_disparity, right)
+    row_disp_min_max, row_disp_interval = get_min_max_disp_from_dicts(dataset, row_disparity, right)
+
+    # Add disparity grids to dataset
+    for key, disparity_data, source in zip(
+        ["col_disparity", "row_disparity"], [col_disp_min_max, row_disp_min_max], [col_disp_interval, row_disp_interval]
+    ):
         dataset[key] = xr.DataArray(
-            np.array([np.full(shape, disparity) for disparity in disparity_interval]),
+            disparity_data,
             dims=["band_disp", "row", "col"],
             coords={"band_disp": ["min", "max"]},
         )
-        dataset.attrs[f"{key}_source"] = disparity_interval
+
+        dataset.attrs[f"{key}_source"] = source
     return dataset
+
+
+def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: bool = False) -> Tuple[NDArray, List]:
+    """
+    Transforms input disparity dicts with constant init into min/max disparity grids
+
+    :param dataset: xarray dataset
+    :type dataset: xr.Dataset
+    :param disparity: input disparity
+    :type disparity: Dict
+    :param right: indicates whether the disparity grid is added to the right dataset
+    :type right: bool
+    :return: 3D numpy array containing min/max disparity grids and list with disparity source
+    :rtype: Tuple[NDArray, List]
+    """
+
+    # Creates min and max disparity grids if initial disparity is constant (int)
+    if isinstance(disparity["init"], int):
+
+        shape = (dataset.sizes["row"], dataset.sizes["col"])
+
+        disp_interval = [
+            disparity["init"] * pow(-1, right) - disparity["range"],
+            disparity["init"] * pow(-1, right) + disparity["range"],
+        ]
+
+        disp_min_max = np.array([np.full(shape, disparity) for disparity in disp_interval])
+
+    # Creates min and max disparity grids if initial disparities are variable (grid)
+    elif isinstance(disparity["init"], str):
+
+        # Get dataset coordinates to select correct zone of disparity grids if we are using a ROI
+        rows = dataset.row.data
+        cols = dataset.col.data
+
+        # Get disparity data
+        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read()[
+            :, rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1
+        ]
+
+        # Use disparity data to creates min/max grids
+        disp_min_max = np.squeeze(
+            np.array(
+                [
+                    disp_data * pow(-1, right) - disparity["range"],
+                    disp_data * pow(-1, right) + disparity["range"],
+                ]
+            )
+        )
+
+        disp_interval = [np.min(disp_min_max[0, ::]), np.max(disp_min_max[1, ::])]
+
+    return disp_min_max, disp_interval
 
 
 def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
@@ -262,12 +301,26 @@ def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> d
     """
     new_roi = copy.deepcopy(roi)
 
-    new_roi["margins"] = (
-        max(abs(col_disparity["init"] - col_disparity["range"]), roi["margins"][0]),
-        max(abs(row_disparity["init"] - row_disparity["range"]), roi["margins"][1]),
-        max(abs(col_disparity["init"] + col_disparity["range"]), roi["margins"][2]),
-        max(abs(row_disparity["init"] + row_disparity["range"]), roi["margins"][3]),
-    )
+    if isinstance(col_disparity["init"], str) and isinstance(row_disparity["init"], str):
+
+        # Read disparity grids
+        disparity_row_init = pandora_img_tools.rasterio_open(row_disparity["init"]).read()
+        disparity_col_init = pandora_img_tools.rasterio_open(col_disparity["init"]).read()
+
+        new_roi["margins"] = (
+            int(max(abs(np.min(disparity_col_init - col_disparity["range"])), roi["margins"][0])),
+            int(max(abs(np.min(disparity_row_init - row_disparity["range"])), roi["margins"][1])),
+            int(max(abs(np.max(disparity_col_init + col_disparity["range"])), roi["margins"][2])),
+            int(max(abs(np.max(disparity_row_init + row_disparity["range"])), roi["margins"][3])),
+        )
+
+    else:
+        new_roi["margins"] = (
+            max(abs(col_disparity["init"] - col_disparity["range"]), roi["margins"][0]),
+            max(abs(row_disparity["init"] - row_disparity["range"]), roi["margins"][1]),
+            max(abs(col_disparity["init"] + col_disparity["range"]), roi["margins"][2]),
+            max(abs(row_disparity["init"] + row_disparity["range"]), roi["margins"][3]),
+        )
 
     # Update user ROI with new margins.
     roi["margins"] = new_roi["margins"]
