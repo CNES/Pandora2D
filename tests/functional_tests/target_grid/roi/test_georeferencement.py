@@ -88,9 +88,10 @@ def right_path(tmp_path, right_data, crs, transform):
     return path
 
 
-def test_roi_georeferencement(run_pipeline, left_path, right_path, crs, transform, correct_pipeline_without_refinement):
-    """Test that new georeferencement origin correspond to upper left corner of the ROI."""
-    configuration = {
+@pytest.fixture()
+def configuration(left_path, right_path, correct_pipeline_without_refinement, step, roi):
+    correct_pipeline_without_refinement["pipeline"]["matching_cost"]["step"] = step
+    return {
         "input": {
             "left": {
                 "img": str(left_path),
@@ -101,17 +102,70 @@ def test_roi_georeferencement(run_pipeline, left_path, right_path, crs, transfor
             "col_disparity": {"init": 1, "range": 2},
             "row_disparity": {"init": 1, "range": 2},
         },
-        "ROI": {
-            "col": {"first": 3, "last": 7},
-            "row": {"first": 5, "last": 8},
-        },
+        **roi,
         **correct_pipeline_without_refinement,
     }
 
+
+@pytest.mark.parametrize(
+    [
+        "roi",
+        "step",
+        "bottom_right_corner_indexes",  # Use transform convention: (col, row)
+    ],
+    [
+        pytest.param(
+            {"ROI": {"col": {"first": 3, "last": 7}, "row": {"first": 5, "last": 8}}}, [1, 1], (7, 8), id="No step"
+        ),  # Disp map corner match ROI corner
+        pytest.param(
+            {"ROI": {"col": {"first": 3, "last": 7}, "row": {"first": 5, "last": 8}}},
+            [2, 3],
+            (6, 7),
+            id="Step < ROI size",
+        ),  # Disp map corner is inside ROI
+        pytest.param(
+            {"ROI": {"col": {"first": 3, "last": 7}, "row": {"first": 5, "last": 8}}},
+            [4, 5],
+            (3, 5),
+            id="Step == ROI size",
+        ),  # Only one pixel at ROI origin
+        pytest.param(
+            {"ROI": {"col": {"first": 3, "last": 7}, "row": {"first": 5, "last": 8}}},
+            [5, 6],
+            (3, 5),
+            id="Step > ROI size",
+        ),  # Only one pixel at ROI origin
+        pytest.param(
+            {"ROI": {"col": {"first": 3, "last": 3}, "row": {"first": 5, "last": 5}}},
+            [1, 1],
+            (3, 5),
+            id="1px ROI - No step",
+        ),
+        pytest.param(
+            {"ROI": {"col": {"first": 3, "last": 3}, "row": {"first": 5, "last": 5}}},
+            [5, 6],
+            (3, 5),
+            id="1px ROI - Step",
+        ),
+    ],
+)
+@pytest.mark.parametrize("output_file", ["columns_disparity.tif", "row_disparity.tif", "correlation_score.tif"])
+def test_roi_georeferencement(
+    run_pipeline,
+    configuration,
+    crs,
+    transform,
+    bottom_right_corner_indexes,
+    output_file,
+):
+    """Test that top left and bottom right corners are well georeferenced."""
     run_dir = run_pipeline(configuration)
 
-    columns_disparity = rasterio.open(run_dir / "output" / "columns_disparity.tif")
+    output = rasterio.open(run_dir / "output" / output_file)
+    bottom_right_disparity_indexes = output.width - 1, output.height - 1
 
-    assert columns_disparity.crs == crs
+    assert output.crs == crs
     # assert that new georeferencement origin correspond to upper left corner of the ROI:
-    assert columns_disparity.transform * (0, 0) == transform * (3, 5)
+    upper_left_corner_indexes = (configuration["ROI"]["col"]["first"], configuration["ROI"]["row"]["first"])
+    assert output.transform * (0, 0) == transform * upper_left_corner_indexes
+    assert output.transform * bottom_right_disparity_indexes == transform * bottom_right_corner_indexes
