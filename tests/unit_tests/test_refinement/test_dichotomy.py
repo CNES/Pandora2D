@@ -758,8 +758,29 @@ class TestCostSurfaces:
         )
 
 
+@pytest.fixture()
+def make_cost_surface(cost_surface_data, subpix):
+    """
+    Creates a cost surface data array according to given data and subpix
+    """
+
+    cost_surface = xr.DataArray(cost_surface_data)
+
+    cost_surface.attrs["subpixel"] = subpix
+
+    return cost_surface
+
+
 @pytest.mark.parametrize(
-    ["cost_surface", "precision", "initial_disparity", "initial_position", "initial_value", "expected"],
+    [
+        "cost_surface_data",
+        "subpix",
+        "precision",
+        "initial_disparity",
+        "initial_position",
+        "initial_value",
+        "expected",
+    ],
     [
         pytest.param(
             np.array(
@@ -771,6 +792,7 @@ class TestCostSurfaces:
                     [0, 0, 0, 0, 0],
                 ]
             ),
+            1,
             0.5,
             (2, 2),
             (2, 2),
@@ -789,6 +811,7 @@ class TestCostSurfaces:
                     [0, 0, 0, 0, 0],
                 ]
             ),
+            1,
             0.5,
             (2, 2),
             (2, 2),
@@ -806,6 +829,7 @@ class TestCostSurfaces:
                     [0, 0, 0, 0, 0],
                 ]
             ),
+            1,
             0.25,
             (1.5, 2.5),
             (1.5, 2.5),
@@ -823,6 +847,7 @@ class TestCostSurfaces:
                     [0, 0, 0, 0, 0],
                 ]
             ),
+            1,
             0.5,
             (2, 2),
             (2, 2),
@@ -840,6 +865,7 @@ class TestCostSurfaces:
                     [0, 0, 0, 0, 0],
                 ]
             ),
+            1,
             0.5,
             (2, 2),
             (2, 2),
@@ -857,6 +883,7 @@ class TestCostSurfaces:
                     [0, 0, 0, 0, 0],
                 ]
             ),
+            1,
             0.5,
             (2, 2),
             (2, 2),
@@ -864,9 +891,93 @@ class TestCostSurfaces:
             (refinement.dichotomy.Point(2.5, 2.5), np.float32(2.5), np.float32(2.5), np.float32(6.64453125)),
             id="NaN outside of kernel has no effect",
         ),
+        pytest.param(
+            np.array(
+                [
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 20, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                ]
+            ),
+            2,
+            0.25,
+            (2, 2),
+            (2, 2),
+            1.0,
+            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.75), np.float32(2.25), np.float32(6.64453125)),
+            id="Bottom left is best and subpix=2",
+        ),
+        pytest.param(
+            np.array(
+                [
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 0, 0, 20, 0],
+                    [0, 0, 0, 0, 0],
+                ]
+            ),
+            2,
+            0.125,
+            (2, 2),
+            (2, 2),
+            1.0,
+            (
+                refinement.dichotomy.Point(2.25, 2.25),
+                np.float32(2.125),
+                np.float32(2.125),
+                np.float32(1.77862548828125),
+            ),
+            id="Bottom right is best and subpix=2",
+        ),
+        pytest.param(
+            np.array(
+                [
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 20, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                ]
+            ),
+            4,
+            0.125,
+            (2, 2),
+            (2, 2),
+            1.0,
+            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.875), np.float32(2.125), np.float32(6.64453125)),
+            id="Bottom left is best and subpix=4",
+        ),
+        pytest.param(
+            np.array(
+                [
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 0, 0, 20, 0],
+                    [0, 0, 0, 0, 0],
+                ]
+            ),
+            4,
+            0.0625,
+            (2, 2),
+            (2, 2),
+            1.0,
+            (
+                refinement.dichotomy.Point(2.25, 2.25),
+                np.float32(2.0625),
+                np.float32(2.0625),
+                np.float32(1.77862548828125),
+            ),
+            id="Bottom right is best and subpix=4",
+        ),
     ],
 )
-def test_search_new_best_point(cost_surface, precision, initial_disparity, initial_position, initial_value, expected):
+def test_search_new_best_point(
+    make_cost_surface, precision, initial_disparity, initial_position, initial_value, expected
+):
     """Test we get new coordinates as expected."""
 
     filter_dicho = Bicubic({"method": "bicubic"})
@@ -874,7 +985,7 @@ def test_search_new_best_point(cost_surface, precision, initial_disparity, initi
     cost_selection_method = np.nanargmax
 
     result = refinement.dichotomy.search_new_best_point(
-        cost_surface,
+        make_cost_surface,
         precision,
         initial_disparity,
         initial_position,

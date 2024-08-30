@@ -80,6 +80,7 @@ class MatchingCost:
             "step": self._step,
             "window_size": self._window_size,
             "subpix": self._subpix,
+            "spline_order": self._spline_order,
         }
 
     @property
@@ -111,6 +112,16 @@ class MatchingCost:
         :rtype: subpix: int
         """
         return self.pandora_matching_cost_._subpix  # pylint: disable=W0212 protected-access
+
+    @property
+    def _spline_order(self) -> int:
+        """
+        Get spline_order, parameter specific to pandora
+
+        :return: spline_order: spline_order used
+        :rtype: spline_order: int
+        """
+        return self.pandora_matching_cost_._spline_order  # pylint: disable=W0212 protected-access
 
     @property
     def margins(self) -> Margins:
@@ -326,7 +337,7 @@ class MatchingCost:
         row_index = None
 
         # Contains the shifted right images (with subpixel)
-        imgs_right_shift_subpixel = img_tools.shift_subpix_img(img_right, self._subpix)
+        imgs_right_shift_subpixel = img_tools.shift_subpix_img(img_right, self._subpix, order=self._spline_order)
 
         for idx, disp_row in enumerate(disps_row):
             i_right = int((disp_row % 1) * self._subpix)

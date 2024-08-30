@@ -336,7 +336,7 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
 
 
 def row_zoom_img(
-    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str]
+    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str], order: int = 1
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in row
@@ -355,13 +355,15 @@ def row_zoom_img(
     :type ind: int
     :param no_data: no_data value in img
     :type no_data: Union[int, str]
+    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
+    :type order: int, optional
     :return: an array that contains the shifted right images in row
     :rtype: array of xarray.Dataset
     """
 
     shift = 1 / subpix
     # For each index, shift the right image for subpixel precision 1/subpix*index
-    data = zoom(img, ((ny * subpix - (subpix - 1)) / float(ny), 1), order=1)[ind::subpix, :]
+    data = zoom(img, ((ny * subpix - (subpix - 1)) / float(ny), 1), order=order)[ind::subpix, :]
 
     # Add a row full of no data at the end of data have the same shape as img
     # It enables to use Pandora's compute_cost_volume() methods,
@@ -379,7 +381,7 @@ def row_zoom_img(
 
 
 def col_zoom_img(
-    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str]
+    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str], order: int = 1
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in col
@@ -398,13 +400,15 @@ def col_zoom_img(
     :type ind: int
     :param no_data: no_data value in img
     :type no_data: Union[int, str]
+    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
+    :type order: int, optional
     :return: an array that contains the shifted right images in col
     :rtype: array of xarray.Dataset
     """
 
     shift = 1 / subpix
     # For each index, shift the right image for subpixel precision 1/subpix*index
-    data = zoom(img, (1, (nx * subpix - (subpix - 1)) / float(nx)), order=1)[:, ind::subpix]
+    data = zoom(img, (1, (nx * subpix - (subpix - 1)) / float(nx)), order=order)[:, ind::subpix]
 
     # Add a col full of no data at the end of data to have the same shape as img
     # It enables to use Pandora's compute_cost_volume() methods,
@@ -420,7 +424,7 @@ def col_zoom_img(
     )
 
 
-def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True) -> List[xr.Dataset]:
+def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order: int = 1) -> List[xr.Dataset]:
     """
     Return an array that contains the shifted right images
 
@@ -430,6 +434,8 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True) -> Li
     :type subpix: int
     :param column: column to shift (otherwise row)
     :type column: bool
+    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
+    :type order: int, optional
     :return: an array that contains the shifted right images
     :rtype: array of xarray.Dataset
     """
@@ -446,6 +452,7 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True) -> Li
                         img_right.coords,
                         ind,
                         img_right.attrs["no_data_img"],
+                        order,
                     ).assign_attrs(img_right.attrs)
                 )
             else:
@@ -457,6 +464,7 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True) -> Li
                         img_right.coords,
                         ind,
                         img_right.attrs["no_data_img"],
+                        order,
                     ).assign_attrs(img_right.attrs)
                 )
 
