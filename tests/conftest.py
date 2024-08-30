@@ -20,8 +20,6 @@
 Module with global test fixtures.
 """
 
-import json
-
 # pylint: disable=redefined-outer-name
 import pathlib
 import re
@@ -32,8 +30,6 @@ import pytest
 import rasterio
 import xarray as xr
 from pandora.common import write_data_array
-
-import pandora2d
 
 import pandora2d
 
@@ -240,3 +236,97 @@ def run_pipeline(tmp_path):
         return tmp_path
 
     return run
+
+
+@pytest.fixture()
+def constant_initial_disparity():
+    """
+    Create a correct disparity dictionary
+    with constant initial disparity
+    """
+    return {"init": 1, "range": 3}
+
+
+@pytest.fixture()
+def second_constant_initial_disparity():
+    """
+    Create a correct disparity dictionary
+    with constant initial disparity
+    """
+    return {"init": 0, "range": 2}
+
+
+@pytest.fixture()
+def make_input_cfg(left_img_path, right_img_path, request):
+    """Get input configuration with given disparities"""
+
+    input_cfg = {
+        "left": {
+            "img": left_img_path,
+            "nodata": -9999,
+        },
+        "right": {"img": right_img_path, "nodata": -9999},
+        "col_disparity": request.getfixturevalue(request.param["col_disparity"]),
+        "row_disparity": request.getfixturevalue(request.param["row_disparity"]),
+    }
+
+    return input_cfg
+
+
+@pytest.fixture
+def left_img_shape(left_img_path):
+    """
+    Get shape of left image stored in left_img_path fixture
+    """
+
+    with rasterio.open(left_img_path) as src:
+        width = src.width
+        height = src.height
+
+    return (height, width)
+
+
+@pytest.fixture
+def create_disparity_grid_fixture(tmp_path):
+    """
+    Creates initial disparity grid and save it in tmp.
+    """
+
+    def create_disparity_grid(data, disp_range, suffix_path, band=False, disp_type=rasterio.dtypes.int64):
+
+        if not band:
+            disparity_grid = xr.DataArray(data, dims=["row", "col"])
+        else:
+            disparity_grid = xr.DataArray(data, dims=["row", "col", "band"])
+
+        path = tmp_path / suffix_path
+
+        write_data_array(data_array=disparity_grid, filename=str(path), dtype=disp_type)
+
+        return {"init": str(path), "range": disp_range}
+
+    return create_disparity_grid
+
+
+@pytest.fixture
+def correct_grid(left_img_shape, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width) with alternating rows of 2, 0 and 3
+    init_band = np.tile([[2], [0], [3]], (height // 3 + 1, width))[:height, :]
+
+    return create_disparity_grid_fixture(init_band, 5, "disparity.tif")
+
+
+@pytest.fixture
+def second_correct_grid(left_img_shape, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width) with alternating columns of 5, -21 and -1
+    init_band = np.tile([[5, -21, -1]], (height, width // 3 + 1))[:, :width]
+
+    return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
