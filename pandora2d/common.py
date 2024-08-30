@@ -65,11 +65,8 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     # remove ROI margins to save only user ROI in tif files
     if "ROI" in cfg:
         dataset = remove_roi_margins(dataset, cfg)
-        # Translate georeferencement origin to ROI origin:
-        dataset.attrs["transform"] *= Affine.translation(cfg["ROI"]["col"]["first"], cfg["ROI"]["row"]["first"])
-
-    row_step, col_step = get_step(cfg)
-    set_pixel_size(dataset, row_step, col_step)
+    if dataset.attrs["transform"] is not None:
+        adjust_georeferencement(dataset, cfg)
     # create output dir
     mkdir_p(output)
 
@@ -96,6 +93,22 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
         crs=dataset.attrs["crs"],
         transform=dataset.attrs["transform"],
     )
+
+
+def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:
+    """
+    Change origin in case a ROI is present and set pixel size to the matching cost step.
+
+    :param dataset: dataset to configure.
+    :type dataset: xr.Dataset
+    :param cfg: configuration
+    :type cfg: Dict
+    """
+    if "ROI" in cfg:
+        # Translate georeferencement origin to ROI origin:
+        dataset.attrs["transform"] *= Affine.translation(cfg["ROI"]["col"]["first"], cfg["ROI"]["row"]["first"])
+    row_step, col_step = get_step(cfg)
+    set_pixel_size(dataset, row_step, col_step)
 
 
 def get_step(cfg: Dict) -> Tuple[int, int]:
