@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 """
-Test criteria dataset method 
+Test criteria dataset method
 """
 
 # pylint: disable=redefined-outer-name
@@ -87,8 +87,19 @@ def cost_volumes(matching_cost_cfg, img_left):
 
 
 @pytest.fixture()
-def criteria_dataset(cost_volumes):
-    return criteria.allocate_criteria_dataset(cost_volumes, Criteria.VALID, None)
+def criteria_dataset():
+    shape = (10, 13, 9, 5)
+    return xr.Dataset(
+        {
+            "criteria": (["row", "col", "disp_col", "disp_row"], np.full(shape, Criteria.VALID)),
+        },
+        coords={
+            "row": np.arange(shape[0]),
+            "col": np.arange(shape[1]),
+            "disp_col": np.arange(-5, 4),
+            "disp_row": np.arange(-1, 4),
+        },
+    )
 
 
 class TestAllocateCriteriaDataset:
@@ -195,24 +206,23 @@ class TestSetUnprocessedDisparity:
 class TestMaskBorder:
     """Test mask_border method."""
 
-    def test_null_offset(self, cost_volumes, criteria_dataset):
-        """Window_size == 1 -> offset = 0, no raise PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria"""
+    def test_null_offset(self, criteria_dataset):
+        """offset = 0, no raise PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria"""
         make_criteria_copy = criteria_dataset.copy(deep=True)
-        criteria.mask_border(cost_volumes, criteria_dataset)
+        criteria.mask_border(0, criteria_dataset)
 
         # Check criteria_dataset has not changed
         xr.testing.assert_equal(criteria_dataset, make_criteria_copy)
         # Check the PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria does not raise
         assert np.all(criteria_dataset.criteria.data[:, :, :, :] != Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
 
-    @pytest.mark.parametrize("window_size", [3, 5, 7])
-    def test_variable_offset(self, cost_volumes, criteria_dataset):
+    @pytest.mark.parametrize("offset", [1, 2, 3])
+    def test_variable_offset(self, criteria_dataset, offset):
         """
-        Window_size == X -> offset = int((window_size - 1) / 2)
         With mask_border, the PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria is raised on the border.
 
         Example :
-        window_size = 3 -> offset = 1
+        offset = 1
 
         For this image :          1 2 3 4 5 6 7 8
                                   1 2 3 4 5 6 7 8
@@ -235,9 +245,8 @@ class TestMaskBorder:
                                   1 0 0 0 0 0 0 1
                                   1 1 1 1 1 1 1 1
         """
-        criteria.mask_border(cost_volumes, criteria_dataset)
+        criteria.mask_border(offset, criteria_dataset)
 
-        offset = cost_volumes.offset_row_col
         assert np.all(criteria_dataset.criteria.data[:offset, :, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
         assert np.all(criteria_dataset.criteria.data[-offset:, :, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
         assert np.all(criteria_dataset.criteria.data[:, :offset, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
@@ -246,10 +255,6 @@ class TestMaskBorder:
 
 class TestMaskDisparityOutsideRightImage:
     """Test mask_disparity_outside_right_image method."""
-
-    @pytest.fixture()
-    def offset(self, cost_volumes):
-        return cost_volumes.offset_row_col
 
     @pytest.fixture()
     def ground_truth_null_disparity(self, offset, img_size):
@@ -263,7 +268,7 @@ class TestMaskDisparityOutsideRightImage:
         return data
 
     @pytest.fixture()
-    def ground_truth_first_disparity(self, cost_volumes, offset, img_size):
+    def ground_truth_first_disparity(self, offset, img_size):
         """
         Make ground_truth of criteria dataset for first disparity (disp_col=-5 and disp_row=-1)
 
@@ -297,34 +302,36 @@ class TestMaskDisparityOutsideRightImage:
         """
         data = np.full(img_size, Criteria.VALID)
         # Update row
-        delta_row_start = offset + abs(cost_volumes.disp_row.values[0])
-        delta_row_end = offset + cost_volumes.disp_row.values[0]
+        first_row_disparity = -1
+        delta_row_start = offset + abs(first_row_disparity)
+        delta_row_end = offset + first_row_disparity
         data[:delta_row_start, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
         if delta_row_end > 0:
             data[-delta_row_end:, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
         # Udpate col
-        delta_col_start = offset + abs(cost_volumes.disp_col.values[0])
-        delta_col_end = offset + cost_volumes.disp_col.values[0]
+        first_col_disparity = -5
+        delta_col_start = offset + abs(first_col_disparity)
+        delta_col_end = offset + first_col_disparity
         data[:, :delta_col_start] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
         if delta_col_end > 0:
             data[:, -delta_col_end:] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
         return data
 
     @pytest.mark.parametrize(
-        "window_size",
+        "offset",
         [
-            pytest.param(1, id="offset nul"),
-            pytest.param(3, id="offset == 1"),
-            pytest.param(5, id="offset == 2"),
-            pytest.param(7, id="offset == 3"),
-            pytest.param(99, id="offset > dimension"),
+            pytest.param(0),
+            pytest.param(1),
+            pytest.param(2),
+            pytest.param(3),
+            pytest.param(49, id="offset > dimension"),
         ],
     )
-    def test_nominal(self, cost_volumes, criteria_dataset, ground_truth_null_disparity, ground_truth_first_disparity):
+    def test_nominal(self, offset, criteria_dataset, ground_truth_null_disparity, ground_truth_first_disparity):
         """
         Test mask_disparity_outside_right_image
         """
-        criteria.mask_disparity_outside_right_image(cost_volumes, criteria_dataset)
+        criteria.mask_disparity_outside_right_image(offset, criteria_dataset)
 
         np.testing.assert_array_equal(criteria_dataset.criteria.values[:, :, 5, 1], ground_truth_null_disparity)
         np.testing.assert_array_equal(criteria_dataset.criteria.values[:, :, 0, 0], ground_truth_first_disparity)

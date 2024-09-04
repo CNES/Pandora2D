@@ -89,20 +89,19 @@ def set_unprocessed_disp(
     )
 
 
-def mask_border(cost_volumes: xr.Dataset, criteria_dataset: xr.Dataset):
+def mask_border(offset: int, criteria_dataset: xr.Dataset) -> None:
     """
     This method raises PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria on the edges of the criteria_dataset
     for each of the disparities.
 
     PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria is non-cumulative, so this method will be called last.
 
-    :param cost_volumes: 4D xarray.Dataset
-    :type cost_volumes: 4D xarray.Dataset
+    :param offset: offset
+    :type offset: int
     :param criteria_dataset: 4D xarray.Dataset with all criteria
     :type criteria_dataset: 4D xarray.Dataset
     """
 
-    offset = cost_volumes.offset_row_col
     if offset > 0:
 
         # Raise criteria 0 on border of criteria_disp_col according to offset value
@@ -112,17 +111,16 @@ def mask_border(cost_volumes: xr.Dataset, criteria_dataset: xr.Dataset):
         criteria_dataset.criteria.data[:, -offset:, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
 
 
-def mask_disparity_outside_right_image(cost_volumes: xr.Dataset, criteria_dataset: xr.Dataset):
+def mask_disparity_outside_right_image(offset: int, criteria_dataset: xr.Dataset) -> None:
     """
     This method raises PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE criteria for points with disparity dimension outside
     the right image
 
-    :param cost_volumes: 4D xarray.Dataset
-    :type cost_volumes: 4D xarray.Dataset
+    :param offset: offset
+    :type offset: int
     :param criteria_dataset: 4D xarray.Dataset with all criteria
     :type criteria_dataset: 4D xarray.Dataset
     """
-    offset = cost_volumes.offset_row_col
     col_coords = criteria_dataset.col.values
     row_coords = criteria_dataset.row.values
 
