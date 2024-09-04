@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 """
-This module contains functions associated to the validity mask and criteria dataset created in the cost volume step.
+This module contains functions associated to the validity mask and criteria dataarray created in the cost volume step.
 """
 
 from typing import Union
@@ -33,32 +33,31 @@ from pandora2d.common import (
 )
 
 
-def allocate_criteria_dataset(
+def allocate_criteria_dataarray(
     cv: xr.Dataset, value: Union[int, float, Criteria] = Criteria.VALID, data_type: Union[np.dtype, None] = None
-) -> xr.Dataset:
+) -> xr.DataArray:
     """
-    This method creates the criteria_dataset with the same dimensions as cost_volumes (cv).
+    This method creates the criteria_dataarray with the same dimensions as cost_volumes (cv).
     Initially, all points are considered valid and have the value XX.
 
     :param cv: cost_volumes
     :type cv: 4D xarray.Dataset
     :param value: value representing the valid criteria, by default Criteria.VALID = 0
     :type value: Union[int, float, Criteria]
-    :param data_type: the desired data-type for the criteria_dataset.
+    :param data_type: the desired data-type for the criteria_dataarray.
     :type data_type: Union[np.dtype, None], by default None
-    :return: criteria_dataset: 4D Dataset containing the criteria
-    :rtype: criteria_dataset: xr.Dataset
+    :return: criteria_dataarray: 4D DataArray containing the criteria
+    :rtype: criteria_dataarray: xr.DataArray
     """
-    return xr.Dataset(
-        {
-            "criteria": (["row", "col", "disp_col", "disp_row"], np.full(cv.cost_volumes.shape, value, data_type)),
-        },
+    return xr.DataArray(
+        np.full(cv.cost_volumes.shape, value, data_type),
         coords={"row": cv.row.data, "col": cv.col.data, "disp_col": cv.disp_col.data, "disp_row": cv.disp_row.data},
+        dims=["row", "col", "disp_col", "disp_row"],
     )
 
 
 def set_unprocessed_disp(
-    criteria_dataset: xr.Dataset,
+    criteria_dataarray: xr.DataArray,
     min_grid_col: NDArray[np.floating],
     max_grid_col: NDArray[np.floating],
     min_grid_row: NDArray[np.floating],
@@ -68,8 +67,8 @@ def set_unprocessed_disp(
     This method sets PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED to points for disparities that will not be processed,
     based on the disparity grids provided.
 
-    :param criteria_dataset: 4D Dataset containing the criteria
-    :type criteria_dataset: xr.Dataset 4D
+    :param criteria_dataarray: 4D DataArray containing the criteria
+    :type criteria_dataarray: xr.DataArray 4D
     :param min_grid_col: grid of min disparity col
     :type min_grid_col: NDArray[np.floating]
     :param max_grid_col: grid of max disparity col
@@ -81,61 +80,61 @@ def set_unprocessed_disp(
     """
     # Check col disparity
     set_out_of_col_disparity_range_to_other_value(
-        criteria_dataset, min_grid_col, max_grid_col, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, "criteria"
+        criteria_dataarray, min_grid_col, max_grid_col, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
     )
     # Check row disparity
     set_out_of_row_disparity_range_to_other_value(
-        criteria_dataset, min_grid_row, max_grid_row, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, "criteria"
+        criteria_dataarray, min_grid_row, max_grid_row, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
     )
 
 
-def mask_border(offset: int, criteria_dataset: xr.Dataset) -> None:
+def mask_border(offset: int, criteria_dataarray: xr.DataArray) -> None:
     """
-    This method raises PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria on the edges of the criteria_dataset
+    This method raises PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria on the edges of the criteria_dataarray
     for each of the disparities.
 
     PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria is non-cumulative, so this method will be called last.
 
     :param offset: offset
     :type offset: int
-    :param criteria_dataset: 4D xarray.Dataset with all criteria
-    :type criteria_dataset: 4D xarray.Dataset
+    :param criteria_dataarray: 4D xarray.DataArray with all criteria
+    :type criteria_dataarray: 4D xarray.DataArray
     """
 
     if offset > 0:
 
         # Raise criteria 0 on border of criteria_disp_col according to offset value
-        criteria_dataset.criteria.data[:offset, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataset.criteria.data[-offset:, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataset.criteria.data[:, :offset, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataset.criteria.data[:, -offset:, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataarray.data[:offset, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataarray.data[-offset:, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataarray.data[:, :offset, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataarray.data[:, -offset:, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
 
 
-def mask_disparity_outside_right_image(offset: int, criteria_dataset: xr.Dataset) -> None:
+def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataArray) -> None:
     """
     This method raises PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE criteria for points with disparity dimension outside
     the right image
 
     :param offset: offset
     :type offset: int
-    :param criteria_dataset: 4D xarray.Dataset with all criteria
-    :type criteria_dataset: 4D xarray.Dataset
+    :param criteria_dataarray: 4D xarray.DataArray with all criteria
+    :type criteria_dataarray: 4D xarray.DataArray
     """
-    col_coords = criteria_dataset.col.values
-    row_coords = criteria_dataset.row.values
+    col_coords = criteria_dataarray.col.values
+    row_coords = criteria_dataarray.row.values
 
     # Condition where the window is outside the image
     condition = (
-        (criteria_dataset.row + criteria_dataset.disp_row < row_coords[0] + offset)
-        | (criteria_dataset.row + criteria_dataset.disp_row > row_coords[-1] - offset)
-        | (criteria_dataset.col + criteria_dataset.disp_col < col_coords[0] + offset)
-        | (criteria_dataset.col + criteria_dataset.disp_col > col_coords[-1] - offset)
+        (criteria_dataarray.row + criteria_dataarray.disp_row < row_coords[0] + offset)
+        | (criteria_dataarray.row + criteria_dataarray.disp_row > row_coords[-1] - offset)
+        | (criteria_dataarray.col + criteria_dataarray.disp_col < col_coords[0] + offset)
+        | (criteria_dataarray.col + criteria_dataarray.disp_col > col_coords[-1] - offset)
     )
 
-    # Swapaxes to have same shape as cost_volumes and criteria_dataset
+    # Swapaxes to have same shape as cost_volumes and criteria_dataarray
     condition_swap = condition.data.swapaxes(1, 3).swapaxes(1, 2)
 
-    # Update criteria dataset
-    criteria_dataset.criteria.data[condition_swap] = (
-        criteria_dataset.criteria.data[condition_swap] | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    # Update criteria dataarray
+    criteria_dataarray.data[condition_swap] = (
+        criteria_dataarray.data[condition_swap] | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
     )

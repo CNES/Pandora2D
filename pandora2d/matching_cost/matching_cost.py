@@ -408,18 +408,16 @@ class MatchingCost:
         del cost_volumes.attrs["ROI_margins_for_cv"]
 
         set_out_of_row_disparity_range_to_other_value(
-            cost_volumes,
+            cost_volumes["cost_volumes"],
             img_left["row_disparity"].sel(band_disp="min").data,
             img_left["row_disparity"].sel(band_disp="max").data,
             np.nan,
-            "cost_volumes",
         )
         set_out_of_col_disparity_range_to_other_value(
-            cost_volumes,
+            cost_volumes["cost_volumes"],
             img_left["col_disparity"].sel(band_disp="min").data,
             img_left["col_disparity"].sel(band_disp="max").data,
             np.nan,
-            "cost_volumes",
         )
 
         return cost_volumes

@@ -196,44 +196,41 @@ def dataset_disp_maps(
 
 
 def set_out_of_row_disparity_range_to_other_value(
-    data: xr.Dataset,
+    data: xr.DataArray,
     min_disp_grid: NDArray[np.floating],
     max_disp_grid: NDArray[np.floating],
     value: Union[int, float, Criteria],
-    data_var_name: str,
-):
+) -> None:
     """
-    Put special value in data (cost_volumes or criteria_dataset) where the disparity is out of the range defined
-    by disparity grids.
+    Put special value in data  where the disparity is out of the range defined by disparity grids.
 
     The operation is done inplace.
 
-    :param data: cost_volumes or criteria_dataset to modify.
-    :type data: xr.Dataset 4D
+    :param data: cost_volumes or criteria_dataarray to modify.
+    :type data: xr.DataArray 4D
     :param min_disp_grid: grid of min disparity.
     :type min_disp_grid: NDArray[np.floating]
     :param max_disp_grid: grid of max disparity.
     :type max_disp_grid: NDArray[np.floating]
     :param value: value to set on data.
     :type value: Union[int, float, Criteria]
-    :param data_var_name: name of xarray.DataArray to set new value.
-    :type data_var_name: str
     """
     # WARNING: if one day we switch disp_row with disp_col index should be -2
-    ndisp_row = data[data_var_name].shape[-1]
+    ndisp_row = data.shape[-1]
 
     # We want to put special value on points that are not in the global disparity range (row_disparity_source)
-    if data_var_name == "cost_volumes":
+    row_disparity_source = data.attrs.get("row_disparity_source")
+    if row_disparity_source:  # Case we are working with cost volume
         for disp_row in range(ndisp_row):
             masking = np.nonzero(
                 np.logical_or(
                     (data.coords["disp_row"].data[disp_row] < min_disp_grid)
-                    & (data.coords["disp_row"].data[disp_row] >= data.attrs["row_disparity_source"][0]),
+                    & (data.coords["disp_row"].data[disp_row] >= row_disparity_source[0]),
                     (data.coords["disp_row"].data[disp_row] > max_disp_grid)
-                    & (data.coords["disp_row"].data[disp_row] <= data.attrs["row_disparity_source"][1]),
+                    & (data.coords["disp_row"].data[disp_row] <= row_disparity_source[1]),
                 )
             )
-            data[data_var_name].data[masking[0], masking[1], :, disp_row] = value
+            data.data[masking[0], masking[1], :, disp_row] = value
 
     else:
         for disp_row in range(ndisp_row):
@@ -243,48 +240,46 @@ def set_out_of_row_disparity_range_to_other_value(
                     data.coords["disp_row"].data[disp_row] > max_disp_grid,
                 )
             )
-            data[data_var_name].data[masking[0], masking[1], :, disp_row] = value
+            data.data[masking[0], masking[1], :, disp_row] = value
 
 
 def set_out_of_col_disparity_range_to_other_value(
-    data: xr.Dataset,
+    data: xr.DataArray,
     min_disp_grid: NDArray[np.floating],
     max_disp_grid: NDArray[np.floating],
     value: Union[int, float, Criteria],
-    data_var_name: str,
-):
+) -> None:
     """
-    Put special value in data (cost_volumes or criteria_dataset) where the disparity is out of the range defined
+    Put special value in data (cost_volumes or criteria_dataarray) where the disparity is out of the range defined
     by disparity grids.
 
     The operation is done inplace.
 
-    :param data: cost_volumes or criteria_dataset to modify.
-    :type data: xr.Dataset 4D
+    :param data: cost_volumes or criteria_dataarray to modify.
+    :type data: xr.DataArray 4D
     :param min_disp_grid: grid of min disparity.
     :type min_disp_grid: NDArray[np.floating]
     :param max_disp_grid: grid of max disparity.
     :type max_disp_grid: NDArray[np.floating]
     :param value: value to set on data.
     :type value: Union[int, float, Criteria]
-    :param data_var_name: name of xarray.DataArray to set new value.
-    :type data_var_name: str
     """
     # WARNING: if one day we switch disp_row with disp_col index should be -1
-    ndisp_col = data[data_var_name].shape[-2]
+    ndisp_col = data.shape[-2]
 
     # We want to put special value on points that are not in the global disparity range (col_disparity_source)
-    if data_var_name == "cost_volumes":
+    col_disparity_source = data.attrs.get("col_disparity_source")
+    if col_disparity_source:  # Case we are working with cost volume
         for disp_col in range(ndisp_col):
             masking = np.nonzero(
                 np.logical_or(
                     (data.coords["disp_col"].data[disp_col] < min_disp_grid)
-                    & (data.coords["disp_col"].data[disp_col] >= data.attrs["col_disparity_source"][0]),
+                    & (data.coords["disp_col"].data[disp_col] >= col_disparity_source[0]),
                     (data.coords["disp_col"].data[disp_col] > max_disp_grid)
-                    & (data.coords["disp_col"].data[disp_col] <= data.attrs["col_disparity_source"][1]),
+                    & (data.coords["disp_col"].data[disp_col] <= col_disparity_source[1]),
                 )
             )
-            data[data_var_name].data[masking[0], masking[1], disp_col, :] = value
+            data.data[masking[0], masking[1], disp_col, :] = value
 
     else:
         for disp_col in range(ndisp_col):
@@ -294,4 +289,4 @@ def set_out_of_col_disparity_range_to_other_value(
                     data.coords["disp_col"].data[disp_col] > max_disp_grid,
                 )
             )
-            data[data_var_name].data[masking[0], masking[1], disp_col, :] = value
+            data.data[masking[0], masking[1], disp_col, :] = value
