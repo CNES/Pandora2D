@@ -26,10 +26,9 @@ This module contains functions allowing to check the configuration given to Pand
 from __future__ import annotations
 
 from typing import Dict
-
 import numpy as np
 import xarray as xr
-from json_checker import And, Checker, Or
+from json_checker import And, Checker, Or, MissKeyCheckerError
 from rasterio.io import DatasetReader
 
 from pandora.img_tools import get_metadata, rasterio_open
@@ -280,14 +279,38 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     return pipeline_cfg
 
 
+def check_expert_mode_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+    """
+    Complete and check if the dictionary is correct
+
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :return: cfg: global configuration
+    :rtype: cfg: dict
+    """
+
+    if "profiling" not in user_cfg:
+        raise MissKeyCheckerError("Please be sure to set the profiling dictionary")
+
+    # check profiling schema
+    profiling_mode_cfg = user_cfg["profiling"]
+    checker = Checker(expert_mode_profiling)
+    checker.validate(profiling_mode_cfg)
+
+    profiling_mode_cfg = {"expert_mode": user_cfg}
+
+    return profiling_mode_cfg
+
+
 def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     """
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
     :type user_cfg: dict
-    :param pandora2d_machine: instance of PandoraMachine
-    :type pandora2d_machine: PandoraMachine
+    :param pandora2d_machine: instance of Pandora2DMachine
+    :type pandora2d_machine: Pandora2DMachine
+
     :return: cfg: global configuration
     :rtype: cfg: dict
     """
@@ -306,7 +329,11 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     if "matching_cost" in cfg_pipeline["pipeline"]:
         check_right_nodata_condition(cfg_input, cfg_pipeline)
 
-    cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline])
+    cfg_expert_mode = user_cfg.get("expert_mode", {})
+    if cfg_expert_mode != {}:
+        cfg_expert_mode = check_expert_mode_section(cfg_expert_mode)
+
+    cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline, cfg_expert_mode])
 
     return cfg
 
@@ -395,3 +422,5 @@ roi_configuration_schema = {
     "row": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},
     "col": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},
 }
+
+expert_mode_profiling = {"folder_name": str}

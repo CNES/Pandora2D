@@ -44,9 +44,11 @@ except ImportError:
     from transitions import Machine
 
 from transitions import MachineError
-
 from pandora.margins import GlobalMargins
-from pandora2d import common, disparity, estimation, matching_cost, refinement, img_tools
+
+
+from pandora2d import common, disparity, estimation, img_tools, matching_cost, refinement
+from pandora2d.profiling import mem_time_profile
 
 
 class MarginsProperties(TypedDict):
@@ -309,6 +311,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             self.left_img, self.right_img, cfg, self.margins.get("refinement")
         )
 
+    @mem_time_profile(name="Estimation step")
     def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Shift's estimation step
@@ -331,6 +334,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             cfg, col_disparity, row_disparity, shifts, extra_dict
         )
 
+    @mem_time_profile(name="Matching cost step")
     def matching_cost_run(self, _, __) -> None:
         """
         Matching cost computation
@@ -346,6 +350,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             self.margins.get("refinement"),
         )
 
+    @mem_time_profile(name="Disparity step")
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Disparity computation and validity mask
@@ -373,6 +378,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             },
         )
 
+    @mem_time_profile(name="Refinement step")
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Subpixel disparity refinement

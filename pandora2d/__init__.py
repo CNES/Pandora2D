@@ -36,6 +36,8 @@ from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 from pandora2d.state_machine import Pandora2DMachine
 from pandora2d import reporting
 from pandora2d.reporting import NumpyPrimitiveEncoder
+from pandora2d.profiling import generate_summary
+from pandora2d import profiling
 
 
 def run(
@@ -81,6 +83,8 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     :param cfg_path: path to the json configuration file
     :type cfg_path: string
+    :param path_output: output directory
+    :type path_output: str
     :param verbose: verbose mode
     :type verbose: bool
     :return: None
@@ -95,6 +99,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     pandora2d_machine = Pandora2DMachine()
 
     cfg = check_conf(user_cfg, pandora2d_machine)
+    profiling.expert_mode_config.enable = "expert_mode" in cfg
 
     setup_logging(verbose)
 
@@ -129,3 +134,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     completed_cfg["margins"] = pandora2d_machine.margins.to_dict()
     # save config
     save_config(path_output, completed_cfg)
+
+    # Profiling results
+    if "expert_mode" in completed_cfg:
+        generate_summary(path_output, completed_cfg["expert_mode"]["profiling"])
