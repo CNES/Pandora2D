@@ -25,7 +25,7 @@ import xarray as xr
 import numpy as np
 from numpy.typing import NDArray
 
-
+from pandora.criteria import binary_dilation_msk
 from pandora2d.constants import Criteria
 from pandora2d.common import (
     set_out_of_col_disparity_range_to_other_value,
@@ -138,3 +138,19 @@ def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataA
     criteria_dataarray.data[condition_swap] = (
         criteria_dataarray.data[condition_swap] | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
     )
+
+
+def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataaray: xr.DataArray) -> None:
+    """
+    Set Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA on pixels where a no_data is present in the window around its
+    position in the mask.
+
+    :param left_image: left image with `msk` data var.
+    :type left_image: xr.Dataset
+    :param window_size: window size
+    :type window_size: int
+    :param criteria_dataaray: criteria dataarray to update
+    :type criteria_dataaray: xr.DataArray
+    """
+    dilated_mask = binary_dilation_msk(left_image, window_size)
+    criteria_dataaray.data[dilated_mask, ...] |= Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA

@@ -50,7 +50,10 @@ def img_left(img_size, disparity_cfg):
     data = np.random.uniform(0, row * col, (row, col))
 
     return xr.Dataset(
-        {"im": (["row", "col"], data)},
+        {
+            "im": (["row", "col"], data),
+            "msk": (["row", "col"], np.zeros_like(data)),
+        },
         coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         attrs={
             "no_data_img": -9999,
@@ -87,8 +90,8 @@ def cost_volumes(matching_cost_cfg, img_left):
 
 
 @pytest.fixture()
-def criteria_dataarray():
-    shape = (10, 13, 9, 5)
+def criteria_dataarray(img_size):
+    shape = (*img_size, 9, 5)
     return xr.DataArray(
         np.full(shape, Criteria.VALID),
         coords={
@@ -334,3 +337,65 @@ class TestMaskDisparityOutsideRightImage:
 
         np.testing.assert_array_equal(criteria_dataarray.values[:, :, 5, 1], ground_truth_null_disparity)
         np.testing.assert_array_equal(criteria_dataarray.values[:, :, 0, 0], ground_truth_first_disparity)
+
+
+@pytest.mark.parametrize("img_size", [(5, 6)])
+class TestMaskLeftNoData:
+    """Test mask_left_no_data function."""
+
+    @pytest.mark.parametrize(
+        ["no_data_position", "window_size", "row_slice", "col_slice"],
+        [
+            pytest.param((2, 2), 1, 2, 2),
+            pytest.param((2, 2), 3, np.s_[1:4], np.s_[1:4]),
+            pytest.param((0, 2), 1, 0, 2),
+            pytest.param((0, 2), 3, np.s_[:2], np.s_[1:4]),
+            pytest.param((4, 5), 3, np.s_[-2:], np.s_[-2:]),
+        ],
+    )
+    def test_add_criteria_to_all_valid(
+        self, img_size, img_left, criteria_dataarray, no_data_position, window_size, row_slice, col_slice
+    ):
+        """Test add to a previously VALID criteria."""
+        no_data_row_position, no_data_col_position = no_data_position
+
+        img_left["msk"][no_data_row_position, no_data_col_position] = img_left.attrs["no_data_mask"]
+
+        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
+
+        criteria.mask_left_no_data(img_left, window_size, criteria_dataarray)
+
+        np.testing.assert_array_equal(criteria_dataarray.values, expected_criteria_data)
+
+    @pytest.mark.parametrize(
+        ["no_data_position", "window_size", "row_slice", "col_slice"],
+        [
+            pytest.param((2, 2), 1, 2, 2),
+            pytest.param((2, 2), 3, np.s_[1:4], np.s_[1:4]),
+            pytest.param((0, 2), 1, 0, 2),
+            pytest.param((0, 2), 3, np.s_[:2], np.s_[1:4]),
+            pytest.param((4, 5), 3, np.s_[-2:], np.s_[-2:]),
+        ],
+    )
+    def test_add_to_existing(
+        self, img_size, img_left, criteria_dataarray, no_data_position, window_size, row_slice, col_slice
+    ):
+        """Test we do not override existing criteria but combine it."""
+        no_data_row_position, no_data_col_position = no_data_position
+
+        img_left["msk"][no_data_row_position, no_data_col_position] = img_left.attrs["no_data_mask"]
+
+        criteria_dataarray.data[no_data_row_position, no_data_col_position, ...] = (
+            Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        )
+
+        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
+        expected_criteria_data[no_data_row_position, no_data_col_position, ...] = (
+            Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        )
+
+        criteria.mask_left_no_data(img_left, window_size, criteria_dataarray)
+
+        np.testing.assert_array_equal(criteria_dataarray.values, expected_criteria_data)
