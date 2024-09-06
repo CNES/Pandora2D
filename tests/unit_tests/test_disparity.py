@@ -34,7 +34,7 @@ import json_checker
 
 from pandora.margins import Margins
 from pandora2d import matching_cost, disparity
-from pandora2d.img_tools import add_left_disparity_grid
+from pandora2d.img_tools import add_disparity_grid
 
 
 class TestCheckConf:
@@ -207,17 +207,23 @@ def disparity_matcher():
 
 @pytest.fixture()
 def img_left(default_attributs, data_left, disparity_cfg):
+    """
+    Creates left image fixture
+    """
     left = xr.Dataset(
         {"im": (["row", "col"], data_left)},
         coords={"row": np.arange(data_left.shape[0]), "col": np.arange(data_left.shape[1])},
     )
     left.attrs = default_attributs
-    left.pipe(add_left_disparity_grid, disparity_cfg)
+    left.pipe(add_disparity_grid, disparity_cfg["col_disparity"], disparity_cfg["row_disparity"])
     return left
 
 
 @pytest.fixture()
 def img_right(default_attributs, data_right):
+    """
+    Creates right image fixture
+    """
     right = xr.Dataset(
         {"im": (["row", "col"], data_right)},
         coords={"row": np.arange(data_right.shape[0]), "col": np.arange(data_right.shape[1])},
