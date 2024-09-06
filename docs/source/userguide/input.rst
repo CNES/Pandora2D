@@ -82,8 +82,8 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
           - Default value
           - Required
         * - *init*
-          - Initial point
-          - int
+          - Initial point or path to initial grid
+          - int or str
           -
           - Yes
         * - *range*
@@ -91,6 +91,12 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
           - int >= 0
           -
           - Yes
+
+.. note::
+    The initial disparity can be either:  
+      - constant for each point in the image, in which case *init* dictionary key is an integer
+      - variable, in which case *init* is a string which returns the path to a grid containing 
+        an integer initial value for each point in the image. 
 
 .. warning::
     With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`) , `nodata` only accepts `int` type.
@@ -101,7 +107,10 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
      - Value not equal to 0 for invalid pixel
 
 
-**Example**
+Examples
+********
+
+**Input with constant initial disparity** 
 
 .. code:: json
     :name: Input example
@@ -128,3 +137,29 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
         }
     }
 
+**Input with variable initial disparity** 
+
+.. code:: json
+    :name: Input example with disparity grid
+
+    {
+        "input":
+        {
+            "left": {
+                "img": "./data/left.tif",
+                "nodata": -9999,
+                "mask": "./data/mask_left.tif"
+            },
+            "right": {
+                "img": "/data/right.tif",
+                "nodata": -9999
+            },
+            "col_disparity": {"init": "./data/col_disparity_grid.tif", "range": 3},
+            "row_disparity": {"init": "./data/row_disparity_grid.tif", "range": 3}
+        }
+        ,
+        "pipeline" :
+        {
+            // pipeline content
+        }
+    }
