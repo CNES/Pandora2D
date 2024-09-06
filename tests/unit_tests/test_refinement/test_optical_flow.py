@@ -656,8 +656,8 @@ class TestDisparityGrids:
                 "valid_pixels": 0,
                 "no_data_mask": 1,
                 "crs": None,
-                "col_disparity_source": "grid_col",
-                "row_disparity_source": "grid_row",
+                "col_disparity_source": [np.min(col_min_disparity), np.max(col_max_disparity)],
+                "row_disparity_source": [np.min(row_min_disparity), np.max(col_max_disparity)],
             },
         )
 

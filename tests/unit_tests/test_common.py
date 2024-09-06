@@ -406,6 +406,8 @@ class TestSetOutOfDisparity:
                 "disp_row": disp_range_row,
             },
         )
+
+        xarray.attrs = {"col_disparity_source": [2, 8], "row_disparity_source": [-5, 0]}
         min_disp_grid = np.full((xarray.sizes["row"], xarray.sizes["col"]), xarray.coords[disp_coords].data[0])
         max_disp_grid = np.full((xarray.sizes["row"], xarray.sizes["col"]), xarray.coords[disp_coords].data[-1])
         return xarray, min_disp_grid, max_disp_grid
