@@ -43,7 +43,12 @@ def disparity_cfg():
 
 
 @pytest.fixture()
-def image(img_size, disparity_cfg):
+def no_data_mask():
+    return 1
+
+
+@pytest.fixture()
+def image(img_size, disparity_cfg, no_data_mask):
     """Make image"""
     row, col = img_size
     row_disparity, col_disparity = disparity_cfg
@@ -58,11 +63,16 @@ def image(img_size, disparity_cfg):
         attrs={
             "no_data_img": -9999,
             "valid_pixels": 0,
-            "no_data_mask": 1,
+            "no_data_mask": no_data_mask,
             "crs": None,
             "invalid_disparity": np.nan,
         },
     ).pipe(add_disparity_grid, col_disparity, row_disparity)
+
+
+@pytest.fixture()
+def mask_image(image, msk):
+    image["msk"].data = msk
 
 
 @pytest.fixture()
@@ -399,3 +409,304 @@ class TestMaskLeftNoData:
         criteria.mask_left_no_data(image, window_size, criteria_dataarray)
 
         np.testing.assert_array_equal(criteria_dataarray.values, expected_criteria_data)
+
+
+@pytest.mark.parametrize("img_size", [(4, 5)])
+class TestMaskRightNoData:
+    """Test mask_right_no_data function."""
+
+    @pytest.mark.usefixtures("mask_image")
+    @pytest.mark.parametrize(
+        ["no_data_mask", "msk", "disp_row", "disp_col", "expected_criteria"],
+        [
+            # pylint: disable=line-too-long
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 1],
+                    ]
+                ),
+                -1,
+                -1,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp -1 -1 - Pos (3,4)",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 1],
+                    ]
+                ),
+                -1,
+                1,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp -1 1 - Pos (3,4)",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 1],
+                    ]
+                ),
+                1,
+                1,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 1 1 - Pos (3,4)",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 1],
+                    ]
+                ),
+                2,
+                1,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 2 1 - Pos (3,4)",
+            ),
+            pytest.param(
+                2,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [1, 0, 0, 0, 0],
+                        [0, 1, 0, 0, 0],
+                        [0, 0, 0, 0, 2],
+                    ]
+                ),
+                2,
+                1,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 2 1 - other no_data_mask",
+            ),
+        ],
+        # pylint: enable=line-too-long
+    )
+    def test_window_size_1(self, image, criteria_dataarray, disp_row, disp_col, expected_criteria):
+        """Test some disparity couples with a window size of 1."""
+
+        criteria.mask_right_no_data(image, 1, criteria_dataarray)
+
+        np.testing.assert_array_equal(
+            criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col),
+            expected_criteria,
+        )
+
+    @pytest.mark.usefixtures("mask_image")
+    @pytest.mark.parametrize(
+        ["no_data_mask", "msk", "disp_row", "disp_col", "expected_criteria"],
+        # pylint: disable=line-too-long
+        [
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                -1,
+                -1,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp -1 -1 - Pos (2,3)",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                -1,
+                1,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp -1 1 - Pos (2,3)",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                1,
+                1,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 1 1 - Pos (2,3)",
+            ),
+            pytest.param(
+                3,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 1, 2, 0],
+                        [0, 0, 1, 3, 0],
+                        [0, 0, 4, 0, 0],
+                    ]
+                ),
+                1,
+                1,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 1 1 - Pos (2,3) - other no_data_mask",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                2,
+                1,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 2 1 - Pos (2,3)",
+            ),
+        ],
+        # pylint: enable=line-too-long
+    )
+    def test_window_size_3(self, image, criteria_dataarray, disp_row, disp_col, expected_criteria):
+        """Test some disparity couples with a window size of 3."""
+
+        criteria.mask_right_no_data(image, 3, criteria_dataarray)
+
+        np.testing.assert_array_equal(
+            criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col),
+            expected_criteria,
+        )
+
+    def test_combination(self, image, criteria_dataarray):
+        """Test that we combine with existing criteria and do not override them."""
+        image["msk"].data = np.array(
+            [
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1],
+            ]
+        )
+
+        criteria_dataarray.data[2, 3, ...] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+
+        criteria.mask_right_no_data(image, 1, criteria_dataarray)
+
+        assert (
+            criteria_dataarray.sel(row=2, col=3, disp_row=1, disp_col=1).data
+            == Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+        )

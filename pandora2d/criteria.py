@@ -19,7 +19,7 @@
 """
 This module contains functions associated to the validity mask and criteria dataarray created in the cost volume step.
 """
-
+import itertools
 from typing import Union
 import xarray as xr
 import numpy as np
@@ -154,3 +154,37 @@ def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataara
     """
     dilated_mask = binary_dilation_msk(left_image, window_size)
     criteria_dataaray.data[dilated_mask, ...] |= Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
+
+
+def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarray: xr.DataArray) -> None:
+    """
+    Set Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA on pixels where a no_data is present in the window around its
+    position in the mask shift by its disparity.
+
+    :param img_right: right image with `msk` data var.
+    :type img_right: xr.Dataset
+    :param window_size: window size
+    :type window_size: int
+    :param criteria_dataarray:
+    :type criteria_dataarray:
+    """
+    right_criteria_mask = np.full_like(img_right["msk"], Criteria.VALID, dtype=Criteria)
+    right_binary_mask = binary_dilation_msk(img_right, window_size)
+    right_criteria_mask[right_binary_mask] |= Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+    for row_disp, col_disp in itertools.product(
+        criteria_dataarray.coords["disp_row"], criteria_dataarray.coords["disp_col"]
+    ):
+        row_disp, col_disp = row_disp.data, col_disp.data
+        # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
+        msk_row_slice = np.s_[:row_disp] if row_disp < 0 else np.s_[row_disp:]
+        msk_col_slice = np.s_[:col_disp] if col_disp < 0 else np.s_[col_disp:]
+        criteria_row_slice = np.s_[-row_disp:] if row_disp <= 0 else np.s_[:-row_disp]
+        criteria_col_slice = np.s_[-col_disp:] if col_disp <= 0 else np.s_[:-col_disp]
+        criteria_dataarray.loc[
+            {
+                "row": criteria_dataarray.coords["row"][criteria_row_slice],
+                "col": criteria_dataarray.coords["col"][criteria_col_slice],
+                "disp_col": col_disp,
+                "disp_row": row_disp,
+            }
+        ] |= right_criteria_mask[msk_row_slice, msk_col_slice]
