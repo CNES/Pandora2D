@@ -19,7 +19,7 @@
 """
 Test methods from criteria.py file
 """
-
+# pylint: disable=too-many-lines
 # pylint: disable=redefined-outer-name
 import pytest
 import numpy as np
@@ -48,7 +48,12 @@ def no_data_mask():
 
 
 @pytest.fixture()
-def image(img_size, disparity_cfg, no_data_mask):
+def valid_pixels():
+    return 0
+
+
+@pytest.fixture()
+def image(img_size, disparity_cfg, valid_pixels, no_data_mask):
     """Make image"""
     row, col = img_size
     row_disparity, col_disparity = disparity_cfg
@@ -62,7 +67,7 @@ def image(img_size, disparity_cfg, no_data_mask):
         coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         attrs={
             "no_data_img": -9999,
-            "valid_pixels": 0,
+            "valid_pixels": valid_pixels,
             "no_data_mask": no_data_mask,
             "crs": None,
             "invalid_disparity": np.nan,
@@ -709,4 +714,290 @@ class TestMaskRightNoData:
         assert (
             criteria_dataarray.sel(row=2, col=3, disp_row=1, disp_col=1).data
             == Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+        )
+
+
+class TestMaskLeftInvalid:
+    """Test mask_left_invalid function."""
+
+    @pytest.mark.parametrize(
+        ["invalid_position"],
+        [
+            pytest.param((2, 2)),
+            pytest.param((0, 0)),
+            pytest.param((0, 2)),
+            pytest.param((9, 12)),
+            pytest.param((4, 5)),
+        ],
+    )
+    def test_mask_left_invalid(self, img_size, image, criteria_dataarray, invalid_position):
+        """
+        Test that mask_invalid_left method raises criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
+        for points whose value is neither valid_pixels or no_data_mask.
+        """
+        invalid_row_position, invalid_col_position = invalid_position
+
+        # We put 2 in img_left msk because it is different from valid_pixels=0 and no_data_mask=1
+        image["msk"][invalid_row_position, invalid_col_position] = 2
+
+        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data[invalid_row_position, invalid_col_position, ...] = (
+            Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
+        )
+
+        criteria.mask_left_invalid(image, criteria_dataarray)
+
+        np.testing.assert_array_equal(criteria_dataarray.values, expected_criteria_data)
+
+    @pytest.mark.parametrize(
+        ["invalid_position"],
+        [
+            pytest.param((2, 2)),
+            pytest.param((0, 0)),
+            pytest.param((0, 2)),
+            pytest.param((9, 12)),
+            pytest.param((4, 5)),
+        ],
+    )
+    def test_add_to_existing(self, img_size, image, criteria_dataarray, invalid_position):
+        """Test we do not override existing criteria but combine it."""
+        invalid_row_position, invalid_col_position = invalid_position
+
+        # We put 2 in img_left msk because it is different from valid_pixels=0 and no_data_mask=1
+        image["msk"][invalid_row_position, invalid_col_position] = 2
+
+        criteria_dataarray.data[invalid_row_position, invalid_col_position, ...] = (
+            Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        )
+
+        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data[invalid_row_position, invalid_col_position, ...] = (
+            Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        )
+
+        criteria.mask_left_invalid(image, criteria_dataarray)
+
+        np.testing.assert_array_equal(criteria_dataarray.values, expected_criteria_data)
+
+
+@pytest.mark.parametrize("img_size", [(4, 5)])
+class TestMaskRightInvalid:
+    """Test mask_right_invalid function."""
+
+    @pytest.mark.usefixtures("mask_image")
+    @pytest.mark.parametrize(
+        ["valid_pixels", "no_data_mask", "msk", "expected_criteria", "disp_col", "disp_row"],
+        [
+            # pylint: disable=line-too-long
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT],
+                        # fmt: on
+                    ]
+                ),
+                -1,  # disp_col
+                -1,  # disp_row
+                id="Invalid point at center of right mask with disp_row=-1 and disp_col=-1",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                2,  # disp_col
+                1,  # disp_row
+                id="Invalid point at center of right mask with disp_row=2 and disp_col=1",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 2],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                -1,  # disp_col
+                -1,  # disp_row
+                id="Invalid point at right bottom corner of right mask with disp_row=-1 and disp_col=-1",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 3, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                -1,  # disp_col
+                -1,  # disp_row
+                id="Invalid point at center of right mask with disp_row=-1 and disp_col=-1",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 4, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0,  # disp_col
+                -1,  # disp_row
+                id="Invalid point at center of right mask with disp_row=-1 and disp_col=0",
+            ),
+            pytest.param(
+                3,
+                4,
+                np.array(  # msk
+                    [
+                        [3, 3, 3, 3, 3],
+                        [3, 3, 0, 3, 4],
+                        [3, 3, 4, 3, 3],
+                        [3, 4, 3, 3, 3],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0,  # disp_col
+                -1,  # disp_row
+                id="Invalid point at center of right mask with no_data_mask=4, valid_pixels=3, disp_row=-1 and disp_col=0",
+            ),
+            # pylint: enable=line-too-long
+        ],
+    )
+    def test_mask_invalid_right(self, image, criteria_dataarray, expected_criteria, disp_col, disp_row):
+        """
+        Test that mask_invalid_right method raises criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+        for points whose value is neither valid_pixels or no_data_mask when we shift it by its disparity.
+        """
+
+        criteria.mask_right_invalid(image, criteria_dataarray)
+
+        np.testing.assert_array_equal(
+            criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col),
+            expected_criteria,
+        )
+
+    @pytest.mark.usefixtures("mask_image")
+    @pytest.mark.parametrize(
+        ["msk", "disp_col", "disp_row"],
+        [
+            pytest.param(
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 3, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                -2,  # disp_col
+                -1,  # disp_row
+                id="Invalid point at center of right mask with disp_row=-1 and disp_col=-2",
+            ),
+            pytest.param(
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 2],
+                    ]
+                ),
+                1,  # disp_col
+                1,  # disp_row
+                id="Invalid point at right bottom corner of right mask with disp_row=1 and disp_col=1",
+            ),
+        ],
+    )
+    def test_combination(self, image, criteria_dataarray, disp_col, disp_row):
+        """
+        Test that we combine Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+        with existing criteria and do not override them.
+        """
+
+        criteria_dataarray.data[2, 3, ...] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+
+        criteria.mask_right_invalid(image, criteria_dataarray)
+
+        assert (
+            criteria_dataarray.sel(row=2, col=3, disp_row=disp_row, disp_col=disp_col).data
+            == Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
         )
