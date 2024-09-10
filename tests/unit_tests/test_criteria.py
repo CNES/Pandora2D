@@ -43,8 +43,8 @@ def disparity_cfg():
 
 
 @pytest.fixture()
-def img_left(img_size, disparity_cfg):
-    """Make left image"""
+def image(img_size, disparity_cfg):
+    """Make image"""
     row, col = img_size
     row_disparity, col_disparity = disparity_cfg
     data = np.random.uniform(0, row * col, (row, col))
@@ -81,12 +81,12 @@ def matching_cost_cfg(window_size, subpix):
 
 
 @pytest.fixture()
-def cost_volumes(matching_cost_cfg, img_left):
+def cost_volumes(matching_cost_cfg, image):
     """Compute a cost_volumes"""
     matching_cost_ = matching_cost.MatchingCost(matching_cost_cfg)
 
-    matching_cost_.allocate_cost_volume_pandora(img_left=img_left, img_right=img_left, cfg=matching_cost_cfg)
-    return matching_cost_.compute_cost_volumes(img_left=img_left, img_right=img_left)
+    matching_cost_.allocate_cost_volume_pandora(img_left=image, img_right=image, cfg=matching_cost_cfg)
+    return matching_cost_.compute_cost_volumes(img_left=image, img_right=image)
 
 
 @pytest.fixture()
@@ -142,20 +142,20 @@ class TestSetUnprocessedDisparity:
     """Test create a criteria xarray.Dataset."""
 
     @pytest.fixture()
-    def grid_min_col(self, img_left):
-        return img_left["col_disparity"].sel(band_disp="min")
+    def grid_min_col(self, image):
+        return image["col_disparity"].sel(band_disp="min")
 
     @pytest.fixture()
-    def grid_max_col(self, img_left):
-        return img_left["col_disparity"].sel(band_disp="max")
+    def grid_max_col(self, image):
+        return image["col_disparity"].sel(band_disp="max")
 
     @pytest.fixture()
-    def grid_min_row(self, img_left):
-        return img_left["row_disparity"].sel(band_disp="min")
+    def grid_min_row(self, image):
+        return image["row_disparity"].sel(band_disp="min")
 
     @pytest.fixture()
-    def grid_max_row(self, img_left):
-        return img_left["row_disparity"].sel(band_disp="max")
+    def grid_max_row(self, image):
+        return image["row_disparity"].sel(band_disp="max")
 
     def test_homogeneous_grids(self, criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row):
         """With uniform grids"""
@@ -354,17 +354,17 @@ class TestMaskLeftNoData:
         ],
     )
     def test_add_criteria_to_all_valid(
-        self, img_size, img_left, criteria_dataarray, no_data_position, window_size, row_slice, col_slice
+        self, img_size, image, criteria_dataarray, no_data_position, window_size, row_slice, col_slice
     ):
         """Test add to a previously VALID criteria."""
         no_data_row_position, no_data_col_position = no_data_position
 
-        img_left["msk"][no_data_row_position, no_data_col_position] = img_left.attrs["no_data_mask"]
+        image["msk"][no_data_row_position, no_data_col_position] = image.attrs["no_data_mask"]
 
         expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
         expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
 
-        criteria.mask_left_no_data(img_left, window_size, criteria_dataarray)
+        criteria.mask_left_no_data(image, window_size, criteria_dataarray)
 
         np.testing.assert_array_equal(criteria_dataarray.values, expected_criteria_data)
 
@@ -379,12 +379,12 @@ class TestMaskLeftNoData:
         ],
     )
     def test_add_to_existing(
-        self, img_size, img_left, criteria_dataarray, no_data_position, window_size, row_slice, col_slice
+        self, img_size, image, criteria_dataarray, no_data_position, window_size, row_slice, col_slice
     ):
         """Test we do not override existing criteria but combine it."""
         no_data_row_position, no_data_col_position = no_data_position
 
-        img_left["msk"][no_data_row_position, no_data_col_position] = img_left.attrs["no_data_mask"]
+        image["msk"][no_data_row_position, no_data_col_position] = image.attrs["no_data_mask"]
 
         criteria_dataarray.data[no_data_row_position, no_data_col_position, ...] = (
             Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
@@ -396,6 +396,6 @@ class TestMaskLeftNoData:
             Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
         )
 
-        criteria.mask_left_no_data(img_left, window_size, criteria_dataarray)
+        criteria.mask_left_no_data(image, window_size, criteria_dataarray)
 
         np.testing.assert_array_equal(criteria_dataarray.values, expected_criteria_data)
