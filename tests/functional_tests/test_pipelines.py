@@ -98,7 +98,22 @@ class TestRemoveExtrakeys:
         assert result == {}
 
 
-def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement):
+@pytest.mark.parametrize(
+    "roi",
+    [
+        pytest.param({}, id="No ROI"),
+        pytest.param(
+            {
+                "ROI": {
+                    "col": {"first": 3, "last": 7},
+                    "row": {"first": 5, "last": 8},
+                }
+            },
+            id="With ROI",
+        ),
+    ],
+)
+def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, roi):
     """
     Description : Test a configuration with monoband images.
     Data :
@@ -106,7 +121,7 @@ def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_p
     - Right image : cones/monoband/right.png
     Requirement : EX_CONF_00, EX_CONF_06
     """
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement}
+    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **roi}
     configuration["input"]["left"]["nodata"] = -9999
 
     run_dir = run_pipeline(configuration)
