@@ -25,6 +25,7 @@ Test get_roi_processing.
 # pylint: disable=redefined-outer-name
 
 import pytest
+import numpy as np
 
 from pandora2d import img_tools
 
@@ -75,6 +76,70 @@ def test_roi_with_negative_and_positive_disparities(default_roi, col_disparity, 
     Test the get_roi_processing method with negative disparities
     """
     test_roi_column = img_tools.get_roi_processing(default_roi, col_disparity, row_disparity)
+
+    assert test_roi_column["margins"] == expected
+    assert test_roi_column == default_roi
+
+
+@pytest.fixture
+def positive_grid(left_img_shape, create_disparity_grid_fixture):
+    """Create a positive disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width) with alternating rows of 6 and 8
+    init_band = np.tile([[6], [8]], (height // 2 + 1, width))[:height, :]
+
+    return create_disparity_grid_fixture(init_band, 2, "postive_disparity.tif")
+
+
+@pytest.fixture
+def negative_grid(left_img_shape, create_disparity_grid_fixture):
+    """Create a negative disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width) with alternating rows of -5 and -7
+    init_band = np.tile([[-5], [-7]], (height // 2 + 1, width))[:height, :]
+
+    return create_disparity_grid_fixture(init_band, 2, "negative_disparity.tif")
+
+
+@pytest.fixture
+def lower_than_margins_grid(left_img_shape, create_disparity_grid_fixture):
+    """
+    Create a disparity grid with disparity lower than default_roi margins
+    and save it in tmp
+    """
+
+    height, width = left_img_shape
+
+    init_band = np.full((height, width), 0)
+
+    return create_disparity_grid_fixture(init_band, 1, "lower_than_margins_disparity.tif")
+
+
+@pytest.mark.parametrize(
+    ["col_disparity", "row_disparity", "expected"],
+    [
+        pytest.param("second_correct_grid", "correct_grid", (26, 5, 10, 8), id="Negative and positive disparities"),
+        pytest.param("negative_grid", "positive_grid", (9, 4, 3, 10), id="Negative disparities for columns"),
+        pytest.param("positive_grid", "negative_grid", (4, 9, 10, 3), id="Negative disparities for rows"),
+        pytest.param(
+            "lower_than_margins_grid",
+            "lower_than_margins_grid",
+            (2, 2, 2, 2),
+            id="Margins greater than disparities",
+        ),
+    ],
+)
+def test_roi_with_negative_and_positive_disparities_grids(default_roi, col_disparity, row_disparity, expected, request):
+    """
+    Test the get_roi_processing method with grid disparities
+    """
+    test_roi_column = img_tools.get_roi_processing(
+        default_roi, request.getfixturevalue(col_disparity), request.getfixturevalue(row_disparity)
+    )
 
     assert test_roi_column["margins"] == expected
     assert test_roi_column == default_roi

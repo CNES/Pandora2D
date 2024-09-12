@@ -27,7 +27,7 @@ import pytest
 from skimage.io import imsave
 
 from pandora2d import Pandora2DMachine
-from pandora2d.img_tools import add_left_disparity_grid
+from pandora2d.img_tools import add_disparity_grid
 
 
 @pytest.fixture()
@@ -182,9 +182,7 @@ def left_stereo_object():
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
     }
 
-    return left.pipe(
-        add_left_disparity_grid, {"col_disparity": {"init": 1, "range": 1}, "row_disparity": {"init": -1, "range": 1}}
-    )
+    return left.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
 
 
 @pytest.fixture()
@@ -256,8 +254,74 @@ def stereo_object_with_args():
 
     return (
         left_arg.pipe(
-            add_left_disparity_grid,
-            {"col_disparity": {"init": 1, "range": 1}, "row_disparity": {"init": -1, "range": 1}},
+            add_disparity_grid,
+            {"init": 1, "range": 1},
+            {"init": -1, "range": 1},
         ),
         right_arg,
     )
+
+
+@pytest.fixture
+def incorrect_disp_dict():
+    """Create an incorrect disparity dictionary"""
+    return {"init": -460, "range": 3}
+
+
+@pytest.fixture
+def out_of_image_grid(left_img_shape, create_disparity_grid_fixture):
+    """
+    Create an initial disparity grid with a point that has its disparity interval outside the image
+    and save it in tmp
+    """
+
+    height, width = left_img_shape
+
+    init_band = np.random.randint(-3, 4, size=(height, width))
+    init_band[0, 0] = -455
+
+    return create_disparity_grid_fixture(init_band, 2, "out_of_image_disparity.tif")
+
+
+@pytest.fixture
+def negative_exploration_grid(left_img_shape, create_disparity_grid_fixture):
+    """
+    Create an initial disparity grid with a point that has a negative exploration value
+    and save it in tmp
+    """
+
+    height, width = left_img_shape
+
+    init_band = np.random.randint(-3, 4, size=(height, width))
+
+    return create_disparity_grid_fixture(init_band, -2, "negative_exploration_disparity.tif")
+
+
+@pytest.fixture
+def two_bands_grid(left_img_shape, create_disparity_grid_fixture):
+    """
+    Create an initial disparity grid with two bands and save it in tmp
+    """
+
+    height, width = left_img_shape
+
+    first_band = np.random.randint(-3, 4, size=(height, width))
+    second_band = np.random.randint(0, 6, size=(height, width))
+
+    data = np.stack([first_band, second_band], axis=-1)
+
+    return create_disparity_grid_fixture(data, 2, "two_bands_disparity.tif", True)
+
+
+@pytest.fixture
+def wrong_size_grid(left_img_shape, create_disparity_grid_fixture):
+    """
+    Create an initial disparity grid of wrong size
+    and save it in tmp
+    """
+
+    height, width = left_img_shape
+
+    init_band = np.random.randint(-3, 4, size=(height - 2, width + 4))
+
+    return create_disparity_grid_fixture(init_band, 3, "wrong_size_disparity.tif")

@@ -22,6 +22,13 @@ In the configuration file, the user is required to enter disparity range for row
         }
     }
 
+.. note::
+    The "init" key can be either: 
+        - an integer if the initial disparity is common to every point in the image.
+        - a path to a disparity grid if each point has its own initial disparity value.
+        
+    (see :ref:`inputs`)
+
 The min and max disparity would then be equal to (example for columns): 
 
 .. code:: python

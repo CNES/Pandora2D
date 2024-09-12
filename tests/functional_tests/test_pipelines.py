@@ -28,6 +28,9 @@ from typing import Dict
 
 import pytest
 
+import numpy as np
+import rasterio
+
 
 def remove_extra_keys(extended: dict, reference: dict):
     """
@@ -233,3 +236,68 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
         report = json.load(report_file)
 
     assert report["statistics"]["disparity"].keys() == {"row", "col"}
+
+
+@pytest.mark.parametrize(
+    ["make_input_cfg", "pipeline"],
+    [
+        pytest.param(
+            {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
+            "correct_pipeline_without_refinement",
+            id="Pipeline with disparity grids",
+        ),
+        pytest.param(
+            {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
+            "correct_pipeline_with_dichotomy",
+            id="Pipeline with disparity grids and dichotomy",
+        ),
+    ],
+    indirect=["make_input_cfg"],
+)
+def test_disparity_grids(run_pipeline, make_input_cfg, pipeline, request):
+    """
+    Description: Test pipeline with disparity grids
+    """
+
+    configuration = {
+        "input": make_input_cfg,
+        "ROI": {"col": {"first": 210, "last": 240}, "row": {"first": 210, "last": 240}},
+        **request.getfixturevalue(pipeline),
+    }
+    configuration["pipeline"]["disparity"]["invalid_disparity"] = np.nan
+
+    run_dir = run_pipeline(configuration)
+
+    with rasterio.open(run_dir / "output" / "row_disparity.tif") as src:
+        row_map = src.read(1)
+    with rasterio.open(run_dir / "output" / "columns_disparity.tif") as src:
+        col_map = src.read(1)
+
+    non_nan_row_map = ~np.isnan(row_map)
+    non_nan_col_map = ~np.isnan(col_map)
+
+    # Minimal and maximal disparities corresponding to correct_grid_path fixture
+    min_max_disp_row = np.array(
+        [
+            np.tile([[-3], [-5], [-2]], (375 // 3 + 1, 450))[210:241, 210:241],
+            np.tile([[7], [5], [8]], (375 // 3 + 1, 450))[210:241, 210:241],
+        ]
+    )
+
+    # Minimal and maximal disparities corresponding to second_correct_grid_path fixture
+    min_max_disp_col = np.array(
+        [
+            np.tile([[0, -26, -6]], (375, 450 // 3 + 1))[210:241, 210:241],
+            np.tile([[10, -16, 4]], (375, 450 // 3 + 1))[210:241, 210:241],
+        ]
+    )
+
+    # Checks that the resulting disparities are well within the ranges created from the input disparity grids
+    assert np.all(
+        (row_map[non_nan_row_map] >= min_max_disp_row[0, ::][non_nan_row_map])
+        & (row_map[non_nan_row_map] <= min_max_disp_row[1, ::][non_nan_row_map])
+    )
+    assert np.all(
+        (col_map[non_nan_col_map] >= min_max_disp_col[0, ::][non_nan_col_map])
+        & (col_map[non_nan_col_map] <= min_max_disp_col[1, ::][non_nan_col_map])
+    )

@@ -33,7 +33,7 @@ import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
 from skimage.io import imsave
 
-
+from pandora.img_tools import get_metadata
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 from pandora2d import check_configuration
 
@@ -580,6 +580,93 @@ class TestDisparityRangeAgainstImageSize:
     def test_disparity_partially_out(self, pandora2d_machine, configuration):
         """Partially out should not raise error."""
         check_configuration.check_conf(configuration, pandora2d_machine)
+
+
+class TestCheckDisparity:
+    """
+    Test check_disparity method
+    """
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
+                id="Correct disparity with variable initial value",
+            ),
+            pytest.param(
+                {"row_disparity": "constant_initial_disparity", "col_disparity": "second_constant_initial_disparity"},
+                id="Correct disparity with constant initial value",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_passes_check_disparity(self, left_img_path, make_input_cfg):
+        """
+        Test check_disparity method with correct input disparities
+        """
+
+        image_metadata = get_metadata(left_img_path)
+
+        check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg", "error_type", "error_message"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "left_img_shape"},
+                AttributeError,
+                "The disparities in rows and columns must be given as 2 dictionaries",
+                id="Col disparity is not a dictionary",
+            ),
+            pytest.param(
+                {"row_disparity": "left_img_shape", "col_disparity": "correct_grid"},
+                AttributeError,
+                "The disparities in rows and columns must be given as 2 dictionaries",
+                id="Row disparity is not a dictionary",
+            ),
+            pytest.param(
+                {"row_disparity": "constant_initial_disparity", "col_disparity": "correct_grid"},
+                ValueError,
+                "Initial columns and row disparity values must be two strings or two integers",
+                id="Initial value is different for columns and rows disparity",
+            ),
+            pytest.param(
+                {"row_disparity": "out_of_image_grid", "col_disparity": "second_correct_grid"},
+                ValueError,
+                "Row disparity range out of image",
+                id="Row disparity grid out of image for one point",
+            ),
+            pytest.param(
+                {"row_disparity": "constant_initial_disparity", "col_disparity": "incorrect_disp_dict"},
+                ValueError,
+                "Column disparity range out of image",
+                id="Column disparity dict out of image for one point",
+            ),
+            pytest.param(
+                {"row_disparity": "two_bands_grid", "col_disparity": "correct_grid"},
+                AttributeError,
+                "Initial disparity grid must be a 1-channel grid",
+                id="Row disparity grid has two band",
+            ),
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "wrong_size_grid"},
+                AttributeError,
+                "Initial disparity grids and image must have the same size",
+                id="Column disparity grid size is different from image size",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_check_disparity(self, left_img_path, make_input_cfg, error_type, error_message):
+        """
+        Test check_disparity method with incorrect input disparities
+        """
+
+        image_metadata = get_metadata(left_img_path)
+
+        with pytest.raises(error_type, match=error_message):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
 
 
 @pytest.mark.parametrize(
