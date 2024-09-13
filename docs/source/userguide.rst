@@ -14,6 +14,7 @@ Userguide
    userguide/output.rst
    userguide/as_an_api.rst
    userguide/faq.rst
+   userguide/expert_mode.rst
    
 
 
