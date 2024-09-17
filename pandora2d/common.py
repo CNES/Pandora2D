@@ -222,8 +222,8 @@ def set_out_of_row_disparity_range_to_other_value(
     ndisp_row = data.shape[-1]
 
     # We want to put special value on points that are not in the global disparity range (row_disparity_source)
-    if global_disparity_range is not None:  # Case we are working with cost volume
-        for disp_row in range(ndisp_row):
+    for disp_row in range(ndisp_row):
+        if global_disparity_range is not None:  # Case we are working with cost volume
             masking = np.nonzero(
                 np.logical_or(
                     (data.coords["disp_row"].data[disp_row] < min_disp_grid)
@@ -232,17 +232,14 @@ def set_out_of_row_disparity_range_to_other_value(
                     & (data.coords["disp_row"].data[disp_row] <= global_disparity_range[1]),
                 )
             )
-            data.data[masking[0], masking[1], :, disp_row] = value
-
-    else:
-        for disp_row in range(ndisp_row):
+        else:
             masking = np.nonzero(
                 np.logical_or(
                     data.coords["disp_row"].data[disp_row] < min_disp_grid,
                     data.coords["disp_row"].data[disp_row] > max_disp_grid,
                 )
             )
-            data.data[masking[0], masking[1], :, disp_row] = value
+        data.data[masking[0], masking[1], :, disp_row] = value
 
 
 def set_out_of_col_disparity_range_to_other_value(
@@ -273,8 +270,8 @@ def set_out_of_col_disparity_range_to_other_value(
     ndisp_col = data.shape[-2]
 
     # We want to put special value on points that are not in the global disparity range (col_disparity_source)
-    if global_disparity_range:  # Case we are working with cost volume
-        for disp_col in range(ndisp_col):
+    for disp_col in range(ndisp_col):
+        if global_disparity_range is not None:  # Case we are working with cost volume
             masking = np.nonzero(
                 np.logical_or(
                     (data.coords["disp_col"].data[disp_col] < min_disp_grid)
@@ -283,14 +280,11 @@ def set_out_of_col_disparity_range_to_other_value(
                     & (data.coords["disp_col"].data[disp_col] <= global_disparity_range[1]),
                 )
             )
-            data.data[masking[0], masking[1], disp_col, :] = value
-
-    else:
-        for disp_col in range(ndisp_col):
+        else:
             masking = np.nonzero(
                 np.logical_or(
                     data.coords["disp_col"].data[disp_col] < min_disp_grid,
                     data.coords["disp_col"].data[disp_col] > max_disp_grid,
                 )
             )
-            data.data[masking[0], masking[1], disp_col, :] = value
+        data.data[masking[0], masking[1], disp_col, :] = value
