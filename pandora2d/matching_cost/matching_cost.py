@@ -412,12 +412,14 @@ class MatchingCost:
             img_left["row_disparity"].sel(band_disp="min").data,
             img_left["row_disparity"].sel(band_disp="max").data,
             np.nan,
+            cost_volumes.attrs["row_disparity_source"],
         )
         set_out_of_col_disparity_range_to_other_value(
             cost_volumes["cost_volumes"],
             img_left["col_disparity"].sel(band_disp="min").data,
             img_left["col_disparity"].sel(band_disp="max").data,
             np.nan,
+            cost_volumes.attrs["col_disparity_source"],
         )
 
         return cost_volumes
