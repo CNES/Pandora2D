@@ -94,8 +94,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "before": "refinement_check_conf"},
     ]
 
-    margins = GlobalMargins()
-
     def __init__(
         self,
     ) -> None:
@@ -117,6 +115,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         # For communication between matching_cost and refinement steps
         self.step: list = None
         self.window_size: int = None
+        self.margins = GlobalMargins()
 
         # Define available states
         states_ = ["begin", "assumption", "cost_volumes", "disp_maps"]

@@ -137,8 +137,6 @@ def test_extrema_disparities_not_processed(make_cfg_for_dichotomy):
 
     image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
 
-    pandora2d_machine = Pandora2DMachine()
-
     # Prepare Pandora2D machine
     pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
     # Run matching cost step
