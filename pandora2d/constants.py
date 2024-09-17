@@ -30,20 +30,22 @@ class Criteria(Flag):
 
     VALID = 0
 
-    # The pixel is invalid : border of left image according to window size
     PANDORA2D_MSK_PIXEL_LEFT_BORDER = auto()
-    # The pixel is invalid : nodata in left mask
+    """The pixel is invalid : border of left image according to window size."""
     PANDORA2D_MSK_PIXEL_LEFT_NODATA = auto()
-    # The pixel is invalid : nodata in right mask
+    """The pixel is invalid : nodata in left mask."""
     PANDORA2D_MSK_PIXEL_RIGHT_NODATA = auto()
-    # The pixel is invalid : disparity is out the right image
+    """The pixel is invalid : nodata in right mask."""
     PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE = auto()
-    # The pixel is invalid : invalidated by validity mask of left image
+    """The pixel is invalid : disparity is out the right image."""
     PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT = auto()
-    # The pixel is invalid : invalidated by validity mask of right image
+    """The pixel is invalid : invalidated by validity mask of left image."""
     PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT = auto()
-    # The pixel is invalid : The correlation peak is at the edge of disparity range.
-    # The calculations stopped at the pixellic stage.
+    """The pixel is invalid : invalidated by validity mask of right image."""
     PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE = auto()
-    # The disparity is not processed because not included in the disparity range of the current point
+    """
+    The pixel is invalid : The correlation peak is at the edge of disparity range.
+    The calculations stopped at the pixellic stage.
+    """
     PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED = auto()
+    """The disparity is not processed because not included in the disparity range of the current point."""
