@@ -171,6 +171,73 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
     right_criteria_mask = np.full_like(img_right["msk"], Criteria.VALID, dtype=Criteria)
     right_binary_mask = binary_dilation_msk(img_right, window_size)
     right_criteria_mask[right_binary_mask] |= Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+
+    apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
+
+
+def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
+    """
+    This method raises PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT criteria for points having
+    an invalid point in the left image mask.
+    A point is considered invalid if its value in the msk of the left image
+    is different from the values of the valid_pixels and no_data_mask attributes.
+
+    :param left_image: left image with `msk` data var.
+    :type left_image: xr.Dataset
+    :param criteria_dataaray: criteria dataarray to update
+    :type criteria_dataaray: xr.DataArray
+    """
+    invalid_left_mask = get_invalid_mask(left_image)
+
+    criteria_dataarray.data[invalid_left_mask, ...] |= Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
+
+
+def mask_right_invalid(right_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
+    """
+    This method raises PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT criteria for points having
+    an invalid point in the right image mask shift by its disparity.
+    A point is considered invalid if when we shift it by its disparity, the obtained value
+    is different from the values of the valid_pixels and no_data_mask attributes.
+
+    :param right_image: right image with `msk` data var.
+    :type right_image: xr.Dataset
+    :param criteria_dataaray: criteria dataarray to update
+    :type criteria_dataaray: xr.DataArray
+    """
+    right_criteria_mask = np.full_like(right_image["msk"], Criteria.VALID, dtype=Criteria)
+
+    invalid_right_mask = get_invalid_mask(right_image)
+
+    right_criteria_mask[invalid_right_mask] |= Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+
+    apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
+
+
+def get_invalid_mask(image: xr.Dataset) -> NDArray:
+    """
+    Get mask for points of the image that are neither valid
+    or no data.
+
+    :param image: image with `msk` data var.
+    :type image: xr.Dataset
+    :return: invalid_mask: mask containing invalid points
+    :rtype: invalid_mask: NDArray
+    """
+
+    invalid_mask = (image.msk.data != image.attrs["no_data_mask"]) & (image.msk.data != image.attrs["valid_pixels"])
+    return invalid_mask
+
+
+def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_mask: NDArray):
+    """
+    This method apply right_criteria_mask array on criteria_dataarray according
+    to row and column disparities.
+
+    :param criteria_dataaray: criteria dataarray to update
+    :type criteria_dataaray: xr.DataArray
+    :param right_criteria_mask: mask to apply to criteria dataarray
+    :type right_criteria_mask: np.NDArray
+    """
     for row_disp, col_disp in itertools.product(
         criteria_dataarray.coords["disp_row"], criteria_dataarray.coords["disp_col"]
     ):
@@ -178,6 +245,7 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
         # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
         msk_row_slice = np.s_[:row_disp] if row_disp < 0 else np.s_[row_disp:]
         msk_col_slice = np.s_[:col_disp] if col_disp < 0 else np.s_[col_disp:]
+
         criteria_row_slice = np.s_[-row_disp:] if row_disp <= 0 else np.s_[:-row_disp]
         criteria_col_slice = np.s_[-col_disp:] if col_disp <= 0 else np.s_[:-col_disp]
         criteria_dataarray.loc[
