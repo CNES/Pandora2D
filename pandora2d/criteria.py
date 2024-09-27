@@ -56,6 +56,56 @@ def allocate_criteria_dataarray(
     )
 
 
+def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: xr.Dataset) -> xr.DataArray:
+    """
+    This method fill the criteria dataarray with the different criteria obtained thanks to
+    the methods implemented in this file
+    """
+
+    # Allocate criteria dataarray
+    criteria_dataarray = allocate_criteria_dataarray(cv)
+
+    if "msk" in left_image.data_vars:
+
+        # Raise criteria PANDORA2D_MSK_PIXEL_LEFT_NODATA
+        # for points having no data in left mask, for each disparity
+        mask_left_no_data(left_image, cv.attrs["window_size"], criteria_dataarray)
+        # Raise criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
+        # for points having invalid in left mask, for each disparity
+        mask_left_invalid(left_image, criteria_dataarray)
+
+    if "msk" in right_image.data_vars:
+
+        # Raise criteria PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+        # for points having no data in right mask according to disparity value
+        mask_right_no_data(right_image, cv.attrs["window_size"], criteria_dataarray)
+        # Raise criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+        # for points having invalid in right mask according to disparity value
+        mask_right_invalid(right_image, criteria_dataarray)
+
+    # Raise criteria PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    # for points for which window is outside right image according to disparity value
+    mask_disparity_outside_right_image(cv.attrs["offset_row_col"], criteria_dataarray)
+
+    # Raise criteria PANDORA2D_MSK_PIXEL_LEFT_BORDER
+    # on the border according to offset value, for each disparity
+    mask_border(cv.attrs["offset_row_col"], criteria_dataarray)
+
+    # Get columns disparity grid
+    d_min_col_grid = left_image["col_disparity"].sel(band_disp="min").data.copy()
+    d_max_col_grid = left_image["col_disparity"].sel(band_disp="max").data.copy()
+
+    # Get rows disparity grid
+    d_min_row_grid = left_image["row_disparity"].sel(band_disp="min").data.copy()
+    d_max_row_grid = left_image["row_disparity"].sel(band_disp="max").data.copy()
+
+    # Put PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
+    # on points for which corresponding disparity is not processed
+    set_unprocessed_disp(criteria_dataarray, d_min_col_grid, d_max_col_grid, d_min_row_grid, d_max_row_grid)
+
+    return criteria_dataarray
+
+
 def set_unprocessed_disp(
     criteria_dataarray: xr.DataArray,
     min_grid_col: NDArray[np.floating],
