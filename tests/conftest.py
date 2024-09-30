@@ -333,6 +333,16 @@ def second_correct_grid(left_img_shape, create_disparity_grid_fixture):
 
 
 @pytest.fixture()
+def correct_pipeline_without_refinement():
+    return {
+        "pipeline": {
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+        }
+    }
+
+
+@pytest.fixture()
 def reset_profiling():
     pandora2d.profiling.data.reset()
     pandora2d.profiling.expert_mode_config.enable = False
