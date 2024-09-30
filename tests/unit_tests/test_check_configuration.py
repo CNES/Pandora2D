@@ -687,3 +687,39 @@ def test_extra_section_is_allowed(correct_input_cfg, correct_pipeline, pandora2d
     configuration = {**correct_input_cfg, **correct_pipeline, extra_section_name: {}}
 
     check_configuration.check_conf(configuration, pandora2d_machine)
+
+
+class TestExpertModeSection:
+    """
+    Description : Test expert_mode_section.
+    """
+
+    def test_expert_mode_section_missing_profile_parameter(self):
+        """
+        Description : Test if profiling section is missing
+        Data :
+        Requirement :
+        """
+
+        with pytest.raises(MissKeyCheckerError) as exc_info:
+            check_configuration.check_expert_mode_section({"expert_mode": {}})
+        assert str(exc_info.value) == "Please be sure to set the profiling dictionary"
+
+    @pytest.mark.parametrize(
+        ["parameter", "wrong_value_parameter"],
+        [
+            pytest.param("folder_name", 12, id="error folder name with an int"),
+            pytest.param("folder_name", ["folder_name"], id="error folder name with a list"),
+            pytest.param("folder_name", {"folder_name": "expert_mode"}, id="error folder name with a dict"),
+            pytest.param("folder_name", 12.0, id="error folder name with a float"),
+        ],
+    )
+    def test_configuration_expert_mode(self, parameter, wrong_value_parameter):
+        """
+        Description : Test if wrong parameters are detected
+        Data :
+        Requirement :
+        """
+        with pytest.raises(DictCheckerError) as err:
+            check_configuration.check_expert_mode_section({"profiling": {parameter: wrong_value_parameter}})
+        assert "folder_name" in err.value.args[0]

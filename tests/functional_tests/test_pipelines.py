@@ -19,10 +19,13 @@
 """
 Run pandora2d configurations from end to end.
 """
+import glob
 
 # pylint: disable=redefined-outer-name
 
 import json
+import os
+import re
 from copy import deepcopy
 from typing import Dict
 
@@ -301,3 +304,44 @@ def test_disparity_grids(run_pipeline, make_input_cfg, pipeline, request):
         (col_map[non_nan_col_map] >= min_max_disp_col[0, ::][non_nan_col_map])
         & (col_map[non_nan_col_map] <= min_max_disp_col[1, ::][non_nan_col_map])
     )
+
+
+@pytest.mark.usefixtures("reset_profiling")
+@pytest.mark.parametrize(
+    ["ground_truth", "configuration_expert", "file_exists"],
+    [
+        pytest.param(
+            [".csv", ".pdf"],
+            {"expert_mode": {"profiling": {"folder_name": "expert_mode"}}},
+            True,
+            id="Expert mode",
+        ),
+        pytest.param([], {}, False, id="No expert mode"),
+    ],
+)
+def test_expert_mode(
+    ground_truth,
+    configuration_expert,
+    run_pipeline,
+    file_exists,
+    correct_input_cfg,
+    correct_pipeline_without_refinement,
+):
+    """
+    Description : Test default expert mode outputs
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    """
+
+    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **configuration_expert}
+
+    run_dir = run_pipeline(configuration)
+
+    output_expert_dir = run_dir / "output" / "expert_mode"
+
+    assert output_expert_dir.exists() == file_exists
+
+    if output_expert_dir.exists():
+        file_extensions = [f.suffix for f in output_expert_dir.iterdir() if f.is_file()]
+        assert set(file_extensions) == set(ground_truth)

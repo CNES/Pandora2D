@@ -330,3 +330,9 @@ def second_correct_grid(left_img_shape, create_disparity_grid_fixture):
     init_band = np.tile([[5, -21, -1]], (height, width // 3 + 1))[:, :width]
 
     return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
+
+
+@pytest.fixture()
+def reset_profiling():
+    pandora2d.profiling.data.reset()
+    pandora2d.profiling.expert_mode_config.enable = False
