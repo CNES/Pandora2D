@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.4.0 (October 2024)
+
+### Added
+- Add unit tests for optical flows. [#114]
+- Subpix taken into account in the dichotomy. [#148]
+- Adding requirement numbers to the test docstring. [#143]
+- Add requirement on html-report test. [#167]
+- Variable initial disparity added to the configuration file. [#76]
+- Adding cardinal sine module in interpolation filter. [#146]
+- Mask added to the configuration file. [#157]
+- Variable disparity taken into account in matching cost step. [#152]
+- Add constant.py and criteria.py files for masks. [#159]
+- Add right-disparity-outside criterion. [#162]
+- Variable disparity taken into account in dichotomy. [#154]
+- Add accuracy tests for dichotomy. [#126]
+- Variable disparity taken into account in optical flow. [#158]
+- Add first resource tests. [#174]
+- Setting up disparity grids at inputs. [#165]
+- Add left_nodata and right_nodata criteria. [#160]
+- Add left_invalid and right_invalid criteria. [#161]
+- Add criteria dataarray. [#163]
+- Add profiling. [#175]
+
+### Fixed
+- Fix the use of a step with the optical flow method in the refinement step. [#119]
+- Fix ROI coordinates when the first point is within the margin. [#142]
+- Fix sphinx errors. [#168]
+- Remove np.inf on cost volume. [#170]
+
+### Changed
+- State machine callback changed from after to before. [#144]
+- Update pylint version. [#153]
+- Documentation updated with new parameters for variable initial disparity. [#150]
+- Update numpy version. [#145]
+- Removal of disparity grids in the state machine. [#171]
+- Removal of the disparity condition with the interpolation step. [#169]
+- Update dichotomy documentation. [#166]
+- Pixel size output updated as a function of step size. [#164]
+
+ 
 ## 0.3.0 (June 2024)
 
 ### Added
