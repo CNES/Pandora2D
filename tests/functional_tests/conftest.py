@@ -18,26 +18,7 @@
 #
 """Module with global test fixtures."""
 
-import json
-
 import pytest
-
-import pandora2d
-
-
-@pytest.fixture()
-def run_pipeline(tmp_path):
-    """Fixture that returns a function to run a pipeline and which returns the output directory path."""
-
-    def run(configuration, output_dir="output"):
-        config_path = tmp_path / "config.json"
-        with config_path.open("w", encoding="utf-8") as file_:
-            json.dump(configuration, file_, indent=2)
-
-        pandora2d.main(str(config_path), str(tmp_path / output_dir), verbose=False)
-        return tmp_path
-
-    return run
 
 
 @pytest.fixture()
@@ -57,5 +38,16 @@ def correct_pipeline_with_optical_flow():
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "optical_flow"},
+        }
+    }
+
+
+@pytest.fixture()
+def correct_pipeline_with_dichotomy():
+    return {
+        "pipeline": {
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "refinement": {"refinement_method": "dichotomy", "iterations": 2, "filter": {"method": "bicubic"}},
         }
     }

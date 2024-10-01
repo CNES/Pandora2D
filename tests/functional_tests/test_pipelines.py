@@ -19,14 +19,20 @@
 """
 Run pandora2d configurations from end to end.
 """
+import glob
 
 # pylint: disable=redefined-outer-name
 
 import json
+import os
+import re
 from copy import deepcopy
 from typing import Dict
 
 import pytest
+
+import numpy as np
+import rasterio
 
 
 def remove_extra_keys(extended: dict, reference: dict):
@@ -98,9 +104,30 @@ class TestRemoveExtrakeys:
         assert result == {}
 
 
-def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement):
-    """Test a configuration with monoband images."""
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement}
+@pytest.mark.parametrize(
+    "roi",
+    [
+        pytest.param({}, id="No ROI"),
+        pytest.param(
+            {
+                "ROI": {
+                    "col": {"first": 3, "last": 7},
+                    "row": {"first": 5, "last": 8},
+                }
+            },
+            id="With ROI",
+        ),
+    ],
+)
+def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, roi):
+    """
+    Description : Test a configuration with monoband images.
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    Requirement : EX_CONF_00, EX_CONF_06
+    """
+    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **roi}
     configuration["input"]["left"]["nodata"] = -9999
 
     run_dir = run_pipeline(configuration)
@@ -122,7 +149,13 @@ def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_p
 
 @pytest.mark.xfail(reason="saved nan in nodata is not valid json and is not comparable to nan")
 def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement):
-    """Test a configuration with monoband images and left nodata set to NaN."""
+    """
+    Description : Test a configuration with monoband images and left nodata set to NaN.
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    Requirement : EX_CONF_00, EX_CONF_06
+    """
     configuration = {**correct_input_cfg, **correct_pipeline_without_refinement}
 
     run_dir = run_pipeline(configuration)
@@ -138,7 +171,13 @@ def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipel
 
 @pytest.mark.xfail(reason="Multiband is not managed")
 def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_without_refinement):
-    """Test a configuration with multiband images."""
+    """
+    Description : Test a configuration with multiband images.
+    Data :
+    - Left image : cones/multibands/left.tif
+    - Right image : cones/multibands/right.tif
+    Requirement : EX_CONF_00, EX_CONF_06, EX_CONF_12
+    """
     configuration: Dict[str, Dict] = {**correct_multiband_input_cfg, **correct_pipeline_without_refinement}
 
     run_dir = run_pipeline(configuration)
@@ -153,7 +192,13 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
 
 
 def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pipeline_with_optical_flow):
-    """Test optical_flow configuration has a window_size and a step identical to matching_cost step."""
+    """
+    Description : Test optical_flow configuration has a window_size and a step identical to matching_cost step.
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    Requirement : EX_CONF_00, EX_CONF_06
+    """
     configuration: Dict[str, Dict] = {**correct_input_cfg, **correct_pipeline_with_optical_flow}
     configuration["pipeline"]["refinement"]["iterations"] = 1
 
@@ -168,3 +213,135 @@ def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pip
     # Check window_size and step parameters
     assert matching_cost_cfg["window_size"] == refinement_cfg["window_size"]
     assert matching_cost_cfg["step"] == refinement_cfg["step"]
+
+
+@pytest.mark.parametrize("input_cfg", ["correct_input_with_left_mask", "correct_input_with_right_mask"])
+def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_without_refinement, request):
+    """
+    Description : Test mask configuration
+    """
+    input_cfg = request.getfixturevalue(input_cfg)
+
+    configuration = {**input_cfg, **correct_pipeline_without_refinement}
+
+    run_dir = run_pipeline(configuration)
+
+    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+        output_config = json.load(output_file)
+
+    result = remove_extra_keys(output_config, configuration)
+
+    assert result == configuration
+    assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
+
+    # Test for report
+    with open(run_dir / "output" / "report.json", encoding="utf8") as report_file:
+        report = json.load(report_file)
+
+    assert report["statistics"]["disparity"].keys() == {"row", "col"}
+
+
+@pytest.mark.parametrize(
+    ["make_input_cfg", "pipeline"],
+    [
+        pytest.param(
+            {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
+            "correct_pipeline_without_refinement",
+            id="Pipeline with disparity grids",
+        ),
+        pytest.param(
+            {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
+            "correct_pipeline_with_dichotomy",
+            id="Pipeline with disparity grids and dichotomy",
+        ),
+    ],
+    indirect=["make_input_cfg"],
+)
+def test_disparity_grids(run_pipeline, make_input_cfg, pipeline, request):
+    """
+    Description: Test pipeline with disparity grids
+    """
+
+    configuration = {
+        "input": make_input_cfg,
+        "ROI": {"col": {"first": 210, "last": 240}, "row": {"first": 210, "last": 240}},
+        **request.getfixturevalue(pipeline),
+    }
+    configuration["pipeline"]["disparity"]["invalid_disparity"] = np.nan
+
+    run_dir = run_pipeline(configuration)
+
+    with rasterio.open(run_dir / "output" / "row_disparity.tif") as src:
+        row_map = src.read(1)
+    with rasterio.open(run_dir / "output" / "columns_disparity.tif") as src:
+        col_map = src.read(1)
+
+    non_nan_row_map = ~np.isnan(row_map)
+    non_nan_col_map = ~np.isnan(col_map)
+
+    # Minimal and maximal disparities corresponding to correct_grid_path fixture
+    min_max_disp_row = np.array(
+        [
+            np.tile([[-3], [-5], [-2]], (375 // 3 + 1, 450))[210:241, 210:241],
+            np.tile([[7], [5], [8]], (375 // 3 + 1, 450))[210:241, 210:241],
+        ]
+    )
+
+    # Minimal and maximal disparities corresponding to second_correct_grid_path fixture
+    min_max_disp_col = np.array(
+        [
+            np.tile([[0, -26, -6]], (375, 450 // 3 + 1))[210:241, 210:241],
+            np.tile([[10, -16, 4]], (375, 450 // 3 + 1))[210:241, 210:241],
+        ]
+    )
+
+    # Checks that the resulting disparities are well within the ranges created from the input disparity grids
+    assert np.all(
+        (row_map[non_nan_row_map] >= min_max_disp_row[0, ::][non_nan_row_map])
+        & (row_map[non_nan_row_map] <= min_max_disp_row[1, ::][non_nan_row_map])
+    )
+    assert np.all(
+        (col_map[non_nan_col_map] >= min_max_disp_col[0, ::][non_nan_col_map])
+        & (col_map[non_nan_col_map] <= min_max_disp_col[1, ::][non_nan_col_map])
+    )
+
+
+@pytest.mark.usefixtures("reset_profiling")
+@pytest.mark.parametrize(
+    ["ground_truth", "configuration_expert", "file_exists"],
+    [
+        pytest.param(
+            [".csv", ".pdf"],
+            {"expert_mode": {"profiling": {"folder_name": "expert_mode"}}},
+            True,
+            id="Expert mode",
+        ),
+        pytest.param([], {}, False, id="No expert mode"),
+    ],
+)
+def test_expert_mode(
+    ground_truth,
+    configuration_expert,
+    run_pipeline,
+    file_exists,
+    correct_input_cfg,
+    correct_pipeline_without_refinement,
+):
+    """
+    Description : Test default expert mode outputs
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    """
+
+    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **configuration_expert}
+
+    run_dir = run_pipeline(configuration)
+
+    output_expert_dir = run_dir / "output" / "expert_mode"
+
+    assert output_expert_dir.exists() == file_exists
+
+    if output_expert_dir.exists():
+        file_extensions = [f.suffix for f in output_expert_dir.iterdir() if f.is_file()]
+        assert set(file_extensions) == set(ground_truth)

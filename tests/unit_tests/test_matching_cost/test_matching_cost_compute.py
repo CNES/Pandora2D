@@ -21,17 +21,19 @@
 """
 Test compute_cost_volumes method from Matching cost
 """
+
 import importlib.util
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
 import numpy as np
 import xarray as xr
+from pytest_mock import MockerFixture
 from rasterio import Affine
 
 import pytest
 from pandora.margins import Margins
-from pandora2d import matching_cost
+from pandora2d import matching_cost, disparity
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 
 
@@ -49,7 +51,17 @@ from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 @pytest.mark.parametrize("col_step", [1, 2, pytest.param(5, id="Step gt image")])
 @pytest.mark.parametrize("row_step", [1, 2, pytest.param(5, id="Step gt image")])
 def test_steps(request, data_fixture_name, col_step, row_step):
-    """We expect step to work."""
+    """
+    Description : We expect step to work.
+    Data :
+    - data_with_null_disparity,
+    - data_with_positive_disparity_in_col,
+    - data_with_positive_disparity_in_row,
+    - data_with_negative_disparity_in_col,
+    - data_with_negative_disparity_in_row,
+    - data_with_disparity_negative_in_row_and_positive_in_col
+    Requirement : EX_STEP_00, EX_STEP_01
+    """
     data = request.getfixturevalue(data_fixture_name)
 
     # sum of squared difference images self.left, self.right, window_size=3
@@ -58,22 +70,9 @@ def test_steps(request, data_fixture_name, col_step, row_step):
     }
     # initialise matching cost
     matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=data.left,
-        img_right=data.right,
-        grid_min_col=data.disparity_grids.col_min,
-        grid_max_col=data.disparity_grids.col_max,
-        cfg=cfg,
-    )
+    matching_cost_matcher.allocate_cost_volume_pandora(img_left=data.left, img_right=data.right, cfg=cfg)
     # compute cost volumes
-    zncc = matching_cost_matcher.compute_cost_volumes(
-        img_left=data.left,
-        img_right=data.right,
-        grid_min_col=data.disparity_grids.col_min,
-        grid_max_col=data.disparity_grids.col_max,
-        grid_min_row=data.disparity_grids.row_min,
-        grid_max_row=data.disparity_grids.row_max,
-    )
+    zncc = matching_cost_matcher.compute_cost_volumes(img_left=data.left, img_right=data.right)
 
     # indexes are : row, col, disp_x, disp_y
     np.testing.assert_equal(zncc["cost_volumes"].data, data.full_matching_cost[::row_step, ::col_step, :, :])
@@ -83,6 +82,10 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     """
     Test the  cost volume product by ssd
     """
+    # update disparity
+    left_stereo_object["col_disparity"][0, :, :] = np.full((3, 3), -1)
+    left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 0)
+    left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
     # sum of squared difference images left, right, window_size=1
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
     # sum of squared difference ground truth for the images left, right, window_size=1
@@ -112,22 +115,11 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
     matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_stereo_object,
-        img_right=right_stereo_object,
-        grid_min_col=np.full((3, 3), -1),
-        grid_max_col=np.full((3, 3), 0),
-        cfg=cfg,
+        img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg
     )
 
     # compute cost volumes
-    ssd = matching_cost_matcher.compute_cost_volumes(
-        img_left=left_stereo_object,
-        img_right=right_stereo_object,
-        grid_min_col=np.full((3, 3), -1),
-        grid_max_col=np.full((3, 3), 0),
-        grid_min_row=np.full((3, 3), -1),
-        grid_max_row=np.full((3, 3), 0),
-    )
+    ssd = matching_cost_matcher.compute_cost_volumes(img_left=left_stereo_object, img_right=right_stereo_object)
 
     # check that the generated cost_volumes is equal to ground truth
     np.testing.assert_allclose(ssd["cost_volumes"].data, ad_ground_truth, atol=1e-06)
@@ -156,29 +148,15 @@ def test_compute_cv_mc_cnn():
         "no_data_mask": 1,
         "crs": None,
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": [-1, 1],
-        "row_disparity_source": [-1, 1],
     }
+    img.pipe(add_disparity_grid, {"init": 0, "range": 1}, {"init": 0, "range": 1})
 
     matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=img,
-        img_right=img,
-        grid_min_col=np.full((100, 100), -1),
-        grid_max_col=np.full((100, 100), 1),
-        cfg=cfg,
-    )
+    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img, img_right=img, cfg=cfg)
 
     # compute cost volumes
-    mccnn = matching_cost_matcher.compute_cost_volumes(
-        img_left=img,
-        img_right=img,
-        grid_min_col=np.full((100, 100), -1),
-        grid_max_col=np.full((100, 100), 1),
-        grid_min_row=np.full((100, 100), -1),
-        grid_max_row=np.full((100, 100), 1),
-    )
+    mccnn = matching_cost_matcher.compute_cost_volumes(img_left=img, img_right=img)
 
     # get cv with disparity = 0
     disp = abs(mccnn["cost_volumes"].data[:, :, 1, 1])
@@ -192,7 +170,10 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     """
     Test the  cost volume product by sad
     """
-
+    # update disparity
+    left_stereo_object["col_disparity"][0, :, :] = np.full((3, 3), -1)
+    left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 0)
+    left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
     # sum of squared difference images left, right, window_size=1
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 1}}}
     # sum of absolute difference ground truth for the images left, right, window_size=1
@@ -222,21 +203,10 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     # initialise matching cost
     matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
     matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_stereo_object,
-        img_right=right_stereo_object,
-        grid_min_col=np.full((3, 3), -1),
-        grid_max_col=np.full((3, 3), 0),
-        cfg=cfg,
+        img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg
     )
     # compute cost volumes
-    sad = matching_cost_matcher.compute_cost_volumes(
-        img_left=left_stereo_object,
-        img_right=right_stereo_object,
-        grid_min_col=np.full((3, 3), -1),
-        grid_max_col=np.full((3, 3), 0),
-        grid_min_row=np.full((3, 3), -1),
-        grid_max_row=np.full((3, 3), 0),
-    )
+    sad = matching_cost_matcher.compute_cost_volumes(img_left=left_stereo_object, img_right=right_stereo_object)
     # check that the generated cost_volumes is equal to ground truth
     np.testing.assert_allclose(sad["cost_volumes"].data, ad_ground_truth, atol=1e-06)
 
@@ -262,9 +232,8 @@ def test_compute_cv_zncc():
         "no_data_mask": 1,
         "crs": None,
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-        "col_disparity_source": [0, 1],
-        "row_disparity_source": [-1, 0],
     }
+    left_zncc.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
 
     data = np.array(
         ([[1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
@@ -320,28 +289,15 @@ def test_compute_cv_zncc():
 
     # initialise matching cost
     matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_zncc,
-        img_right=right_zncc,
-        grid_min_col=np.full((3, 3), 0),
-        grid_max_col=np.full((3, 3), 1),
-        cfg=cfg,
-    )
+    matching_cost_matcher.allocate_cost_volume_pandora(img_left=left_zncc, img_right=right_zncc, cfg=cfg)
     # compute cost volumes
-    zncc = matching_cost_matcher.compute_cost_volumes(
-        img_left=left_zncc,
-        img_right=right_zncc,
-        grid_min_col=np.full((3, 3), 0),
-        grid_max_col=np.full((3, 3), 1),
-        grid_min_row=np.full((3, 3), -1),
-        grid_max_row=np.full((3, 3), 0),
-    )
-    # check that the generated cost_volumes is equal to ground truth
+    zncc = matching_cost_matcher.compute_cost_volumes(img_left=left_zncc, img_right=right_zncc)
 
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 0], ad_ground_truth_1_1_0_1, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 1], ad_ground_truth_2_2_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 0], ad_ground_truth_2_2_0_1, rtol=1e-06)
+    # check that the generated cost_volumes is equal to ground truth
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 2], ad_ground_truth_1_1_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_1, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 2], ad_ground_truth_2_2_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 1], ad_ground_truth_2_2_0_1, rtol=1e-06)
 
 
 @pytest.mark.parametrize(
@@ -438,11 +394,29 @@ def test_compute_cv_zncc():
             np.array([5]),  # Only ROI["row"]["first"]=5 is in the cost_volume rows
             id="ROI and step_row and step_col greater than the number of columns and rows in the ROI",
         ),
+        pytest.param(
+            {"col": {"first": 1, "last": 7}, "row": {"first": 1, "last": 7}, "margins": [2, 2, 2, 2]},
+            [2, 1],
+            np.arange(10),  # Coordinates of user ROI + margins
+            np.arange(1, 10, 2),  # ROI["row"]["first"]=1 then coordinates are [1,3,5,7,9]
+            id="First point of ROI lower than margin and step_row=2",
+        ),
+        pytest.param(
+            {"col": {"first": 3, "last": 5}, "row": {"first": 1, "last": 5}, "margins": [4, 4, 4, 4]},
+            [1, 2],
+            np.arange(1, 10, 2),  # ROI["col"]["first"]=3 then coordinates are [1,3,5,7,9]
+            np.arange(0, 10),  # Coordinates of user ROI + margins
+            id="First point of ROI lower than margin and step_col=2",
+        ),
     ],
 )
 def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_config, col_expected, row_expected):
     """
-    Test that we have the correct cost_volumes coordinates with a ROI
+    Description : Test that we have the correct cost_volumes coordinates with a ROI
+    Data :
+    - Left image : tmp_path / "left_img.png"
+    - Right image : tmp_path / "right_img.png"
+    Requirement : EX_STEP_00
     """
 
     cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}, "ROI": roi}
@@ -451,25 +425,12 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
 
     matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=img_left,
-        img_right=img_right,
-        grid_min_col=np.full((10, 10), 0),
-        grid_max_col=np.full((10, 10), 1),
-        cfg=cfg,
-    )
+    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
 
     np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
 
     # compute cost volumes with roi
-    cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(
-        img_left=img_left,
-        img_right=img_right,
-        grid_min_col=np.full((10, 10), 0),
-        grid_max_col=np.full((10, 10), 1),
-        grid_min_row=np.full((10, 10), -1),
-        grid_max_row=np.full((10, 10), 0),
-    )
+    cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["col"], col_expected)
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
@@ -487,7 +448,7 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
         pytest.param(
             [2, 1],
             np.arange(10),
-            np.arange(0, 10, 2),  #   1 < step_row < len(cost_volume["cost_volumes"].coords["row"])
+            np.arange(0, 10, 2),  # 1 < step_row < len(cost_volume["cost_volumes"].coords["row"])
             id="No ROI, step_row=2 and step_col=1",
         ),
         pytest.param(
@@ -498,7 +459,7 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
         ),
         pytest.param(
             [1, 3],
-            np.arange(0, 10, 3),  #   1 < step_col < len(cost_volume["cost_volumes"].coords["col"])
+            np.arange(0, 10, 3),  # 1 < step_col < len(cost_volume["cost_volumes"].coords["col"])
             np.arange(10),
             id="No ROI, step_row=1 and step_col=3",
         ),
@@ -524,7 +485,11 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
 )
 def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config, col_expected, row_expected):
     """
-    Test that we have the correct cost_volumes coordinates without a ROI
+    Description : Test that we have the correct cost_volumes coordinates without a ROI
+    Data :
+    - Left image : tmp_path / "left_img.png"
+    - Right image : tmp_path / "right_img.png"
+    Requirement : EX_STEP_00
     """
 
     cfg = {
@@ -536,25 +501,12 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
 
     matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=img_left,
-        img_right=img_right,
-        grid_min_col=np.full((10, 10), 0),
-        grid_max_col=np.full((10, 10), 1),
-        cfg=cfg,
-    )
+    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
 
     np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
 
     # compute cost volumes without roi
-    cost_volumes = matching_cost_matcher.compute_cost_volumes(
-        img_left=img_left,
-        img_right=img_right,
-        grid_min_col=np.full((10, 10), 0),
-        grid_max_col=np.full((10, 10), 1),
-        grid_min_row=np.full((10, 10), -1),
-        grid_max_row=np.full((10, 10), 0),
-    )
+    cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
     np.testing.assert_array_equal(cost_volumes["cost_volumes"].coords["col"], col_expected)
     np.testing.assert_array_equal(cost_volumes["cost_volumes"].coords["row"], row_expected)
@@ -572,8 +524,8 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
     [
         pytest.param(
             [1, 1],
-            (5, 5, 2, 2),
-            (5, 4, 2, 2),
+            (5, 5, 3, 5),
+            (5, 4, 3, 5),
             np.s_[2:4, 2:4, :, :],
             np.s_[2:4, 1:3, :, :],
             (5, 5),
@@ -581,8 +533,8 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
         ),
         pytest.param(
             [1, 2],
-            (5, 3, 2, 2),
-            (5, 2, 2, 2),
+            (5, 3, 3, 5),
+            (5, 2, 3, 5),
             np.s_[2:4, 2:4:2, :, :],
             np.s_[2:4, 1:3:2, :, :],
             (5, 5),
@@ -590,8 +542,8 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
         ),
         pytest.param(
             [2, 1],
-            (3, 5, 2, 2),
-            (3, 4, 2, 2),
+            (3, 5, 3, 5),
+            (3, 4, 3, 5),
             np.s_[2:4, 2:4, :, :],
             np.s_[2:4, 1:3, :, :],
             (5, 5),
@@ -617,22 +569,9 @@ def test_roi_inside_and_margins_inside(  # pylint: disable=too-many-arguments
     # crop image with roi
     img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=img_left,
-        img_right=img_right,
-        grid_min_col=np.full((5, 5), 0),
-        grid_max_col=np.full((5, 5), 1),
-        cfg=configuration_roi,
-    )
+    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=configuration_roi)
     # compute cost volumes with roi
-    cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(
-        img_left=img_left,
-        img_right=img_right,
-        grid_min_col=np.full((5, 5), 0),
-        grid_max_col=np.full((5, 5), 1),
-        grid_min_row=np.full((5, 5), -1),
-        grid_max_row=np.full((5, 5), 0),
-    )
+    cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
     assert cost_volumes_with_roi["cost_volumes"].data.shape == expected_shape_roi
     assert cost_volumes["cost_volumes"].data.shape == expected_shape
@@ -642,79 +581,224 @@ def test_roi_inside_and_margins_inside(  # pylint: disable=too-many-arguments
     )
 
 
-class TestSubpix:
-    """Test subpix parameter"""
+@pytest.fixture()
+def make_image_fixture():
+    """
+    Create image dataset
+    """
 
-    @pytest.fixture()
-    def make_image_fixture(self):
-        """
-        Create image dataset
-        """
+    def make_image(disp_row, disp_col, data):
+        img = xr.Dataset(
+            {"im": (["row", "col"], data)},
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        )
 
-        def make_image(disp_row, disp_col, data):
-            img = xr.Dataset(
-                {"im": (["row", "col"], data)},
-                coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-            )
+        img.pipe(add_disparity_grid, disp_col, disp_row)
 
-            add_disparity_grid(img, disp_col, disp_row)
-
-            img.attrs = {
+        img.attrs.update(
+            {
                 "no_data_img": -9999,
                 "valid_pixels": 0,
                 "no_data_mask": 1,
                 "crs": None,
-                "col_disparity_source": disp_col,
-                "row_disparity_source": disp_row,
             }
+        )
 
-            return img
+        return img
 
-        return make_image
+    return make_image
+
+
+@pytest.fixture()
+def make_cost_volumes(make_image_fixture, request):
+    """
+    Instantiate a matching_cost and compute cost_volumes
+    """
+
+    cfg = {
+        "pipeline": {
+            "matching_cost": {
+                "matching_cost_method": "ssd",
+                "window_size": 1,
+                "step": request.param["step"],
+                "subpix": request.param["subpix"],
+            }
+        }
+    }
+
+    disp_row = request.param["disp_row"]
+    disp_col = request.param["disp_col"]
+
+    img_left = make_image_fixture(disp_row, disp_col, request.param["data_left"])
+    img_right = make_image_fixture(disp_row, disp_col, request.param["data_right"])
+
+    matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+
+    matching_cost_.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
+
+    cost_volumes = matching_cost_.compute_cost_volumes(img_left=img_left, img_right=img_right)
+
+    return cost_volumes
+
+
+class TestDisparityGrid:
+    """Test effect of disparity grids."""
 
     @pytest.fixture()
-    def make_cost_volumes(self, make_image_fixture, request):
+    def nb_rows(self):
+        return 5
+
+    @pytest.fixture()
+    def nb_cols(self):
+        return 4
+
+    @pytest.fixture()
+    def nb_disp_rows(self):
+        return 6
+
+    @pytest.fixture()
+    def nb_disp_cols(self):
+        return 7
+
+    @pytest.fixture()
+    def cost_volumes(self, nb_rows, nb_cols, nb_disp_rows, nb_disp_cols):
+        """cost_volumes full of zeros."""
+        # only need because allocate_cost_volumes delete it
+        fake_pandora_attrs = {"col_to_compute": 1, "sampling_interval": 1}
+        return matching_cost.MatchingCost.allocate_cost_volumes(
+            fake_pandora_attrs,
+            row=np.arange(nb_rows),
+            col=np.arange(nb_cols),
+            disp_range_col=np.arange(2, 2 + nb_disp_cols),
+            disp_range_row=np.arange(-5, -5 + nb_disp_rows),
+        )
+
+    @pytest.fixture()
+    def min_disp_grid(self, cost_volumes, nb_rows, nb_cols):
+        return np.full((nb_rows, nb_cols), cost_volumes.coords["disp_row"].data[0])
+
+    @pytest.fixture()
+    def max_disp_grid(self, cost_volumes, nb_rows, nb_cols):
+        return np.full((nb_rows, nb_cols), cost_volumes.coords["disp_row"].data[-1])
+
+    @pytest.fixture()
+    def row_index(self, nb_rows):
+        return nb_rows // 2
+
+    @pytest.fixture()
+    def col_index(self, nb_cols):
+        return nb_cols // 2
+
+    @pytest.fixture()
+    def disparity_to_alter(self):
+        return "row_disparity"
+
+    @pytest.fixture()
+    def mock_type(self):
+        return "used"
+
+    @pytest.fixture()
+    def mock_set_out_of_disparity_range_to_nan(self, mock_type, mocker: MockerFixture):
         """
-        Instantiate a matching_cost and compute cost_volumes
+        Used or bypass set_out_of_row_disparity_range_to_other_value.
+
+        :param mock_type: `used` or `not used`
+        :type mock_type: str
+        :param mocker:
+        :type mocker:
+        :return: Mock if mock_type is `use`
+        :rtype: Mock or None
+        :raises: ValueError if mock_type is neither `used` or `not used`
         """
+        if mock_type == "not used":
+            return mocker.patch(
+                "pandora2d.matching_cost.matching_cost.set_out_of_row_disparity_range_to_other_value",
+                side_effect=lambda x, y, z, k, l: x,
+            )
+        if mock_type != "used":
+            raise ValueError(f"Expected mock_type to be 'used' or 'not used', got {mock_type}.")
+
+    @pytest.fixture()
+    def disparity_maps(
+        self,
+        make_image_fixture,
+        random_generator,
+        nb_rows,
+        nb_cols,
+        row_index,
+        col_index,
+        disparity_to_alter,
+        mock_set_out_of_disparity_range_to_nan,
+    ):  # pylint: disable=too-many-arguments,unused-argument
+        """Compute disparity maps and return disp_map_row and disp_map_col."""
+        image = make_image_fixture(
+            disp_col={"init": 0, "range": 2},
+            disp_row={"init": 0, "range": 2},
+            data=random_generator.integers(0, 255, (nb_rows, nb_cols), endpoint=True),
+        )
+        # Make disparity search out of truth for one point
+        image[disparity_to_alter].loc[
+            {
+                "band_disp": "min",
+                "row": row_index,
+                "col": col_index,
+            }
+        ] = 1
 
         cfg = {
             "pipeline": {
                 "matching_cost": {
                     "matching_cost_method": "ssd",
                     "window_size": 1,
-                    "step": request.param["step"],
-                    "subpix": request.param["subpix"],
+                    "step": [1, 1],
+                    "subpix": 1,
                 }
             }
         }
-
-        disp_row = request.param["disp_row"]
-        disp_col = request.param["disp_col"]
-
-        img_left = make_image_fixture(disp_row, disp_col, request.param["data_left"])
-        img_right = make_image_fixture(disp_row, disp_col, request.param["data_right"])
-
         matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
 
-        matching_cost_.allocate_cost_volume_pandora(
-            img_left=img_left,
-            img_right=img_right,
-            grid_min_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[0]),
-            grid_max_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[1]),
-            cfg=cfg,
-        )
+        matching_cost_.allocate_cost_volume_pandora(img_left=image, img_right=image, cfg=cfg)
 
-        cost_volumes = matching_cost_.compute_cost_volumes(
-            img_left=img_left,
-            img_right=img_right,
-            grid_min_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[0]),
-            grid_max_col=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_col[1]),
-            grid_min_row=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_row[0]),
-            grid_max_row=np.full((img_left["im"].shape[0], img_left["im"].shape[1]), disp_row[1]),
-        )
+        cost_volumes = matching_cost_.compute_cost_volumes(img_left=image, img_right=image)
 
-        return cost_volumes
+        disparity_matcher = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -99})
+
+        disp_map_col, disp_map_row, _ = disparity_matcher.compute_disp_maps(cost_volumes)
+        return {"row_disparity": disp_map_row, "col_disparity": disp_map_col}
+
+    @pytest.mark.parametrize("disparity_to_alter", ["row_disparity", "col_disparity"])
+    def test_effect_on_compute_cost_volume(self, disparity_maps, disparity_to_alter, row_index, col_index):
+        """Check best candidate out of disparity range is not chosen by wta.
+
+        As we use the very same images, WTA should find a 0 disparity everywhere except for the point where we set a
+        disparity range that did not include 0.
+
+        Note: `col_disparity` is done by Pandora.
+        """
+        result = disparity_maps[disparity_to_alter]
+
+        assert result[row_index, col_index] != 0
+        assert np.all(result[:row_index, :] == 0)
+        assert np.all(result[row_index + 1 :, :] == 0)
+        assert np.all(result[:, :col_index] == 0)
+        assert np.all(result[:, col_index + 1 :] == 0)
+
+    @pytest.mark.parametrize("mock_type", ["not used"])
+    def test_when_not_taken_into_account(
+        self, disparity_maps, disparity_to_alter, mock_set_out_of_disparity_range_to_nan
+    ):  # pylint: disable=unused-argument
+        """Check best candidate out of disparity range is not chosen by wta.
+
+        Note: `col_disparity` is done by Pandora.
+        """
+        result = disparity_maps[disparity_to_alter]
+
+        assert np.all(result == 0)
+        assert mock_set_out_of_disparity_range_to_nan.called
+
+
+class TestSubpix:
+    """Test subpix parameter"""
 
     @pytest.mark.parametrize(
         ["make_cost_volumes", "shape_expected", "row_disparity", "col_disparity"],
@@ -723,13 +807,13 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 1,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 5, 4),  # (row, col, disp_col, disp_row)
-                np.arange(4),  # [0, 1, 2, 3]
+                (10, 10, 5, 3),  # (row, col, disp_col, disp_row)
+                np.arange(3),  # [0, 1, 2]
                 np.arange(-2, 3),  # [-2, -1, 0, 1, 2]
                 id="subpix=1, step_row=1 and step_col=1",
             ),
@@ -737,13 +821,13 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 9, 7),  # (row, col, disp_col, disp_row)
-                np.arange(0, 3.5, 0.5),  # [0, 0.5, 1, 1.5, 2, 2.5, 3]
+                (10, 10, 9, 5),  # (row, col, disp_col, disp_row)
+                np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2]
                 np.arange(-2, 2.5, 0.5),  # [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
                 id="subpix=2, step_row=1 and step_col=1",
             ),
@@ -751,13 +835,13 @@ class TestSubpix:
                 {
                     "step": [2, 3],
                     "subpix": 2,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (5, 4, 9, 7),  # (row, col, disp_col, disp_row)
-                np.arange(0, 3.5, 0.5),  # [0, 0.5, 1, 1.5, 2, 2.5, 3] # step has no influence on subpix disparity range
+                (5, 4, 9, 5),  # (row, col, disp_col, disp_row)
+                np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2] # step has no influence on subpix disparity range
                 np.arange(-2, 2.5, 0.5),  # [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
                 id="subpix=2, step_row=2 and step_col=3",
             ),
@@ -765,13 +849,13 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 17, 13),  # (row, col, disp_col, disp_row)
-                np.arange(0, 3.25, 0.25),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
+                (10, 10, 17, 9),  # (row, col, disp_col, disp_row)
+                np.arange(0, 2.25, 0.25),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
                 np.arange(
                     -2, 2.25, 0.25
                 ),  # [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -781,15 +865,17 @@ class TestSubpix:
                 {
                     "step": [3, 2],
                     "subpix": 4,
-                    "disp_row": [0, 3],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 1, "range": 1},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (4, 5, 17, 13),  # (row, col, disp_col, disp_row)
+                (4, 5, 17, 9),  # (row, col, disp_col, disp_row)
                 np.arange(
-                    0, 3.25, 0.25  # step has no influence on subpix disparity range
-                ),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
+                    0,
+                    2.25,
+                    0.25,  # step has no influence on subpix disparity range
+                ),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
                 np.arange(
                     -2, 2.25, 0.25
                 ),  # [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -819,8 +905,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -843,8 +929,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -867,8 +953,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -905,7 +991,6 @@ class TestSubpix:
         # If the shift is positive, we test all the rows expect the last one for which the shift is equal to 0.
         for col in range(cost_volumes["cost_volumes"].shape[1]):
             for row in range(cost_volumes["cost_volumes"].shape[0] - 1):
-
                 # index_min = all minimum value indexes
                 index_min = np.where(
                     cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :]
@@ -920,8 +1005,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -944,8 +1029,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -968,8 +1053,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -1006,7 +1091,6 @@ class TestSubpix:
         # If the shift is negative, we test all the rows expect the first one for which the shift is equal to 0.
         for col in range(cost_volumes["cost_volumes"].shape[1]):
             for row in range(1, cost_volumes["cost_volumes"].shape[0]):
-
                 # index_min = all minimum value indexes
                 index_min = np.where(
                     cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :]
@@ -1021,8 +1105,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1045,8 +1129,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1069,8 +1153,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1107,7 +1191,6 @@ class TestSubpix:
         # If the shift is positive, we test all the columns expect the last one for which the shift is equal to 0.
         for col in range(cost_volumes["cost_volumes"].shape[1] - 1):
             for row in range(cost_volumes["cost_volumes"].shape[0]):
-
                 # index_min = all minimum value indexes
                 index_min = np.where(
                     cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero]
@@ -1122,8 +1205,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 2,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1146,8 +1229,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1170,8 +1253,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 4,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1208,7 +1291,6 @@ class TestSubpix:
         # If the shift is negative, we test all the columns expect the first one for which the shift is equal to 0.
         for col in range(1, cost_volumes["cost_volumes"].shape[1]):
             for row in range(cost_volumes["cost_volumes"].shape[0]):
-
                 # index_min = all minimum value indexes
                 index_min = np.where(
                     cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero]
@@ -1223,8 +1305,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 1,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]),
                         dtype=np.float64,
@@ -1275,8 +1357,8 @@ class TestSubpix:
                 {
                     "step": [1, 1],
                     "subpix": 1,
-                    "disp_row": [-2, 2],
-                    "disp_col": [-2, 2],
+                    "disp_row": {"init": 0, "range": 2},
+                    "disp_col": {"init": 0, "range": 2},
                     "data_left": np.array(
                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]),
                         dtype=np.float64,
@@ -1338,16 +1420,16 @@ class TestDisparityMargins:
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
 
-        add_disparity_grid(left, [0, 1], [-1, 0])
+        left.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
 
-        left.attrs = {
-            "no_data_img": -9999,
-            "valid_pixels": 0,
-            "no_data_mask": 1,
-            "crs": None,
-            "col_disparity_source": [0, 1],
-            "row_disparity_source": [-1, 0],
-        }
+        left.attrs.update(
+            {
+                "no_data_img": -9999,
+                "valid_pixels": 0,
+                "no_data_mask": 1,
+                "crs": None,
+            }
+        )
 
         data = np.full((5, 5), 1)
         right = xr.Dataset(
@@ -1360,8 +1442,8 @@ class TestDisparityMargins:
             "valid_pixels": 0,
             "no_data_mask": 1,
             "crs": None,
-            "col_disparity_source": [0, 1],
-            "row_disparity_source": [-1, 0],
+            "disp_row": {"init": 1, "range": 1},
+            "disp_col": {"init": -1, "range": 1},
         }
 
         return left, right
@@ -1373,44 +1455,35 @@ class TestDisparityMargins:
             pytest.param(
                 None,
                 1,
-                (5, 5, 2, 2),  # margins=None -> we do not add disparity margins
-                [0, 1],
-                [-1, 0],
+                (5, 5, 3, 3),  # margins=None -> we do not add disparity margins
+                np.arange(0, 2.25, 1),
+                np.arange(-2, 0.25, 1),
                 id="Margins=None",
             ),
             pytest.param(
                 Margins(0, 0, 0, 0),
                 1,
-                (5, 5, 2, 2),
-                [0, 1],
-                [-1, 0],  # margins=(0,0,0,0) -> we do not add disparity margins
+                (5, 5, 3, 3),
+                np.arange(0, 2.25, 1),
+                np.arange(-2, 0.25, 1),
+                # margins=(0,0,0,0) -> we do not add disparity margins
                 id="Margins(left=0, up=0, right=0, down=0)",
             ),
             pytest.param(
                 Margins(3, 3, 3, 3),
                 1,
-                (
-                    5,
-                    5,
-                    8,
-                    8,
-                ),
-                [-3, -2, -1, 0, 1, 2, 3, 4],
-                [-4, -3, -2, -1, 0, 1, 2, 3],
+                (5, 5, 9, 9),
+                np.arange(-3, 5.25, 1),
+                np.arange(-5, 3.25, 1),
                 # margins=(3,3,3,3) -> we add a margin of 3 on disp_min_col, disp_max_col, disp_min_row, disp_max_row
                 id="Margins(left=3, up=3, right=3, down=3)",
             ),
             pytest.param(
                 Margins(0, 1, 2, 3),
                 1,
-                (
-                    5,
-                    5,
-                    4,
-                    6,
-                ),
-                [0, 1, 2, 3],
-                [-2, -1, 0, 1, 2, 3],
+                (5, 5, 5, 7),
+                np.arange(0, 4.25, 1),
+                np.arange(-3, 3.25, 1),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2 on disp_max_col,
                 # 1 on disp_min_row and 3 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3)",
@@ -1418,14 +1491,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(4, 2, 4, 2),
                 1,
-                (
-                    5,
-                    5,
-                    10,
-                    6,
-                ),
-                [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-                [-3, -2, -1, 0, 1, 2],
+                (5, 5, 11, 7),
+                np.arange(-4, 6.25, 1),
+                np.arange(-4, 2.25, 1),
                 # margins=(4,2,4,2) -> we add a margin of 4 on disp_min_col and on disp_max_col
                 # and of 2 on disp_min_row and disp_max_row
                 id="Margins(left=4, up=2, right=4, down=2)",
@@ -1433,14 +1501,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(2, 6, 2, 6),
                 1,
-                (
-                    5,
-                    5,
-                    6,
-                    14,
-                ),
-                [-2, -1, 0, 1, 2, 3],
-                [-7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6],
+                (5, 5, 7, 15),
+                np.arange(-2, 4.25, 1),
+                np.arange(-8, 6.25, 1),
                 # margins=(2,6,2,6) -> we add a margin of 2 on disp_min_col and on disp_max_col
                 # and of 6 on disp_min_row and disp_max_row
                 id="Margins(left=2, up=6, right=2, down=6)",
@@ -1448,14 +1511,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(6, 2, 6, 2),
                 1,
-                (
-                    5,
-                    5,
-                    14,
-                    6,
-                ),
-                [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7],
-                [-3, -2, -1, 0, 1, 2],
+                (5, 5, 15, 7),
+                np.arange(-6, 8.25, 1),
+                np.arange(-4, 2.25, 1),
                 # margins=(6,2,6,2) -> we add a margin of 6 on disp_min_col and on disp_max_col
                 # and of 2 on disp_min_row and disp_max_row
                 id="Margins(left=6, up=2, right=6, down=2)",
@@ -1463,14 +1521,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(3, 3, 3, 3),
                 2,
-                (
-                    5,
-                    5,
-                    15,
-                    15,
-                ),
-                [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
-                [-4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
+                (5, 5, 17, 17),
+                np.arange(-3, 5.25, 0.5),
+                np.arange(-5, 3.25, 0.5),
                 # margins=(3,3,3,3) and subpix=2 -> we add a margin of 3x2 on disp_min_col, disp_max_col,
                 # disp_min_row, disp_max_row
                 id="Margins(left=3, up=3, right=3, down=3), subpix=2",
@@ -1478,14 +1531,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 1, 2, 3),
                 2,
-                (
-                    5,
-                    5,
-                    7,
-                    11,
-                ),
-                [0, 0.5, 1, 1.5, 2, 2.5, 3],
-                [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
+                (5, 5, 9, 13),
+                np.arange(0, 4.25, 0.5),
+                np.arange(-3, 3.25, 0.5),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x2 on disp_max_col,
                 # 1x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3)",
@@ -1493,14 +1541,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(6, 4, 2, 3),
                 2,
-                (
-                    5,
-                    5,
-                    19,
-                    17,
-                ),
-                [-6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
-                [-5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
+                (5, 5, 21, 19),
+                np.arange(-6, 4.25, 0.5),
+                np.arange(-6, 3.25, 0.5),
                 # margins=(6,4,2,3) -> we add a margin of 6x2 on disp_min_col, 2x2 on disp_max_col,
                 # 4x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=6, up=4, right=2, down=3)",
@@ -1508,49 +1551,17 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 0, 0, 0),
                 4,
-                (
-                    5,
-                    5,
-                    5,
-                    5,
-                ),
-                [0, 0.25, 0.5, 0.75, 1],
-                [-1, -0.75, -0.5, -0.25, 0],  # we do not add disparity margins
+                (5, 5, 9, 9),
+                np.arange(0, 2.25, 0.25),
+                np.arange(-2, 0.25, 0.25),  # we do not add disparity margins
                 id="Margins(left=0, up=0, right=0, down=0), subpix=4",
             ),
             pytest.param(
                 Margins(0, 1, 2, 3),
                 4,
-                (
-                    5,
-                    5,
-                    13,
-                    21,
-                ),
-                [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3],
-                [
-                    -2,
-                    -1.75,
-                    -1.5,
-                    -1.25,
-                    -1,
-                    -0.75,
-                    -0.5,
-                    -0.25,
-                    0,
-                    0.25,
-                    0.5,
-                    0.75,
-                    1,
-                    1.25,
-                    1.5,
-                    1.75,
-                    2,
-                    2.25,
-                    2.5,
-                    2.75,
-                    3,
-                ],
+                (5, 5, 17, 25),
+                np.arange(0, 4.25, 0.25),
+                np.arange(-3, 3.25, 0.25),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x4 on disp_max_col,
                 # 1x4 on disp_min_row and 3x4 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3), subpix=4",
@@ -1558,14 +1569,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(3, 3, 3, 3),
                 4,
-                (
-                    5,
-                    5,
-                    29,
-                    29,
-                ),
-                np.arange(-3, 4.25, 0.25),
-                np.arange(-4, 3.25, 0.25),
+                (5, 5, 33, 33),
+                np.arange(-3, 5.25, 0.25),
+                np.arange(-5, 3.25, 0.25),
                 # margins=(3,3,3,3) and subpix=4 -> we add a margin of 3x4 on disp_min_col, disp_max_col,
                 # disp_min_row, disp_max_row
                 id="Margins(left=3, up=3, right=3, down=3), subpix=4",
@@ -1595,25 +1601,14 @@ class TestDisparityMargins:
         matching_cost_matcher.allocate_cost_volume_pandora(
             img_left=left,
             img_right=right,
-            grid_min_col=np.full((5, 5), 0),
-            grid_max_col=np.full((5, 5), 1),
             cfg=cfg,
             margins=margins,
         )
-
-        # minimum and maximum column disparity may have been modified
-        # after disparity margins were added in allocate_cost_volume_pandora
-        disp_col_min = matching_cost_matcher.grid_.disp.min()
-        disp_col_max = matching_cost_matcher.grid_.disp.max()
 
         # compute cost volumes
         cost_volumes = matching_cost_matcher.compute_cost_volumes(
             img_left=left,
             img_right=right,
-            grid_min_col=np.full((5, 5), disp_col_min),
-            grid_max_col=np.full((5, 5), disp_col_max),
-            grid_min_row=np.full((5, 5), -1),
-            grid_max_row=np.full((5, 5), 0),
             margins=margins,
         )
 

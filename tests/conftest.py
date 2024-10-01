@@ -21,11 +21,17 @@ Module with global test fixtures.
 """
 
 # pylint: disable=redefined-outer-name
-
 import pathlib
 import re
 
+import json
+import numpy as np
 import pytest
+import rasterio
+import xarray as xr
+from pandora.common import write_data_array
+
+import pandora2d
 
 
 def pytest_collection_modifyitems(config, items):
@@ -56,9 +62,11 @@ def pytest_html_results_table_header(cells):
 
     1. Category : with values {'TU', 'TF', 'TP', 'TR'}
     2. Function tested : basename of python test file
+    3. Requirement : validating the Pandora2D tool, string with EX_*
     """
     cells.insert(1, "<th>Category</th>")
     cells.insert(2, "<th>Function tested</th>")
+    cells.insert(3, "<th>Requirement</th>")
 
 
 def pytest_html_results_table_row(report, cells):
@@ -69,12 +77,25 @@ def pytest_html_results_table_row(report, cells):
 
     1. CATEGORY : with values {'TU', 'TF', 'TP', 'TR'}
     2. FUNCTION : basename of python test file
+    3. REQUIREMENT : with values EX_*
     """
     type_dict = {"unit": "TU", "functional": "TF", "resource": "TR", "performance": "TP"}
     pattern = r"tests/(?P<type>\w+)_tests.*test_(?P<function>\w+)\.py"
     match = re.match(pattern, report.nodeid)
     cells.insert(1, f"<td>{type_dict[match.groupdict()['type']]}</td>")
     cells.insert(2, f"<td>{match.groupdict()['function']}</td>")
+    cells.insert(3, f"<td>{'<br>'.join(report.requirement)}</td>")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
+    """
+    Parse test docstrings and retrieve strings in EX_*.
+    """
+    outcome = yield
+    report = outcome.get_result()
+    pattern = r"(EX_\w*)"
+    report.requirement = re.findall(pattern, str(item.function.__doc__))
 
 
 @pytest.fixture()
@@ -113,8 +134,8 @@ def correct_input_cfg(left_img_path, right_img_path):
             "right": {
                 "img": right_img_path,
             },
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
     }
 
@@ -130,7 +151,188 @@ def correct_multiband_input_cfg(left_rgb_path, right_rgb_path):
             "right": {
                 "img": right_rgb_path,
             },
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
     }
+
+
+@pytest.fixture
+def mask_path(left_img_path, tmp_path):
+    """Create a mask and save it in tmp"""
+
+    with rasterio.open(left_img_path) as src:
+        width = src.width
+        height = src.height
+
+    mask = xr.DataArray(data=0, dims=["height", "width"], coords={"height": range(height), "width": range(width)})
+    mask[0 : int(height / 2), 0 : int(width / 2)] = 1
+
+    path = tmp_path / "mask_left.tif"
+
+    write_data_array(
+        data_array=mask,
+        filename=str(path),
+    )
+
+    return path
+
+
+@pytest.fixture
+def correct_input_with_left_mask(left_img_path, right_img_path, mask_path):
+    return {
+        "input": {
+            "left": {"img": left_img_path, "nodata": -9999, "mask": str(mask_path)},
+            "right": {
+                "img": right_img_path,
+            },
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
+        }
+    }
+
+
+@pytest.fixture
+def correct_input_with_right_mask(left_img_path, right_img_path, mask_path):
+    return {
+        "input": {
+            "left": {
+                "img": left_img_path,
+                "nodata": -9999,
+            },
+            "right": {"img": right_img_path, "mask": str(mask_path)},
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
+        }
+    }
+
+
+@pytest.fixture()
+def random_seed():
+    """
+    Seed generated with:
+
+    >>> import secrets
+    >>> secrets.randbits(128)
+    """
+    return 160187526967402499820683775418299155210
+
+
+@pytest.fixture()
+def random_generator(random_seed):
+    return np.random.default_rng(random_seed)
+
+
+@pytest.fixture()
+def run_pipeline(tmp_path):
+    """Fixture that returns a function to run a pipeline and which returns the output directory path."""
+
+    def run(configuration, output_dir="output"):
+        config_path = tmp_path / "config.json"
+        with config_path.open("w", encoding="utf-8") as file_:
+            json.dump(configuration, file_, indent=2)
+
+        pandora2d.main(str(config_path), str(tmp_path / output_dir), verbose=False)
+        return tmp_path
+
+    return run
+
+
+@pytest.fixture()
+def constant_initial_disparity():
+    """
+    Create a correct disparity dictionary
+    with constant initial disparity
+    """
+    return {"init": 1, "range": 3}
+
+
+@pytest.fixture()
+def second_constant_initial_disparity():
+    """
+    Create a correct disparity dictionary
+    with constant initial disparity
+    """
+    return {"init": 0, "range": 2}
+
+
+@pytest.fixture()
+def make_input_cfg(left_img_path, right_img_path, request):
+    """Get input configuration with given disparities"""
+
+    input_cfg = {
+        "left": {
+            "img": left_img_path,
+            "nodata": -9999,
+        },
+        "right": {"img": right_img_path, "nodata": -9999},
+        "col_disparity": request.getfixturevalue(request.param["col_disparity"]),
+        "row_disparity": request.getfixturevalue(request.param["row_disparity"]),
+    }
+
+    return input_cfg
+
+
+@pytest.fixture
+def left_img_shape(left_img_path):
+    """
+    Get shape of left image stored in left_img_path fixture
+    """
+
+    with rasterio.open(left_img_path) as src:
+        width = src.width
+        height = src.height
+
+    return (height, width)
+
+
+@pytest.fixture
+def create_disparity_grid_fixture(tmp_path):
+    """
+    Creates initial disparity grid and save it in tmp.
+    """
+
+    def create_disparity_grid(data, disp_range, suffix_path, band=False, disp_type=rasterio.dtypes.int64):
+
+        if not band:
+            disparity_grid = xr.DataArray(data, dims=["row", "col"])
+        else:
+            disparity_grid = xr.DataArray(data, dims=["row", "col", "band"])
+
+        path = tmp_path / suffix_path
+
+        write_data_array(data_array=disparity_grid, filename=str(path), dtype=disp_type)
+
+        return {"init": str(path), "range": disp_range}
+
+    return create_disparity_grid
+
+
+@pytest.fixture
+def correct_grid(left_img_shape, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width) with alternating rows of 2, 0 and 3
+    init_band = np.tile([[2], [0], [3]], (height // 3 + 1, width))[:height, :]
+
+    return create_disparity_grid_fixture(init_band, 5, "disparity.tif")
+
+
+@pytest.fixture
+def second_correct_grid(left_img_shape, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width) with alternating columns of 5, -21 and -1
+    init_band = np.tile([[5, -21, -1]], (height, width // 3 + 1))[:, :width]
+
+    return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
+
+
+@pytest.fixture()
+def reset_profiling():
+    pandora2d.profiling.data.reset()
+    pandora2d.profiling.expert_mode_config.enable = False

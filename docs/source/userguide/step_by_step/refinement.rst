@@ -106,63 +106,216 @@ Available filters are described in :ref:`interpolation_filters`.
 Configuration and parameters
 ----------------------------
 
-.. list-table:: Configuration and parameters
-    :header-rows: 1
+.. tabs::
 
-    * - Name
-      - Description
-      - Type
-      - Default value
-      - Available value
-      - Required
-    * - *refinement_method*
-      - Refinement method
-      - string
-      -
-      - | "interpolation",
-        | "dichotomy",
-        | "optical_flow"
-      - Yes
-    * - *iterations*
-      - Number of iterations (not available for interpolation)
-      - integer
-      - 4 for **optical_flow** method
-      - | **Dichotomy**
-        | 1 to 9
-        | *if above, will be bound to 9*
-        | **Optical flow**
-        | >0
-      - | **Dichotomy**
-        | Yes
-        | **Optical flow**
-        | No
-    * - *filter*
-      - Name of the filter to use
-      - str
-      -
-      - | "sinc",
-        | "bicubic",
-        | **Only available if "dichotomy" method**
-      - Yes
+    .. tab:: Interpolation
 
-**Example**
+        Parameters : 
 
-.. code:: json
-    :name: Refinement example
+        .. list-table:: 
+            :header-rows: 1
 
-    {
-        "input" :
-        {
-            // input content
-        },
-        "pipeline" :
-        {
-            // ...
-            "refinement":
+            * - Name
+              - Description
+              - Type
+              - Available value
+              - Required
+            * - *refinement_method*
+              - Refinement method
+              - string
+              - "interpolation"
+              - Yes
+
+        Configuration example with interpolation : 
+
+        .. code:: json
+
             {
-               "refinement_method": "optical_flow"
-            },
-            // ...
-        }
-    }
+                "input" :
+                {
+                    // input content
+                },
+                "pipeline" :
+                {
+                    // ...
+                    "refinement":
+                    {
+                      "refinement_method": "interpolation"
+                    },
+                    // ...
+                }
+            }
+
+    .. tab:: Optical-flow
+
+        Parameters : 
+
+        .. list-table:: 
+            :header-rows: 1
+
+            * - Name
+              - Description
+              - Type
+              - Default value
+              - Available value
+              - Required
+            * - *refinement_method*
+              - Refinement method
+              - string
+              -
+              - "optical_flow"
+              - Yes
+            * - *iterations*
+              - Number of iterations
+              - integer
+              - 4
+              - >0
+              - No
+
+        Configuration example with optical_flow : 
+
+        .. code:: json
+
+            {
+                "input" :
+                {
+                    // input content
+                },
+                "pipeline" :
+                {
+                    // ...
+                    "refinement":
+                    {
+                      "refinement_method": "optical_flow",
+                      "iterations" : 7
+                    },
+                    // ...
+                }
+            }
+
+    .. tab:: Dichotomy
+
+        .. tabs::
+        
+            .. tab:: Bicubic
+
+                Parameters : 
+
+                .. list-table:: 
+                    :header-rows: 1
+
+                    * - Name
+                      - Description
+                      - Type
+                      - Default value
+                      - Available value
+                      - Required
+                    * - *refinement_method*
+                      - Refinement method
+                      - string
+                      -
+                      - "dichotomy"
+                      - Yes
+                    * - *iterations*
+                      - Number of iterations
+                      - integer
+                      - 
+                      - | 1 to 9
+                        | *if above, will be bound to 9*
+                      - Yes
+                    * - *filter*
+                      - | Configuration of the filter 
+                        | used for interpolation
+                      - | dict with key:
+                        | - "method"
+                      - 
+                      - {"method": "bicubic"}
+                      - Yes
+
+                Configuration example with dichotomy : 
+
+                .. code:: json
+
+                    {
+                        "input" :
+                        {
+                            // input content
+                        },
+                        "pipeline" :
+                        {
+                            // ...
+                            "refinement":
+                            {
+                              "refinement_method": "dichotomy",
+                              "filter": {"method": "bicubic"},
+                              "iterations" : 7
+                            },
+                            // ...
+                        }
+                    }
+            
+            .. tab:: Cardinal sine
+
+                Parameters : 
+
+                .. list-table:: 
+                    :header-rows: 1
+
+                    * - Name
+                      - Description
+                      - Type
+                      - Default value
+                      - Available value
+                      - Required
+                    * - *refinement_method*
+                      - Refinement method
+                      - string
+                      -
+                      - "dichotomy"
+                      - Yes
+                    * - *iterations*
+                      - Number of iterations
+                      - integer
+                      - 
+                      - | 1 to 9
+                        | *if above, will be bound to 9*
+                      - Yes
+                    * - *filter*
+                      - | Configuration of the filter 
+                        | used for interpolation
+                      - | dict with keys: 
+                        | - "method"
+                        | - "size"
+                      -
+                      - | {
+                        |  "method": "sinc", 
+                        |  "size" : 6 to 21, 
+                        | }
+                      - Yes
+
+                Configuration example with dichotomy : 
+
+                .. code:: json
+
+                    {
+                        "input" :
+                        {
+                            // input content
+                        },
+                        "pipeline" :
+                        {
+                            // ...
+                            "refinement":
+                            {
+                              "refinement_method": "dichotomy",
+                              "filter": {
+                                "method": "sinc",
+                                "size": 9
+                              },
+                              "iterations" : 7
+                            },
+                            // ...
+                        }
+                    }
+            
 

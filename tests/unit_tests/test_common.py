@@ -39,6 +39,7 @@ from pandora2d.check_configuration import check_conf
 from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d import matching_cost, disparity, refinement
 from pandora2d.state_machine import Pandora2DMachine
+from pandora2d.constants import Criteria
 
 
 class TestSaveDataset:
@@ -278,8 +279,8 @@ class TestDatasetDispMaps:
                 "img": right_image,
                 "nodata": -9999,
             },
-            "col_disparity": [0, 4],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 2, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
 
         img_left, img_right = create_datasets_from_inputs(input_cfg, roi=roi)
@@ -301,20 +302,11 @@ class TestDatasetDispMaps:
         matching_cost_matcher.allocate_cost_volume_pandora(
             img_left=img_left,
             img_right=img_right,
-            grid_min_col=np.full((3, 3), 0),
-            grid_max_col=np.full((3, 3), 4),
             cfg=cfg,
         )
 
         # compute cost volumes
-        cvs = matching_cost_matcher.compute_cost_volumes(
-            img_left=img_left,
-            img_right=img_right,
-            grid_min_col=np.full((3, 3), 0),
-            grid_max_col=np.full((3, 3), 4),
-            grid_min_row=np.full((3, 3), -2),
-            grid_max_row=np.full((3, 3), 2),
-        )
+        cvs = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -9999}
         disparity_matcher = disparity.Disparity(cfg_disp)
@@ -347,7 +339,6 @@ def test_disparity_map_output_georef(correct_pipeline, correct_input_cfg):
     """
     Test outputs georef with crs and transform
     """
-
     img_left, img_right = create_datasets_from_inputs(input_config=correct_input_cfg["input"])
 
     # Stock crs and transform information from input
@@ -366,3 +357,258 @@ def test_disparity_map_output_georef(correct_pipeline, correct_input_cfg):
 
     assert "EPSG:32632" == dataset.attrs["crs"]
     assert Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03) == dataset.attrs["transform"]
+
+
+class TestSetOutOfDisparity:
+    """Test effect of disparity grids."""
+
+    @pytest.fixture()
+    def disp_coords(self):
+        return "disp_row"
+
+    @pytest.fixture()
+    def init_value(self):
+        return 0.0
+
+    @pytest.fixture()
+    def range_col(self):
+        return np.arange(4)
+
+    @pytest.fixture()
+    def range_row(self):
+        return np.arange(5)
+
+    @pytest.fixture()
+    def disp_range_col(self):
+        return np.arange(2, 2 + 7)
+
+    @pytest.fixture()
+    def disp_range_row(self):
+        return np.arange(-5, -5 + 6)
+
+    @pytest.fixture()
+    def dataset(self, range_row, range_col, disp_range_col, disp_range_row, init_value, disp_coords):
+        """make a xarray dataset and disparity grids"""
+        xarray = xr.DataArray(
+            np.full((5, 4, 7, 6), init_value),
+            coords={
+                "row": range_row,
+                "col": range_col,
+                "disp_col": disp_range_col,
+                "disp_row": disp_range_row,
+            },
+            dims=["row", "col", "disp_col", "disp_row"],
+        )
+
+        xarray.attrs = {"col_disparity_source": [2, 8], "row_disparity_source": [-5, 0]}
+        min_disp_grid = np.full((xarray.sizes["row"], xarray.sizes["col"]), xarray.coords[disp_coords].data[0])
+        max_disp_grid = np.full((xarray.sizes["row"], xarray.sizes["col"]), xarray.coords[disp_coords].data[-1])
+        return xarray, min_disp_grid, max_disp_grid
+
+    @pytest.mark.parametrize(
+        ["init_value", "value"],
+        [
+            [0.0, np.nan],
+            [0.0, 1],
+            [0.0, -1],
+            [0.0, np.inf],
+            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+        ],
+    )
+    def test_homogeneous_row_grids(self, dataset, value):
+        """With grids set to extreme disparities, cost_volumes should be left untouched."""
+        # As set_out_of_row_disparity_range_to_other_value modify cost_volumes in place we do a copy to be able
+        # to make the comparison later.
+        array, min_disp_grid, max_disp_grid = dataset
+        make_array_copy = array.copy(deep=True)
+        common.set_out_of_row_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
+
+        xr.testing.assert_equal(array, make_array_copy)
+
+    @pytest.mark.parametrize(
+        ["init_value", "value"],
+        [
+            [0.0, np.nan],
+            [0.0, 10],
+            [0.0, -10],
+            [0.0, np.inf],
+            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+        ],
+    )
+    @pytest.mark.parametrize("disp_coords", ["disp_col"])
+    def test_homogeneous_col_grids(self, dataset, value):
+        """With grids set to extreme disparities, cost_volumes should be left untouched."""
+        # As set_out_of_col_disparity_range_to_other_value modify cost_volumes in place we do a copy to be able
+        # to make the comparison later.
+        array, min_disp_grid, max_disp_grid = dataset
+        make_array_copy = array.copy(deep=True)
+        common.set_out_of_col_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
+
+        xr.testing.assert_equal(array, make_array_copy)
+
+    @pytest.mark.parametrize(
+        ["init_value", "value"],
+        [
+            [0.0, 0.0],
+            [0.0, -1],
+            [0.0, np.inf],
+            [0.0, -np.inf],
+            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+        ],
+    )
+    def test_variable_min_row(self, dataset, value, disp_coords, init_value):
+        """Check special value below min disparities."""
+        array, min_disp_grid, max_disp_grid = dataset
+        min_disp_index = 1
+        min_disp_grid[::2] = array.coords[disp_coords].data[min_disp_index]
+
+        common.set_out_of_row_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
+
+        expected_value = array.data[::2, ..., :min_disp_index]
+        expected_zeros_on_odd_lines = array.data[1::2, ...]
+        expected_zeros_on_even_lines = array.data[::2, ..., min_disp_index:]
+
+        assert np.all(expected_value == value)
+        assert np.all(expected_zeros_on_odd_lines == init_value)
+        assert np.all(expected_zeros_on_even_lines == init_value)
+
+    @pytest.mark.parametrize(
+        ["init_value", "value"],
+        [
+            [0.0, 0.0],
+            [0.0, -1],
+            [0.0, np.inf],
+            [0.0, -np.inf],
+            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+        ],
+    )
+    @pytest.mark.parametrize("disp_coords", ["disp_col"])
+    def test_variable_min_col(self, dataset, value, disp_coords, init_value):
+        """Check special value below min disparities."""
+        array, min_disp_grid, max_disp_grid = dataset
+        min_disp_index = 1
+        min_disp_grid[:, ::2] = array.coords[disp_coords].data[min_disp_index]
+
+        common.set_out_of_col_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
+
+        expected_value = array.data[:, ::2, :min_disp_index, ...]
+        expected_zeros_on_odd_columns = array.data[:, 1::2, ...]
+        expected_zeros_on_even_columns = array.data[:, ::2, min_disp_index:, ...]
+
+        assert np.all(expected_value == value)
+        assert np.all(expected_zeros_on_odd_columns == init_value)
+        assert np.all(expected_zeros_on_even_columns == init_value)
+
+    @pytest.mark.parametrize(
+        ["init_value", "value"],
+        [
+            [0.0, 0.0],
+            [0.0, -1],
+            [0.0, np.inf],
+            [0.0, -np.inf],
+            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+        ],
+    )
+    def test_variable_max_row(self, dataset, value, disp_coords, init_value):
+        """Check special value above max disparities."""
+        array, min_disp_grid, max_disp_grid = dataset
+        max_disp_index = 1
+        max_disp_grid[::2] = array.coords[disp_coords].data[max_disp_index]
+
+        common.set_out_of_row_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
+
+        expected_value = array.data[::2, ..., (max_disp_index + 1) :]
+        expected_zeros_on_odd_lines = array.data[1::2, ...]
+        expected_zeros_on_even_lines = array.data[::2, ..., : (max_disp_index + 1)]
+
+        assert np.all(expected_value == value)
+        assert np.all(expected_zeros_on_odd_lines == init_value)
+        assert np.all(expected_zeros_on_even_lines == init_value)
+
+    @pytest.mark.parametrize(
+        ["init_value", "value"],
+        [
+            [0.0, 0.0],
+            [0.0, -1],
+            [0.0, np.inf],
+            [0.0, -np.inf],
+            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+        ],
+    )
+    @pytest.mark.parametrize("disp_coords", ["disp_col"])
+    def test_variable_max_col(self, dataset, value, disp_coords, init_value):
+        """Check special value above max disparities."""
+        array, min_disp_grid, max_disp_grid = dataset
+        max_disp_index = 1
+        max_disp_grid[:, ::2] = array.coords[disp_coords].data[max_disp_index]
+
+        common.set_out_of_col_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
+
+        expected_value = array.data[:, ::2, (max_disp_index + 1) :, ...]
+        expected_zeros_on_odd_columns = array.data[:, 1::2, ...]
+        expected_zeros_on_even_columns = array.data[:, ::2, : (max_disp_index + 1), ...]
+
+        assert np.all(expected_value == value)
+        assert np.all(expected_zeros_on_odd_columns == init_value)
+        assert np.all(expected_zeros_on_even_columns == init_value)
+
+    @pytest.mark.parametrize(
+        ["init_value", "value"],
+        [
+            [0.0, 0.0],
+            [0.0, -1],
+            [0.0, np.inf],
+            [0.0, -np.inf],
+            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+        ],
+    )
+    def test_variable_min_and_max_row(self, dataset, value, disp_coords, init_value):
+        """Check special value below min and above max disparities."""
+        array, min_disp_grid, max_disp_grid = dataset
+        min_disp_index = 1
+        min_disp_grid[::2] = array.coords[disp_coords].data[min_disp_index]
+        max_disp_index = 2
+        max_disp_grid[::2] = array.coords[disp_coords].data[max_disp_index]
+
+        common.set_out_of_row_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
+
+        expected_below_min = array.data[::2, ..., :min_disp_index]
+        expected_above_max = array.data[::2, ..., (max_disp_index + 1) :]
+        expected_zeros_on_odd_lines = array.data[1::2, ...]
+        expected_zeros_on_even_lines = array.data[::2, ..., min_disp_index : (max_disp_index + 1)]
+
+        assert np.all(expected_below_min == value)
+        assert np.all(expected_above_max == value)
+        assert np.all(expected_zeros_on_odd_lines == init_value)
+        assert np.all(expected_zeros_on_even_lines == init_value)
+
+    @pytest.mark.parametrize(
+        ["init_value", "value"],
+        [
+            [0.0, 0.0],
+            [0.0, -1],
+            [0.0, np.inf],
+            [0.0, -np.inf],
+            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+        ],
+    )
+    @pytest.mark.parametrize("disp_coords", ["disp_col"])
+    def test_variable_min_and_max_col(self, dataset, value, disp_coords, init_value):
+        """Check special value below min and above max disparities."""
+        array, min_disp_grid, max_disp_grid = dataset
+        min_disp_index = 1
+        min_disp_grid[:, ::2] = array.coords[disp_coords].data[min_disp_index]
+        max_disp_index = 2
+        max_disp_grid[:, ::2] = array.coords[disp_coords].data[max_disp_index]
+
+        common.set_out_of_col_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
+
+        expected_below_min = array.data[:, ::2, :min_disp_index, ...]
+        expected_above_max = array.data[:, ::2, (max_disp_index + 1) :, ...]
+        expected_zeros_on_odd_columns = array.data[:, 1::2, ...]
+        expected_zeros_on_even_columns = array.data[:, ::2, min_disp_index : (max_disp_index + 1), ...]
+
+        assert np.all(expected_below_min == value)
+        assert np.all(expected_above_max == value)
+        assert np.all(expected_zeros_on_odd_columns == init_value)
+        assert np.all(expected_zeros_on_even_columns == init_value)

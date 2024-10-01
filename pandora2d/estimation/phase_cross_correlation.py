@@ -39,10 +39,6 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
     PhaseCrossCorrelation class allows to perform estimation
     """
 
-    _range_col = None
-    _range_row = None
-    _sample_factor = None
-
     # Default configuration, do not change these values
     _RANGE_COL = 5
     _RANGE_ROW = 5
@@ -94,7 +90,7 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
 
         return cfg
 
-    def compute_estimation(self, img_left: xr.Dataset, img_right: xr.Dataset) -> Tuple[list, list, np.ndarray, dict]:
+    def compute_estimation(self, img_left: xr.Dataset, img_right: xr.Dataset) -> Tuple[Dict, Dict, np.ndarray, dict]:
         """
         Compute the phase cross correlation method
 
@@ -120,14 +116,8 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
         # reformat outputs
         phasediff = "{:.{}e}".format(phasediff, 8)
         # -shifts because of pandora2d convention
-        min_col = round(-shifts[1]) - int(self._range_col)
-        max_col = round(-shifts[1]) + int(self._range_col)
-
-        min_row = round(-shifts[0]) - int(self._range_row)
-        max_row = round(-shifts[0]) + int(self._range_row)
-
-        row_disparity = [min_row, max_row]
-        col_disparity = [min_col, max_col]
+        row_disparity = {"init": round(-shifts[0]), "range": int(self._range_row)}
+        col_disparity = {"init": round(-shifts[1]), "range": int(self._range_col)}
 
         logging.info("Estimation result is %s in columns and %s in row", -shifts[1], -shifts[0])
         logging.debug("Translation invariant normalized RMS error between left and right is %s", error)

@@ -85,7 +85,9 @@ def estimation_class(full_configuration):
 )
 def test_false_check_conf(estimation_method, range_col, range_row, sample_factor, error):
     """
-    test check_conf of estimation with wrongs pipelines
+    Description : test check_conf of estimation with wrongs pipelines
+    Data :
+    Requirement : EX_CONF_08
     """
 
     with pytest.raises(error):
@@ -122,7 +124,11 @@ def test_check_conf():
     ],
 )
 def test_default_parameters_values(full_configuration, parameter, expected_value):
-    """Test default values are the expected ones."""
+    """
+    Description : Test default values are the expected ones.
+    Data :
+    Requirement : EX_CONF_04
+    """
     del full_configuration[parameter]
 
     result = estimation.AbstractEstimation(full_configuration)  # type: ignore[abstract]
@@ -136,14 +142,14 @@ def test_update_cfg_with_estimation(estimation_class):
     """
 
     gt_cfg = {
-        "input": {"col_disparity": [-2, 2], "row_disparity": [-2, 2]},
+        "input": {"col_disparity": {"init": 1, "range": 2}, "row_disparity": {"init": 1, "range": 2}},
         "pipeline": {"estimation": {"estimated_shifts": [-0.5, 1.3], "error": [1.0], "phase_diff": [1.0]}},
     }
 
     cfg = estimation_class.update_cfg_with_estimation(
         {"input": {}, "pipeline": {"estimation": {}}},
-        [-2, 2],
-        [-2, 2],
+        {"init": 1, "range": 2},
+        {"init": 1, "range": 2},
         -np.array([0.5, -1.3]),
         {"error": np.array([1.0]), "phase_diff": np.array([1.0])},
     )
@@ -162,8 +168,8 @@ def test_estimation_computation(left_stereo_object, right_stereo_object, estimat
 
     row_disparity, col_disparity, shifts, extra_dict = estimation_.compute_estimation(left, right)
 
-    assert col_disparity == [-5, 5]
-    assert row_disparity == [-6, 4]
+    assert col_disparity == {"init": 0, "range": 5}
+    assert row_disparity == {"init": -1, "range": 5}
     assert np.array_equal(shifts, [-0.8, 0])
     assert extra_dict["error"] == 0.9999999999855407
     assert extra_dict["phase_diff"] == "1.06382330e-18"

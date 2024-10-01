@@ -21,6 +21,7 @@
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 
+import warnings
 import numpy as np
 import pytest
 
@@ -97,6 +98,9 @@ class TestComputeStatistics:
     )
     def test_minimal_valid_pixel_ratio(self, data, invalid_values, expected):
         """Test std statistic result."""
-        result = compute_statistics(data, invalid_values)
 
-        assert result.minimal_valid_pixel_ratio == expected
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            result = compute_statistics(data, invalid_values)
+
+            assert result.minimal_valid_pixel_ratio == expected

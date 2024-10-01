@@ -38,3 +38,20 @@ For both points to interpolate, the `fractional_shift` is `0.5`. Thus, the coeff
 :math:`x` values for which kernel is not null are available for :math:`a` ranging from :math:`-1` to :math:`2`.
 
 Thus, for an image in 2D, the filter is applied on an array of shape :math:`4 \times 4` where coefficients are applied on columns then lines.
+
+Sinc
+----
+
+This filter use a cardinal sine of the form:
+
+.. math::
+    \frac{\sin(x\ \pi)}{x\ \pi}
+
+Where :math:`x` is the fractional shift.
+
+Computed coefficients are windowed by a Gaussian of form:
+
+.. math::
+    \exp\left(\frac{-2\ \pi\ x^2}{\sigma^2}\right)
+
+Where :math:`\sigma` correspond to the size of the filter (half width of the window).

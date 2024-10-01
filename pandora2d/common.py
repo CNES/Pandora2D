@@ -34,14 +34,16 @@ except ImportError:
     from xarray import Coordinate as Coordinates
 
 import os
-from typing import Dict
+from typing import Dict, Union, Tuple, List
 import xarray as xr
 import numpy as np
+from numpy.typing import NDArray
 
 from rasterio import Affine
 
 from pandora.common import mkdir_p, write_data_array
 from pandora2d.img_tools import remove_roi_margins
+from pandora2d.constants import Criteria
 
 
 def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
@@ -63,8 +65,8 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     # remove ROI margins to save only user ROI in tif files
     if "ROI" in cfg:
         dataset = remove_roi_margins(dataset, cfg)
-        # Translate georeferencement origin to ROI origin:
-        dataset.attrs["transform"] *= Affine.translation(cfg["ROI"]["col"]["first"], cfg["ROI"]["row"]["first"])
+    if dataset.attrs["transform"] is not None:
+        adjust_georeferencement(dataset, cfg)
     # create output dir
     mkdir_p(output)
 
@@ -91,6 +93,52 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
         crs=dataset.attrs["crs"],
         transform=dataset.attrs["transform"],
     )
+
+
+def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:
+    """
+    Change origin in case a ROI is present and set pixel size to the matching cost step.
+
+    :param dataset: dataset to configure.
+    :type dataset: xr.Dataset
+    :param cfg: configuration
+    :type cfg: Dict
+    """
+    if "ROI" in cfg:
+        # Translate georeferencement origin to ROI origin:
+        dataset.attrs["transform"] *= Affine.translation(cfg["ROI"]["col"]["first"], cfg["ROI"]["row"]["first"])
+    row_step, col_step = get_step(cfg)
+    set_pixel_size(dataset, row_step, col_step)
+
+
+def get_step(cfg: Dict) -> Tuple[int, int]:
+    """
+    Get step from matching cost or retun default value.
+    :param cfg: configuration
+    :type cfg: Dict
+    :return: row_step, col_step
+    :rtype: Tuple[int, int]
+    """
+    try:
+        return cfg["pipeline"]["matching_cost"]["step"]
+    except KeyError:
+        return 1, 1
+
+
+def set_pixel_size(dataset: xr.Dataset, row_step: int = 1, col_step: int = 1) -> None:
+    """
+    Set the pixel size according to the step used in calculating the matching cost.
+
+    This ensures that all pixels are well geo-referenced in case a step is applied.
+
+    :param dataset: Data to save
+    :type dataset: xr.Dataset
+    :param row_step: step used in row
+    :type row_step: int
+    :param col_step: step used in column
+    :type col_step: int
+    """
+    dataset.attrs["transform"] *= Affine.scale(col_step, row_step)
 
 
 def dataset_disp_maps(
@@ -145,3 +193,98 @@ def dataset_disp_maps(
         dataset.attrs = attributes
 
     return dataset
+
+
+def set_out_of_row_disparity_range_to_other_value(
+    data: xr.DataArray,
+    min_disp_grid: NDArray[np.floating],
+    max_disp_grid: NDArray[np.floating],
+    value: Union[int, float, Criteria],
+    global_disparity_range: Union[None, List[int]] = None,
+) -> None:
+    """
+    Put special value in data  where the disparity is out of the range defined by disparity grids.
+
+    The operation is done inplace.
+
+    :param data: cost_volumes or criteria_dataarray to modify.
+    :type data: xr.DataArray 4D
+    :param min_disp_grid: grid of min disparity.
+    :type min_disp_grid: NDArray[np.floating]
+    :param max_disp_grid: grid of max disparity.
+    :type max_disp_grid: NDArray[np.floating]
+    :param value: value to set on data.
+    :type value: Union[int, float, Criteria]
+    :param global_disparity_range:
+    :type global_disparity_range:
+    """
+    # WARNING: if one day we switch disp_row with disp_col index should be -2
+    ndisp_row = data.shape[-1]
+
+    # We want to put special value on points that are not in the global disparity range (row_disparity_source)
+    for disp_row in range(ndisp_row):
+        if global_disparity_range is not None:  # Case we are working with cost volume
+            masking = np.nonzero(
+                np.logical_or(
+                    (data.coords["disp_row"].data[disp_row] < min_disp_grid)
+                    & (data.coords["disp_row"].data[disp_row] >= global_disparity_range[0]),
+                    (data.coords["disp_row"].data[disp_row] > max_disp_grid)
+                    & (data.coords["disp_row"].data[disp_row] <= global_disparity_range[1]),
+                )
+            )
+        else:
+            masking = np.nonzero(
+                np.logical_or(
+                    data.coords["disp_row"].data[disp_row] < min_disp_grid,
+                    data.coords["disp_row"].data[disp_row] > max_disp_grid,
+                )
+            )
+        data.data[masking[0], masking[1], :, disp_row] = value
+
+
+def set_out_of_col_disparity_range_to_other_value(
+    data: xr.DataArray,
+    min_disp_grid: NDArray[np.floating],
+    max_disp_grid: NDArray[np.floating],
+    value: Union[int, float, Criteria],
+    global_disparity_range: Union[None, List[int]] = None,
+) -> None:
+    """
+    Put special value in data (cost_volumes or criteria_dataarray) where the disparity is out of the range defined
+    by disparity grids.
+
+    The operation is done inplace.
+
+    :param data: cost_volumes or criteria_dataarray to modify.
+    :type data: xr.DataArray 4D
+    :param min_disp_grid: grid of min disparity.
+    :type min_disp_grid: NDArray[np.floating]
+    :param max_disp_grid: grid of max disparity.
+    :type max_disp_grid: NDArray[np.floating]
+    :param value: value to set on data.
+    :type value: Union[int, float, Criteria]
+    :param global_disparity_range:
+    :type global_disparity_range:
+    """
+    # WARNING: if one day we switch disp_row with disp_col index should be -1
+    ndisp_col = data.shape[-2]
+
+    # We want to put special value on points that are not in the global disparity range (col_disparity_source)
+    for disp_col in range(ndisp_col):
+        if global_disparity_range is not None:  # Case we are working with cost volume
+            masking = np.nonzero(
+                np.logical_or(
+                    (data.coords["disp_col"].data[disp_col] < min_disp_grid)
+                    & (data.coords["disp_col"].data[disp_col] >= global_disparity_range[0]),
+                    (data.coords["disp_col"].data[disp_col] > max_disp_grid)
+                    & (data.coords["disp_col"].data[disp_col] <= global_disparity_range[1]),
+                )
+            )
+        else:
+            masking = np.nonzero(
+                np.logical_or(
+                    data.coords["disp_col"].data[disp_col] < min_disp_grid,
+                    data.coords["disp_col"].data[disp_col] > max_disp_grid,
+                )
+            )
+        data.data[masking[0], masking[1], disp_col, :] = value

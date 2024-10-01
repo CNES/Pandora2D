@@ -227,7 +227,7 @@ def test_interpolate(filter_method, image, positions_col, positions_row, expecte
     """
 
     assert (
-        AbstractFilter(filter_method).interpolate(  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
+        AbstractFilter({"method": filter_method}).interpolate(  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
             request.getfixturevalue(image), (positions_col, positions_row)
         )
         == expected_values

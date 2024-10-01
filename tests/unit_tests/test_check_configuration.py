@@ -26,7 +26,6 @@ Test configuration
 
 import random
 import string
-
 import pytest
 import transitions
 import numpy as np
@@ -34,6 +33,7 @@ import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
 from skimage.io import imsave
 
+from pandora.img_tools import get_metadata
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 from pandora2d import check_configuration
 
@@ -47,8 +47,8 @@ class TestCheckDatasets:
         input_cfg = {
             "left": {"img": left_img_path, "nodata": -9999},
             "right": {"img": right_img_path, "nodata": -9999},
-            "col_disparity": [-2, 2],
-            "row_disparity": [-3, 3],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 3},
         }
         return create_datasets_from_inputs(input_cfg)
 
@@ -61,7 +61,9 @@ class TestCheckDatasets:
 
     def test_fails_with_wrong_dimension(self):
         """
-        Test with wrong image shapes
+        Description : Test with wrong image shapes
+        Data :
+        Requirement : EX_CONF_11
         """
         data_left = np.full((3, 3), 2)
         data_right = np.full((4, 4), 2)
@@ -78,13 +80,13 @@ class TestCheckDatasets:
             {"im": (["row", "col"], data_left)},
             coords={"row": np.arange(data_left.shape[0]), "col": np.arange(data_left.shape[1])},
             attrs=attributs,
-        ).pipe(add_disparity_grid, [0, 1], [-1, 0])
+        ).pipe(add_disparity_grid, {"init": -1, "range": 2}, {"init": -1, "range": 3})
 
         dataset_right = xr.Dataset(
             {"im": (["row", "col"], data_right)},
             coords={"row": np.arange(data_right.shape[0]), "col": np.arange(data_right.shape[1])},
             attrs=attributs,
-        ).pipe(add_disparity_grid, [-2, 2], [-3, 3])
+        ).pipe(add_disparity_grid, {"init": 1, "range": 2}, {"init": 1, "range": 3})
 
         with pytest.raises(ValueError) as exc_info:
             check_configuration.check_datasets(dataset_left, dataset_right)
@@ -100,7 +102,11 @@ class TestCheckDatasets:
     )
     def test_fails_without_disparity(self, datasets, col_disparity, row_disparity):
         """
-        Test with missing disparities
+        Description : Test with missing disparities
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
         """
         dataset_left, dataset_right = datasets
         if col_disparity:
@@ -126,19 +132,31 @@ class TestCheckInputSection:
         assert check_configuration.check_input_section(correct_input_cfg)
 
     def test_fails_if_input_section_is_missing(self):
+        """
+        Description : Test if input section is missing in the configuration file
+        Data :
+        Requirement : EX_CONF_01
+        """
         with pytest.raises(KeyError, match="input key is missing"):
             check_configuration.check_input_section({})
 
-    def test_false_input_disp_should_exit(self, false_input_disp):
-        with pytest.raises(ValueError, match="disp_max must be bigger than disp_min"):
-            check_configuration.check_input_section(false_input_disp)
-
     def test_false_input_path_image_should_raise_error(self, false_input_path_image):
+        """
+        Description : Test raises an error if the image path isn't correct
+        Data : cones/monoband/right.png
+        Requirement : EX_CONF_09
+        """
         with pytest.raises(DictCheckerError):
             check_configuration.check_input_section(false_input_path_image)
 
     def test_fails_with_images_of_different_sizes(self, correct_input_cfg, make_empty_image):
-        """Images must have the same shape and size."""
+        """
+        Description : Images must have the same shape and size.
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_11
+        """
         correct_input_cfg["input"]["left"]["img"] = str(make_empty_image("left.tiff"))
         correct_input_cfg["input"]["right"]["img"] = str(make_empty_image("right.tiff", shape=(50, 50)))
 
@@ -146,7 +164,13 @@ class TestCheckInputSection:
             check_configuration.check_input_section(correct_input_cfg)
 
     def test_default_nodata(self, correct_input_cfg):
-        """Default nodata value shoud be -9999."""
+        """
+        Description : Default nodata value shoud be -9999.
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_04
+        """
         del correct_input_cfg["input"]["left"]["nodata"]
 
         result = check_configuration.check_input_section(correct_input_cfg)
@@ -178,12 +202,19 @@ class TestCheckPipelineSection:
     """Test check_pipeline_section."""
 
     def test_fails_if_pipeline_section_is_missing(self, pandora2d_machine) -> None:
+        """
+        Description : Test if the pipeline section is missing in the configuration file
+        Data :
+        Requirement : EX_CONF_02
+        """
         with pytest.raises(KeyError, match="pipeline key is missing"):
             assert check_configuration.check_pipeline_section({}, pandora2d_machine)
 
     def test_nominal_case(self, pandora2d_machine, correct_pipeline) -> None:
         """
-        Test function for checking user pipeline section
+        Description : Test function for checking user pipeline section
+        Data :
+        Requirement : EX_REF_00
         """
         assert check_configuration.check_pipeline_section(correct_pipeline, pandora2d_machine)
 
@@ -204,7 +235,11 @@ class TestCheckPipelineSection:
         ],
     )
     def test_wrong_order_should_raise_error(self, pandora2d_machine, step_order):
-        """Pipeline section order is important."""
+        """
+        Description : Pipeline section order is important.
+        Data :
+        Requirement : EX_CONF_07
+        """
         steps = {
             "estimation": {"estimated_shifts": [-0.5, 1.3], "error": [1.0], "phase_diff": [1.0]},
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
@@ -217,7 +252,11 @@ class TestCheckPipelineSection:
 
     def test_multiband_pipeline(self, pandora2d_machine, left_rgb_path, right_rgb_path):
         """
-        Test the method check_conf for multiband images
+        Description : Test the method check_conf for multiband images
+        Data :
+        - Left image : cones/multibands/left.tif
+        - Right image : cones/multibands/right.tif
+        Requirement : EX_CONF_12
         """
         input_multiband_cfg = {
             "left": {
@@ -226,8 +265,8 @@ class TestCheckPipelineSection:
             "right": {
                 "img": right_rgb_path,
             },
-            "col_disparity": [-60, 0],
-            "row_disparity": [-60, 0],
+            "col_disparity": {"init": -30, "range": 30},
+            "row_disparity": {"init": -30, "range": 30},
         }
         cfg = {
             "input": input_multiband_cfg,
@@ -240,46 +279,35 @@ class TestCheckPipelineSection:
         check_configuration.check_conf(cfg, pandora2d_machine)
 
 
-class TestCheckConf:
+class TestCheckConf:  # pylint: disable=too-few-public-methods
     """Test check_conf method."""
 
     def test_passes_with_good_disparity_range_and_interpolation_step(
         self, correct_input_cfg, correct_pipeline, pandora2d_machine
     ):
         """
-        Test col_disparity & row_disparity range (=5) with interpolation step in user configuration
+        Description : Test col_disparity & row_disparity range (=5) with interpolation step in user configuration
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_ROI_05
         """
         user_cfg = {**correct_input_cfg, **correct_pipeline}
         check_configuration.check_conf(user_cfg, pandora2d_machine)
 
-    @pytest.mark.parametrize(
-        ["col_disparity", "row_disparity"],
-        [
-            pytest.param([0, 2], [-2, 2], id="col_disparity range too small"),
-            pytest.param([-2, 2], [1, 4], id="row_disparity range too small"),
-            pytest.param([0, 2], [1, 4], id="col_disparity & row_disparity range too small"),
-        ],
-    )
-    def test_fails_with_wrong_disparity_range_and_interpolation_step(
-        self, correct_input_cfg, correct_pipeline, pandora2d_machine, col_disparity, row_disparity
-    ):
-        """
-        Test wrong col_disparity & row_disparity range with interpolation step in user configuration
-        """
-        correct_input_cfg["input"]["col_disparity"] = col_disparity
-        correct_input_cfg["input"]["row_disparity"] = row_disparity
-        user_cfg = {**correct_input_cfg, **correct_pipeline}
-        with pytest.raises(ValueError) as err:
-            check_configuration.check_conf(user_cfg, pandora2d_machine)
-        assert (
-            "disparity range with a size < 5 are not allowed with interpolation refinement method" in err.value.args[0]
-        )
-
 
 class TestCheckRoiSection:
-    """Test check_roi_section."""
+    """
+    Description : Test check_roi_section.
+    Requirement : EX_ROI_04
+    """
 
     def test_expect_roi_section(self):
+        """
+        Description : Test if ROI section is missing
+        Data :
+        Requirement : EX_ROI_05
+        """
         with pytest.raises(MissKeyCheckerError, match="ROI"):
             check_configuration.check_roi_section({"input": {}})
 
@@ -291,10 +319,20 @@ class TestCheckRoiSection:
         assert check_configuration.check_roi_section(correct_roi_sensor)
 
     def test_dimension_lt_0_raises_exception(self, false_roi_sensor_negative):
+        """
+        Description : Raises an exception if the ROI dimensions are lower than 0
+        Data :
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(BaseException):
             check_configuration.check_roi_section(false_roi_sensor_negative)
 
     def test_first_dimension_gt_last_dimension_raises_exception(self, false_roi_sensor_first_superior_to_last):
+        """
+        Description : Test if the first dimension of the ROI is greater than the last one
+        Data :
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(BaseException):
             check_configuration.check_roi_section(false_roi_sensor_first_superior_to_last)
 
@@ -345,19 +383,30 @@ def test_get_roi_pipeline(
 
 
 class TestCheckRoiCoherence:
-    """Test check_roi_coherence."""
+    """
+    Description : Test check_roi_coherence.
+    Requirement : EX_ROI_04
+    """
 
     def test_first_lt_last_is_ok(self, correct_roi_sensor) -> None:
         check_configuration.check_roi_coherence(correct_roi_sensor["ROI"]["col"])
 
     def test_first_gt_last_raises_error(self, false_roi_sensor_first_superior_to_last):
+        """
+        Description : Test if 'first' is greater than 'last' in ROI
+        Data :
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(ValueError) as exc_info:
             check_configuration.check_roi_coherence(false_roi_sensor_first_superior_to_last["ROI"]["col"])
         assert str(exc_info.value) == 'In ROI "first" should be lower than "last" in sensor ROI'
 
 
 class TestCheckStep:
-    """Test check_step."""
+    """
+    Description : Test check_step.
+    Requirement : EX_STEP_02
+    """
 
     def test_nominal_case(self, pipeline_config, pandora2d_machine) -> None:
         """
@@ -378,7 +427,11 @@ class TestCheckStep:
         ],
     )
     def test_fails_with_bad_step_values(self, pipeline_config, pandora2d_machine, step) -> None:
-        """Test check_pipeline_section fails with bad values of step."""
+        """
+        Description : Test check_pipeline_section fails with bad values of step.
+        Data :
+        Requirement : EX_CONF_08
+        """
         pipeline_config["pipeline"]["matching_cost"]["step"] = step
         with pytest.raises(DictCheckerError):
             check_configuration.check_pipeline_section(pipeline_config, pandora2d_machine)
@@ -399,8 +452,8 @@ class TestCheckConfMatchingCostNodataCondition:
                     "img": right_img_path,
                     "nodata": right_nodata,
                 },
-                "col_disparity": [-2, 2],
-                "row_disparity": [-2, 2],
+                "col_disparity": {"init": 1, "range": 2},
+                "row_disparity": {"init": 1, "range": 2},
             },
             "pipeline": {
                 "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 1},
@@ -410,7 +463,13 @@ class TestCheckConfMatchingCostNodataCondition:
     @pytest.mark.parametrize("right_nodata", ["NaN", 0.1, "inf", None])
     @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd"])
     def test_sad_or_ssd_fail_with(self, pandora2d_machine, configuration):
-        """Right nodata must be an integer with sad or ssd matching_cost_method."""
+        """
+        Description : Right nodata must be an integer with sad or ssd matching_cost_method.
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
+        """
         with pytest.raises((ValueError, DictCheckerError)):
             check_configuration.check_conf(configuration, pandora2d_machine)
 
@@ -429,63 +488,15 @@ class TestCheckConfMatchingCostNodataCondition:
     @pytest.mark.parametrize("right_nodata", [0.2, None])
     @pytest.mark.parametrize("matching_cost_method", ["zncc"])
     def test_zncc_fails_with(self, pandora2d_machine, configuration):
-        """Right nodata must can not be float or nan with zncc matching_cost_method."""
+        """
+        Description : Right nodata can not be float or nan with zncc matching_cost_method.
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        Requirement : EX_CONF_08
+        """
         with pytest.raises((ValueError, DictCheckerError)):
             check_configuration.check_conf(configuration, pandora2d_machine)
-
-
-class TestCheckDisparityRangeSize:
-    """Test check_disparity_range_size method."""
-
-    @pytest.mark.parametrize(
-        ["disparity", "title", "string_match"],
-        [
-            pytest.param(
-                [-1, 1],
-                "Column",
-                "Column disparity range with a size < 5 are not allowed with interpolation refinement method",
-                id="Column disparity range < 5",
-            ),
-            pytest.param(
-                [-3, -1],
-                "Row",
-                "Row disparity range with a size < 5 are not allowed with interpolation refinement method",
-                id="Row disparity range < 5",
-            ),
-        ],
-    )
-    def test_fails_with_disparity_ranges_lower_5(self, disparity, title, string_match):
-        """Disparity range size must be greater than or equal to 5 when interpolation is used as refinement method"""
-        with pytest.raises(ValueError, match=string_match):
-            check_configuration.check_disparity_range_size(disparity, title)
-
-    @pytest.mark.parametrize(
-        ["disparity", "title", "string_match"],
-        [
-            pytest.param(
-                "disparity_grid_test",
-                "Column",
-                "Grid disparities are not yet handled by Pandora2D",
-                id="Grid disparity",
-            ),
-        ],
-    )
-    def test_fails_with_grid_disparity(self, disparity, title, string_match):
-        """Disparity grid is not handled yet by Pandora2D"""
-        with pytest.raises(TypeError, match=string_match):
-            check_configuration.check_disparity_range_size(disparity, title)
-
-    @pytest.mark.parametrize(
-        ["disparity", "title"],
-        [
-            pytest.param([-2, 2], "Col", id="Column disparity range greater than or equal to 5"),
-            pytest.param([1, 5], "Row", id="Row disparity range greater than or equal to 5"),
-        ],
-    )
-    def test_passes_with_disparity_ranges_equal_5(self, disparity, title):
-        """Disparity range size is correct"""
-
-        check_configuration.check_disparity_range_size(disparity, title)
 
 
 class TestDisparityRangeAgainstImageSize:
@@ -499,11 +510,11 @@ class TestDisparityRangeAgainstImageSize:
 
     @pytest.fixture()
     def row_disparity(self):
-        return [-4, 1]
+        return {"init": -2, "range": 2}
 
     @pytest.fixture()
     def col_disparity(self):
-        return [-3, 2]
+        return {"init": -1, "range": 2}
 
     @pytest.fixture()
     def configuration(self, image_path, row_disparity, col_disparity):
@@ -528,39 +539,134 @@ class TestDisparityRangeAgainstImageSize:
     @pytest.mark.parametrize(
         "row_disparity",
         [
-            pytest.param([-460, -451], id="Out on left"),
-            pytest.param([451, 460], id="Out on right"),
+            pytest.param({"init": -456, "range": 5}, id="Out on left"),
+            pytest.param({"init": 456, "range": 5}, id="Out on right"),
         ],
     )
     def test_row_disparity_totally_out(self, pandora2d_machine, configuration):
-        """Totally out disparities should raise an error."""
+        """
+        Description : Totally out disparities should raise an error.
+        Data : tmp_path / "tiff_file.tif"
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(ValueError, match="Row disparity range out of image"):
             check_configuration.check_conf(configuration, pandora2d_machine)
 
     @pytest.mark.parametrize(
         "col_disparity",
         [
-            pytest.param([-460, -451], id="Out on top"),
-            pytest.param([451, 460], id="Out on bottom"),
+            pytest.param({"init": -456, "range": 5}, id="Out on top"),
+            pytest.param({"init": 456, "range": 5}, id="Out on bottom"),
         ],
     )
     def test_column_disparity_totally_out(self, pandora2d_machine, configuration):
-        """Totally out disparities should raise an error."""
+        """
+        Description : Totally out disparities should raise an error.
+        Data : tmp_path / "tiff_file.tif"
+        Requirement : EX_CONF_08
+        """
         with pytest.raises(ValueError, match="Column disparity range out of image"):
             check_configuration.check_conf(configuration, pandora2d_machine)
 
     @pytest.mark.parametrize(
         ["row_disparity", "col_disparity"],
         [
-            pytest.param([-460, -450], [100, 200], id="Partially out on left"),
-            pytest.param([450, 460], [100, 200], id="Partially out on right"),
-            pytest.param([100, 200], [-460, -450], id="Partially out on top"),
-            pytest.param([100, 200], [450, 460], id="Partially out on bottom"),
+            pytest.param({"init": -455, "range": 5}, {"init": 150, "range": 50}, id="Partially out on left"),
+            pytest.param({"init": 455, "range": 5}, {"init": 150, "range": 50}, id="Partially out on right"),
+            pytest.param({"init": 150, "range": 50}, {"init": -455, "range": 5}, id="Partially out on top"),
+            pytest.param({"init": 150, "range": 50}, {"init": 455, "range": 5}, id="Partially out on bottom"),
         ],
     )
     def test_disparity_partially_out(self, pandora2d_machine, configuration):
         """Partially out should not raise error."""
         check_configuration.check_conf(configuration, pandora2d_machine)
+
+
+class TestCheckDisparity:
+    """
+    Test check_disparity method
+    """
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
+                id="Correct disparity with variable initial value",
+            ),
+            pytest.param(
+                {"row_disparity": "constant_initial_disparity", "col_disparity": "second_constant_initial_disparity"},
+                id="Correct disparity with constant initial value",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_passes_check_disparity(self, left_img_path, make_input_cfg):
+        """
+        Test check_disparity method with correct input disparities
+        """
+
+        image_metadata = get_metadata(left_img_path)
+
+        check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg", "error_type", "error_message"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "left_img_shape"},
+                AttributeError,
+                "The disparities in rows and columns must be given as 2 dictionaries",
+                id="Col disparity is not a dictionary",
+            ),
+            pytest.param(
+                {"row_disparity": "left_img_shape", "col_disparity": "correct_grid"},
+                AttributeError,
+                "The disparities in rows and columns must be given as 2 dictionaries",
+                id="Row disparity is not a dictionary",
+            ),
+            pytest.param(
+                {"row_disparity": "constant_initial_disparity", "col_disparity": "correct_grid"},
+                ValueError,
+                "Initial columns and row disparity values must be two strings or two integers",
+                id="Initial value is different for columns and rows disparity",
+            ),
+            pytest.param(
+                {"row_disparity": "out_of_image_grid", "col_disparity": "second_correct_grid"},
+                ValueError,
+                "Row disparity range out of image",
+                id="Row disparity grid out of image for one point",
+            ),
+            pytest.param(
+                {"row_disparity": "constant_initial_disparity", "col_disparity": "incorrect_disp_dict"},
+                ValueError,
+                "Column disparity range out of image",
+                id="Column disparity dict out of image for one point",
+            ),
+            pytest.param(
+                {"row_disparity": "two_bands_grid", "col_disparity": "correct_grid"},
+                AttributeError,
+                "Initial disparity grid must be a 1-channel grid",
+                id="Row disparity grid has two band",
+            ),
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "wrong_size_grid"},
+                AttributeError,
+                "Initial disparity grids and image must have the same size",
+                id="Column disparity grid size is different from image size",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_check_disparity(self, left_img_path, make_input_cfg, error_type, error_message):
+        """
+        Test check_disparity method with incorrect input disparities
+        """
+
+        image_metadata = get_metadata(left_img_path)
+
+        with pytest.raises(error_type, match=error_message):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
 
 
 @pytest.mark.parametrize(
@@ -571,7 +677,49 @@ class TestDisparityRangeAgainstImageSize:
     ],
 )
 def test_extra_section_is_allowed(correct_input_cfg, correct_pipeline, pandora2d_machine, extra_section_name):
-    """Should not raise an error if an extra section is added."""
+    """
+    Description : Should not raise an error if an extra section is added.
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    Requirement : EX_CONF_05
+    """
     configuration = {**correct_input_cfg, **correct_pipeline, extra_section_name: {}}
 
     check_configuration.check_conf(configuration, pandora2d_machine)
+
+
+class TestExpertModeSection:
+    """
+    Description : Test expert_mode_section.
+    """
+
+    def test_expert_mode_section_missing_profile_parameter(self):
+        """
+        Description : Test if profiling section is missing
+        Data :
+        Requirement :
+        """
+
+        with pytest.raises(MissKeyCheckerError) as exc_info:
+            check_configuration.check_expert_mode_section({"expert_mode": {}})
+        assert str(exc_info.value) == "Please be sure to set the profiling dictionary"
+
+    @pytest.mark.parametrize(
+        ["parameter", "wrong_value_parameter"],
+        [
+            pytest.param("folder_name", 12, id="error folder name with an int"),
+            pytest.param("folder_name", ["folder_name"], id="error folder name with a list"),
+            pytest.param("folder_name", {"folder_name": "expert_mode"}, id="error folder name with a dict"),
+            pytest.param("folder_name", 12.0, id="error folder name with a float"),
+        ],
+    )
+    def test_configuration_expert_mode(self, parameter, wrong_value_parameter):
+        """
+        Description : Test if wrong parameters are detected
+        Data :
+        Requirement :
+        """
+        with pytest.raises(DictCheckerError) as err:
+            check_configuration.check_expert_mode_section({"profiling": {parameter: wrong_value_parameter}})
+        assert "folder_name" in err.value.args[0]

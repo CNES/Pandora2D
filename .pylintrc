@@ -59,7 +59,8 @@ disable=raw-checker-failed,
         broad-except,
         unsubscriptable-object,
         unsupported-membership-test,
-        consider-using-f-string
+        consider-using-f-string,
+        unsupported-binary-operation
 
 
 # Enable the message, report, category or checker with the given id(s). You can

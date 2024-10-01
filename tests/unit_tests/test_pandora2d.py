@@ -24,6 +24,7 @@
 """
 Test state_machine
 """
+
 import copy
 import numpy as np
 
@@ -45,7 +46,9 @@ class TestPandora2D:
     @staticmethod
     def test_run_pandora(correct_pipeline, false_pipeline_mc, false_pipeline_disp) -> None:
         """
-        Test function for checking user input section
+        Description : Test function for checking user input section
+        Data :
+        Requirement : EX_CONF_08
         """
 
         pandora2d_machine = state_machine.Pandora2DMachine()
@@ -69,8 +72,8 @@ class TestPandora2D:
         input_config = {
             "left": {"img": left_img_path, "nodata": -9999},
             "right": {"img": right_img_path, "nodata": -9999},
-            "col_disparity": [-2, 2],
-            "row_disparity": [-2, 2],
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
         }
         img_left, img_right = create_datasets_from_inputs(input_config=input_config)
 
@@ -79,25 +82,13 @@ class TestPandora2D:
         assert pandora2d_machine.left_img == img_left
         assert pandora2d_machine.right_img == img_right
         assert pandora2d_machine.completed_cfg == input_config
-        np.testing.assert_array_equal(
-            pandora2d_machine.disp_min_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
-        )
-        np.testing.assert_array_equal(
-            pandora2d_machine.disp_max_col, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
-        )
-        np.testing.assert_array_equal(
-            pandora2d_machine.disp_min_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), -2)
-        )
-        np.testing.assert_array_equal(
-            pandora2d_machine.disp_max_row, np.full((img_left.sizes["row"], img_left.sizes["col"]), 2)
-        )
 
     @pytest.mark.parametrize(
         ["refinement_config", "expected"],
         [
             pytest.param({"refinement_method": "interpolation"}, Margins(3, 3, 3, 3), id="interpolation"),
             pytest.param(
-                {"refinement_method": "dichotomy", "iterations": 3, "filter": "bicubic"},
+                {"refinement_method": "dichotomy", "iterations": 3, "filter": {"method": "bicubic"}},
                 Margins(2, 2, 2, 2),
                 id="dichotomy with bicubic filter",
             ),

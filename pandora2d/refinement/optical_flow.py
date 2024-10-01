@@ -21,11 +21,13 @@
 """
 This module contains functions associated to the optical flow method used in the refinement step.
 """
-from typing import Dict, Tuple
+
+from typing import Dict, Tuple, List
 
 import numpy as np
 import xarray as xr
 from json_checker import And
+from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
 from pandora.margins import Margins
 
@@ -39,7 +41,6 @@ class OpticalFlow(refinement.AbstractRefinement):
     OpticalFLow class allows to perform the subpixel cost refinement step
     """
 
-    _iterations = None
     _invalid_disp = None
 
     _ITERATIONS = 4
@@ -97,6 +98,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         self,
         img: xr.Dataset,
         cost_volumes: xr.Dataset,
+        coordinates: Tuple[List, List],
         disp_row: np.ndarray = None,
         disp_col: np.ndarray = None,
     ):
@@ -107,6 +109,8 @@ class OpticalFlow(refinement.AbstractRefinement):
         :type img: xr.Dataset
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
         :type cost_volumes: xarray.Dataset
+        :param coordinates: min and max index coordinate for row and col [(first_row,last_row),(first_col,last_col)]
+        :type coordinates: tuple
         :param disp_row: array dim [] containing all the row shift
         :type disp_row: np.ndarray
         :param disp_col: array dim [] containing all the columns shift
@@ -118,44 +122,67 @@ class OpticalFlow(refinement.AbstractRefinement):
         # get numpy array datas for image
         img_data = img["im"].data
 
-        offset = max(self.margins.astuple())
+        # get general offset value
+        offset = cost_volumes.offset_row_col
 
-        computable_col = cost_volumes.col.data[offset:-offset]
-        computable_row = cost_volumes.row.data[offset:-offset]
+        # get cost volume sub xarray with offset coordinates values
+        offset_row, offset_col = coordinates
+        cost_volumes_sub = cost_volumes.sel(
+            row=slice(offset_row[0], offset_row[-1]), col=slice(offset_col[0], offset_col[-1])
+        )
 
-        one_dim_size = len(computable_row) * len(computable_col)
+        # get computable cost volume data in row and col
+        computable_col = cost_volumes_sub.col.data
+        computable_row = cost_volumes_sub.row.data
 
         if disp_row is None and disp_col is None:
+            # define image patches in one dim
             patches = np.lib.stride_tricks.sliding_window_view(img_data, [self._window_size, self._window_size])
-            patches = patches.reshape((one_dim_size, self._window_size, self._window_size)).transpose((1, 2, 0))
-        else:
-            # initiate values for right reshape computation
-            offset = max(self.margins.astuple())
-            patches = np.ndarray((self._window_size, self._window_size, one_dim_size))
-            idx = 0
+            flattened_patches = patches.reshape(-1, self._window_size, self._window_size)
 
-            for row in computable_row:
-                for col in computable_col:
-                    shift_col = (
-                        0 if np.isnan(disp_col[idx]) or disp_col[idx] == self._invalid_disp else int(disp_col[idx])
-                    )
-                    shift_row = (
-                        0 if np.isnan(disp_row[idx]) or disp_row[idx] == self._invalid_disp else int(disp_row[idx])
-                    )
+            # get patches id from original image
+            id_patches_img = [
+                int(c_row * img.sizes["col"]) + c_col
+                for c_row in img["row"].data[offset:-offset]
+                for c_col in img["col"].data[offset:-offset]
+            ]
 
-                    # get right pixel with his matching cost window
-                    patch = img_data[
-                        row - offset + shift_row : row + offset + 1 + shift_row,
-                        col - offset + shift_col : col + offset + 1 + shift_col,
-                    ]
+            # Associate each patches of the one dim image to the id of the true image patches
+            patch_dict = {id_patches_img[i]: flattened_patches[i] for i in range(len(id_patches_img))}
+            id_patches = [int(c_row * img.sizes["col"]) + c_col for c_row in computable_row for c_col in computable_col]
 
-                    # stock matching_cost window
-                    if patch.shape == (self._window_size, self._window_size):
-                        patches[:, :, idx] = patch
-                    else:
-                        patches[:, :, idx] = np.ones([self._window_size, self._window_size]) * np.nan
+            # Filter patches to keep only id calculated with offset and step
+            filtered_patches_list = [patch_dict[key] for key in id_patches if key in patch_dict]
+            reshaped_patches = np.stack(filtered_patches_list, axis=-1).reshape(
+                (self._window_size, self._window_size, len(filtered_patches_list))
+            )
+            return reshaped_patches
 
-                    idx += 1
+        # initiate values for right reshape computation
+        offset = self._window_size // 2
+        patches = np.ndarray((self._window_size, self._window_size, len(computable_row) * len(computable_col)))
+        idx = 0
+
+        for row in computable_row:
+            for col in computable_col:
+                shift_col = 0 if np.isnan(disp_col[idx]) or disp_col[idx] == self._invalid_disp else int(disp_col[idx])
+                shift_row = 0 if np.isnan(disp_row[idx]) or disp_row[idx] == self._invalid_disp else int(disp_row[idx])
+
+                # get right pixel with his matching cost window
+                patch_row_start = row - offset + shift_row
+                patch_row_end = row + offset + shift_row
+                patch_col_start = col - offset + shift_col
+                patch_col_end = col + offset + shift_col
+                patch = img.sel(row=slice(patch_row_start, patch_row_end), col=slice(patch_col_start, patch_col_end))
+                patch = patch["im"].data
+
+                # stock matching_cost  window
+                if patch.shape == (self._window_size, self._window_size):
+                    patches[:, :, idx] = patch
+                else:
+                    patches[:, :, idx] = np.ones([self._window_size, self._window_size]) * np.nan
+
+                idx += 1
 
         return patches
 
@@ -246,7 +273,6 @@ class OpticalFlow(refinement.AbstractRefinement):
         final_dec_col = np.zeros(left_img.shape[2])
 
         for idx in list_idx_to_compute:
-
             left_matching_cost = left_img[:, :, idx]
             right_matching_cost = right_img[:, :, idx]
 
@@ -267,6 +293,26 @@ class OpticalFlow(refinement.AbstractRefinement):
             final_dec_col[idx] = computed_delta_col
 
         return final_dec_row, final_dec_col, new_list_to_compute
+
+    @staticmethod
+    def find_nearest_column(value, data, direction):
+        """
+        Return the nearest column from initial column index coordinate in a given direction
+
+        :param value: initial column index
+        :type value: int
+        :param data: cost volume coordinates
+        :type data: np.ndarray
+        :param direction: direction sign (must be + or -)
+        :type direction: string
+        """
+
+        if direction == "+":
+            return data[np.searchsorted(data, value, side="left")]
+        if direction == "-":
+            return data[np.searchsorted(data, value, side="right") - 1]
+
+        raise ValueError("Direction must be '+' or '-'")
 
     def refinement_method(
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
@@ -290,21 +336,40 @@ class OpticalFlow(refinement.AbstractRefinement):
         self._invalid_disp = disp_map.attrs["invalid_disp"]
 
         # get offset
-        offset = max(self.margins.astuple())
+        offset = cost_volumes.offset_row_col
 
-        # get displacement map from disparity state
-        initial_delta_row = disp_map["row_map"].data
-        initial_delta_col = disp_map["col_map"].data
+        # get first and last coordinates for row and col in cost volume dataset
+        first_col_coordinate = cost_volumes.col.data[0] + offset
+        last_col_coordinate = cost_volumes.col.data[-1] - offset
+        col_extrema_coordinates = [
+            self.find_nearest_column(first_col_coordinate, cost_volumes.col.data, "+"),
+            self.find_nearest_column(last_col_coordinate, cost_volumes.col.data, "-"),
+        ]
 
-        delta_col = initial_delta_col[offset:-offset, offset:-offset].flatten()
-        delta_row = initial_delta_row[offset:-offset, offset:-offset].flatten()
+        first_row_coordinate = cost_volumes.row.data[0] + offset
+        last_row_coordinate = cost_volumes.row.data[-1] - offset
+        row_extrema_coordinates = [
+            self.find_nearest_column(first_row_coordinate, cost_volumes.row.data, "+"),
+            self.find_nearest_column(last_row_coordinate, cost_volumes.row.data, "-"),
+        ]
+
+        # get displacement map in row and col - from disparity min/max coordinates
+        row_slice = slice(row_extrema_coordinates[0], row_extrema_coordinates[-1])
+        col_slice = slice(col_extrema_coordinates[0], col_extrema_coordinates[-1])
+        cost_volume_sub = cost_volumes.sel(row=row_slice, col=col_slice)
+        disp_map_sub = disp_map.sel(row=cost_volume_sub.row, col=cost_volume_sub.col)
+        delta_row = disp_map_sub["row_map"].data.flatten()
+        delta_col = disp_map_sub["col_map"].data.flatten()
 
         # reshape left and right datas
         # from (nbcol, nbrow) to (window_size, window_size, nbcol*nbrow)
-        reshaped_left = self.reshape_to_matching_cost_window(img_left, cost_volumes)
+        reshaped_left = self.reshape_to_matching_cost_window(
+            img_left, cost_volumes, (row_extrema_coordinates, col_extrema_coordinates)
+        )
         reshaped_right = self.reshape_to_matching_cost_window(
             img_right,
             cost_volumes,
+            (row_extrema_coordinates, col_extrema_coordinates),
             delta_row,
             delta_col,
         )
@@ -323,21 +388,46 @@ class OpticalFlow(refinement.AbstractRefinement):
             delta_col = delta_col - computed_dcol
             delta_row = delta_row - computed_drow
 
-        # get finals disparity map dimensions
-        nb_row, nb_col = initial_delta_col.shape
-        nb_valid_points_row = nb_row - 2 * offset
-        nb_valid_points_col = nb_col - 2 * offset
+        # get finals disparity map dimensions, add +1 because it began at 0
+        nb_valid_points_row = int((row_extrema_coordinates[-1] - row_extrema_coordinates[0]) / cost_volumes.step[0] + 1)
+        nb_valid_points_col = int((col_extrema_coordinates[-1] - col_extrema_coordinates[0]) / cost_volumes.step[1] + 1)
 
         delta_col = delta_col.reshape([nb_valid_points_row, nb_valid_points_col])
         delta_row = delta_row.reshape([nb_valid_points_row, nb_valid_points_col])
 
-        # add borders
-        delta_col = np.pad(delta_col, pad_width=offset, constant_values=self._invalid_disp)
-        delta_row = np.pad(delta_row, pad_width=offset, constant_values=self._invalid_disp)
+        # add border
+        padding_top = (disp_map.sizes["row"] - delta_row.shape[0]) // 2
+        padding_bottom = disp_map.sizes["row"] - delta_row.shape[0] - padding_top
+        padding_left = (disp_map.sizes["col"] - delta_row.shape[1]) // 2
+        padding_right = disp_map.sizes["col"] - delta_row.shape[1] - padding_left
 
-        delta_col[delta_col <= img_left.attrs["col_disparity_source"][0]] = self._invalid_disp
-        delta_col[delta_col >= img_left.attrs["col_disparity_source"][1]] = self._invalid_disp
-        delta_row[delta_row <= img_left.attrs["row_disparity_source"][0]] = self._invalid_disp
-        delta_row[delta_row >= img_left.attrs["row_disparity_source"][1]] = self._invalid_disp
+        delta_row = np.pad(
+            delta_row,
+            pad_width=((padding_top, padding_bottom), (padding_left, padding_right)),
+            constant_values=self._invalid_disp,
+        )
+        delta_col = np.pad(
+            delta_col,
+            pad_width=((padding_top, padding_bottom), (padding_left, padding_right)),
+            constant_values=self._invalid_disp,
+        )
+
+        self._invalid_out_of_grid_disparities(cost_volumes.attrs["step"], delta_col, img_left["col_disparity"])
+        self._invalid_out_of_grid_disparities(cost_volumes.attrs["step"], delta_row, img_left["row_disparity"])
 
         return delta_col, delta_row, disp_map["correlation_score"].data
+
+    def _invalid_out_of_grid_disparities(self, step: List, delta: NDArray[np.floating], disparity: xr.DataArray):
+        """
+        Replace delta values by invalid_disp value when it is outside the corresponding disparity range defined by
+        the disparity grid.
+
+        :param step: [row_step, col_step]
+        :type step: list
+        :param delta: refined disparity map
+        :type delta: np.NDArray
+        :param disparity: pixelic disparity grids with min and max `band_disp` coordinates.
+        :type disparity: xr.DataArray
+        """
+        delta[delta <= disparity.sel(band_disp="min").data[:: step[0], :: step[1]]] = self._invalid_disp
+        delta[delta >= disparity.sel(band_disp="max").data[:: step[0], :: step[1]]] = self._invalid_disp

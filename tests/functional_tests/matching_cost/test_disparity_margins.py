@@ -48,16 +48,16 @@ class TestDisparityMargins:
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
         )
 
-        add_disparity_grid(left, [1, 3], [-2, 2])
+        add_disparity_grid(left, {"init": 2, "range": 1}, {"init": 0, "range": 2})
 
-        left.attrs = {
-            "no_data_img": -9999,
-            "valid_pixels": 0,
-            "no_data_mask": 1,
-            "crs": None,
-            "col_disparity_source": [1, 3],
-            "row_disparity_source": [-2, 2],
-        }
+        left.attrs.update(
+            {
+                "no_data_img": -9999,
+                "valid_pixels": 0,
+                "no_data_mask": 1,
+                "crs": None,
+            }
+        )
 
         data = np.full((10, 10), 1)
         right = xr.Dataset(
@@ -70,8 +70,6 @@ class TestDisparityMargins:
             "valid_pixels": 0,
             "no_data_mask": 1,
             "crs": None,
-            "col_disparity_source": [1, 3],
-            "row_disparity_source": [-2, 2],
         }
 
         return left, right
@@ -98,7 +96,7 @@ class TestDisparityMargins:
         [
             pytest.param(
                 1,
-                {"refinement_method": "dichotomy", "iterations": 1, "filter": "bicubic"},
+                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
                 (10, 10, 6, 8),
                 [0, 1, 2, 3, 4, 5],
                 [-3, -2, -1, 0, 1, 2, 3, 4],
@@ -126,7 +124,7 @@ class TestDisparityMargins:
             ),
             pytest.param(
                 2,
-                {"refinement_method": "dichotomy", "iterations": 1, "filter": "bicubic"},
+                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
                 (10, 10, 11, 15),
                 [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
                 [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
@@ -154,7 +152,7 @@ class TestDisparityMargins:
             ),
             pytest.param(
                 4,
-                {"refinement_method": "dichotomy", "iterations": 1, "filter": "bicubic"},
+                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
                 (10, 10, 21, 29),
                 np.arange(0, 5.25, 0.25),
                 np.arange(-3, 4.25, 0.25),

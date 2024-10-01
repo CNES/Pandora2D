@@ -25,16 +25,15 @@ This module contains functions allowing to check the configuration given to Pand
 
 from __future__ import annotations
 
-from typing import Dict, List
-
+from typing import Dict
 import numpy as np
 import xarray as xr
-from json_checker import And, Checker, Or
+from json_checker import And, Checker, Or, MissKeyCheckerError
+from rasterio.io import DatasetReader
 
-from pandora.img_tools import get_metadata
+from pandora.img_tools import get_metadata, rasterio_open
 from pandora.check_configuration import (
     check_dataset,
-    check_disparities_from_input,
     check_images,
     concat_conf,
     get_config_input,
@@ -42,6 +41,7 @@ from pandora.check_configuration import (
     update_conf,
 )
 
+from pandora.check_configuration import rasterio_can_open
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -101,35 +101,119 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
     check_images(cfg["input"])
 
     if estimation_config is None:
-        check_disparities_from_input(cfg["input"]["col_disparity"], None)
-        check_disparities_from_input(cfg["input"]["row_disparity"], None)
         left_image_metadata = get_metadata(cfg["input"]["left"]["img"])
-        check_disparity_ranges_are_inside_image(
-            left_image_metadata, cfg["input"]["row_disparity"], cfg["input"]["col_disparity"]
-        )
+        check_disparity(left_image_metadata, cfg["input"])
 
     return cfg
 
 
+def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
+    """
+    All checks on disparity
+
+    :param image_metadata: only metadata on the left image
+    :type image_metadata: xr.Dataset
+    :param input_cfg: input configuration
+    :type input_cfg: Dict
+
+    """
+
+    # Check that disparities are dictionaries or grids
+    if not (isinstance(input_cfg["row_disparity"], dict) and isinstance(input_cfg["col_disparity"], dict)):
+        raise AttributeError("The disparities in rows and columns must be given as 2 dictionaries.")
+
+    if isinstance(input_cfg["row_disparity"]["init"], str) and isinstance(input_cfg["col_disparity"]["init"], str):
+
+        # Read disparity grids
+        disparity_row_reader = rasterio_open(input_cfg["row_disparity"]["init"])
+        disparity_col_reader = rasterio_open(input_cfg["col_disparity"]["init"])
+
+        # Check disparity grids size and number of bands
+        check_disparity_grids(image_metadata, disparity_row_reader)
+        check_disparity_grids(image_metadata, disparity_col_reader)
+
+        # Get correct disparity dictionaries from init disparity grids to give as input of
+        # the check_disparity_ranges_are_inside_image method
+        row_disp_dict = get_dictionary_from_init_grid(disparity_row_reader, input_cfg["row_disparity"]["range"])
+        col_disp_dict = get_dictionary_from_init_grid(disparity_col_reader, input_cfg["col_disparity"]["range"])
+
+    elif isinstance(input_cfg["row_disparity"]["init"], int) and isinstance(input_cfg["col_disparity"]["init"], int):
+        row_disp_dict = input_cfg["row_disparity"]
+        col_disp_dict = input_cfg["col_disparity"]
+
+    else:
+        raise ValueError("Initial columns and row disparity values must be two strings or two integers")
+
+    # Check that disparity ranges are not totally out of the image
+    check_disparity_ranges_are_inside_image(image_metadata, row_disp_dict, col_disp_dict)
+
+
+def check_disparity_grids(image_metadata: xr.Dataset, disparity_reader: DatasetReader) -> None:
+    """
+    Check that disparity grids contains two bands and are
+    the same size as the input image
+
+    :param image_metadata:
+    :type image_metadata: xr.Dataset
+    :param disparity_reader: disparity grids
+    :type disparity_reader: rasterio.io.DatasetReader
+    """
+
+    # Check that disparity grids are 1-channel grids
+    if disparity_reader.count != 1:
+        raise AttributeError("Initial disparity grid must be a 1-channel grid")
+
+    # Check that disparity grids are the same size as the input image
+    if (disparity_reader.height, disparity_reader.width) != (
+        image_metadata.sizes["row"],
+        image_metadata.sizes["col"],
+    ):
+        raise AttributeError("Initial disparity grids and image must have the same size")
+
+
+def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: int) -> Dict:
+    """
+    Get correct dictionaries to give as input of check_disparity_ranges_are_inside_image method
+    from initial disparity grids.
+
+    :param disparity_reader: initial disparity grid
+    :type disparity_reader: rasterio.io.DatasetReader
+    :param disp_range: range of exploration
+    :type disp_range: int
+    :return: a disparity dictionary to give to check_disparity_ranges_are_inside_image() method
+    :rtype: Dict
+    """
+
+    init_disp_grid = disparity_reader.read(1)
+
+    # Get dictionary with integer init value corresponding to the maximum absolute value of init_disp_grid
+    disp_dict = {
+        "init": np.max(np.abs(init_disp_grid)),
+        "range": disp_range,
+    }
+
+    return disp_dict
+
+
 def check_disparity_ranges_are_inside_image(
-    image_metadata: xr.Dataset, row_disparity_range: List, col_disparity_range: List
+    image_metadata: xr.Dataset, row_disparity: Dict, col_disparity: Dict
 ) -> None:
     """
     Raise an error if disparity ranges are out off image.
 
     :param image_metadata:
     :type image_metadata: xr.Dataset
-    :param row_disparity_range:
-    :type row_disparity_range: List
-    :param col_disparity_range:
-    :type col_disparity_range: List
+    :param row_disparity:
+    :type row_disparity: Dict
+    :param col_disparity:
+    :type col_disparity: Dict
     :return: None
     :rtype: None
     :raises: ValueError
     """
-    if np.abs(row_disparity_range).min() > image_metadata.sizes["row"]:
+    if np.abs(row_disparity["init"]) - row_disparity["range"] > image_metadata.sizes["row"]:
         raise ValueError("Row disparity range out of image")
-    if np.abs(col_disparity_range).min() > image_metadata.sizes["col"]:
+    if np.abs(col_disparity["init"]) - col_disparity["range"] > image_metadata.sizes["col"]:
         raise ValueError("Column disparity range out of image")
 
 
@@ -195,14 +279,38 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     return pipeline_cfg
 
 
+def check_expert_mode_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+    """
+    Complete and check if the dictionary is correct
+
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :return: cfg: global configuration
+    :rtype: cfg: dict
+    """
+
+    if "profiling" not in user_cfg:
+        raise MissKeyCheckerError("Please be sure to set the profiling dictionary")
+
+    # check profiling schema
+    profiling_mode_cfg = user_cfg["profiling"]
+    checker = Checker(expert_mode_profiling)
+    checker.validate(profiling_mode_cfg)
+
+    profiling_mode_cfg = {"expert_mode": user_cfg}
+
+    return profiling_mode_cfg
+
+
 def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     """
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
     :type user_cfg: dict
-    :param pandora2d_machine: instance of PandoraMachine
-    :type pandora2d_machine: PandoraMachine
+    :param pandora2d_machine: instance of Pandora2DMachine
+    :type pandora2d_machine: Pandora2DMachine
+
     :return: cfg: global configuration
     :rtype: cfg: dict
     """
@@ -221,15 +329,11 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     if "matching_cost" in cfg_pipeline["pipeline"]:
         check_right_nodata_condition(cfg_input, cfg_pipeline)
 
-    # The refinement step with interpolation method is not allowed with disparity ranges of size lower than 5
-    if (
-        "refinement" in cfg_pipeline["pipeline"]
-        and cfg_pipeline["pipeline"]["refinement"]["refinement_method"] == "interpolation"
-    ):
-        check_disparity_range_size(cfg_input["input"]["col_disparity"], "Column")
-        check_disparity_range_size(cfg_input["input"]["row_disparity"], "Row")
+    cfg_expert_mode = user_cfg.get("expert_mode", {})
+    if cfg_expert_mode != {}:
+        cfg_expert_mode = check_expert_mode_section(cfg_expert_mode)
 
-    cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline])
+    cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline, cfg_expert_mode])
 
     return cfg
 
@@ -249,26 +353,6 @@ def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
         raise ValueError(
             "nodata of right image must be of type integer with sad or ssd matching_cost_method (ex: 9999)"
         )
-
-
-def check_disparity_range_size(disparity: list[int] | str, title: str) -> None:
-    """
-    Check that disparity ranges with a size < 5 are not allowed for interpolation refinement method.
-
-    :param disparity: disparity range
-    :type disparity: list[int] | str
-    :param cfg_pipeline: pipeline section of configuration
-    :type cfg_pipeline: Dict
-    """
-
-    if isinstance(disparity, list):
-        if (abs(disparity[1] - disparity[0]) + 1) < 5:
-            raise ValueError(
-                title + " disparity range with a size < 5 are not allowed with interpolation refinement method"
-            )
-
-    if isinstance(disparity, str):
-        raise TypeError("Grid disparities are not yet handled by Pandora2D")
 
 
 def check_roi_coherence(roi_cfg: dict) -> None:
@@ -306,29 +390,37 @@ input_configuration_schema = {
     "left": {
         "img": And(str, rasterio_can_open_mandatory),
         "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+        "mask": And(Or(str, lambda input: input is None), rasterio_can_open),
     },
     "right": {
         "img": And(str, rasterio_can_open_mandatory),
         "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
+        "mask": And(Or(str, lambda input: input is None), rasterio_can_open),
     },
-    "col_disparity": [int, int],
-    "row_disparity": [int, int],
+    "col_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
+    "row_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
 }
 
 default_short_configuration_input = {
     "input": {
         "left": {
             "nodata": -9999,
+            "mask": None,
         },
         "right": {
             "nodata": -9999,
+            "mask": None,
         },
     }
 }
 
-default_configuration_disp = {"input": {"col_disparity": [-9999, -9995], "row_disparity": [-9999, -9995]}}
+default_configuration_disp = {
+    "input": {"col_disparity": {"init": -9997, "range": 2}, "row_disparity": {"init": -9997, "range": 2}}
+}
 
 roi_configuration_schema = {
     "row": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},
     "col": {"first": And(int, lambda x: x >= 0), "last": And(int, lambda x: x >= 0)},
 }
+
+expert_mode_profiling = {"folder_name": str}

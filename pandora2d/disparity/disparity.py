@@ -25,11 +25,11 @@ This module contains functions associated to the disparity map computation step.
 
 from typing import Dict, Tuple, Callable
 from json_checker import Or, And, Checker
-from pandora.margins.descriptors import NullMargins
-from pandora.margins import Margins
-
 import numpy as np
 import xarray as xr
+
+from pandora.margins.descriptors import NullMargins
+from pandora.margins import Margins
 
 
 class Disparity:
@@ -269,6 +269,7 @@ class Disparity:
             score_map = self.get_score(maps_min_row, np.min)
 
         invalid_mc = np.all(indices_nan, axis=(2, 3))
+        cost_volumes_user["cost_volumes"].data[indices_nan] = np.nan
 
         disp_map_col = disp_map_col.astype("float32")
         disp_map_row = disp_map_row.astype("float32")
