@@ -22,6 +22,7 @@ This file keeps track of authors contributions.
 * Natalia Jimenez <natalia.jimenez-diaz@csgroup.eu>
 * Quentin Fardet <quentin.fardet@csgroup.eu>
 * Jerome Lebreton <jerome.lebreton@csgroup.eu>
+* Tommy Calendini <tommy.calendini@cs-soprasteria.com>
 
 Update here with new contributors.
 
