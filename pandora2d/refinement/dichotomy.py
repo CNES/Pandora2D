@@ -138,12 +138,17 @@ class Dichotomy(refinement.AbstractRefinement):
         cost_values[invalid_disparity_map_mask] = np.nan
 
         # Get disparities grid
+
+        # Select correct rows and columns in case of a step different from 1.
+        row_cv = cost_volumes.row.values
+        col_cv = cost_volumes.col.values
+
         # Column's min, max disparities
-        disp_min_col = img_left["col_disparity"].sel(band_disp="min").data
-        disp_max_col = img_left["col_disparity"].sel(band_disp="max").data
+        disp_min_col = img_left["col_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
+        disp_max_col = img_left["col_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
         # Row's min, max disparities
-        disp_min_row = img_left["row_disparity"].sel(band_disp="min").data
-        disp_max_row = img_left["row_disparity"].sel(band_disp="max").data
+        disp_min_row = img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
+        disp_max_row = img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
 
         # start iterations after subpixel precision: `subpixel.bit_length() - 1` found which power of 2 subpixel is,
         # and we add 1 to start at next iteration
