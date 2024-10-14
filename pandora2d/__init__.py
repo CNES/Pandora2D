@@ -110,7 +110,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     # check roi in user configuration
     roi = None
     if "ROI" in cfg:
-        cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
+        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], col_disparity, row_disparity)
 
     # read images
@@ -131,7 +131,8 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
         with open(Path(path_output) / "report.json", "w", encoding="utf8") as fd:
             json.dump(report, fd, indent=2, cls=NumpyPrimitiveEncoder)
     # Update output configuration with detailed margins
-    completed_cfg["margins"] = pandora2d_machine.margins.to_dict()
+    completed_cfg["margins_disp"] = pandora2d_machine.margins_disp.to_dict()
+    completed_cfg["margins"] = pandora2d_machine.margins_img.to_dict()
     # save config
     save_config(path_output, completed_cfg)
 

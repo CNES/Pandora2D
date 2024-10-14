@@ -117,7 +117,8 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         # For communication between matching_cost and refinement steps
         self.step: list = None
         self.window_size: int = None
-        self.margins = GlobalMargins()
+        self.margins_img = GlobalMargins()
+        self.margins_disp = GlobalMargins()
 
         # Define available states
         states_ = ["begin", "assumption", "cost_volumes", "disp_maps"]
@@ -261,7 +262,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
         self.step = matching_cost_._step  # pylint: disable=W0212 protected-access
         self.window_size = matching_cost_._window_size  # pylint: disable=W0212 protected-access
-        self.margins.add_cumulative(input_step, matching_cost_.margins)
+        self.margins_img.add_cumulative(input_step, matching_cost_.margins)
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -276,7 +277,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         disparity_ = disparity.Disparity(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
-        self.margins.add_cumulative(input_step, disparity_.margins)
+        self.margins_img.add_cumulative(input_step, disparity_.margins)
 
     def refinement_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -293,7 +294,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             cfg["pipeline"][input_step], self.step, self.window_size
         )  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
-        self.margins.add_non_cumulative(input_step, refinement_.margins)
+        self.margins_disp.add_non_cumulative(input_step, refinement_.margins)
 
     def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -308,7 +309,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
 
         self.matching_cost_.allocate_cost_volume_pandora(
-            self.left_img, self.right_img, cfg, self.margins.get("refinement")
+            self.left_img, self.right_img, cfg, self.margins_disp.get("refinement")
         )
 
     @mem_time_profile(name="Estimation step")
@@ -347,7 +348,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.cost_volumes = self.matching_cost_.compute_cost_volumes(
             self.left_img,
             self.right_img,
-            self.margins.get("refinement"),
+            self.margins_disp.get("refinement"),
         )
 
     @mem_time_profile(name="Disparity step")
