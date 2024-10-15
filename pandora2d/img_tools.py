@@ -281,6 +281,35 @@ def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     return img_right_shift
 
 
+def get_margins_values(init_value: Union[int, np.ndarray], range_value: int, margins: list) -> Tuple[int, int]:
+    """
+    Generate the values of margins
+
+    :param init_value: init value for disparity interval
+    :type init_value: Union[int, np.ndarray]
+    :param range_value: range value for disparity interval
+    :type range_value: int
+    :param margins: necessary value for margins
+    :type margins: int
+    :return: Margins value
+    :rtype: Tuple[int, int]
+    """
+
+    init_min, init_max = int(np.min(init_value)), int(np.max(init_value))
+
+    interval = [init_min - range_value, init_max + range_value]
+
+    first = init_min - range_value + margins[0] if interval[0] > 0 else init_min - range_value - margins[0]
+    second = init_max + range_value + margins[1] if interval[1] < 0 else init_max + range_value + margins[1]
+
+    if first > 0 and second > 0:
+        first = 0
+    elif first < 0 and second < 0:
+        second = 0
+
+    return abs(first), abs(second)
+
+
 def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> dict:
     """
     Return a roi which takes disparities into account.
@@ -299,28 +328,26 @@ def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> d
     :type row_disparity: Dict
     :type roi: Dict
     """
+
     new_roi = copy.deepcopy(roi)
 
     if isinstance(col_disparity["init"], str) and isinstance(row_disparity["init"], str):
-
-        # Read disparity grids
         disparity_row_init = pandora_img_tools.rasterio_open(row_disparity["init"]).read()
         disparity_col_init = pandora_img_tools.rasterio_open(col_disparity["init"]).read()
-
-        new_roi["margins"] = (
-            int(max(abs(np.min(disparity_col_init - col_disparity["range"])), roi["margins"][0])),
-            int(max(abs(np.min(disparity_row_init - row_disparity["range"])), roi["margins"][1])),
-            int(max(abs(np.max(disparity_col_init + col_disparity["range"])), roi["margins"][2])),
-            int(max(abs(np.max(disparity_row_init + row_disparity["range"])), roi["margins"][3])),
-        )
-
     else:
-        new_roi["margins"] = (
-            max(abs(col_disparity["init"] - col_disparity["range"]), roi["margins"][0]),
-            max(abs(row_disparity["init"] - row_disparity["range"]), roi["margins"][1]),
-            max(abs(col_disparity["init"] + col_disparity["range"]), roi["margins"][2]),
-            max(abs(row_disparity["init"] + row_disparity["range"]), roi["margins"][3]),
-        )
+        disparity_row_init = row_disparity["init"]
+        disparity_col_init = col_disparity["init"]
+
+    col_range = col_disparity["range"]
+    row_range = row_disparity["range"]
+
+    # for columns
+    left, right = get_margins_values(disparity_col_init, col_range, [roi["margins"][0], roi["margins"][2]])
+
+    # for rows
+    up, down = get_margins_values(disparity_row_init, row_range, [roi["margins"][1], roi["margins"][3]])
+
+    new_roi["margins"] = (left, up, right, down)
 
     # Update user ROI with new margins.
     roi["margins"] = new_roi["margins"]
