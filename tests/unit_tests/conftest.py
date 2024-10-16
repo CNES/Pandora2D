@@ -182,7 +182,7 @@ def left_stereo_object():
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
     }
 
-    return left.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
+    return left.pipe(add_disparity_grid, {"init": 1, "range": 2}, {"init": -1, "range": 1})
 
 
 @pytest.fixture()
