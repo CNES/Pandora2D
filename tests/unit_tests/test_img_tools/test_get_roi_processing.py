@@ -43,37 +43,59 @@ def default_roi():
 
 
 @pytest.mark.parametrize(
+    ["init_value", "range_value", "margins", "expected"],
+    [
+        pytest.param(-30, 30, [2, 2], (62, 2), id="Negative disparity for columns"),
+        pytest.param(1, 1, [2, 2], (2, 4), id="Negative disparity for rows"),
+        pytest.param(30, 30, [2, 2], (2, 62), id="Positive disparity for columns and rows"),
+        pytest.param(0, 1, [2, 2], (3, 3), id="Margins greater than disparities"),
+        pytest.param(0, 3, [3, 3], (6, 6), id="Margins lower than disparities"),
+        pytest.param(10, 2, [2, 2], (0, 14), id="Positive disparities for margins"),
+        pytest.param(-10, 2, [2, 2], (14, 0), id="Negative disparities for margins"),
+    ],
+)
+def test_get_margins_values(init_value, range_value, margins, expected):
+    """
+    Test the get_margins_values method with different disparities
+    """
+
+    test_values_margins = img_tools.get_margins_values(init_value, range_value, margins)
+
+    assert test_values_margins == expected
+
+
+@pytest.mark.parametrize(
     ["col_disparity", "row_disparity", "expected"],
     [
         pytest.param(
-            {"init": -30, "range": 30}, {"init": 1, "range": 1}, (60, 2, 2, 2), id="Negative disparity for columns"
+            {"init": -30, "range": 30}, {"init": 1, "range": 1}, (62, 2, 2, 4), id="Negative disparity for columns"
         ),
         pytest.param(
-            {"init": 1, "range": 1}, {"init": -30, "range": 30}, (2, 60, 2, 2), id="Negative disparity for rows"
+            {"init": 1, "range": 1}, {"init": -30, "range": 30}, (2, 62, 4, 2), id="Negative disparity for rows"
         ),
         pytest.param(
             {"init": -30, "range": 30},
             {"init": -30, "range": 30},
-            (60, 60, 2, 2),
+            (62, 62, 2, 2),
             id="Negative disparity for columns and rows",
         ),
         pytest.param(
             {"init": 30, "range": 30},
             {"init": 30, "range": 30},
-            (2, 2, 60, 60),
+            (2, 2, 62, 62),
             id="Positive disparity for columns and rows",
         ),
         pytest.param(
-            {"init": 0, "range": 1}, {"init": 0, "range": 1}, (2, 2, 2, 2), id="Margins greater than disparities"
+            {"init": 0, "range": 1}, {"init": 0, "range": 1}, (3, 3, 3, 3), id="Margins greater than disparities"
         ),
         pytest.param(
-            {"init": 0, "range": 3}, {"init": 0, "range": 3}, (3, 3, 3, 3), id="Margins lower than disparities"
+            {"init": 0, "range": 3}, {"init": 0, "range": 3}, (5, 5, 5, 5), id="Margins lower than disparities"
         ),
     ],
 )
 def test_roi_with_negative_and_positive_disparities(default_roi, col_disparity, row_disparity, expected):
     """
-    Test the get_roi_processing method with negative disparities
+    Test the get_roi_processing method with different disparities
     """
     test_roi_column = img_tools.get_roi_processing(default_roi, col_disparity, row_disparity)
 
@@ -122,13 +144,13 @@ def lower_than_margins_grid(left_img_shape, create_disparity_grid_fixture):
 @pytest.mark.parametrize(
     ["col_disparity", "row_disparity", "expected"],
     [
-        pytest.param("second_correct_grid", "correct_grid", (26, 5, 10, 8), id="Negative and positive disparities"),
-        pytest.param("negative_grid", "positive_grid", (9, 4, 3, 10), id="Negative disparities for columns"),
-        pytest.param("positive_grid", "negative_grid", (4, 9, 10, 3), id="Negative disparities for rows"),
+        pytest.param("second_correct_grid", "correct_grid", (28, 7, 12, 10), id="Negative and positive disparities"),
+        pytest.param("negative_grid", "positive_grid", (11, 0, 0, 12), id="Negative disparities for columns"),
+        pytest.param("positive_grid", "negative_grid", (0, 11, 12, 0), id="Negative disparities for rows"),
         pytest.param(
             "lower_than_margins_grid",
             "lower_than_margins_grid",
-            (2, 2, 2, 2),
+            (3, 3, 3, 3),
             id="Margins greater than disparities",
         ),
     ],
