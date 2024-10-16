@@ -51,8 +51,9 @@ def allocate_criteria_dataarray(
     """
     return xr.DataArray(
         np.full(cv.cost_volumes.shape, value, data_type),
-        coords={"row": cv.row.data, "col": cv.col.data, "disp_col": cv.disp_col.data, "disp_row": cv.disp_row.data},
-        dims=["row", "col", "disp_col", "disp_row"],
+        coords=cv["cost_volumes"].coords,
+        dims=cv["cost_volumes"].dims,
+        name="criteria",
     )
 
 
