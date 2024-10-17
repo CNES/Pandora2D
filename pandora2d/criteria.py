@@ -91,13 +91,17 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     # on the border according to offset value, for each disparity
     mask_border(cv.attrs["offset_row_col"], criteria_dataarray)
 
+    # Select correct rows and columns in case of a step different from 1.
+    row_cv = cv.row.values
+    col_cv = cv.col.values
+
     # Get columns disparity grid
-    d_min_col_grid = left_image["col_disparity"].sel(band_disp="min").data.copy()
-    d_max_col_grid = left_image["col_disparity"].sel(band_disp="max").data.copy()
+    d_min_col_grid = left_image["col_disparity"].sel(row=row_cv, col=col_cv, band_disp="min").data
+    d_max_col_grid = left_image["col_disparity"].sel(row=row_cv, col=col_cv, band_disp="max").data
 
     # Get rows disparity grid
-    d_min_row_grid = left_image["row_disparity"].sel(band_disp="min").data.copy()
-    d_max_row_grid = left_image["row_disparity"].sel(band_disp="max").data.copy()
+    d_min_row_grid = left_image["row_disparity"].sel(row=row_cv, col=col_cv, band_disp="min").data
+    d_max_row_grid = left_image["row_disparity"].sel(row=row_cv, col=col_cv, band_disp="max").data
 
     # Put PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
     # on points for which corresponding disparity is not processed

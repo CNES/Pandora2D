@@ -407,17 +407,21 @@ class MatchingCost:
         # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
         del cost_volumes.attrs["ROI_margins_for_cv"]
 
+        # Select correct rows and columns in case of a step different from 1.
+        row_cv = cost_volumes.row.values
+        col_cv = cost_volumes.col.values
+
         set_out_of_row_disparity_range_to_other_value(
             cost_volumes["cost_volumes"],
-            img_left["row_disparity"].sel(band_disp="min").data,
-            img_left["row_disparity"].sel(band_disp="max").data,
+            img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data,
+            img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data,
             np.nan,
             cost_volumes.attrs["row_disparity_source"],
         )
         set_out_of_col_disparity_range_to_other_value(
             cost_volumes["cost_volumes"],
-            img_left["col_disparity"].sel(band_disp="min").data,
-            img_left["col_disparity"].sel(band_disp="max").data,
+            img_left["col_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data,
+            img_left["col_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data,
             np.nan,
             cost_volumes.attrs["col_disparity_source"],
         )
