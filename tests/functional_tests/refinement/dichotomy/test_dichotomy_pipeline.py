@@ -106,7 +106,7 @@ def test_dichotomy_execution(make_cfg_for_dichotomy):
 
     cfg = check_conf(make_cfg_for_dichotomy, pandora2d_machine)
 
-    cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
+    cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
     roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
 
     image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
@@ -143,7 +143,7 @@ def test_extrema_disparities_not_processed(make_cfg_for_dichotomy):
 
     cfg = check_conf(make_cfg_for_dichotomy, pandora2d_machine)
 
-    cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
+    cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
     roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
 
     image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
