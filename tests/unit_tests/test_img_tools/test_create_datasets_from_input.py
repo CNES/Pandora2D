@@ -452,7 +452,7 @@ class TestDisparityChecking:
 
         with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(correct_input_cfg["input"])
-        assert exc_info.value.args[0] == "Disparity should be a dictionary"
+        assert exc_info.value.args[0] == "The input disparity must be a dictionary."
 
     @pytest.mark.parametrize("disparity", [{"wrong_init": 2, "range": 2}])
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
@@ -519,7 +519,7 @@ class TestDisparityChecking:
 
         with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(correct_input_cfg["input"])
-        assert exc_info.value.args[0] == "Disparity should be a dictionary"
+        assert exc_info.value.args[0] == "The input disparity must be a dictionary."
 
     @pytest.mark.parametrize(
         ["make_input_cfg"],
