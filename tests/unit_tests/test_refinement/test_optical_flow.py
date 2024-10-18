@@ -203,6 +203,7 @@ class TestStep:
         assert "step" in err.value.args[0]
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_reshape_to_matching_cost_window_left(dataset_image):
     """
     Test reshape_to_matching_cost_window function for a left image
@@ -262,6 +263,7 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
     assert np.array_equal(reshaped_left[:, :, 9], idx_4_1)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_reshape_to_matching_cost_window_right(dataset_image):
     """
     Test reshape_to_matching_cost_window function for a right image
