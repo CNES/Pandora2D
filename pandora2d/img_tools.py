@@ -129,7 +129,7 @@ def check_disparity_types(disparity: Any) -> None:
     Check that disparity a dictionary with keys "init" and range"
     where "init" is either:
 
-        - a integer
+        - an integer
         - a path to a grid with integer values
 
     :param disparity: disparity to check
@@ -140,7 +140,7 @@ def check_disparity_types(disparity: Any) -> None:
 
     # Check disparity type
     if disparity is None or not isinstance(disparity, Dict):
-        raise ValueError("Disparity should be a dictionary")
+        raise ValueError("The input disparity must be a dictionary.")
 
     # Check that dictionary keys are correct
     if not set(disparity.keys()) == {"init", "range"}:
