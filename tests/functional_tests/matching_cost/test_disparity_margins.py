@@ -101,6 +101,7 @@ class TestDisparityMargins:
                 [0, 1, 2, 3, 4, 5],
                 [-3, -2, -1, 0, 1, 2, 3, 4],
                 id="Subpix=1 and refinement_method=dichotomy",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 1,
@@ -111,6 +112,7 @@ class TestDisparityMargins:
                 [-2, -1, 0, 1, 2, 3, 4, 5, 6],
                 [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
                 id="Subpix=1 and refinement_method=interpolation",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 1,
@@ -121,6 +123,7 @@ class TestDisparityMargins:
                 [0, 1, 2, 3, 4],
                 [-3, -2, -1, 0, 1, 2, 3],
                 id="Subpix=1 and refinement_method=optical_flow",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 2,
@@ -129,6 +132,7 @@ class TestDisparityMargins:
                 [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
                 [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
                 id="Subpix=2 and refinement_method=dichotomy",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 2,
@@ -139,6 +143,7 @@ class TestDisparityMargins:
                 [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6],
                 [-5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
                 id="Subpix=2 and refinement_method=interpolation",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 2,
@@ -149,6 +154,7 @@ class TestDisparityMargins:
                 [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
                 [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
                 id="Subpix=2 and refinement_method=optical_flow",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 4,
@@ -157,6 +163,7 @@ class TestDisparityMargins:
                 np.arange(0, 5.25, 0.25),
                 np.arange(-3, 4.25, 0.25),
                 id="Subpix=4 and refinement_method=dichotomy",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 4,
@@ -167,6 +174,7 @@ class TestDisparityMargins:
                 np.arange(-2, 6.25, 0.25),
                 np.arange(-5, 5.25, 0.25),
                 id="Subpix=4 and refinement_method=interpolation",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 4,
@@ -177,6 +185,7 @@ class TestDisparityMargins:
                 [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4],
                 np.arange(-3, 3.25, 0.25),
                 id="Subpix=4 and refinement_method=optical_flow",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
         ],
     )

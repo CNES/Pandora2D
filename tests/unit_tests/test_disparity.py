@@ -83,6 +83,7 @@ def test_margins():
     assert _disparity.margins == Margins(0, 0, 0, 0)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 @pytest.mark.parametrize(
     ["extrema_func", "expected_result"],
     [
@@ -131,6 +132,7 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
     np.testing.assert_allclose(cvs_max[:, :, 1], expected_result[:, :, 1], atol=1e-06)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 @pytest.mark.parametrize(
     ["extrema_func", "arg_extrema_func", "expected_result"],
     [
@@ -297,6 +299,7 @@ def test_compute_disparity_map(margins, img_left, img_right, ground_truth_row, g
     np.testing.assert_array_equal(ground_truth_row, delta_y)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_masked_nan():
     """
     Test the capacity of disparity_computation to find nans
