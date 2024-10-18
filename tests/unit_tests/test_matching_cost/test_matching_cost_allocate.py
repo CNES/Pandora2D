@@ -36,7 +36,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     """
 
     # generated data for the test
-    np_data = np.empty((3, 3, 5, 3))
+    np_data = np.empty((3, 3, 3, 5))
     np_data.fill(np.nan)
 
     c_row = [0, 1, 2]
@@ -49,13 +49,9 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     disparity_range_col = np.arange(0, 4 + 1)
     disparity_range_row = np.arange(-2, 0 + 1)
 
-    # Create the cost volume
-    if np_data is None:
-        np_data = np.zeros((len(row), len(col), len(disparity_range_col), len(disparity_range_row)), dtype=np.float32)
-
     cost_volumes_test = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], np_data)},
-        coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np_data)},
+        coords={"row": row, "col": col, "disp_row": disparity_range_row, "disp_col": disparity_range_col},
     )
 
     cost_volumes_test.attrs["measure"] = "zncc"
