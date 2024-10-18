@@ -160,8 +160,8 @@ def zeros_cost_volumes(
         attrs,
         rows,
         cols,
-        np.linspace(min_disparity_col, max_disparity_col, number_of_disparity_col),
         np.linspace(min_disparity_row, max_disparity_row, number_of_disparity_row),
+        np.linspace(min_disparity_col, max_disparity_col, number_of_disparity_col),
         data,
     )
 
@@ -642,10 +642,10 @@ class TestCostSurfaces:
                     coords={
                         "row": 0,
                         "col": 0,
-                        "disp_col": [-2, -1, 0, 1, 2, 3],
                         "disp_row": [2, 3, 4, 5, 6, 7],
+                        "disp_col": [-2, -1, 0, 1, 2, 3],
                     },
-                    dims=["disp_col", "disp_row"],
+                    dims=["disp_row", "disp_col"],
                 ),
                 id="First value",
             ),
@@ -664,10 +664,10 @@ class TestCostSurfaces:
                     coords={
                         "row": 1,
                         "col": 2,
-                        "disp_col": [-2, -1, 0, 1, 2, 3],
                         "disp_row": [2, 3, 4, 5, 6, 7],
+                        "disp_col": [-2, -1, 0, 1, 2, 3],
                     },
-                    dims=["disp_col", "disp_row"],
+                    dims=["disp_row", "disp_col"],
                 ),
                 id="Another value",
             ),
@@ -731,10 +731,10 @@ class TestCostSurfaces:
                 coords={
                     "row": 0,
                     "col": 0,
-                    "disp_col": [-2, -1, 0, 1, 2, 3],
                     "disp_row": [2, 3, 4, 5, 6, 7],
+                    "disp_col": [-2, -1, 0, 1, 2, 3],
                 },
-                dims=["disp_col", "disp_row"],
+                dims=["disp_row", "disp_col"],
             ),
         )
         assert result[-2].equals(
@@ -750,10 +750,10 @@ class TestCostSurfaces:
                 coords={
                     "row": 1,
                     "col": 1,
-                    "disp_col": [-2, -1, 0, 1, 2, 3],
                     "disp_row": [2, 3, 4, 5, 6, 7],
+                    "disp_col": [-2, -1, 0, 1, 2, 3],
                 },
-                dims=["disp_col", "disp_row"],
+                dims=["disp_row", "disp_col"],
             )
         )
 
