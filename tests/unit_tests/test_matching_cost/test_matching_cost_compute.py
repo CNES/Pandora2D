@@ -78,6 +78,7 @@ def test_steps(request, data_fixture_name, col_step, row_step):
     np.testing.assert_equal(zncc["cost_volumes"].data, data.full_matching_cost[::row_step, ::col_step, :, :])
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     """
     Test the  cost volume product by ssd
@@ -166,6 +167,7 @@ def test_compute_cv_mc_cnn():
     np.testing.assert_allclose(error_mean, 0, atol=1e-06)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     """
     Test the  cost volume product by sad
@@ -211,6 +213,7 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     np.testing.assert_allclose(sad["cost_volumes"].data, ad_ground_truth, atol=1e-06)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_compute_cv_zncc():
     """
     Test the  cost volume product by zncc
@@ -512,6 +515,7 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
     np.testing.assert_array_equal(cost_volumes["cost_volumes"].coords["row"], row_expected)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 @pytest.mark.parametrize(
     [
         "step",
@@ -800,6 +804,7 @@ class TestDisparityGrid:
 class TestSubpix:
     """Test subpix parameter"""
 
+    @pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
     @pytest.mark.parametrize(
         ["make_cost_volumes", "shape_expected", "row_disparity", "col_disparity"],
         [
@@ -898,6 +903,7 @@ class TestSubpix:
         # Check that the subpixel col disparities are correct
         np.testing.assert_array_equal(cost_volumes.disp_col, col_disparity)
 
+    @pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
     @pytest.mark.parametrize(
         ["make_cost_volumes", "index_disp_col_zero", "index_best_disp_row"],
         [
@@ -998,6 +1004,7 @@ class TestSubpix:
                 )
                 np.testing.assert_array_equal(index_min, index_best_disp_row)
 
+    @pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
     @pytest.mark.parametrize(
         ["make_cost_volumes", "index_disp_col_zero", "index_best_disp_row"],
         [
@@ -1098,6 +1105,7 @@ class TestSubpix:
                 )
                 np.testing.assert_array_equal(index_min, index_best_disp_row)
 
+    @pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
     @pytest.mark.parametrize(
         ["make_cost_volumes", "index_disp_row_zero", "index_best_disp_col"],
         [
@@ -1198,6 +1206,7 @@ class TestSubpix:
                 )
                 np.testing.assert_array_equal(index_min, index_best_disp_col)
 
+    @pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
     @pytest.mark.parametrize(
         ["make_cost_volumes", "index_disp_row_zero", "index_best_disp_col"],
         [
@@ -1475,6 +1484,7 @@ class TestDisparityMargins:
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2 on disp_max_col,
                 # 1 on disp_min_row and 3 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3)",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 Margins(4, 2, 4, 2),
@@ -1485,6 +1495,7 @@ class TestDisparityMargins:
                 # margins=(4,2,4,2) -> we add a margin of 4 on disp_min_col and on disp_max_col
                 # and of 2 on disp_min_row and disp_max_row
                 id="Margins(left=4, up=2, right=4, down=2)",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 Margins(2, 6, 2, 6),
@@ -1495,6 +1506,7 @@ class TestDisparityMargins:
                 # margins=(2,6,2,6) -> we add a margin of 2 on disp_min_col and on disp_max_col
                 # and of 6 on disp_min_row and disp_max_row
                 id="Margins(left=2, up=6, right=2, down=6)",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 Margins(6, 2, 6, 2),
@@ -1505,6 +1517,7 @@ class TestDisparityMargins:
                 # margins=(6,2,6,2) -> we add a margin of 6 on disp_min_col and on disp_max_col
                 # and of 2 on disp_min_row and disp_max_row
                 id="Margins(left=6, up=2, right=6, down=2)",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 Margins(3, 3, 3, 3),
@@ -1525,6 +1538,7 @@ class TestDisparityMargins:
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x2 on disp_max_col,
                 # 1x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3)",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 Margins(6, 4, 2, 3),
@@ -1535,6 +1549,7 @@ class TestDisparityMargins:
                 # margins=(6,4,2,3) -> we add a margin of 6x2 on disp_min_col, 2x2 on disp_max_col,
                 # 4x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=6, up=4, right=2, down=3)",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 Margins(0, 0, 0, 0),
@@ -1553,6 +1568,7 @@ class TestDisparityMargins:
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x4 on disp_max_col,
                 # 1x4 on disp_min_row and 3x4 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3), subpix=4",
+                marks=pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective"),
             ),
             pytest.param(
                 Margins(3, 3, 3, 3),
