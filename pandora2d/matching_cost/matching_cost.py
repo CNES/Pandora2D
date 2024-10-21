@@ -201,11 +201,11 @@ class MatchingCost:
 
         # Create the cost volume
         if np_data is None:
-            np_data = np.zeros((len(row), len(col), len(disp_range_col), len(disp_range_row)), dtype=np.float32)
+            np_data = np.zeros((len(row), len(col), len(disp_range_row), len(disp_range_col)), dtype=np.float32)
 
         cost_volumes = xr.Dataset(
-            {"cost_volumes": (["row", "col", "disp_col", "disp_row"], np_data)},
-            coords={"row": row, "col": col, "disp_col": disp_range_col, "disp_row": disp_range_row},
+            {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np_data)},
+            coords={"row": row, "col": col, "disp_row": disp_range_row, "disp_col": disp_range_col},
         )
 
         cost_volumes.attrs = cost_volume_attr
