@@ -90,9 +90,9 @@ def test_margins():
             np.max,
             np.array(
                 [
-                    [[np.nan, np.nan], [np.nan, np.nan], [np.nan, np.nan]],
-                    [[2.0, 3.0], [3.0, 4.0], [4.0, np.nan]],
-                    [[2.0, 2.0], [3.0, 3.0], [4.0, np.nan]],
+                    [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                    [[np.nan, 2.0, 3.0], [2.0, 3.0, 4.0], [3.0, 4.0, np.nan]],
+                    [[np.nan, 2.0, 2.0], [3.0, 3.0, 3.0], [4.0, 4.0, np.nan]],
                 ]
             ),
             id="test for maximum",
@@ -101,9 +101,9 @@ def test_margins():
             np.min,
             np.array(
                 [
-                    [[np.nan, np.nan], [np.nan, np.nan], [np.nan, np.nan]],
-                    [[0.0, 0.0], [0.0, 0.0], [0.0, np.nan]],
-                    [[0.0, 1.0], [0.0, 1.0], [0.0, np.nan]],
+                    [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                    [[np.nan, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, np.nan]],
+                    [[np.nan, 0.0, 1.0], [1.0, 0.0, 1.0], [1.0, 0.0, np.nan]],
                 ]
             ),
             id="test for minimum",
@@ -301,7 +301,7 @@ def test_masked_nan():
     """
     Test the capacity of disparity_computation to find nans
     """
-    cv = np.zeros((4, 5, 2, 2))
+    cv = np.full((4, 5, 3, 5), np.nan)
     # disp_x = -1, disp_y = -1
     cv[:, :, 0, 0] = np.array(
         [[np.nan, np.nan, np.nan, 6, 8], [np.nan, 0, 0, np.nan, 5], [1, 1, 1, 1, 1], [1, np.nan, 2, 3, np.nan]]
@@ -329,8 +329,8 @@ def test_masked_nan():
     row = np.arange(c_row[0], c_row[-1] + 1)
     col = np.arange(c_col[0], c_col[-1] + 1)
 
-    disparity_range_col = np.arange(-1, 0 + 1)
-    disparity_range_row = np.arange(-1, 0 + 1)
+    disparity_range_col = np.arange(-1, 1 + 1)
+    disparity_range_row = np.arange(-1, 3 + 1)
 
     cost_volumes_dataset = xr.Dataset(
         {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},

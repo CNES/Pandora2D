@@ -36,7 +36,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     """
 
     # generated data for the test
-    np_data = np.empty((3, 3, 3, 3))
+    np_data = np.empty((3, 3, 5, 3))
     np_data.fill(np.nan)
 
     c_row = [0, 1, 2]
@@ -46,7 +46,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     row = np.arange(c_row[0], c_row[-1] + 1)
     col = np.arange(c_col[0], c_col[-1] + 1)
 
-    disparity_range_col = np.arange(0, 2 + 1)
+    disparity_range_col = np.arange(0, 4 + 1)
     disparity_range_row = np.arange(-2, 0 + 1)
 
     # Create the cost volume
@@ -67,7 +67,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     cost_volumes_test.attrs["crs"] = None
     cost_volumes_test.attrs["transform"] = Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
     cost_volumes_test.attrs["band_correl"] = None
-    cost_volumes_test.attrs["col_disparity_source"] = [0, 2]
+    cost_volumes_test.attrs["col_disparity_source"] = [-1, 3]
     cost_volumes_test.attrs["row_disparity_source"] = [-2, 0]
     cost_volumes_test.attrs["no_data_img"] = -9999
     cost_volumes_test.attrs["no_data_mask"] = 1

@@ -214,9 +214,9 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
         {"refinement_method": "optical_flow"}, [1, 1], 3
     )  # type: ignore[abstract]
 
-    cv = np.zeros((6, 5, 5, 5))
+    cv = np.zeros((6, 5, 7, 5))
 
-    disparity_range_col = np.arange(-2, 2 + 1)
+    disparity_range_col = np.arange(-2, 4 + 1)
     disparity_range_row = np.arange(-2, 2 + 1)
 
     cost_volumes = xr.Dataset(
@@ -276,9 +276,9 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
     col_disp_map = [2, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0]
     row_disp_map = [2, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0]
 
-    cv = np.zeros((6, 5, 5, 5))
+    cv = np.zeros((6, 5, 7, 5))
 
-    disparity_range_col = np.arange(-2, 2 + 1)
+    disparity_range_col = np.arange(-2, 4 + 1)
     disparity_range_row = np.arange(-2, 2 + 1)
 
     cost_volumes = xr.Dataset(
