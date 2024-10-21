@@ -44,6 +44,7 @@ def img_size():
 
 @pytest.fixture()
 def disparity_cfg():
+    """Return (disp_row, disp_col)"""
     return {"init": 1, "range": 2}, {"init": -1, "range": 4}
 
 
@@ -111,16 +112,16 @@ def cost_volumes(matching_cost_cfg, image):
 
 @pytest.fixture()
 def criteria_dataarray(img_size):
-    shape = (*img_size, 9, 5)
+    shape = (*img_size, 5, 9)
     return xr.DataArray(
         np.full(shape, Criteria.VALID),
         coords={
             "row": np.arange(shape[0]),
             "col": np.arange(shape[1]),
-            "disp_col": np.arange(-5, 4),
             "disp_row": np.arange(-1, 4),
+            "disp_col": np.arange(-5, 4),
         },
-        dims=["row", "col", "disp_col", "disp_row"],
+        dims=["row", "col", "disp_row", "disp_col"],
     )
 
 
@@ -143,6 +144,7 @@ class TestAllocateCriteriaDataset:
 
         assert criteria_dataarray.shape == cost_volumes.cost_volumes.shape
 
+    @pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
     @pytest.mark.parametrize("value", [0, Criteria.VALID])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     def test_with_subpix(self, cost_volumes, value, subpix, img_size, disparity_cfg):
@@ -155,9 +157,10 @@ class TestAllocateCriteriaDataset:
         nb_row_disp = 2 * row_disparity["range"] * subpix + 1
 
         assert criteria_dataarray.shape == cost_volumes.cost_volumes.shape
-        assert criteria_dataarray.shape == (row, col, nb_col_disp, nb_row_disp)
+        assert criteria_dataarray.shape == (row, col, nb_row_disp, nb_col_disp)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 class TestSetUnprocessedDisparity:
     """Test create a criteria xarray.Dataset."""
 
@@ -196,13 +199,13 @@ class TestSetUnprocessedDisparity:
         criteria.set_unprocessed_disp(criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row)
 
         assert np.all(
-            criteria_dataarray.data[:, :nb_col_set, 0, :] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
+            criteria_dataarray.data[:, :nb_col_set, :, 0] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
         )
-        assert np.all(criteria_dataarray.data[:, nb_col_set:, 0, :] == Criteria.VALID)
+        assert np.all(criteria_dataarray.data[:, nb_col_set:, :, 0] == Criteria.VALID)
         assert np.all(
-            criteria_dataarray.data[:, nb_col_set:, -1, :] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
+            criteria_dataarray.data[:, nb_col_set:, :, -1] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
         )
-        assert np.all(criteria_dataarray.data[:, :nb_col_set, -1, :] == Criteria.VALID)
+        assert np.all(criteria_dataarray.data[:, :nb_col_set, :, -1] == Criteria.VALID)
 
     def test_variable_row_disparity(
         self, criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row, img_size
@@ -216,13 +219,13 @@ class TestSetUnprocessedDisparity:
         criteria.set_unprocessed_disp(criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row)
 
         assert np.all(
-            criteria_dataarray.data[:nb_row_set, :, :, 0] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
+            criteria_dataarray.data[:nb_row_set, :, 0, :] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
         )
-        assert np.all(criteria_dataarray.data[nb_row_set:, :, :, 0] == Criteria.VALID)
+        assert np.all(criteria_dataarray.data[nb_row_set:, :, 0, :] == Criteria.VALID)
         assert np.all(
-            criteria_dataarray.data[nb_row_set:, :, :, -1] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
+            criteria_dataarray.data[nb_row_set:, :, -1, :] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
         )
-        assert np.all(criteria_dataarray.data[:nb_row_set, :, :, -1] == Criteria.VALID)
+        assert np.all(criteria_dataarray.data[:nb_row_set, :, -1, :] == Criteria.VALID)
 
 
 class TestMaskBorder:
@@ -275,6 +278,7 @@ class TestMaskBorder:
         assert np.all(criteria_dataarray.data[:, -offset:, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 class TestMaskDisparityOutsideRightImage:
     """Test mask_disparity_outside_right_image method."""
 
@@ -355,7 +359,7 @@ class TestMaskDisparityOutsideRightImage:
         """
         criteria.mask_disparity_outside_right_image(offset, criteria_dataarray)
 
-        np.testing.assert_array_equal(criteria_dataarray.values[:, :, 5, 1], ground_truth_null_disparity)
+        np.testing.assert_array_equal(criteria_dataarray.values[:, :, 1, 5], ground_truth_null_disparity)
         np.testing.assert_array_equal(criteria_dataarray.values[:, :, 0, 0], ground_truth_first_disparity)
 
 
@@ -381,7 +385,7 @@ class TestMaskLeftNoData:
 
         image["msk"][no_data_row_position, no_data_col_position] = image.attrs["no_data_mask"]
 
-        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
         expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
 
         criteria.mask_left_no_data(image, window_size, criteria_dataarray)
@@ -410,7 +414,7 @@ class TestMaskLeftNoData:
             Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
         )
 
-        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
         expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
         expected_criteria_data[no_data_row_position, no_data_col_position, ...] = (
             Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
@@ -745,7 +749,7 @@ class TestMaskLeftInvalid:
         # We put 2 in img_left msk because it is different from valid_pixels=0 and no_data_mask=1
         image["msk"][invalid_row_position, invalid_col_position] = 2
 
-        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
         expected_criteria_data[invalid_row_position, invalid_col_position, ...] = (
             Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
         )
@@ -764,6 +768,7 @@ class TestMaskLeftInvalid:
             pytest.param((4, 5)),
         ],
     )
+    @pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
     def test_add_to_existing(self, img_size, image, criteria_dataarray, invalid_position):
         """Test we do not override existing criteria but combine it."""
         invalid_row_position, invalid_col_position = invalid_position
@@ -1353,28 +1358,25 @@ def ground_truth_criteria_dataarray(left_img_shape):
     correct_input_cfg and correct_pipeline_without_refinement fixtures.
     """
 
-    # WARNING: after switching disp_col & disp_row in cost_volumes
-    # this ground_truth  will have to be updated
-
     # disp = {"init": 1, "range":2} -> range size = 5
     ground_truth = np.full((left_img_shape[0], left_img_shape[1], 5, 5), Criteria.VALID)
 
     # Here, window_size=5
     # For disp=-1, 3 first column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:3, :, :, 0] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, :3, 0, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:3, :, 0, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:, :3, :, 0] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
 
     # For disp=1, 3 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-3:, :, :, 2] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -3:, 2, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[-3:, :, 2, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:, -3:, :, 2] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
 
     # For disp=2, 4 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-4:, :, :, 3] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -4:, 3, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[-4:, :, 3, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:, -4:, :, 3] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
 
     # For disp=3, 5 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-5:, :, :, 4] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -5:, 4, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[-5:, :, 4, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:, -5:, :, 4] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
 
     # Window_size=5, so the two first and last rows and columns are equal to Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
     ground_truth[:2, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
@@ -1385,6 +1387,7 @@ def ground_truth_criteria_dataarray(left_img_shape):
     return ground_truth
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_criteria_datarray_created_in_state_machine(
     correct_input_cfg, correct_pipeline_without_refinement, ground_truth_criteria_dataarray
 ):
