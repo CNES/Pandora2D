@@ -395,7 +395,7 @@ class MatchingCost:
                 )
 
             # Add current cost volume to the cost_volumes dataset
-            cost_volumes["cost_volumes"].data[:, :, :, idx] = cost_volume["cost_volume"].data[row_index, :, :]
+            cost_volumes["cost_volumes"].data[:, :, idx, :] = cost_volume["cost_volume"].data[row_index, :, :]
 
         # Add disparity source
         del cost_volumes.attrs["disparity_source"]

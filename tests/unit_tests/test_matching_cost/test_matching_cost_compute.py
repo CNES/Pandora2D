@@ -294,9 +294,9 @@ def test_compute_cv_zncc():
     zncc = matching_cost_matcher.compute_cost_volumes(img_left=left_zncc, img_right=right_zncc)
 
     # check that the generated cost_volumes is equal to ground truth
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 2], ad_ground_truth_1_1_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 2, 0], ad_ground_truth_1_1_0_0, rtol=1e-06)
     np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 1, 0], ad_ground_truth_1_1_1_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 2], ad_ground_truth_2_2_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 2, 0], ad_ground_truth_2_2_0_0, rtol=1e-06)
     np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 1, 0], ad_ground_truth_2_2_1_0, rtol=1e-06)
 
 
@@ -993,7 +993,7 @@ class TestSubpix:
             for row in range(cost_volumes["cost_volumes"].shape[0] - 1):
                 # index_min = all minimum value indexes
                 index_min = np.where(
-                    cost_volumes["cost_volumes"][row, col:, index_disp_col_zero]
+                    cost_volumes["cost_volumes"][row, col, :, index_disp_col_zero]
                     == cost_volumes["cost_volumes"][row, col, :, index_disp_col_zero].min()
                 )
                 np.testing.assert_array_equal(index_min, index_best_disp_row)
