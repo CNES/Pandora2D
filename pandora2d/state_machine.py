@@ -46,8 +46,7 @@ except ImportError:
 from transitions import MachineError
 from pandora.margins import GlobalMargins
 
-
-from pandora2d import common, disparity, estimation, img_tools, matching_cost, refinement
+from pandora2d import common, disparity, estimation, img_tools, matching_cost, refinement, criteria
 from pandora2d.profiling import mem_time_profile
 
 
@@ -112,6 +111,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.pipeline_cfg: Dict = {"pipeline": {}}
         self.completed_cfg: Dict = {}
         self.cost_volumes: xr.Dataset = xr.Dataset()
+        self.criteria_dataarray: xr.DataArray = xr.DataArray()
         self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
         # For communication between matching_cost and refinement steps
@@ -350,6 +350,8 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             self.right_img,
             self.margins_disp.get("refinement"),
         )
+
+        self.criteria_dataarray = criteria.get_criteria_dataarray(self.left_img, self.right_img, self.cost_volumes)
 
     @mem_time_profile(name="Disparity step")
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:

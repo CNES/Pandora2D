@@ -22,16 +22,6 @@ import pytest
 
 
 @pytest.fixture()
-def correct_pipeline_without_refinement():
-    return {
-        "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
-            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-        }
-    }
-
-
-@pytest.fixture()
 def correct_pipeline_with_optical_flow():
     return {
         "pipeline": {
