@@ -36,8 +36,7 @@ from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 from pandora2d.state_machine import Pandora2DMachine
 from pandora2d import reporting
 from pandora2d.reporting import NumpyPrimitiveEncoder
-from pandora2d.profiling import generate_summary
-from pandora2d import profiling
+from pandora2d.profiling import generate_summary, expert_mode_config
 
 
 def run(
@@ -99,7 +98,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     pandora2d_machine = Pandora2DMachine()
 
     cfg = check_conf(user_cfg, pandora2d_machine)
-    profiling.expert_mode_config.enable = "expert_mode" in cfg
+    expert_mode_config.enable = "expert_mode" in cfg
 
     setup_logging(verbose)
 
