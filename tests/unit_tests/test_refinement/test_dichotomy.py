@@ -354,7 +354,6 @@ class TestCheckConf:
         assert "Missing keys in expected schema: unexpected_key" in err.value.args[0]
 
 
-@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 @pytest.mark.parametrize(
     "rows",
     [
@@ -622,7 +621,6 @@ def test_margins(dichotomy_instance, expected):
     assert dichotomy_instance.margins == expected
 
 
-@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 class TestCostSurfaces:
     """Test CostSurfaces container."""
 
@@ -999,7 +997,6 @@ def test_search_new_best_point(
     assert result == expected
 
 
-@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 class TestExtremaOnEdges:
     """
     Test that points for which best cost value is on the edge of disparity range
