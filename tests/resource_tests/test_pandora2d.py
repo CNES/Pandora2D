@@ -117,7 +117,7 @@ class TestRefinement:
             "matching_cost": {"matching_cost_method": matching_cost_method, "subpix": subpix},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {
-                "refinement_method": "dichotomy",
+                "refinement_method": "dichotomy_python",
                 "iterations": iterations,
                 "filter": {"method": filter_method},
             },

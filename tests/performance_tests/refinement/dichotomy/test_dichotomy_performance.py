@@ -103,7 +103,11 @@ class TestComparisonMedicis:
                     "spline_order": 3,
                 },  # we use spline_order=3 to get better results when subpix is different from 1
                 "disparity": {"disparity_method": "wta", "invalid_disparity": np.nan},
-                "refinement": {"refinement_method": "dichotomy", "iterations": 9, "filter": {"method": filter_method}},
+                "refinement": {
+                    "refinement_method": "dichotomy_python",
+                    "iterations": 9,
+                    "filter": {"method": filter_method},
+                },
             },
         }
 

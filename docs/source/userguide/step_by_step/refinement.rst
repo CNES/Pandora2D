@@ -214,7 +214,7 @@ Configuration and parameters
                       - Refinement method
                       - string
                       -
-                      - "dichotomy"
+                      - "dichotomy_python"
                       - Yes
                     * - *iterations*
                       - Number of iterations

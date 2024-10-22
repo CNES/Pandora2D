@@ -17,7 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Module for Dichotomy refinement method.
+Module for Dichotomy refinement method (python version).
 """
 
 import logging
@@ -34,13 +34,13 @@ from . import refinement
 COST_SELECTION_METHOD_MAPPING = {"min": np.nanargmin, "max": np.nanargmax}
 
 
-@refinement.AbstractRefinement.register_subclass("dichotomy")
-class Dichotomy(refinement.AbstractRefinement):
-    """Subpixel refinement method by dichotomy."""
+@refinement.AbstractRefinement.register_subclass("dichotomy_python")
+class DichotomyPython(refinement.AbstractRefinement):
+    """Subpixel refinement method by dichotomy (python version)."""
 
     NB_MAX_ITER = 9
     schema = {
-        "refinement_method": And(str, lambda x: x in ["dichotomy"]),
+        "refinement_method": And(str, lambda x: x in ["dichotomy_python"]),
         "iterations": And(int, lambda it: it > 0),
         "filter": And(dict, lambda x: x["method"] in AbstractFilter.interpolation_filter_methods_avail),
     }
