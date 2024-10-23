@@ -776,7 +776,7 @@ class TestMaskLeftInvalid:
             Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
         )
 
-        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
         expected_criteria_data[invalid_row_position, invalid_col_position, ...] = (
             Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
         )
