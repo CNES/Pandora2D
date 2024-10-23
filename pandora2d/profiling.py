@@ -41,7 +41,7 @@ THREAD_TIMEOUT = 2
 
 
 @dataclass
-class EpertModeConfig:
+class ExpertModeConfig:
     """
     Expert mode config class
     """
@@ -73,7 +73,7 @@ class Data:
         self._timestamp = value
 
 
-expert_mode_config = EpertModeConfig()
+expert_mode_config = ExpertModeConfig()
 data = Data()
 
 
