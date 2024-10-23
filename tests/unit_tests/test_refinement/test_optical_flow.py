@@ -216,14 +216,14 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
 
     cv = np.zeros((6, 5, 7, 5))
 
-    disparity_range_col = np.arange(-2, 4 + 1)
-    disparity_range_row = np.arange(-2, 2 + 1)
+    disparity_range_row = np.arange(-2, 4 + 1)
+    disparity_range_col = np.arange(-2, 2 + 1)
 
     cost_volumes = xr.Dataset(
         {"cost_volumes": (["row", "col", "disp_row", "disp_col"], cv)},
         coords={
             "row": np.arange(0, 6),
-            "col": np.arange(0, 7),
+            "col": np.arange(0, 5),
             "disp_row": disparity_range_row,
             "disp_col": disparity_range_col,
         },
@@ -278,8 +278,8 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
 
     cv = np.zeros((6, 5, 7, 5))
 
-    disparity_range_col = np.arange(-2, 4 + 1)
-    disparity_range_row = np.arange(-2, 2 + 1)
+    disparity_range_row = np.arange(-2, 4 + 1)
+    disparity_range_col = np.arange(-2, 2 + 1)
 
     cost_volumes = xr.Dataset(
         {"cost_volumes": (["row", "col", "disp_row", "disp_col"], cv)},

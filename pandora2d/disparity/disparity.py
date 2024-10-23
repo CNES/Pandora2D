@@ -218,17 +218,17 @@ class Disparity:
             cost_volumes_user = xr.Dataset(
                 {
                     "cost_volumes": (
-                        ["row", "col", "disp_col", "disp_row"],
+                        ["row", "col", "disp_row", "disp_col"],
                         cost_volumes["cost_volumes"].data[
-                            :, :, margins["left"] : -margins["right"], margins["up"] : -margins["down"]
+                            :, :, margins["up"] : -margins["down"], margins["left"] : -margins["right"]
                         ],
                     )
                 },
                 coords={
                     "row": cost_volumes.coords["row"],
                     "col": cost_volumes.coords["col"],
-                    "disp_col": cost_volumes.coords["disp_col"][margins["left"] : -margins["right"]],
                     "disp_row": cost_volumes.coords["disp_row"][margins["up"] : -margins["down"]],
+                    "disp_col": cost_volumes.coords["disp_col"][margins["left"] : -margins["right"]],
                 },
             )
         else:
@@ -242,12 +242,12 @@ class Disparity:
             cost_volumes_user["cost_volumes"].data[indices_nan] = -np.inf
             # -------compute disp_map row---------
             # process of maximum for dispx
-            maps_max_col = self.extrema_split(cost_volumes_user, 2, np.max)
+            maps_max_col = self.extrema_split(cost_volumes_user, 3, np.max)
             # process of argmax for dispy
             disp_map_row = cost_volumes_user["disp_row"].data[self.arg_split(maps_max_col, 2, np.argmax)]
             # -------compute disp_map col---------
             # process of maximum for dispy
-            maps_max_row = self.extrema_split(cost_volumes_user, 3, np.max)
+            maps_max_row = self.extrema_split(cost_volumes_user, 2, np.max)
             # process of argmax for dispx
             disp_map_col = cost_volumes_user["disp_col"].data[self.arg_split(maps_max_row, 2, np.argmax)]
             # --------compute correlation score----
@@ -257,12 +257,12 @@ class Disparity:
             # -------compute disp_map row---------
             cost_volumes_user["cost_volumes"].data[indices_nan] = np.inf
             # process of minimum for dispx
-            maps_min_col = self.extrema_split(cost_volumes_user, 2, np.min)
+            maps_min_col = self.extrema_split(cost_volumes_user, 3, np.min)
             # process of argmin for disp
             disp_map_row = cost_volumes_user["disp_row"].data[self.arg_split(maps_min_col, 2, np.argmin)]
             # -------compute disp_map col---------
             # process of maximum for dispy
-            maps_min_row = self.extrema_split(cost_volumes_user, 3, np.min)
+            maps_min_row = self.extrema_split(cost_volumes_user, 2, np.min)
             # process of argmin for dispx
             disp_map_col = cost_volumes_user["disp_col"].data[self.arg_split(maps_min_row, 2, np.argmin)]
             # --------compute correlation score----
