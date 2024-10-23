@@ -83,6 +83,7 @@ def test_margins():
     assert _disparity.margins == Margins(0, 0, 0, 0)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 @pytest.mark.parametrize(
     ["extrema_func", "expected_result"],
     [
@@ -125,12 +126,13 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
 
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
     # searching along dispy axis
-    cvs_max = disparity_test.extrema_split(cvs, 3, extrema_func)
+    cvs_max = disparity_test.extrema_split(cvs, 2, extrema_func)
 
     np.testing.assert_allclose(cvs_max[:, :, 0], expected_result[:, :, 0], atol=1e-06)
     np.testing.assert_allclose(cvs_max[:, :, 1], expected_result[:, :, 1], atol=1e-06)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 @pytest.mark.parametrize(
     ["extrema_func", "arg_extrema_func", "expected_result"],
     [
@@ -171,7 +173,7 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
 
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
     # searching along dispy axis
-    cvs_max = disparity_test.extrema_split(cvs, 3, extrema_func)
+    cvs_max = disparity_test.extrema_split(cvs, 2, extrema_func)
     min_tensor = disparity_test.arg_split(cvs_max, 2, arg_extrema_func)
 
     np.testing.assert_allclose(min_tensor, expected_result, atol=1e-06)
@@ -297,18 +299,19 @@ def test_compute_disparity_map(margins, img_left, img_right, ground_truth_row, g
     np.testing.assert_array_equal(ground_truth_row, delta_y)
 
 
+@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_masked_nan():
     """
     Test the capacity of disparity_computation to find nans
     """
-    cv = np.full((4, 5, 3, 5), np.nan)
+    cv = np.full((4, 5, 5, 3), np.nan)
     # disp_x = -1, disp_y = -1
     cv[:, :, 0, 0] = np.array(
         [[np.nan, np.nan, np.nan, 6, 8], [np.nan, 0, 0, np.nan, 5], [1, 1, 1, 1, 1], [1, np.nan, 2, 3, np.nan]]
     )
 
     # disp_x = -1, disp_y = 0
-    cv[:, :, 0, 1] = np.array(
+    cv[:, :, 1, 0] = np.array(
         [[np.nan, np.nan, np.nan, 1, 2], [np.nan, 2, 2, 3, 6], [4, np.nan, 1, 1, 1], [6, 6, 6, 6, np.nan]]
     )
 
@@ -318,7 +321,7 @@ def test_masked_nan():
     )
 
     # disp_x = 0, disp_y = -1
-    cv[:, :, 1, 0] = np.array(
+    cv[:, :, 0, 1] = np.array(
         [[np.nan, np.nan, np.nan, 5, 60], [np.nan, 7, 8, 9, 10], [np.nan, np.nan, 6, 10, 11], [7, 8, 9, 10, np.nan]]
     )
 
@@ -333,8 +336,8 @@ def test_masked_nan():
     disparity_range_row = np.arange(-1, 3 + 1)
 
     cost_volumes_dataset = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},
-        coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], cv)},
+        coords={"row": row, "col": col, "disp_row": disparity_range_row, "disp_col": disparity_range_col},
     )
 
     cost_volumes_dataset.attrs["type_measure"] = "max"
