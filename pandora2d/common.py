@@ -218,8 +218,7 @@ def set_out_of_row_disparity_range_to_other_value(
     :param global_disparity_range:
     :type global_disparity_range:
     """
-    # WARNING: if one day we switch disp_row with disp_col index should be -2
-    ndisp_row = data.shape[-1]
+    ndisp_row = data.shape[-2]
 
     # We want to put special value on points that are not in the global disparity range (row_disparity_source)
     for disp_row in range(ndisp_row):
@@ -239,7 +238,7 @@ def set_out_of_row_disparity_range_to_other_value(
                     data.coords["disp_row"].data[disp_row] > max_disp_grid,
                 )
             )
-        data.data[masking[0], masking[1], :, disp_row] = value
+        data.data[masking[0], masking[1], disp_row, :] = value
 
 
 def set_out_of_col_disparity_range_to_other_value(
@@ -266,8 +265,7 @@ def set_out_of_col_disparity_range_to_other_value(
     :param global_disparity_range:
     :type global_disparity_range:
     """
-    # WARNING: if one day we switch disp_row with disp_col index should be -1
-    ndisp_col = data.shape[-2]
+    ndisp_col = data.shape[-1]
 
     # We want to put special value on points that are not in the global disparity range (col_disparity_source)
     for disp_col in range(ndisp_col):
@@ -287,4 +285,4 @@ def set_out_of_col_disparity_range_to_other_value(
                     data.coords["disp_col"].data[disp_col] > max_disp_grid,
                 )
             )
-        data.data[masking[0], masking[1], disp_col, :] = value
+        data.data[masking[0], masking[1], :, disp_col] = value

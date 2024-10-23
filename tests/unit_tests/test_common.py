@@ -390,14 +390,14 @@ class TestSetOutOfDisparity:
     def dataset(self, range_row, range_col, disp_range_col, disp_range_row, init_value, disp_coords):
         """make a xarray dataset and disparity grids"""
         xarray = xr.DataArray(
-            np.full((5, 4, 7, 6), init_value),
+            np.full((5, 4, 6, 7), init_value),
             coords={
                 "row": range_row,
                 "col": range_col,
-                "disp_col": disp_range_col,
                 "disp_row": disp_range_row,
+                "disp_col": disp_range_col,
             },
-            dims=["row", "col", "disp_col", "disp_row"],
+            dims=["row", "col", "disp_row", "disp_col"],
         )
 
         xarray.attrs = {"col_disparity_source": [2, 8], "row_disparity_source": [-5, 0]}
@@ -464,9 +464,9 @@ class TestSetOutOfDisparity:
 
         common.set_out_of_row_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
 
-        expected_value = array.data[::2, ..., :min_disp_index]
+        expected_value = array.data[::2, :, :min_disp_index, :]
         expected_zeros_on_odd_lines = array.data[1::2, ...]
-        expected_zeros_on_even_lines = array.data[::2, ..., min_disp_index:]
+        expected_zeros_on_even_lines = array.data[::2, :, min_disp_index:, :]
 
         assert np.all(expected_value == value)
         assert np.all(expected_zeros_on_odd_lines == init_value)
@@ -491,9 +491,9 @@ class TestSetOutOfDisparity:
 
         common.set_out_of_col_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
 
-        expected_value = array.data[:, ::2, :min_disp_index, ...]
+        expected_value = array.data[:, ::2, :, :min_disp_index]
         expected_zeros_on_odd_columns = array.data[:, 1::2, ...]
-        expected_zeros_on_even_columns = array.data[:, ::2, min_disp_index:, ...]
+        expected_zeros_on_even_columns = array.data[:, ::2, :, min_disp_index:]
 
         assert np.all(expected_value == value)
         assert np.all(expected_zeros_on_odd_columns == init_value)
@@ -517,9 +517,9 @@ class TestSetOutOfDisparity:
 
         common.set_out_of_row_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
 
-        expected_value = array.data[::2, ..., (max_disp_index + 1) :]
+        expected_value = array.data[::2, :, (max_disp_index + 1) :, :]
         expected_zeros_on_odd_lines = array.data[1::2, ...]
-        expected_zeros_on_even_lines = array.data[::2, ..., : (max_disp_index + 1)]
+        expected_zeros_on_even_lines = array.data[::2, :, : (max_disp_index + 1), :]
 
         assert np.all(expected_value == value)
         assert np.all(expected_zeros_on_odd_lines == init_value)
@@ -544,9 +544,9 @@ class TestSetOutOfDisparity:
 
         common.set_out_of_col_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
 
-        expected_value = array.data[:, ::2, (max_disp_index + 1) :, ...]
+        expected_value = array.data[:, ::2, :, (max_disp_index + 1) :]
         expected_zeros_on_odd_columns = array.data[:, 1::2, ...]
-        expected_zeros_on_even_columns = array.data[:, ::2, : (max_disp_index + 1), ...]
+        expected_zeros_on_even_columns = array.data[:, ::2, :, : (max_disp_index + 1)]
 
         assert np.all(expected_value == value)
         assert np.all(expected_zeros_on_odd_columns == init_value)
@@ -572,10 +572,10 @@ class TestSetOutOfDisparity:
 
         common.set_out_of_row_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
 
-        expected_below_min = array.data[::2, ..., :min_disp_index]
-        expected_above_max = array.data[::2, ..., (max_disp_index + 1) :]
+        expected_below_min = array.data[::2, :, :min_disp_index, :]
+        expected_above_max = array.data[::2, :, (max_disp_index + 1) :, :]
         expected_zeros_on_odd_lines = array.data[1::2, ...]
-        expected_zeros_on_even_lines = array.data[::2, ..., min_disp_index : (max_disp_index + 1)]
+        expected_zeros_on_even_lines = array.data[::2, :, min_disp_index : (max_disp_index + 1), :]
 
         assert np.all(expected_below_min == value)
         assert np.all(expected_above_max == value)
@@ -603,10 +603,10 @@ class TestSetOutOfDisparity:
 
         common.set_out_of_col_disparity_range_to_other_value(array, min_disp_grid, max_disp_grid, value)
 
-        expected_below_min = array.data[:, ::2, :min_disp_index, ...]
-        expected_above_max = array.data[:, ::2, (max_disp_index + 1) :, ...]
+        expected_below_min = array.data[:, ::2, :, :min_disp_index]
+        expected_above_max = array.data[:, ::2, :, (max_disp_index + 1) :]
         expected_zeros_on_odd_columns = array.data[:, 1::2, ...]
-        expected_zeros_on_even_columns = array.data[:, ::2, min_disp_index : (max_disp_index + 1), ...]
+        expected_zeros_on_even_columns = array.data[:, ::2, :, min_disp_index : (max_disp_index + 1)]
 
         assert np.all(expected_below_min == value)
         assert np.all(expected_above_max == value)
