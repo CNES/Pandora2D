@@ -137,25 +137,29 @@ xarray.DataArray named cost_volumes. When matching is impossible, the matching c
 
 ::
 
-    <xarray.Dataset>
-    Dimensions:       (col: 3, disp_col: 2, disp_row: 2, row: 3)
+    <xarray.Dataset> Size: 224B
+    Dimensions:       (row: 3, col: 3, disp_row: 2, disp_col: 2)
     Coordinates:
-
-    row (row) int64 0 1 2
-    col (col) int64 0 1 2
-    disp_col (disp_col) int64 -1 0
-    disp_row (disp_row) int64 -1 0
+      * col           (col) int64 24B 0 1 2
+      * row           (row) int64 24B 0 1 2
+      * disp_row      (disp_row) int64 16B -1 0
+      * disp_col      (disp_col) int64 16B -1 0
     Data variables:
-        cost_volumes  (row, col, disp_col, disp_row) float32 nan nan ... 4.0
-    Attributes:
-        measure:         sad
-        subpixel:        1
-        offset_row_col:  0
-        window_size:     1
-        type_measure:    min
-        cmax:            10004
-        crs:             None
-        transform:       | 1.00, 0.00, 0.00|| 0.00, 1.00, 0.00|| 0.00, 0.00, ...
+        cost_volumes  (row, col, disp_row, disp_col) float32 144B nan nan ... 4.0
+    Attributes: (12/16)
+        no_data_img:           -9999
+        valid_pixels:          0
+        no_data_mask:          1
+        crs:                   None
+        transform:             | 1.00, 0.00, 0.00|\n| 0.00, 1.00, 0.00|\n| 0.00, ...
+        col_disparity_source:  [-1, 3]
+        ...                    ...
+        offset_row_col:        0
+        measure:               sad
+        type_measure:          min
+        cmax:                  10004
+        disparity_margins:     None
+        step:                  [1, 1]
 
 Disparity map
 #############
