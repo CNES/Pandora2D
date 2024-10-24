@@ -31,200 +31,11 @@ import xarray as xr
 from pandora.margins import Margins
 from pytest_mock import MockerFixture
 
-from pandora2d.matching_cost import MatchingCost
 from pandora2d import refinement
 from pandora2d.interpolation_filter.bicubic import Bicubic
 
 
-# Make pylint happy with fixtures:
-# pylint: disable=redefined-outer-name
-# pylint: disable=too-many-lines
-
-
-@pytest.fixture()
-def rows():
-    return np.arange(2)
-
-
-@pytest.fixture()
-def cols():
-    return np.arange(3)
-
-
-@pytest.fixture()
-def min_disparity_row():
-    return 2
-
-
-@pytest.fixture()
-def max_disparity_row():
-    return 7
-
-
-@pytest.fixture()
-def min_disparity_col():
-    return -2
-
-
-@pytest.fixture()
-def max_disparity_col():
-    return 3
-
-
-@pytest.fixture()
-def type_measure():
-    return "max"
-
-
-@pytest.fixture()
-def subpixel():
-    return 1
-
-
-# Once the criteria for identifying extremas at the edge of disparity ranges has been implemented,
-# this fixture could possibly be removed.
-@pytest.fixture()
-def left_img(rows, cols, min_disparity_row, max_disparity_row, min_disparity_col, max_disparity_col):
-    """
-    Creates a left image dataset
-    """
-
-    img = xr.Dataset(
-        {"im": (["row", "col"], np.full((rows.size, cols.size), 0))},
-        coords={"row": rows, "col": cols},
-    )
-
-    d_min_col = np.full((rows.size, cols.size), min_disparity_col)
-    d_max_col = np.full((rows.size, cols.size), max_disparity_col)
-    d_min_row = np.full((rows.size, cols.size), min_disparity_row)
-    d_max_row = np.full((rows.size, cols.size), max_disparity_row)
-
-    # Once the variable disparity grids have been introduced into pandora2d,
-    # it will be possible to call a method such as add_disparity_grid
-    # to complete img with uniform or non-uniform disparity grids.
-
-    # Here, it is completed by hand because the disparity range is even.
-    img["col_disparity"] = xr.DataArray(
-        np.array([d_min_col, d_max_col]),
-        dims=["band_disp", "row", "col"],
-        coords={"band_disp": ["min", "max"]},
-    )
-
-    img["row_disparity"] = xr.DataArray(
-        np.array([d_min_row, d_max_row]),
-        dims=["band_disp", "row", "col"],
-        coords={"band_disp": ["min", "max"]},
-    )
-
-    img.attrs.update(
-        {
-            "no_data_img": -9999,
-            "valid_pixels": 0,
-            "no_data_mask": 1,
-            "crs": None,
-            "row_disparity_source": [np.min(d_min_row), np.max(d_max_row)],
-            "col_disparity_source": [np.min(d_min_col), np.max(d_max_col)],
-        }
-    )
-
-    return img
-
-
-@pytest.fixture()
-def zeros_cost_volumes(
-    rows,
-    cols,
-    min_disparity_row,
-    max_disparity_row,
-    min_disparity_col,
-    max_disparity_col,
-    type_measure,
-    subpixel,
-):
-    """Create a cost_volumes full of zeros."""
-    number_of_disparity_col = int((max_disparity_col - min_disparity_col) * subpixel + 1)
-    number_of_disparity_row = int((max_disparity_row - min_disparity_row) * subpixel + 1)
-
-    data = np.zeros((rows.size, cols.size, number_of_disparity_col, number_of_disparity_row))
-    attrs = {
-        "col_disparity_source": [min_disparity_col, max_disparity_col],
-        "row_disparity_source": [min_disparity_row, max_disparity_row],
-        "col_to_compute": 1,
-        "sampling_interval": 1,
-        "type_measure": type_measure,
-        "step": [1, 1],
-        "subpixel": subpixel,
-    }
-
-    return MatchingCost.allocate_cost_volumes(
-        attrs,
-        rows,
-        cols,
-        np.linspace(min_disparity_row, max_disparity_row, number_of_disparity_row),
-        np.linspace(min_disparity_col, max_disparity_col, number_of_disparity_col),
-        data,
-    )
-
-
-@pytest.fixture()
-def cost_volumes(zeros_cost_volumes):
-    """Pandora2d cost volumes fake data."""
-    zeros_cost_volumes["cost_volumes"].data[:] = np.arange(zeros_cost_volumes["cost_volumes"].data.size).reshape(
-        zeros_cost_volumes["cost_volumes"].data.shape
-    )
-    return zeros_cost_volumes
-
-
-@pytest.fixture()
-def invalid_disparity():
-    return np.nan
-
-
-@pytest.fixture()
-def disp_map(invalid_disparity, rows, cols):
-    """Fake disparity maps with alternating values."""
-    row = np.full(rows.size * cols.size, 4.0)
-    row[::2] = 5
-    col = np.full(rows.size * cols.size, 0.0)
-    col[::2] = 1
-    return xr.Dataset(
-        {
-            "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
-            "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
-        },
-        coords={
-            "row": rows,
-            "col": cols,
-        },
-        attrs={"invalid_disp": invalid_disparity},
-    )
-
-
-@pytest.fixture()
-def iterations():
-    return 2
-
-
-@pytest.fixture()
-def filter_name():
-    return "bicubic"
-
-
-@pytest.fixture()
-def config(iterations, filter_name):
-    return {
-        "refinement_method": "dichotomy_python",
-        "iterations": iterations,
-        "filter": {"method": filter_name},
-    }
-
-
-@pytest.fixture()
-def dichotomy_python_instance(config):
-    return refinement.dichotomy.DichotomyPython(config)
-
-
-def test_factory(dichotomy_python_instance):
+def test_factory(dichotomy_python_instance, dichotomy_cpp_instance):
     """
     Description : With `refinement_method` equals to `dichotomy`, we should get a DichotomyPython object.
     Data :
@@ -233,6 +44,9 @@ def test_factory(dichotomy_python_instance):
     assert isinstance(dichotomy_python_instance, refinement.dichotomy.DichotomyPython)
     assert isinstance(dichotomy_python_instance, refinement.AbstractRefinement)
 
+    assert isinstance(dichotomy_cpp_instance, refinement.dichotomy_cpp.DichotomyCPP)
+    assert isinstance(dichotomy_cpp_instance, refinement.AbstractRefinement)
+
 
 class TestCheckConf:
     """
@@ -240,29 +54,54 @@ class TestCheckConf:
     Requirement : EX_CONF_08, EX_REF_01, EX_REF_DICH_01
     """
 
-    def test_method_field(self, config):
+    @pytest.mark.parametrize(
+        ["wrong_refinement_method_name", "dichotomy_class"],
+        [
+            pytest.param("invalid_name", refinement.dichotomy.DichotomyPython),
+            pytest.param("invalid_name", refinement.dichotomy_cpp.DichotomyCPP),
+        ],
+    )
+    def test_method_field(self, config, wrong_refinement_method_name, dichotomy_class):
         """An exception should be raised if `refinement_method` is not `dichotomy`."""
-        config["refinement_method"] = "invalid_method"
+
+        config["refinement_method"] = wrong_refinement_method_name
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            refinement.dichotomy.DichotomyPython(config)
-        assert "invalid_method" in err.value.args[0]
+            dichotomy_class(config)
+        assert "invalid_name" in err.value.args[0]
 
     @pytest.mark.parametrize("iterations", [0])
-    def test_iterations_below_minimum(self, config):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
+        ],
+    )
+    def test_iterations_below_minimum(self, config, iterations, dichotomy_class, dichotomy_class_str):
         """An exception should be raised."""
+        config["refinement_method"] = dichotomy_class_str
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            refinement.dichotomy.DichotomyPython(config)
+            dichotomy_class(config)
         assert "Not valid data" in err.value.args[0]
         assert "iterations" in err.value.args[0]
 
     @pytest.mark.parametrize("iterations", [10])
-    def test_iterations_above_maximum(self, config, caplog):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
+        ],
+    )
+    def test_iterations_above_maximum(self, config, caplog, iterations, dichotomy_class, dichotomy_class_str):
         """Test that when user set an iteration value above defined maximum,
         we replace it by this maximum and log a warning.
         """
+
+        config["refinement_method"] = dichotomy_class_str
         # caplog does not capture logs from fixture, so we can not use dichotomy_python_instance fixture
-        dichotomy_python_instance = refinement.dichotomy.DichotomyPython(config)
+        dichotomy_python_instance = dichotomy_class(config)
 
         assert dichotomy_python_instance.cfg["iterations"] == 9
         assert (
@@ -271,12 +110,20 @@ class TestCheckConf:
         )
 
     @pytest.mark.parametrize("iterations", [1, 9])
-    def test_iterations_in_allowed_range(self, iterations, dichotomy_python_instance):
+    @pytest.mark.parametrize(
+        "dichotomy_class", [refinement.dichotomy.DichotomyPython, refinement.dichotomy_cpp.DichotomyCPP]
+    )
+    def test_iterations_in_allowed_range(
+        self, iterations, dichotomy_class, dichotomy_python_instance, dichotomy_cpp_instance
+    ):
         """It should not fail."""
-        assert dichotomy_python_instance.cfg["iterations"] == iterations
+        if dichotomy_class == "dichotomy_python":
+            assert dichotomy_python_instance.cfg["iterations"] == iterations
+        else:
+            assert dichotomy_cpp_instance.cfg["iterations"] == iterations
 
     @pytest.mark.parametrize(
-        ["config"],
+        ["config_dict"],
         [
             pytest.param(
                 {
@@ -294,9 +141,25 @@ class TestCheckConf:
                 },
                 id="sinc",
             ),
+            pytest.param(
+                {
+                    "refinement_method": "dichotomy_cpp",
+                    "iterations": 1,
+                    "filter": {"method": "bicubic"},
+                },
+                id="bicubic",
+            ),
+            pytest.param(
+                {
+                    "refinement_method": "dichotomy_cpp",
+                    "iterations": 1,
+                    "filter": {"method": "sinc"},
+                },
+                id="sinc",
+            ),
         ],
     )
-    def test_valid_filter_names(self, config, dichotomy_python_instance):
+    def test_valid_filter_names(self, config_dict, config, dichotomy_python_instance, dichotomy_cpp_instance):
         """
         Description : Test accepted filter names.
         Data :
@@ -304,11 +167,13 @@ class TestCheckConf:
                * EX_REF_BCO_00
                * EX_REF_SINC_00
         """
-
-        assert dichotomy_python_instance.cfg["filter"] == config["filter"]
+        if config_dict["refinement_method"] == "dichotomy_python":
+            assert dichotomy_python_instance.cfg["filter"] == config["filter"]
+        else:
+            assert dichotomy_cpp_instance.cfg["filter"] == config["filter"]
 
     @pytest.mark.parametrize(
-        ["config"],
+        ["config_dict", "dichotomy_class"],
         [
             pytest.param(
                 {
@@ -316,33 +181,60 @@ class TestCheckConf:
                     "iterations": 1,
                     "filter": {"method": "sinc", "size": 42},
                 },
+                refinement.dichotomy.DichotomyPython,
+                id="sinc",
+            ),
+            pytest.param(
+                {
+                    "refinement_method": "dichotomy_cpp",
+                    "iterations": 1,
+                    "filter": {"method": "sinc", "size": 42},
+                },
+                refinement.dichotomy_cpp.DichotomyCPP,
                 id="sinc",
             ),
         ],
     )
-    def test_fails_with_bad_filter_configuration(self, config):
+    def test_fails_with_bad_filter_configuration(self, config_dict, dichotomy_class):
         """Test accepted filter names."""
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            refinement.dichotomy.DichotomyPython(config)
+            dichotomy_class(config_dict)
         assert "size" in err.value.args[0]
 
     @pytest.mark.parametrize("filter_name", ["invalid_name"])
-    def test_faild_with_invalid_filter_name(self, config):
+    @pytest.mark.parametrize(
+        ["dichotomy_class", "dichotomy_class_str"],
+        [
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            pytest.param(refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
+        ],
+    )
+    def test_faild_with_invalid_filter_name(self, config, filter_name, dichotomy_class, dichotomy_class_str):
+        """Should raise an error when filter has invalid name."""
+        config["refinement_method"] = dichotomy_class_str
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            refinement.dichotomy.DichotomyPython(config)
+            dichotomy_class(config)
         assert "filter" in err.value.args[0]
 
     @pytest.mark.parametrize("missing", ["refinement_method", "iterations", "filter"])
-    def test_fails_on_missing_keys(self, config, missing):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
+        ],
+    )
+    def test_fails_on_missing_keys(self, config, missing, dichotomy_class, dichotomy_class_str):
         """
         Description : Should raise an error when a mandatory key is missing.
         Data :
         Requirement : EX_CONF_08
         """
+        config["refinement_method"] = dichotomy_class_str
         del config[missing]
 
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError) as err:
-            refinement.dichotomy.DichotomyPython(config)
+            dichotomy_class(config)
         assert f"Missing keys in current response: {missing}" in err.value.args[0]
 
     def test_fails_on_unexpected_key(self, config):
@@ -596,33 +488,34 @@ def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expect
 
 
 @pytest.mark.parametrize(
-    ["config", "expected"],
+    ["refinement_method", "dichotomy_class"],
     [
+        pytest.param("dichotomy_python", refinement.dichotomy.DichotomyPython),
+        pytest.param("dichotomy_cpp", refinement.dichotomy_cpp.DichotomyCPP),
+    ],
+)
+@pytest.mark.parametrize(
+    ["iterations", "filter_cfg", "expected"],
+    [
+        pytest.param(1, {"method": "bicubic"}, Margins(1, 1, 2, 2)),
         pytest.param(
-            {
-                "refinement_method": "dichotomy_python",
-                "iterations": 1,
-                "filter": {"method": "bicubic"},
-            },
-            Margins(1, 1, 2, 2),
-            id="bicubic",
-        ),
-        pytest.param(
-            {
-                "refinement_method": "dichotomy_python",
-                "iterations": 1,
-                "filter": {"method": "sinc", "size": 7},
-            },
+            1,
+            {"method": "sinc", "size": 7},
             Margins(7, 7, 7, 7),
-            id="sinc",
         ),
     ],
 )
-def test_margins(dichotomy_python_instance, expected):
+def test_margins(refinement_method, dichotomy_class, iterations, filter_cfg, expected):
     """
     Test margins of DichotomyPython.
     """
-    assert dichotomy_python_instance.margins == expected
+    config_dict = {
+        "refinement_method": refinement_method,
+        "iterations": iterations,
+        "filter": filter_cfg,
+    }
+
+    assert dichotomy_class(config_dict).margins == expected
 
 
 class TestCostSurfaces:
