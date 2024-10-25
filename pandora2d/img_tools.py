@@ -202,7 +202,7 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
     :return: 3D numpy array containing min/max disparity grids and list with disparity source
     :rtype: Tuple[NDArray, List]
     """
-
+    disparity_dtype = np.float32
     # Creates min and max disparity grids if initial disparity is constant (int)
     if isinstance(disparity["init"], int):
 
@@ -213,7 +213,7 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
             disparity["init"] * pow(-1, right) + disparity["range"],
         ]
 
-        disp_min_max = np.array([np.full(shape, disparity) for disparity in disp_interval])
+        disp_min_max = np.array([np.full(shape, disparity) for disparity in disp_interval], dtype=disparity_dtype)
 
     # Creates min and max disparity grids if initial disparities are variable (grid)
     elif isinstance(disparity["init"], str):
@@ -223,18 +223,17 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
         cols = dataset.col.data
 
         # Get disparity data
-        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read()[
-            :, rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1
+        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=np.float32)[
+            rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1
         ]
 
         # Use disparity data to creates min/max grids
-        disp_min_max = np.squeeze(
-            np.array(
-                [
-                    disp_data * pow(-1, right) - disparity["range"],
-                    disp_data * pow(-1, right) + disparity["range"],
-                ]
-            )
+        disp_min_max = np.array(
+            [
+                disp_data * pow(-1, right) - disparity["range"],
+                disp_data * pow(-1, right) + disparity["range"],
+            ],
+            dtype=disparity_dtype,
         )
 
         disp_interval = [np.min(disp_min_max[0, ::]), np.max(disp_min_max[1, ::])]

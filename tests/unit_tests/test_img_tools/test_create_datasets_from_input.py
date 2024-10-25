@@ -54,6 +54,27 @@ class TestReturnedValue:
         ],
         indirect=["make_input_cfg"],
     )
+    def test_disparities_are_float32(self, result):
+        """Test disparities are float32."""
+        assert result.left["col_disparity"].dtype == np.float32
+        assert result.left["row_disparity"].dtype == np.float32
+        assert result.right["col_disparity"].dtype == np.float32
+        assert result.right["row_disparity"].dtype == np.float32
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "correct_grid"},
+                id="Correct disparity grids",
+            ),
+            pytest.param(
+                {"row_disparity": "constant_initial_disparity", "col_disparity": "second_constant_initial_disparity"},
+                id="Correct disparity dictionaries",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
     def test_use_function_from_pandora(self, mocker, make_input_cfg):
         """Test we use `create_dataset_from_inputs` from pandora.
 
