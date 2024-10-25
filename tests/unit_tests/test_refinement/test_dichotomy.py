@@ -354,7 +354,6 @@ class TestCheckConf:
         assert "Missing keys in expected schema: unexpected_key" in err.value.args[0]
 
 
-@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 @pytest.mark.parametrize(
     "rows",
     [
@@ -622,7 +621,6 @@ def test_margins(dichotomy_instance, expected):
     assert dichotomy_instance.margins == expected
 
 
-@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 class TestCostSurfaces:
     """Test CostSurfaces container."""
 
@@ -684,7 +682,7 @@ class TestCostSurfaces:
         assert result.equals(expected)
 
     def test_cost_volumes_dimensions_order(self, cost_volumes):
-        """This test is here to show that disp_row is along columns numpy array and disp_col along numpy array rows."""
+        """This test is here to show that disp_row is along rows numpy array and disp_col along numpy array columns ."""
 
         cost_surfaces = refinement.dichotomy.CostSurfaces(cost_volumes)
         result = cost_surfaces[0, 0]
@@ -708,9 +706,9 @@ class TestCostSurfaces:
         #     dims=["disp_col", "disp_row"],
         # )
 
-        # disp_row is along columns numpy array and disp_cal along numpy array rows:
-        np.testing.assert_array_equal(result.sel(disp_row=3).data, [1, 7, 13, 19, 25, 31])
-        np.testing.assert_array_equal(result.sel(disp_col=0).data, [12, 13, 14, 15, 16, 17])
+        # disp_row is along rows numpy array and disp_cal along numpy array columns:
+        np.testing.assert_array_equal(result.sel(disp_row=3).data, [6, 7, 8, 9, 10, 11])
+        np.testing.assert_array_equal(result.sel(disp_col=0).data, [2, 8, 14, 20, 26, 32])
 
     def test_iteration(self, cost_volumes, disp_map):
         """Test we can iterate over cost surfaces."""
@@ -818,7 +816,7 @@ def make_cost_surface(cost_surface_data, subpix):
             (2, 2),
             (2, 2),
             1.0,
-            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.5), np.float32(2.5), np.float32(6.64453125)),
+            (refinement.dichotomy.Point(2.5, 1.5), np.float32(2.5), np.float32(1.5), np.float32(6.64453125)),
             id="Bottom left is best",
         ),
         pytest.param(
@@ -833,10 +831,10 @@ def make_cost_surface(cost_surface_data, subpix):
             ),
             1,
             0.25,
-            (1.5, 2.5),
-            (1.5, 2.5),
+            (2.5, 1.5),
+            (2.5, 1.5),
             7.638916,
-            (refinement.dichotomy.Point(1.25, 2.75), np.float32(1.25), np.float32(2.75), np.float32(15.09161376953125)),
+            (refinement.dichotomy.Point(2.75, 1.25), np.float32(2.75), np.float32(1.25), np.float32(15.09161376953125)),
             id="Bottom left is best at 0.25 precision",
         ),
         pytest.param(
@@ -908,7 +906,7 @@ def make_cost_surface(cost_surface_data, subpix):
             (2, 2),
             (2, 2),
             1.0,
-            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.75), np.float32(2.25), np.float32(6.64453125)),
+            (refinement.dichotomy.Point(2.5, 1.5), np.float32(2.25), np.float32(1.75), np.float32(6.64453125)),
             id="Bottom left is best and subpix=2",
         ),
         pytest.param(
@@ -949,7 +947,7 @@ def make_cost_surface(cost_surface_data, subpix):
             (2, 2),
             (2, 2),
             1.0,
-            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.875), np.float32(2.125), np.float32(6.64453125)),
+            (refinement.dichotomy.Point(2.5, 1.5), np.float32(2.125), np.float32(1.875), np.float32(6.64453125)),
             id="Bottom left is best and subpix=4",
         ),
         pytest.param(
@@ -999,7 +997,6 @@ def test_search_new_best_point(
     assert result == expected
 
 
-@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 class TestExtremaOnEdges:
     """
     Test that points for which best cost value is on the edge of disparity range

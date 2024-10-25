@@ -356,11 +356,8 @@ def search_new_best_point(
     # In the same way, shifting from 0.25 precision corresponds to shift index of 0.5
     # (`index_shift = 0.5 = 0.25 * 2 = precision_shift * subpix`)
 
-    # disp_row are along columns in cost_surface, then new_cols are computed from initial_pos_disp_row
-    new_cols = disp_row_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_row
-
-    # disp_col are along rows in cost_surface, then new_rows are computed from initial_pos_disp_col
-    new_rows = disp_col_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_col
+    new_cols = disp_col_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_col
+    new_rows = disp_row_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_row
 
     # New subpixel disparity values
     new_rows_disp = disp_row_shifts + initial_disp_row
@@ -383,7 +380,7 @@ def search_new_best_point(
     # - new best disparities
     # - value of best similarity coefficient for new best disparities
     return (
-        Point(new_cols[best_index], new_rows[best_index]),
+        Point(new_rows[best_index], new_cols[best_index]),
         new_rows_disp[best_index],
         new_cols_disp[best_index],
         candidates[best_index],

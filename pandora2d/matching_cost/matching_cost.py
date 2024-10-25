@@ -176,8 +176,8 @@ class MatchingCost:
         cost_volume_attr: dict,
         row: np.ndarray,
         col: np.ndarray,
-        disp_range_col: np.ndarray,
         disp_range_row: np.ndarray,
+        disp_range_col: np.ndarray,
         np_data: np.ndarray = None,
     ) -> xr.Dataset:
         """
@@ -189,10 +189,10 @@ class MatchingCost:
         :type row: np.ndarray
         :param col: dimension of the image (columns)
         :type col: np.ndarray
-        :param disp_range_col: columns disparity range.
-        :type disp_range_col: np.ndarray
         :param disp_range_row: rows disparity range.
         :type disp_range_row: np.ndarray
+        :param disp_range_col: columns disparity range.
+        :type disp_range_col: np.ndarray
         :param np_data: 4D numpy.ndarray og cost_volumes. Defaults to None.
         :type np_data: np.ndarray
         :return: cost_volumes: 4D Dataset containing the cost_volumes
@@ -201,11 +201,11 @@ class MatchingCost:
 
         # Create the cost volume
         if np_data is None:
-            np_data = np.zeros((len(row), len(col), len(disp_range_col), len(disp_range_row)), dtype=np.float32)
+            np_data = np.zeros((len(row), len(col), len(disp_range_row), len(disp_range_col)), dtype=np.float32)
 
         cost_volumes = xr.Dataset(
-            {"cost_volumes": (["row", "col", "disp_col", "disp_row"], np_data)},
-            coords={"row": row, "col": col, "disp_col": disp_range_col, "disp_row": disp_range_row},
+            {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np_data)},
+            coords={"row": row, "col": col, "disp_row": disp_range_row, "disp_col": disp_range_col},
         )
 
         cost_volumes.attrs = cost_volume_attr
@@ -391,11 +391,11 @@ class MatchingCost:
                 col_coords = cost_volume["cost_volume"].coords["col"]
 
                 cost_volumes = self.allocate_cost_volumes(
-                    cost_volume.attrs, row_coords, col_coords, disps_col, disps_row, None
+                    cost_volume.attrs, row_coords, col_coords, disps_row, disps_col, None
                 )
 
             # Add current cost volume to the cost_volumes dataset
-            cost_volumes["cost_volumes"].data[:, :, :, idx] = cost_volume["cost_volume"].data[row_index, :, :]
+            cost_volumes["cost_volumes"].data[:, :, idx, :] = cost_volume["cost_volume"].data[row_index, :, :]
 
         # Add disparity source
         del cost_volumes.attrs["disparity_source"]

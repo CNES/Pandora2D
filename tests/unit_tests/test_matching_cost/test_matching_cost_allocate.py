@@ -27,12 +27,9 @@ import numpy as np
 import xarray as xr
 from rasterio import Affine
 
-import pytest
-
 from pandora2d import matching_cost
 
 
-@pytest.mark.xfail(reason="Inversion of `disp_col`/`disp_row` not yet effective")
 def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     """
     Test the allocate cost_volumes function

@@ -187,7 +187,7 @@ def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataA
     )
 
     # Swapaxes to have same shape as cost_volumes and criteria_dataarray
-    condition_swap = condition.data.swapaxes(1, 3).swapaxes(1, 2)
+    condition_swap = condition.data.swapaxes(1, 2)
 
     # Update criteria dataarray
     criteria_dataarray.data[condition_swap] = (
