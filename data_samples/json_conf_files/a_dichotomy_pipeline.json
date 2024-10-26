@@ -22,7 +22,7 @@
         "invalid_disparity": "NaN"
       },
       "refinement": {
-        "refinement_method": "dichotomy",
+        "refinement_method": "dichotomy_python",
         "iterations": 2,
         "filter": { "method": "bicubic"}
       }

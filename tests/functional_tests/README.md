@@ -77,19 +77,19 @@ Selecting the best similarity score, for the moment there is only the WTA method
 ## Refinement
 Accurate the disparity to smooth outliers. The algorithms tested here are:
 
-+-----------+-----------------------+
-| Algorithm | Description           |
-+-----------+-----------------------+
-| fo        | Optical flow          |
-+-----------+-----------------------+
-| dichotomy | Reseach by dichotomy  |
-+-----------+-----------------------+
-| bicubic   | Bicubic interpolation |
-+-----------+-----------------------+
-| sinc      | Sinux cardinal        |
-+-----------+-----------------------+
-| spline    | Spline                |
-+-----------+-----------------------+
++-----------+-----------------------------------------+
+| Algorithm | Description                             |
++-----------+-----------------------------------------+
+| fo        | Optical flow                            |
++-----------+-----------------------------------------+
+| dichotomy_python | Reseach by dichotomy with python |
++-----------+-----------------------------------------+
+| bicubic   | Bicubic interpolation                   |
++-----------+-----------------------------------------+
+| sinc      | Sinux cardinal                          |
++-----------+-----------------------------------------+
+| spline    | Spline                                  |
++-----------+-----------------------------------------+
 
 ## Validation
 A criterion that gives the user additional confidence in the result. The algorithms tested here are:

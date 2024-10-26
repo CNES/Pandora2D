@@ -38,6 +38,6 @@ def correct_pipeline_with_dichotomy():
         "pipeline": {
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-            "refinement": {"refinement_method": "dichotomy", "iterations": 2, "filter": {"method": "bicubic"}},
+            "refinement": {"refinement_method": "dichotomy_python", "iterations": 2, "filter": {"method": "bicubic"}},
         }
     }
