@@ -34,7 +34,7 @@ except ImportError:
     from xarray import Coordinate as Coordinates
 
 import os
-from typing import Dict, Union, Tuple, List
+from typing import Dict, Union, Tuple, List, Generic, TypeVar, Callable, Type
 import xarray as xr
 import numpy as np
 from numpy.typing import NDArray
@@ -44,6 +44,57 @@ from rasterio import Affine
 from pandora.common import mkdir_p, write_data_array
 from pandora2d.img_tools import remove_roi_margins
 from pandora2d.constants import Criteria
+
+T = TypeVar("T")
+
+
+class Registry(Generic[T]):
+    """Registry of classes.
+
+    A class to decorate classes in order to register them with a string name.
+    """
+
+    def __init__(self, default: Union[Type[T], None] = None) -> None:
+        """
+        Initialize the registry with an optional default class.
+
+        :param default: Default class to return if name is not registered. If None, will raise a KeyError.
+        :type default: Union[Type[T], None]
+        """
+        self.registered: Dict[str, Type[T]] = {}
+        self.default = default
+
+    def add(self, name: str) -> Callable[[Type[T]], Type[T]]:
+        """
+        Register a class with `name`.
+
+        :param name: Name to register the decorated class with.
+        :type name: str
+        :return: The decorated class.
+        :rtype: Type[T]
+        """
+
+        def decorator(cls: Type[T]) -> Type[T]:
+            """Returned decorator used for register class."""
+            # No verification is made about already registered name: we need to decide on desired behavior
+            self.registered[name] = cls
+            return cls
+
+        return decorator
+
+    def get(self, name: str) -> Type[T]:
+        """
+        Get the class registered as `name`.
+
+        :param name: The name of the registered class to retrieve.
+        :type name: str
+        :return: The class registered under `name` or the default class if not found.
+        :rtype: Type[T]
+        :raises KeyError: If no class is registered under `name` and no default is set.
+        """
+        if self.default is None and name not in self.registered:
+            raise KeyError(f"No class registered with name `{name}`.")
+        return self.registered.get(name, self.default)
 
 
 def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:

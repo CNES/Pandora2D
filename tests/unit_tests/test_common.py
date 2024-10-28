@@ -42,6 +42,45 @@ from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.constants import Criteria
 
 
+class TestRegistry:
+    """Test Registry behavior."""
+
+    def test_registering(self):
+        """When registring a class with name, we should be able to get it with get."""
+        registry = common.Registry()  # type: ignore[var-annotated]
+
+        @registry.add("example")
+        class Example:  # pylint: disable=too-few-public-methods
+            pass
+
+        assert registry.get("example") is Example
+
+    def test_is_generic(self):
+        """We should be able to specify the returned base class type."""
+
+        class BaseExample:  # pylint: disable=too-few-public-methods
+            pass
+
+        common.Registry[BaseExample]()
+
+    def test_get_unregistered_raise_error(self):
+        """Without default, we raise a KeyError if name is not registered."""
+        registry = common.Registry()  # type: ignore[var-annotated]
+
+        with pytest.raises(KeyError, match=r"No class registered with name `example`\."):
+            assert registry.get("example")
+
+    def test_can_have_default(self):
+        """When a default is given it should be return for unregistered names."""
+
+        class Example:  # pylint: disable=too-few-public-methods
+            pass
+
+        registry = common.Registry(default=Example)
+
+        assert registry.get("unregistered") is Example
+
+
 class TestSaveDataset:
     """Test save_dataset method"""
 
