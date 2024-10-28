@@ -73,7 +73,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
 
     # data by function compute_cost_volume
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3}}}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
     matching_cost_matcher.allocate_cost_volume_pandora(
         img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg

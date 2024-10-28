@@ -23,4 +23,4 @@
 Init file for matching cost module
 """
 
-from .matching_cost import MatchingCost
+from .matching_cost import PandoraMatchingCostMethods

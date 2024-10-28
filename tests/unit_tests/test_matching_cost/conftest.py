@@ -554,7 +554,7 @@ def margins():
 
 @pytest.fixture()
 def matching_cost_matcher(matching_cost_config):
-    return matching_cost.MatchingCost(matching_cost_config)
+    return matching_cost.PandoraMatchingCostMethods(matching_cost_config)
 
 
 @pytest.fixture()

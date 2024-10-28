@@ -124,7 +124,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         states_ = ["begin", "assumption", "cost_volumes", "disp_maps"]
 
         # Instance matching_cost
-        self.matching_cost_: Union[matching_cost.MatchingCost, None] = None
+        self.matching_cost_: Union[matching_cost.PandoraMatchingCostMethods, None] = None
 
         # Initialize a machine without any transition
         Machine.__init__(
@@ -258,7 +258,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         :return: None
         """
 
-        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
+        matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
         self.step = matching_cost_._step  # pylint: disable=W0212 protected-access
         self.window_size = matching_cost_._window_size  # pylint: disable=W0212 protected-access
@@ -306,7 +306,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         :type input_step: str
         :return: None
         """
-        self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
+        self.matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"][input_step])
 
         self.matching_cost_.allocate_cost_volume_pandora(
             self.left_img, self.right_img, cfg, self.margins_disp.get("refinement")

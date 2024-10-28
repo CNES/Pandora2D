@@ -26,7 +26,7 @@ import pytest
 
 import xarray as xr
 
-from pandora2d.matching_cost import MatchingCost
+from pandora2d.matching_cost import PandoraMatchingCostMethods
 from pandora2d import refinement
 
 # Make pylint happy with fixtures:
@@ -148,7 +148,7 @@ def zeros_cost_volumes(
         "subpixel": subpixel,
     }
 
-    return MatchingCost.allocate_cost_volumes(
+    return PandoraMatchingCostMethods.allocate_cost_volumes(
         attrs,
         rows,
         cols,

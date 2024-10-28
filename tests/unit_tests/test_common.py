@@ -297,7 +297,7 @@ class TestDatasetDispMaps:
                 "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": step}},
             }
 
-        matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+        matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
         matching_cost_matcher.allocate_cost_volume_pandora(
             img_left=img_left,

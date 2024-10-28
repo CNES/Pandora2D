@@ -116,7 +116,7 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
     """
     # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min -1, dispy_max 0
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 1}}}
-    matching_cost_test = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_test = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
     left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 1)
     left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
@@ -158,7 +158,7 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
     # create a cost_volume, with SAD measure, window_size 3, dispx_min 0, dispx_max 1, dispy_min -1, dispy_max 0
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 3}}}
 
-    matching_cost_test = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_test = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
     left_arg["col_disparity"][1, :, :] = np.full((5, 5), 1)
     left_arg["row_disparity"][0, :, :] = np.full((5, 5), -1)
@@ -195,7 +195,7 @@ def cfg_mc():
 
 
 def matching_cost_obj(cfg):
-    return matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    return matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
 
 @pytest.fixture()
@@ -278,7 +278,7 @@ def test_compute_disparity_map(margins, img_left, img_right, ground_truth_row, g
     """
     # create matching_cost object with measure = ssd, window_size = 1
     cfg_mc = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg_mc["pipeline"]["matching_cost"])
     # create disparity object with WTA method
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)

@@ -475,7 +475,7 @@ def make_cv_dataset(dataset_img, dataset_img_shift, cfg_mc):
     """
     Instantiate a cost volume dataset
     """
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg_mc["pipeline"]["matching_cost"])
 
     matching_cost_matcher.allocate_cost_volume_pandora(
         img_left=dataset_img,
@@ -681,7 +681,7 @@ class TestDisparityGrids:
     @pytest.fixture()
     def disparities(self, image: xr.Dataset, cfg: Dict, invalid_value) -> Dict:
         """Execute refinement method and return disparities."""
-        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+        matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
         matching_cost_.allocate_cost_volume_pandora(
             img_left=image,

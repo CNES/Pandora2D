@@ -44,7 +44,7 @@ from pandora2d.common import (
 )
 
 
-class MatchingCost:
+class PandoraMatchingCostMethods:
     """
     Matching Cost class
     """

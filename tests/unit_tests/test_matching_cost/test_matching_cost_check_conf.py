@@ -39,7 +39,7 @@ def test_check_conf():
     Data :
     Requirement : EX_MC_ZNCC_00
     """
-    matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
+    matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "zncc", "window_size": 5})
 
 
 def test_invalid_method():
@@ -49,7 +49,7 @@ def test_invalid_method():
     Requirement : EX_CONF_08
     """
     with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-        matching_cost.MatchingCost({"matching_cost_method": "census", "window_size": 5})
+        matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "census", "window_size": 5})
 
 
 class TestWindowSize:
@@ -60,7 +60,7 @@ class TestWindowSize:
 
     @pytest.mark.parametrize("method", ["zncc", "sad", "ssd"])
     def test_default_window_size(self, method):
-        result = matching_cost.MatchingCost({"matching_cost_method": method, "step": [1, 1]})
+        result = matching_cost.PandoraMatchingCostMethods({"matching_cost_method": method, "step": [1, 1]})
 
         assert result.cfg["window_size"] == AbstractMatchingCost._WINDOW_SIZE  # pylint: disable=W0212 protected-access
 
@@ -72,7 +72,7 @@ class TestWindowSize:
         Requirement : EX_CONF_08
         """
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            matching_cost.MatchingCost({"matching_cost_method": method, "window_size": -1})
+            matching_cost.PandoraMatchingCostMethods({"matching_cost_method": method, "window_size": -1})
         assert "window_size" in err.value.args[0]
 
 
@@ -86,12 +86,12 @@ class TestMCCNNConf:
     """
 
     def test_default_window_size(self):
-        result = matching_cost.MatchingCost({"matching_cost_method": "mc_cnn", "step": [1, 1]})
+        result = matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "mc_cnn", "step": [1, 1]})
         assert result.cfg["window_size"] == 11
 
     def test_fails_with_invalid_window_size(self):
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            matching_cost.MatchingCost({"matching_cost_method": "mc_cnn", "window_size": 5})
+            matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "mc_cnn", "window_size": 5})
         assert "window_size" in err.value.args[0]
 
 
@@ -102,10 +102,10 @@ class TestStep:
     """
 
     def test_nominal_case(self):
-        matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3]})
+        matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3]})
 
     def test_default_step(self):
-        result = matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
+        result = matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "zncc", "window_size": 5})
 
         assert result.cfg["step"] == [1, 1]
 
@@ -116,7 +116,9 @@ class TestStep:
         Requirement : EX_CONF_08
         """
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [-2, 3]})
+            matching_cost.PandoraMatchingCostMethods(
+                {"matching_cost_method": "zncc", "window_size": 5, "step": [-2, 3]}
+            )
 
     def test_fails_with_one_element_list(self):
         """
@@ -125,7 +127,7 @@ class TestStep:
         Requirement : EX_CONF_08
         """
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2]})
+            matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "zncc", "window_size": 5, "step": [2]})
 
     def test_fails_with_more_than_two_element_list(self):
         """
@@ -134,7 +136,9 @@ class TestStep:
         Requirement : EX_CONF_08
         """
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3, 4]})
+            matching_cost.PandoraMatchingCostMethods(
+                {"matching_cost_method": "zncc", "window_size": 5, "step": [2, 3, 4]}
+            )
 
     def test_fails_with_string_element(self):
         """
@@ -143,13 +147,15 @@ class TestStep:
         Requirement : EX_CONF_08
         """
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
-            matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5, "step": ["2", 3]})
+            matching_cost.PandoraMatchingCostMethods(
+                {"matching_cost_method": "zncc", "window_size": 5, "step": ["2", 3]}
+            )
 
 
 def test_margins():
     """
     test margins of matching cost pipeline
     """
-    _matching_cost = matching_cost.MatchingCost({"matching_cost_method": "zncc", "window_size": 5})
+    _matching_cost = matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "zncc", "window_size": 5})
 
     assert _matching_cost.margins == Margins(2, 2, 2, 2)
