@@ -712,7 +712,7 @@ class TestDisparityGrid:
         """
         if mock_type == "not used":
             return mocker.patch(
-                "pandora2d.matching_cost.matching_cost.set_out_of_row_disparity_range_to_other_value",
+                "pandora2d.matching_cost.pandora.set_out_of_row_disparity_range_to_other_value",
                 side_effect=lambda x, y, z, k, l: x,
             )
         if mock_type != "used":
