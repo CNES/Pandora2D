@@ -299,7 +299,7 @@ class TestDatasetDispMaps:
 
         matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-        matching_cost_matcher.allocate_cost_volume_pandora(
+        matching_cost_matcher.allocate(
             img_left=img_left,
             img_right=img_right,
             cfg=cfg,

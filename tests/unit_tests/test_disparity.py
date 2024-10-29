@@ -120,7 +120,7 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
 
     left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 1)
     left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
-    matching_cost_test.allocate_cost_volume_pandora(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
+    matching_cost_test.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
     cvs = matching_cost_test.compute_cost_volumes(left_stereo_object, right_stereo_object)
 
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
@@ -162,7 +162,7 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
 
     left_arg["col_disparity"][1, :, :] = np.full((5, 5), 1)
     left_arg["row_disparity"][0, :, :] = np.full((5, 5), -1)
-    matching_cost_test.allocate_cost_volume_pandora(
+    matching_cost_test.allocate(
         img_left=left_arg,
         img_right=right_arg,
         cfg=cfg,
@@ -283,7 +283,7 @@ def test_compute_disparity_map(margins, img_left, img_right, ground_truth_row, g
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
+    matching_cost_matcher.allocate(
         img_left=img_left,
         img_right=img_right,
         cfg=cfg_mc,

@@ -308,9 +308,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         """
         self.matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"][input_step])
 
-        self.matching_cost_.allocate_cost_volume_pandora(
-            self.left_img, self.right_img, cfg, self.margins_disp.get("refinement")
-        )
+        self.matching_cost_.allocate(self.left_img, self.right_img, cfg, self.margins_disp.get("refinement"))
 
     @mem_time_profile(name="Estimation step")
     def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:

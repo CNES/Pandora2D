@@ -216,7 +216,7 @@ class PandoraMatchingCostMethods:
 
         return cost_volumes
 
-    def allocate_cost_volume_pandora(
+    def allocate(
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
@@ -231,6 +231,10 @@ class PandoraMatchingCostMethods:
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_left: xr.Dataset
+        :param img_right: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xr.Dataset
         :param cfg: matching_cost computation configuration
         :type cfg: Dict
         :param margins: refinement margins

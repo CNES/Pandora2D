@@ -70,7 +70,7 @@ def test_steps(request, data_fixture_name, col_step, row_step):
     }
     # initialise matching cost
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=data.left, img_right=data.right, cfg=cfg)
+    matching_cost_matcher.allocate(img_left=data.left, img_right=data.right, cfg=cfg)
     # compute cost volumes
     zncc = matching_cost_matcher.compute_cost_volumes(img_left=data.left, img_right=data.right)
 
@@ -114,9 +114,7 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     # initialise matching cost
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg
-    )
+    matching_cost_matcher.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
 
     # compute cost volumes
     ssd = matching_cost_matcher.compute_cost_volumes(img_left=left_stereo_object, img_right=right_stereo_object)
@@ -153,7 +151,7 @@ def test_compute_cv_mc_cnn():
 
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img, img_right=img, cfg=cfg)
+    matching_cost_matcher.allocate(img_left=img, img_right=img, cfg=cfg)
 
     # compute cost volumes
     mccnn = matching_cost_matcher.compute_cost_volumes(img_left=img, img_right=img)
@@ -202,9 +200,7 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
 
     # initialise matching cost
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg
-    )
+    matching_cost_matcher.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
     # compute cost volumes
     sad = matching_cost_matcher.compute_cost_volumes(img_left=left_stereo_object, img_right=right_stereo_object)
     # check that the generated cost_volumes is equal to ground truth
@@ -289,7 +285,7 @@ def test_compute_cv_zncc():
 
     # initialise matching cost
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=left_zncc, img_right=right_zncc, cfg=cfg)
+    matching_cost_matcher.allocate(img_left=left_zncc, img_right=right_zncc, cfg=cfg)
     # compute cost volumes
     zncc = matching_cost_matcher.compute_cost_volumes(img_left=left_zncc, img_right=right_zncc)
 
@@ -425,7 +421,7 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
 
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
+    matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
     np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
 
@@ -501,7 +497,7 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
 
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
+    matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
     np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
 
@@ -569,7 +565,7 @@ def test_roi_inside_and_margins_inside(  # pylint: disable=too-many-arguments
     # crop image with roi
     img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=configuration_roi)
+    matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=configuration_roi)
     # compute cost volumes with roi
     cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
@@ -634,7 +630,7 @@ def make_cost_volumes(make_image_fixture, request):
 
     matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
+    matching_cost_.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
     cost_volumes = matching_cost_.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
@@ -757,7 +753,7 @@ class TestDisparityGrid:
         }
         matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-        matching_cost_.allocate_cost_volume_pandora(img_left=image, img_right=image, cfg=cfg)
+        matching_cost_.allocate(img_left=image, img_right=image, cfg=cfg)
 
         cost_volumes = matching_cost_.compute_cost_volumes(img_left=image, img_right=image)
 
@@ -1586,7 +1582,7 @@ class TestDisparityMargins:
         matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
         # Allocate cost volume
-        matching_cost_matcher.allocate_cost_volume_pandora(
+        matching_cost_matcher.allocate(
             img_left=left,
             img_right=right,
             cfg=cfg,
