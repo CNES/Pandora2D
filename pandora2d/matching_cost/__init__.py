@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
-#
 # Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
@@ -23,4 +20,5 @@
 Init file for matching cost module
 """
 
+from .base import BaseMatchingCost
 from .pandora import PandoraMatchingCostMethods
