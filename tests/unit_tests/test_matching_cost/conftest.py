@@ -554,7 +554,7 @@ def margins():
 
 @pytest.fixture()
 def matching_cost_matcher(matching_cost_config):
-    return matching_cost.MatchingCost(matching_cost_config)
+    return matching_cost.PandoraMatchingCostMethods(matching_cost_config)
 
 
 @pytest.fixture()
@@ -562,7 +562,7 @@ def cost_volumes(input_config, matching_cost_matcher, configuration):
     """Create cost_volumes."""
     img_left, img_right = create_datasets_from_inputs(input_config, roi=None)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=configuration)
+    matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=configuration)
 
     # compute cost volumes
     return matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)

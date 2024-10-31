@@ -46,7 +46,8 @@ except ImportError:
 from transitions import MachineError
 from pandora.margins import GlobalMargins
 
-from pandora2d import common, disparity, estimation, img_tools, matching_cost, refinement, criteria
+from pandora2d import common, disparity, estimation, img_tools, refinement, criteria
+from pandora2d.matching_cost import MatchingCostRegistry, BaseMatchingCost
 from pandora2d.profiling import mem_time_profile
 
 
@@ -124,7 +125,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         states_ = ["begin", "assumption", "cost_volumes", "disp_maps"]
 
         # Instance matching_cost
-        self.matching_cost_: Union[matching_cost.MatchingCost, None] = None
+        self.matching_cost_: Union[BaseMatchingCost, None] = None
 
         # Initialize a machine without any transition
         Machine.__init__(
@@ -258,11 +259,14 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         :return: None
         """
 
-        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
-        self.pipeline_cfg["pipeline"][input_step] = matching_cost_.cfg
-        self.step = matching_cost_._step  # pylint: disable=W0212 protected-access
-        self.window_size = matching_cost_._window_size  # pylint: disable=W0212 protected-access
-        self.margins_img.add_cumulative(input_step, matching_cost_.margins)
+        MatchingCost = MatchingCostRegistry.get(  # pylint:disable=invalid-name # NOSONAR
+            cfg["pipeline"][input_step]["matching_cost_method"]
+        )
+        matching_cost = MatchingCost(cfg["pipeline"][input_step])
+        self.pipeline_cfg["pipeline"][input_step] = matching_cost.cfg
+        self.step = matching_cost.step
+        self.window_size = matching_cost.window_size
+        self.margins_img.add_cumulative(input_step, matching_cost.margins)
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -306,11 +310,12 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         :type input_step: str
         :return: None
         """
-        self.matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"][input_step])
-
-        self.matching_cost_.allocate_cost_volume_pandora(
-            self.left_img, self.right_img, cfg, self.margins_disp.get("refinement")
+        MatchingCost = MatchingCostRegistry.get(  # pylint:disable=invalid-name # NOSONAR
+            cfg["pipeline"][input_step]["matching_cost_method"]
         )
+        self.matching_cost_ = MatchingCost(cfg["pipeline"][input_step])
+
+        self.matching_cost_.allocate(self.left_img, self.right_img, cfg, self.margins_disp.get("refinement"))
 
     @mem_time_profile(name="Estimation step")
     def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:

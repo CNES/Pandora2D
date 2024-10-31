@@ -104,9 +104,9 @@ def matching_cost_cfg(window_size, subpix):
 @pytest.fixture()
 def cost_volumes(matching_cost_cfg, image):
     """Compute a cost_volumes"""
-    matching_cost_ = matching_cost.MatchingCost(matching_cost_cfg)
+    matching_cost_ = matching_cost.PandoraMatchingCostMethods(matching_cost_cfg)
 
-    matching_cost_.allocate_cost_volume_pandora(img_left=image, img_right=image, cfg=matching_cost_cfg)
+    matching_cost_.allocate(img_left=image, img_right=image, cfg=matching_cost_cfg)
     return matching_cost_.compute_cost_volumes(img_left=image, img_right=image)
 
 

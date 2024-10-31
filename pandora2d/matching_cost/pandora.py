@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf8
-#
 # Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2024 CS GROUP France
 #
@@ -25,31 +22,27 @@ This module contains functions associated to the matching cost computation step.
 """
 
 import copy
-from typing import Dict, List, cast, Union
-from json_checker import And, Checker
+from typing import Dict, List, Union
 
-import xarray as xr
 import numpy as np
-
+import xarray as xr
 from pandora import matching_cost
 from pandora.criteria import validity_mask
 from pandora.margins import Margins
 
-
 from pandora2d import img_tools
-import pandora2d.schema as cst_schema
 from pandora2d.common import (
-    set_out_of_row_disparity_range_to_other_value,
     set_out_of_col_disparity_range_to_other_value,
+    set_out_of_row_disparity_range_to_other_value,
 )
 
+from .base import BaseMatchingCost
 
-class MatchingCost:
+
+class PandoraMatchingCostMethods(BaseMatchingCost):
     """
     Matching Cost class
     """
-
-    _STEP = [1, 1]
 
     def __init__(self, cfg: Dict) -> None:
         """
@@ -59,16 +52,10 @@ class MatchingCost:
         :type cfg: dict
         :return: None
         """
-        # Check the matching_cost parameters specific to pandora2d
-        updated_cfg = self.check_conf(cfg)
-        self._matching_cost_method = updated_cfg["matching_cost_method"]
-        # Cast to int in order to help mypy because self.cfg is a Dict, and it can not know the type of step.
-        self._step_row = cast(int, updated_cfg["step"][0])
-        self._step_col = cast(int, updated_cfg["step"][1])
-
+        super().__init__(cfg)
         # Check the matching_cost parameters specific to pandora
         self.pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**self.get_config_for_pandora(cfg))
-        self.grid_: xr.Dataset = None
+        self.grid_: Union[xr.Dataset, None] = None
 
     @property
     def cfg(self) -> Dict[str, Union[str, int, List[int]]]:
@@ -80,24 +67,14 @@ class MatchingCost:
         """
         return {
             "matching_cost_method": self._matching_cost_method,
-            "step": self._step,
-            "window_size": self._window_size,
+            "step": self.step,
+            "window_size": self.window_size,
             "subpix": self._subpix,
             "spline_order": self._spline_order,
         }
 
     @property
-    def _step(self) -> List[int]:
-        """
-        Get step [row, col]
-
-        :return: step: list with row & col step
-        :rtype: step: list
-        """
-        return [self._step_row, self._step_col]
-
-    @property
-    def _window_size(self) -> int:
+    def window_size(self) -> int:
         """
         Get window_size, parameter specific to pandora
 
@@ -105,6 +82,16 @@ class MatchingCost:
         :rtype: window_size: int
         """
         return self.pandora_matching_cost_._window_size  # pylint: disable=W0212 protected-access
+
+    @window_size.setter
+    def window_size(self, value) -> None:
+        """
+        Set window_size, parameter specific to pandora
+
+        :return: window_size: window used to compute correlation
+        :rtype: window_size: int
+        """
+        # Does nothing as we just want to override superclass behavior
 
     @property
     def _subpix(self) -> int:
@@ -116,6 +103,16 @@ class MatchingCost:
         """
         return self.pandora_matching_cost_._subpix  # pylint: disable=W0212 protected-access
 
+    @_subpix.setter
+    def _subpix(self, value: int) -> int:
+        """
+        Set subpix, parameter specific to pandora
+
+        :return: subpix: subpix used
+        :rtype: subpix: int
+        """
+        # Does nothing as we just want to override superclass behavior
+
     @property
     def _spline_order(self) -> int:
         """
@@ -125,6 +122,16 @@ class MatchingCost:
         :rtype: spline_order: int
         """
         return self.pandora_matching_cost_._spline_order  # pylint: disable=W0212 protected-access
+
+    @_spline_order.setter
+    def _spline_order(self, value: int) -> int:
+        """
+        Set spline_order, parameter specific to pandora
+
+        :return: spline_order: spline_order used
+        :rtype: spline_order: int
+        """
+        # Does nothing as we just want to override superclass behavior
 
     @property
     def margins(self) -> Margins:
@@ -146,30 +153,6 @@ class MatchingCost:
         copy_cfg = copy.deepcopy(cfg)
         copy_cfg["step"] = self._step_col
         return copy_cfg
-
-    def check_conf(self, cfg: Dict) -> Dict[str, str]:
-        """
-        Check the matching cost configuration
-
-        :param cfg: user_config for matching cost
-        :type cfg: dict
-        :return: cfg: global configuration
-        :rtype: cfg: dict
-        """
-        # Check only matching_cost pandora2d param
-        pandora_2d_cfg = {
-            "matching_cost_method": cfg["matching_cost_method"],
-            "step": cfg.get("step", self._STEP),
-        }
-        schema = {
-            "matching_cost_method": And(str, lambda mc: mc in ["ssd", "sad", "zncc", "mc_cnn"]),
-            "step": cst_schema.STEP_SCHEMA,
-        }
-
-        checker = Checker(schema)
-        checker.validate(pandora_2d_cfg)
-
-        return pandora_2d_cfg
 
     @staticmethod
     def allocate_cost_volumes(
@@ -216,7 +199,7 @@ class MatchingCost:
 
         return cost_volumes
 
-    def allocate_cost_volume_pandora(
+    def allocate(
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
@@ -231,6 +214,10 @@ class MatchingCost:
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_left: xr.Dataset
+        :param img_right: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xr.Dataset
         :param cfg: matching_cost computation configuration
         :type cfg: Dict
         :param margins: refinement margins
@@ -299,14 +286,6 @@ class MatchingCost:
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
         :type img_right: xr.Dataset
-        :param grid_min_col: grid containing min disparities for columns.
-        :type grid_min_col: np.ndarray
-        :param grid_max_col: grid containing max disparities for columns.
-        :type grid_max_col: np.ndarray
-        :param grid_min_row: grid containing min disparities for rows.
-        :type grid_min_row: np.ndarray
-        :param grid_max_row: grid containing max disparities for rows.
-        :type grid_max_row: np.ndarray
         :param margins: refinement margins
         :type margins: Margins
         :return: cost_volumes: 4D Dataset containing the cost_volumes
@@ -402,7 +381,7 @@ class MatchingCost:
         cost_volumes.attrs["col_disparity_source"] = img_left.attrs["col_disparity_source"]
         cost_volumes.attrs["row_disparity_source"] = img_left.attrs["row_disparity_source"]
         cost_volumes.attrs["disparity_margins"] = margins
-        cost_volumes.attrs["step"] = self._step
+        cost_volumes.attrs["step"] = self.step
 
         # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
         del cost_volumes.attrs["ROI_margins_for_cv"]
