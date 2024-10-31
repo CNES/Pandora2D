@@ -43,7 +43,7 @@ class BaseMatchingCost(ABC):
         # Cast to int in order to help mypy because self.cfg is a Dict, and it can not know the type of step.
         self._step_row = cast(int, self._cfg["step"][0])
         self._step_col = cast(int, self._cfg["step"][1])
-        self._window_size = cast(int, self._cfg["window_size"])
+        self.window_size = cast(int, self._cfg["window_size"])
         self._subpix = cast(int, self._cfg["subpix"])
         # To move down if #226 use option 0
         self._spline_order = cast(int, self._cfg["spline_order"])
@@ -97,7 +97,7 @@ class BaseMatchingCost(ABC):
         return self._cfg
 
     @property
-    def _step(self) -> List[int]:
+    def step(self) -> List[int]:
         """
         Get step [row, col]
 

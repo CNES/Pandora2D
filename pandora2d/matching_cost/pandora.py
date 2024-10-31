@@ -67,14 +67,14 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         """
         return {
             "matching_cost_method": self._matching_cost_method,
-            "step": self._step,
-            "window_size": self._window_size,
+            "step": self.step,
+            "window_size": self.window_size,
             "subpix": self._subpix,
             "spline_order": self._spline_order,
         }
 
     @property
-    def _window_size(self) -> int:
+    def window_size(self) -> int:
         """
         Get window_size, parameter specific to pandora
 
@@ -83,8 +83,8 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         """
         return self.pandora_matching_cost_._window_size  # pylint: disable=W0212 protected-access
 
-    @_window_size.setter
-    def _window_size(self, value) -> None:
+    @window_size.setter
+    def window_size(self, value) -> None:
         """
         Set window_size, parameter specific to pandora
 
@@ -381,7 +381,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         cost_volumes.attrs["col_disparity_source"] = img_left.attrs["col_disparity_source"]
         cost_volumes.attrs["row_disparity_source"] = img_left.attrs["row_disparity_source"]
         cost_volumes.attrs["disparity_margins"] = margins
-        cost_volumes.attrs["step"] = self._step
+        cost_volumes.attrs["step"] = self.step
 
         # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
         del cost_volumes.attrs["ROI_margins_for_cv"]

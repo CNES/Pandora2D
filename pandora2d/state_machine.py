@@ -264,8 +264,8 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         )
         matching_cost = MatchingCost(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = matching_cost.cfg
-        self.step = matching_cost._step  # pylint: disable=W0212 protected-access
-        self.window_size = matching_cost._window_size  # pylint: disable=W0212 protected-access
+        self.step = matching_cost.step
+        self.window_size = matching_cost.window_size
         self.margins_img.add_cumulative(input_step, matching_cost.margins)
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
