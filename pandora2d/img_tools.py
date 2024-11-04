@@ -37,6 +37,7 @@ import copy
 from typing import List, Dict, Union, NamedTuple, Any, Tuple
 from math import floor
 from numpy.typing import NDArray
+from rasterio.windows import Window
 
 import xarray as xr
 import numpy as np
@@ -222,10 +223,9 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
         rows = dataset.row.data
         cols = dataset.col.data
 
+        window = Window(cols[0], rows[0], cols.size, rows.size)
         # Get disparity data
-        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=np.float32)[
-            rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1
-        ]
+        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=np.float32, window=window)
 
         # Use disparity data to creates min/max grids
         disp_min_max = np.array(
