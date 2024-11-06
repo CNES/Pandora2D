@@ -23,6 +23,7 @@ by specific name. It corresponds to the name of Pandora2D steps you can write in
 The following diagram highlights all states and possible transitions.
 
     .. figure:: ../Images/Pandora2D_pipeline.png
+        :align: center
 
 If you want to understand in more details how Pandora2D machine works, please consult our `Pandora machine state tutorial notebook <https://github.com/CNES/Pandora2D/tree/master/notebooks/...>`_.
 

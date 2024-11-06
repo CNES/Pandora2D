@@ -13,6 +13,7 @@ Pandora2D will shift the right image by the corresponding vertical disparity
 and call Pandora to compute a cost volume with the input horizontal disparity range (disp_min_col, disp_max_col).
 
 .. figure:: ./Images/pandora2d.gif
+    :align: center
 
 Different measures of similarity are available in Pandora2D :
 

@@ -91,6 +91,7 @@ the refinement of the disparity map with optical flow.
 .. figure:: ../../Images/optical_flow_schema.png
    :width: 1000px
    :height: 200px
+   :align: center
 
 Dichotomy method
 ----------------
