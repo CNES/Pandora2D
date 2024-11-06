@@ -45,12 +45,19 @@ def default_roi():
 @pytest.mark.parametrize(
     ["init_value", "range_value", "margins", "expected"],
     [
+        # min: d - R < 0 ; max: d + R = 0
         pytest.param(-30, 30, [2, 2], (62, 2), id="Negative disparity for columns"),
+        # min: d - R = 0 ; max: d + R = m > 0
         pytest.param(1, 1, [2, 2], (2, 4), id="Negative disparity for rows"),
+        # min: d - R = 0 ; max: d + R > m > 0
         pytest.param(30, 30, [2, 2], (2, 62), id="Positive disparity for columns and rows"),
+        # min: d - R < 0 ; max: 0 < d + R < m
         pytest.param(0, 1, [2, 2], (3, 3), id="Margins greater than disparities"),
+        # min: d - R < 0 ; max: d + R = m
         pytest.param(0, 3, [3, 3], (6, 6), id="Margins lower than disparities"),
+        # min: d - R > m ; max: d + R > m
         pytest.param(10, 2, [2, 2], (0, 14), id="Positive disparities for margins"),
+        # min: d - R < 0 ; max: d + R < 0 && |d + R| > m
         pytest.param(-10, 2, [2, 2], (14, 0), id="Negative disparities for margins"),
     ],
 )
