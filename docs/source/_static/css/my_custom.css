@@ -5,6 +5,10 @@
       background: #424242ff;
     }
 
+.wy-nav-content {
+    max-width: 80% !important;
+}
+
 .wy-menu-vertical header, .wy-menu-vertical p.caption{
     color: #39a350ff;
 }
