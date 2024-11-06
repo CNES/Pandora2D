@@ -71,6 +71,61 @@ def test_get_margins_values(init_value, range_value, margins, expected):
     assert test_values_margins == expected
 
 
+class TestGetMarginsValues:
+    """Test get_margins_values."""
+
+    @pytest.mark.parametrize(
+        ["init_value", "range_value", "min_margin", "expected"],
+        [
+            # d = init_value
+            # R = range_value
+            # m = min_margin
+            # D = d - R
+            # D = 0
+            pytest.param(5, 5, 7, 7, id="d - R = 0 => m"),
+            # D < 0
+            pytest.param(3, 5, 10, 12, id="d - R < 0 => m - d + R"),
+            pytest.param(-3, 5, 10, 18, id="d - R < 0 => m - d + R bis"),  # inutile ?
+            # D > 0
+            pytest.param(6, 2, 10, 6, id="d - R < m => m - d + R"),
+            pytest.param(5, 3, 1, 0, id="d - R > m => 0"),
+            pytest.param(7, 4, 3, 0, id="d - R = m => 0"),
+        ],
+    )
+    def test_at_start_of_image(self, init_value, range_value, min_margin, expected):
+        """Test the margin on left for cols or top for rows."""
+        margins = [min_margin, 0]
+
+        test_values_margins = img_tools.get_margins_values(init_value, range_value, margins)
+
+        assert test_values_margins[0] == expected
+
+    @pytest.mark.parametrize(
+        ["init_value", "range_value", "max_margin", "expected"],
+        [
+            # d = init_value
+            # R = range_value
+            # m = min_margin
+            # D = d - R
+            # D = 0
+            pytest.param(-5, 5, 7, 7, id="d + R = 0 => m"),
+            # D < 0
+            pytest.param(-6, 2, 10, 6, id="D < 0; |d + R| < m => m + d + R"),
+            pytest.param(-5, 2, 2, 0, id="D < 0; |d + R| > m => 0"),
+            pytest.param(-4, 3, 1, 0, id="D < 0; |d + R| = m => 0"),  # inutile ?
+            # # D > 0
+            pytest.param(-3, 5, 10, 12, id="d + R > 0 => m + d + R"),
+        ],
+    )
+    def test_at_end_of_image(self, init_value, range_value, max_margin, expected):
+        """Test the margin on right for cols or bottom for rows."""
+        margins = [0, max_margin]
+
+        test_values_margins = img_tools.get_margins_values(init_value, range_value, margins)
+
+        assert test_values_margins[1] == expected
+
+
 @pytest.mark.parametrize(
     ["col_disparity", "row_disparity", "expected"],
     [
