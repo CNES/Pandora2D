@@ -294,19 +294,10 @@ def get_margins_values(init_value: Union[int, np.ndarray], range_value: int, mar
     :rtype: Tuple[int, int]
     """
 
-    init_min, init_max = int(np.min(init_value)), int(np.max(init_value))
+    disp_min = int(np.min(init_value)) - range_value
+    disp_max = int(np.max(init_value)) + range_value
 
-    interval = [init_min - range_value, init_max + range_value]
-
-    first = init_min - range_value + margins[0] if interval[0] > 0 else init_min - range_value - margins[0]
-    second = init_max + range_value + margins[1] if interval[1] < 0 else init_max + range_value + margins[1]
-
-    if first > 0 and second > 0:
-        first = 0
-    elif first < 0 and second < 0:
-        second = 0
-
-    return abs(first), abs(second)
+    return max(margins[0] - disp_min, 0), max(margins[1] + disp_max, 0)
 
 
 def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> dict:
