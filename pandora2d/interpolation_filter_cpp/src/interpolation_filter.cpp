@@ -24,6 +24,7 @@ This module contains functions associated to the Abstract filter class for cpp.
 #include "interpolation_filter.hpp"
 #include <limits>
 #include <cmath>
+#include <utility>
 
 namespace abstractfilter
 {
@@ -40,15 +41,15 @@ namespace abstractfilter
     {
     }
 
-    t_Vector AbstractFilter::get_coeffs(const double &fractional_shift)
+    t_Vector AbstractFilter::get_coeffs(const double fractional_shift)
     {
         return t_Vector();
     }
 
     // Apply
     double AbstractFilter::apply(const t_Matrix &resampling_area,
-                                const t_Vector &row_coeff,
-                                const t_Vector &col_coeff) const
+                                 const t_Vector &row_coeff,
+                                 const t_Vector &col_coeff) const
     {
 
         t_Vector intermediate_result = resampling_area * col_coeff;
@@ -65,9 +66,6 @@ namespace abstractfilter
         // Initialisation of the result list
         t_Vector interpolated_positions = t_Vector::Zero(col_positions.size());
 
-        // Epsilon machine
-        const double eps = std::numeric_limits<double>::epsilon();
-
         // AbstractFilter
         const Margins &my_margins = AbstractFilter::m_margins;
         const int filter_size = AbstractFilter::m_size;
@@ -75,18 +73,18 @@ namespace abstractfilter
         for (int i = 0; i < col_positions.size(); ++i)
         {
             // get_coeffs method receives positive coefficients
-            int pos_col = col_positions[i];
-            int pos_row = row_positions[i];
+            auto pos_col = col_positions[i];
+            auto pos_row = row_positions[i];
 
-            double fractional_row = pos_row - std::floor(pos_row);
-            double fractional_col = pos_col - std::floor(pos_col);
+            double fractional_row = std::abs(pos_row - std::floor(pos_row));
+            double fractional_col = std::abs(pos_col - std::floor(pos_col));
 
             // If the subpixel shift is too close to 1, max_fractional_value is returned to avoid rounding.
-            if (1 - fractional_row < eps)
+            if (1 - fractional_row < EPSILON)
             {
                 fractional_row = max_fractional_value;
             }
-            if (1 - fractional_col < eps)
+            if (1 - fractional_col < EPSILON)
             {
                 fractional_col = max_fractional_value;
             }
