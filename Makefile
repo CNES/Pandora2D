@@ -47,12 +47,15 @@ help: ## this help
 .PHONY: venv
 venv: ## create virtualenv in PANDORA2D_VENV directory if not exists
 	@test -d ${PANDORA2D_VENV} || python3 -m venv ${PANDORA2D_VENV}
-	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip setuptools wheel # no check to upgrade each time
-	@touch ${PANDORA2D_VENV}/bin/activate
+	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip meson-python meson ninja # no check to upgrade each time
+
+.PHONY: cpp_deps
+cpp_deps: ## retrieve cpp dependencies
+	@${PANDORA2D_VENV}/bin/meson wrap update-db
 
 .PHONY: install
-install: venv ## install pandora2D (pip editable mode) without plugins
-	@test -f ${PANDORA2D_VENV}/bin/pandora2d || ${PANDORA2D_VENV}/bin/pip install -e .[dev,docs,notebook]
+install: venv cpp_deps ## install pandora2D (pip editable mode) without plugins
+	@test -f ${PANDORA2D_VENV}/bin/pandora2d || . ${PANDORA2D_VENV}/bin/activate; ${PANDORA2D_VENV}/bin/pip install --no-build-isolation --editable .[dev,docs,notebook]
 	@test -f .git/hooks/pre-commit || echo "  Install pre-commit hook"
 	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
 	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"

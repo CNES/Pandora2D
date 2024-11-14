@@ -1,8 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest/doctest/doctest.h"
-#include "../pandora2d/interpolation_filter_cpp/include/interpolation_filter.hpp"
-#include <Eigen/Dense>
-#include <iostream>
+#include <doctest.h>
+#include "interpolation_filter.hpp"
 
 namespace abstractfilter
 {

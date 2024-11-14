@@ -1,11 +1,6 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["pandora2d"]
-
-[tool.setuptools_scm]
+requires = ["meson-python", "pybind11"]
+build-backend = "mesonpy"
 
 [project]
 name = "pandora2d"
