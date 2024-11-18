@@ -37,6 +37,7 @@ import copy
 from typing import List, Dict, Union, NamedTuple, Any, Tuple
 from math import floor
 from numpy.typing import NDArray
+from rasterio.windows import Window
 
 import xarray as xr
 import numpy as np
@@ -202,7 +203,7 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
     :return: 3D numpy array containing min/max disparity grids and list with disparity source
     :rtype: Tuple[NDArray, List]
     """
-
+    disparity_dtype = np.float32
     # Creates min and max disparity grids if initial disparity is constant (int)
     if isinstance(disparity["init"], int):
 
@@ -213,7 +214,7 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
             disparity["init"] * pow(-1, right) + disparity["range"],
         ]
 
-        disp_min_max = np.array([np.full(shape, disparity) for disparity in disp_interval])
+        disp_min_max = np.array([np.full(shape, disparity) for disparity in disp_interval], dtype=disparity_dtype)
 
     # Creates min and max disparity grids if initial disparities are variable (grid)
     elif isinstance(disparity["init"], str):
@@ -222,19 +223,17 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
         rows = dataset.row.data
         cols = dataset.col.data
 
+        window = Window(cols[0], rows[0], cols.size, rows.size)
         # Get disparity data
-        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read()[
-            :, rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1
-        ]
+        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=np.float32, window=window)
 
         # Use disparity data to creates min/max grids
-        disp_min_max = np.squeeze(
-            np.array(
-                [
-                    disp_data * pow(-1, right) - disparity["range"],
-                    disp_data * pow(-1, right) + disparity["range"],
-                ]
-            )
+        disp_min_max = np.array(
+            [
+                disp_data * pow(-1, right) - disparity["range"],
+                disp_data * pow(-1, right) + disparity["range"],
+            ],
+            dtype=disparity_dtype,
         )
 
         disp_interval = [np.min(disp_min_max[0, ::]), np.max(disp_min_max[1, ::])]
@@ -295,19 +294,10 @@ def get_margins_values(init_value: Union[int, np.ndarray], range_value: int, mar
     :rtype: Tuple[int, int]
     """
 
-    init_min, init_max = int(np.min(init_value)), int(np.max(init_value))
+    disp_min = int(np.min(init_value)) - range_value
+    disp_max = int(np.max(init_value)) + range_value
 
-    interval = [init_min - range_value, init_max + range_value]
-
-    first = init_min - range_value + margins[0] if interval[0] > 0 else init_min - range_value - margins[0]
-    second = init_max + range_value + margins[1] if interval[1] < 0 else init_max + range_value + margins[1]
-
-    if first > 0 and second > 0:
-        first = 0
-    elif first < 0 and second < 0:
-        second = 0
-
-    return abs(first), abs(second)
+    return max(margins[0] - disp_min, 0), max(margins[1] + disp_max, 0)
 
 
 def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> dict:

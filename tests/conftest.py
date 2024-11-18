@@ -332,6 +332,30 @@ def second_correct_grid(left_img_shape, create_disparity_grid_fixture):
     return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
 
 
+@pytest.fixture
+def correct_grid_for_roi(left_img_shape, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width)
+    init_band = np.arange(height * width).reshape((height, width))
+
+    return create_disparity_grid_fixture(init_band, 5, "disparity.tif")
+
+
+@pytest.fixture
+def second_correct_grid_for_roi(left_img_shape, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width)
+    init_band = np.arange(height * width, 0, -1).reshape((height, width))
+
+    return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
+
+
 @pytest.fixture()
 def correct_pipeline_without_refinement():
     return {
