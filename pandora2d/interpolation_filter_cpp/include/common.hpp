@@ -21,6 +21,9 @@
 This module contains type and struct associated to the Abstract filter class for cpp.
 */
 
+#ifndef INTERPOLATION_FILTER_COMMON_HPP
+#define INTERPOLATION_FILTER_COMMON_HPP
+
 #include <Eigen/Dense>
 
 // Alias for eigen type
@@ -48,3 +51,5 @@ struct Margins
 
     int left, up, right, down;
 };
+
+#endif
