@@ -1,9 +1,85 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["pandora2d"]
+
+[tool.setuptools_scm]
+
+[project]
+name = "pandora2d"
+dynamic = ["version"]
+authors = [{ name = "CNES" }]
+description = "A coregistration tool."
+readme = "README.md"
+requires-python = ">=3.8"
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "json-checker",
+    "matplotlib",
+    "numba>=0.47.0;python_version<'3.8'",
+    "numba>=0.55.2;python_version>'3.7'",
+    "numpy",
+    "pandas",
+    "pandora==1.6.2",
+    "psutil",
+    "rasterio",
+    "scikit-image",
+    "scipy<1.14",
+    "transitions",
+    "typing_extensions",
+    "xarray",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=21.5b0",  # PEP8 format code
+    "isort>=5.8.0",   # Check imports
+    "mypy",           # static type checker
+    "pandas-stubs",
+    "pre-commit",
+    "pylint>=2.8.2",  # General linter with more rules
+    "pytest",
+    "pytest-cov",
+    "pytest-html",
+    "pytest-mock",
+    "pytest-monitor",
+    "setuptools_scm", # version from git tag
+    "types-psutil",
+]
+
+docs = ["sphinx", "sphinx_autoapi", "sphinx_rtd_theme", "sphinx_tabs"]
+
+notebook = ["graphviz", "notebook"]
+
+mccnn = ["pandora[mccnn]"]
+
+[project.urls]
+Homepage = "https://pandora2d.readthedocs.io"
+Documentation = "https://pandora2d.readthedocs.io/en/latest/"
+Repository = "https://github.com/CNES/Pandora2D"
+Issues = "https://github.com/CNES/Pandora2D/issues"
+Changelog = "https://github.com/CNES/Pandora2D/blob/master/CHANGELOG.md"
+
+[project.scripts]
+pandora2d = "pandora2d.Pandora2d:main"
 
 [tool.black]
 # https://github.com/psf/black
