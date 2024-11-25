@@ -26,8 +26,8 @@ from pandora.margins import Margins
 from .interpolation_filter import AbstractFilter
 
 
-@AbstractFilter.register_subclass("bicubic")
-class Bicubic(AbstractFilter):
+@AbstractFilter.register_subclass("bicubic_python")
+class BicubicPython(AbstractFilter):
     """Implementation of the Bicubic filter.
 
     With `alpha = -0.5` and a size of 4.
@@ -36,7 +36,17 @@ class Bicubic(AbstractFilter):
     _ALPHA = -0.5
     _SIZE = 4
 
-    schema = {"method": "bicubic"}
+    def __init__(self, cfg, **_):
+        """
+        Initialize a BicubicPython instance.
+
+        :param cfg: optional configuration, {}
+        :type cfg: dict
+        :return: None
+        """
+
+        self.schema = {"method": "bicubic_python"}
+        super().__init__(cfg)
 
     @property
     def margins(self) -> Margins:
@@ -45,6 +55,18 @@ class Bicubic(AbstractFilter):
 
     @lru_cache
     def get_coeffs(self, fractional_shift: float) -> np.ndarray:
+        """
+        Returns the interpolator coefficients to be applied to the resampling area.
+
+        The size of the returned array depends on the filter margins:
+            - For a row shift, returned array size = up_margin + down_margin + 1
+            - For a column shift, returned array size = left_margin + right_margin + 1
+
+        :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
+        :type fractional_shift: float
+        :return: a array of interpolator coefficients whose size depends on the filter margins
+        :rtype: np.ndarray
+        """
         tab_coeffs = np.empty(4)
         alpha = self._ALPHA
 
