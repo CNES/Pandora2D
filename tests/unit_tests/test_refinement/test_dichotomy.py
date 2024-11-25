@@ -19,6 +19,9 @@
 Test the refinement.dichotomy module.
 """
 
+# pylint: disable=redefined-outer-name
+# pylint: disable=too-many-lines
+
 import logging
 import copy
 
@@ -32,7 +35,8 @@ from pandora.margins import Margins
 from pytest_mock import MockerFixture
 
 from pandora2d import refinement
-from pandora2d.interpolation_filter.bicubic import Bicubic
+from pandora2d.interpolation_filter.bicubic import BicubicPython
+from pandora2d.interpolation_filter.bicubic_cpp import Bicubic
 
 
 def test_factory(dichotomy_python_instance, dichotomy_cpp_instance):
@@ -61,13 +65,13 @@ class TestCheckConf:
             pytest.param("invalid_name", refinement.dichotomy_cpp.DichotomyCPP),
         ],
     )
-    def test_method_field(self, config, wrong_refinement_method_name, dichotomy_class):
+    def test_method_field(self, config_dichotomy, wrong_refinement_method_name, dichotomy_class):
         """An exception should be raised if `refinement_method` is not `dichotomy`."""
 
-        config["refinement_method"] = wrong_refinement_method_name
+        config_dichotomy["refinement_method"] = wrong_refinement_method_name
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            dichotomy_class(config)
+            dichotomy_class(config_dichotomy)
         assert "invalid_name" in err.value.args[0]
 
     @pytest.mark.parametrize("iterations", [0])
@@ -78,11 +82,11 @@ class TestCheckConf:
             (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
         ],
     )
-    def test_iterations_below_minimum(self, config, iterations, dichotomy_class, dichotomy_class_str):
+    def test_iterations_below_minimum(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
         """An exception should be raised."""
-        config["refinement_method"] = dichotomy_class_str
+        config_dichotomy["refinement_method"] = dichotomy_class_str
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            dichotomy_class(config)
+            dichotomy_class(config_dichotomy)
         assert "Not valid data" in err.value.args[0]
         assert "iterations" in err.value.args[0]
 
@@ -94,14 +98,14 @@ class TestCheckConf:
             (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
         ],
     )
-    def test_iterations_above_maximum(self, config, caplog, iterations, dichotomy_class, dichotomy_class_str):
+    def test_iterations_above_maximum(self, config_dichotomy, caplog, dichotomy_class, dichotomy_class_str):
         """Test that when user set an iteration value above defined maximum,
         we replace it by this maximum and log a warning.
         """
 
-        config["refinement_method"] = dichotomy_class_str
+        config_dichotomy["refinement_method"] = dichotomy_class_str
         # caplog does not capture logs from fixture, so we can not use dichotomy_python_instance fixture
-        dichotomy_python_instance = dichotomy_class(config)
+        dichotomy_python_instance = dichotomy_class(config_dichotomy)
 
         assert dichotomy_python_instance.cfg["iterations"] == 9
         assert (
@@ -159,7 +163,7 @@ class TestCheckConf:
             ),
         ],
     )
-    def test_valid_filter_names(self, config_dict, config, dichotomy_python_instance, dichotomy_cpp_instance):
+    def test_valid_filter_names(self, config_dict, config_dichotomy, dichotomy_python_instance, dichotomy_cpp_instance):
         """
         Description : Test accepted filter names.
         Data :
@@ -168,9 +172,9 @@ class TestCheckConf:
                * EX_REF_SINC_00
         """
         if config_dict["refinement_method"] == "dichotomy_python":
-            assert dichotomy_python_instance.cfg["filter"] == config["filter"]
+            assert dichotomy_python_instance.cfg["filter"] == config_dichotomy["filter"]
         else:
-            assert dichotomy_cpp_instance.cfg["filter"] == config["filter"]
+            assert dichotomy_cpp_instance.cfg["filter"] == config_dichotomy["filter"]
 
     @pytest.mark.parametrize(
         ["config_dict", "dichotomy_class"],
@@ -209,11 +213,11 @@ class TestCheckConf:
             pytest.param(refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
         ],
     )
-    def test_faild_with_invalid_filter_name(self, config, filter_name, dichotomy_class, dichotomy_class_str):
+    def test_faild_with_invalid_filter_name(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
         """Should raise an error when filter has invalid name."""
-        config["refinement_method"] = dichotomy_class_str
+        config_dichotomy["refinement_method"] = dichotomy_class_str
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            dichotomy_class(config)
+            dichotomy_class(config_dichotomy)
         assert "filter" in err.value.args[0]
 
     @pytest.mark.parametrize("missing", ["refinement_method", "iterations", "filter"])
@@ -224,25 +228,25 @@ class TestCheckConf:
             (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
         ],
     )
-    def test_fails_on_missing_keys(self, config, missing, dichotomy_class, dichotomy_class_str):
+    def test_fails_on_missing_keys(self, config_dichotomy, missing, dichotomy_class, dichotomy_class_str):
         """
         Description : Should raise an error when a mandatory key is missing.
         Data :
         Requirement : EX_CONF_08
         """
-        config["refinement_method"] = dichotomy_class_str
-        del config[missing]
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        del config_dichotomy[missing]
 
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError) as err:
-            dichotomy_class(config)
+            dichotomy_class(config_dichotomy)
         assert f"Missing keys in current response: {missing}" in err.value.args[0]
 
-    def test_fails_on_unexpected_key(self, config):
+    def test_fails_on_unexpected_key(self, config_dichotomy):
         """Should raise an error when an unexpected key is given."""
-        config["unexpected_key"] = "unexpected_value"
+        config_dichotomy["unexpected_key"] = "unexpected_value"
 
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError) as err:
-            refinement.dichotomy.DichotomyPython(config)
+            refinement.dichotomy.DichotomyPython(config_dichotomy)
         assert "Missing keys in expected schema: unexpected_key" in err.value.args[0]
 
 
@@ -670,6 +674,21 @@ def make_cost_surface(cost_surface_data, subpix):
 
 @pytest.mark.parametrize(
     [
+        "filter_dicho",
+    ],
+    [
+        pytest.param(
+            BicubicPython({"method": "bicubic_python"}),
+            id="Bicubic python",
+        ),
+        pytest.param(
+            Bicubic({"method": "bicubic"}),
+            id="Bicubic cpp",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    [
         "cost_surface_data",
         "subpix",
         "precision",
@@ -873,11 +892,9 @@ def make_cost_surface(cost_surface_data, subpix):
     ],
 )
 def test_search_new_best_point(
-    make_cost_surface, precision, initial_disparity, initial_position, initial_value, expected
+    make_cost_surface, filter_dicho, precision, initial_disparity, initial_position, initial_value, expected
 ):
     """Test we get new coordinates as expected."""
-
-    filter_dicho = Bicubic({"method": "bicubic"})
 
     cost_selection_method = np.nanargmax
 

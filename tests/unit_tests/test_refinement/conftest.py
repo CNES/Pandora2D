@@ -208,7 +208,7 @@ def refinement_method_name():
 
 
 @pytest.fixture()
-def config(iterations, filter_name, refinement_method_name):
+def config_dichotomy(iterations, filter_name, refinement_method_name):
     return {
         "refinement_method": refinement_method_name,
         "iterations": iterations,
@@ -217,11 +217,11 @@ def config(iterations, filter_name, refinement_method_name):
 
 
 @pytest.fixture()
-def dichotomy_python_instance(config):
-    return refinement.dichotomy.DichotomyPython(config)
+def dichotomy_python_instance(config_dichotomy):
+    return refinement.dichotomy.DichotomyPython(config_dichotomy)
 
 
 @pytest.fixture()
-def dichotomy_cpp_instance(config):
-    config["refinement_method"] = "dichotomy_cpp"
-    return refinement.dichotomy_cpp.DichotomyCPP(config)
+def dichotomy_cpp_instance(config_dichotomy):
+    config_dichotomy["refinement_method"] = "dichotomy_cpp"
+    return refinement.dichotomy_cpp.DichotomyCPP(config_dichotomy)
