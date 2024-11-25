@@ -85,7 +85,7 @@ def make_cfg_for_dichotomy_python(  # pylint: disable=too-many-arguments
     return user_cfg
 
 
-@pytest.mark.parametrize("method", ["bicubic", "sinc"])
+@pytest.mark.parametrize("method", ["bicubic_python", "bicubic", "sinc"])
 @pytest.mark.parametrize("subpix", [1, 2, 4])
 @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
 @pytest.mark.parametrize("iterations", [1, 2])
