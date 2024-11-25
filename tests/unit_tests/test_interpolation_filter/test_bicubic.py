@@ -30,27 +30,89 @@ import pandora2d.interpolation_filter
 @pytest.fixture()
 def filter_instance():
     return pandora2d.interpolation_filter.AbstractFilter(  # pylint: disable=abstract-class-instantiated
+        cfg={"method": "bicubic_python"},
+    )  # type: ignore[abstract]
+
+
+@pytest.fixture()
+def filter_instance_cpp():
+    return pandora2d.interpolation_filter.AbstractFilter(  # pylint: disable=abstract-class-instantiated
         cfg={"method": "bicubic"},
     )  # type: ignore[abstract]
 
 
-def test_factory(filter_instance):
-    assert isinstance(filter_instance, pandora2d.interpolation_filter.bicubic.Bicubic)
-
-
-def test_margins(filter_instance):
-    assert filter_instance.margins == Margins(1, 1, 2, 2)
+@pytest.fixture()
+def make_filter_instance(request):
+    return request.getfixturevalue(request.param["filter"])
 
 
 @pytest.mark.parametrize(
-    ("coeff", "expected"),
+    ["make_filter_instance", "gt_instance"],
+    [
+        pytest.param(
+            {"filter": "filter_instance"},
+            pandora2d.interpolation_filter.bicubic.BicubicPython,
+            id="Bicubic python",
+        ),
+        pytest.param(
+            {"filter": "filter_instance_cpp"},
+            pandora2d.interpolation_filter.bicubic_cpp.Bicubic,
+            id="Bicubic cpp",
+        ),
+    ],
+    indirect=["make_filter_instance"],
+)
+def test_factory(make_filter_instance, gt_instance):
+    """
+    Test instances of Bicubic filters
+    """
+    assert isinstance(make_filter_instance, gt_instance)
+
+
+@pytest.mark.parametrize(
+    ["make_filter_instance"],
+    [
+        pytest.param(
+            {"filter": "filter_instance"},
+            id="Bicubic python",
+        ),
+        pytest.param(
+            {"filter": "filter_instance_cpp"},
+            id="Bicubic cpp",
+        ),
+    ],
+    indirect=["make_filter_instance"],
+)
+def test_margins(make_filter_instance):
+    """
+    Test margins values
+    """
+    assert make_filter_instance.margins == Margins(1, 1, 2, 2)
+
+
+@pytest.mark.parametrize(
+    ["make_filter_instance"],
+    [
+        pytest.param(
+            {"filter": "filter_instance"},
+            id="Bicubic python",
+        ),
+        pytest.param(
+            {"filter": "filter_instance_cpp"},
+            id="Bicubic cpp",
+        ),
+    ],
+    indirect=["make_filter_instance"],
+)
+@pytest.mark.parametrize(
+    ["coeff", "expected"],
     [
         (0, [0, 1, 0, 0]),
         (0.5, [-0.0625, 0.5625, 0.5625, -0.0625]),
         (0.25, [-0.0703125, 0.8671875, 0.2265625, -0.0234375]),
     ],
 )
-def test_get_coeffs_computation(filter_instance, coeff, expected):
+def test_get_coeffs_computation(make_filter_instance, coeff, expected):
     """Test result of get_coeff computation."""
-    result = filter_instance.get_coeffs(coeff)
+    result = make_filter_instance.get_coeffs(coeff)
     np.testing.assert_array_equal(result, expected)
