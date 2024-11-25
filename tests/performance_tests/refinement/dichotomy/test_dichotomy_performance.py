@@ -32,8 +32,17 @@ from numpy.typing import NDArray
 
 class TestComparisonMedicis:
     """
-    Tests that the pandora2d disparity maps after using the dichotomy
-    are similar to those obtained with Medicis.
+    Test that pandora2d mean errors are smaller
+    than those of medicis plus a threshold given as a parameter.
+
+    Difference between medicis and pandora2d disparity maps may be linked to the difference
+    in the interpolation method used between the two tools when the subpix is greater than 1.
+    As pandora2d use the scipy zoom method (spline interpolation),
+    medicis use the same interpolation method as the one used for the dichotomy loop (sinc).
+
+    When the threshold is 0, pandora2d is at least as effective as medicis.
+    When the threshold is > 0, the mean error of medicis
+    is better than the one of pandora2d by about the value of the threshold.
     """
 
     def remove_edges(
@@ -59,6 +68,43 @@ class TestComparisonMedicis:
         ]
 
         return medicis_map, pandora2d_map
+
+    def compute_mean_errors(
+        self, run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift
+    ) -> Tuple[float, float, float, float]:
+        """
+        Compute mean errors of medicis and pandora2d disparity maps
+        """
+
+        # Run pandora2D pipeline
+        run_dir = run_pipeline(cfg_dichotomy)
+
+        # Get pandora2d disparity maps
+        with rasterio.open(run_dir / "output" / "row_disparity.tif") as src:
+            row_map_pandora2d = src.read(1)
+        with rasterio.open(run_dir / "output" / "columns_disparity.tif") as src:
+            col_map_pandora2d = src.read(1)
+
+        # Get medicis disparity maps
+        with rasterio.open(str(medicis_maps_path) + "row_disp.tif") as src:
+            row_map_medicis = src.read(1)
+        with rasterio.open(str(medicis_maps_path) + "col_disp.tif") as src:
+            col_map_medicis = src.read(1)
+
+        # Remove medicis edges on both pandora2d and medicis disparity maps
+        # in order to compare the same sample of points.
+        row_map_medicis, row_map_pandora2d = self.remove_edges(row_map_medicis, row_map_pandora2d)
+        col_map_medicis, col_map_pandora2d = self.remove_edges(col_map_medicis, col_map_pandora2d)
+
+        # Compute mean error between column disparities and real column shift
+        mean_error_pandora2d_col = np.nanmean(abs(col_map_pandora2d - col_shift))
+        mean_error_medicis_col = np.nanmean(abs(col_map_medicis - col_shift))
+
+        # Compute mean error between row disparities and real row shift
+        mean_error_pandora2d_row = np.nanmean(abs(row_map_pandora2d - row_shift))
+        mean_error_medicis_row = np.nanmean(abs(row_map_medicis - row_shift))
+
+        return mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col
 
     @pytest.fixture()
     def data_path(self):
@@ -111,6 +157,135 @@ class TestComparisonMedicis:
             },
         }
 
+    @pytest.mark.parametrize("filter_method", ["bicubic", "bicubic_python"])
+    @pytest.mark.parametrize(
+        [
+            "img_path",
+            "subpix",
+            "medicis_method_path",
+            "row_shift",
+            "col_shift",
+            "row_map_threshold",
+            "col_map_threshold",
+        ],
+        [
+            pytest.param(
+                "T19KER/r+0.00c+0.50/",
+                1,
+                "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
+                0.0,
+                0.5,
+                0.00001,
+                0.0,
+                id="T19KER (Calama, Chile) shifted of 0.5 in columns with bicubic, 9 iter and subpix=1",
+            ),
+            pytest.param(
+                "T50JML/r+0.00c+0.50/",
+                1,
+                "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
+                0.0,
+                0.5,
+                0.0,
+                0.0,
+                id="T50JML (Perth, Australia) shifted of 0.5 in columns with bicubic, 9 iter and subpix=1",
+            ),
+            pytest.param(
+                "T19KER/r+0.00c+0.25/",
+                1,
+                "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
+                0.0,
+                0.25,
+                0.00001,
+                0.0,
+                id="T19KER (Calama, Chile) shifted of 0.25 in columns with bicubic, 9 iter and subpix=1",
+            ),
+            pytest.param(
+                "T50JML/r+0.00c+0.25/",
+                1,
+                "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
+                0.0,
+                0.25,
+                0.0,
+                0.0,
+                id="T50JML (Perth, Australia) shifted of 0.25 in columns with bicubic, 9 iter and subpix=1",
+            ),
+            pytest.param(
+                "T19KER/r+0.00c-0.25/",
+                4,
+                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
+                0.0,
+                -0.25,
+                0.002,
+                0.0,
+                id="T19KER (Calama, Chile) shifted of -0.25 in columns with bicubic, 9 iter and subpix=4",
+            ),
+            pytest.param(
+                "T50JML/r+0.00c-0.25/",
+                4,
+                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
+                0.0,
+                -0.25,
+                0.004,
+                0.003,
+                id="T50JML (Perth, Australia) shifted of -0.25 in columns with bicubic, 9 iter and subpix=4",
+            ),
+            pytest.param(
+                "T19KER/r+0.00c+0.50/",
+                4,
+                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
+                0.0,
+                0.5,
+                0.004,
+                0.003,
+                id="T19KER (Calama, Chile) shifted of 0.5 in columns with bicubic, 9 iter and subpix=4",
+            ),
+            pytest.param(
+                "T50JML/r+0.00c+0.50/",
+                4,
+                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
+                0.0,
+                0.5,
+                0.004,
+                0.002,
+                id="T50JML (Perth, Australia) shifted of 0.5 in columns with bicubic, 9 iter and subpix=4",
+            ),
+            pytest.param(
+                "T19KER/r+0.25c+0.25/",
+                4,
+                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
+                0.25,
+                0.25,
+                0.0,
+                0.0,
+                id="T19KER (Calama, Chile) shifted of 0.25 in col and in rows with bicubic, 9 iter and subpix=4",
+            ),
+            pytest.param(
+                "T50JML/r+0.25c+0.25/",
+                4,
+                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
+                0.25,
+                0.25,
+                0.005,
+                0.005,
+                id="T50JML (Perth, Australia) shifted of 0.25 in col and in rows with bicubic, 9 iter and subpix=4",
+            ),
+        ],
+    )
+    def test_pandora2d_medicis_dichotomy_bicubic(
+        self, run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift, row_map_threshold, col_map_threshold
+    ):
+        """
+        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
+        with bicubic filter.
+        """
+
+        mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col = (
+            self.compute_mean_errors(run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift)
+        )
+
+        assert mean_error_pandora2d_col <= mean_error_medicis_col + col_map_threshold
+        assert mean_error_pandora2d_row <= mean_error_medicis_row + row_map_threshold
+
     @pytest.mark.parametrize(
         [
             "img_path",
@@ -123,116 +298,6 @@ class TestComparisonMedicis:
             "col_map_threshold",
         ],
         [
-            pytest.param(
-                "T19KER/r+0.00c+0.50/",
-                1,
-                "bicubic",
-                "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
-                0.0,
-                0.5,
-                0.00001,
-                0.0,
-                id="T19KER (Calama, Chile) shifted of 0.5 in columns with bicubic, 9 iter and subpix=1",
-            ),
-            pytest.param(
-                "T50JML/r+0.00c+0.50/",
-                1,
-                "bicubic",
-                "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
-                0.0,
-                0.5,
-                0.0,
-                0.0,
-                id="T50JML (Perth, Australia) shifted of 0.5 in columns with bicubic, 9 iter and subpix=1",
-            ),
-            pytest.param(
-                "T19KER/r+0.00c+0.25/",
-                1,
-                "bicubic",
-                "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
-                0.0,
-                0.25,
-                0.00001,
-                0.0,
-                id="T19KER (Calama, Chile) shifted of 0.25 in columns with bicubic, 9 iter and subpix=1",
-            ),
-            pytest.param(
-                "T50JML/r+0.00c+0.25/",
-                1,
-                "bicubic",
-                "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
-                0.0,
-                0.25,
-                0.0,
-                0.0,
-                id="T50JML (Perth, Australia) shifted of 0.25 in columns with bicubic, 9 iter and subpix=1",
-            ),
-            pytest.param(
-                "T19KER/r+0.00c-0.25/",
-                4,
-                "bicubic",
-                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
-                0.0,
-                -0.25,
-                0.002,
-                0.0,
-                id="T19KER (Calama, Chile) shifted of -0.25 in columns with bicubic, 9 iter and subpix=4",
-            ),
-            pytest.param(
-                "T50JML/r+0.00c-0.25/",
-                4,
-                "bicubic",
-                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
-                0.0,
-                -0.25,
-                0.004,
-                0.003,
-                id="T50JML (Perth, Australia) shifted of -0.25 in columns with bicubic, 9 iter and subpix=4",
-            ),
-            pytest.param(
-                "T19KER/r+0.00c+0.50/",
-                4,
-                "bicubic",
-                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
-                0.0,
-                0.5,
-                0.004,
-                0.003,
-                id="T19KER (Calama, Chile) shifted of 0.5 in columns with bicubic, 9 iter and subpix=4",
-            ),
-            pytest.param(
-                "T50JML/r+0.00c+0.50/",
-                4,
-                "bicubic",
-                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
-                0.0,
-                0.5,
-                0.004,
-                0.002,
-                id="T50JML (Perth, Australia) shifted of 0.5 in columns with bicubic, 9 iter and subpix=4",
-            ),
-            pytest.param(
-                "T19KER/r+0.25c+0.25/",
-                4,
-                "bicubic",
-                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
-                0.25,
-                0.25,
-                0.0,
-                0.0,
-                id="T19KER (Calama, Chile) shifted of 0.25 in col and in rows with bicubic, 9 iter and subpix=4",
-            ),
-            pytest.param(
-                "T50JML/r+0.25c+0.25/",
-                4,
-                "bicubic",
-                "zncc_dicho_nappe_surech_bco/gri_zncc_dicho_nappe_surech_bco_",
-                0.25,
-                0.25,
-                0.005,
-                0.005,
-                id="T50JML (Perth, Australia) shifted of 0.25 in col and in rows with bicubic, 9 iter and subpix=4",
-            ),
             pytest.param(
                 "T19KER/r+0.00c+0.50/",
                 1,
@@ -345,50 +410,17 @@ class TestComparisonMedicis:
             ),
         ],
     )
-    def test_pandora2d_medicis_dichotomy(
+    def test_pandora2d_medicis_dichotomy_sinc(
         self, run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift, row_map_threshold, col_map_threshold
     ):
         """
-        Test that pandora2d mean errors are smaller
-        than those of medicis plus a threshold given as a parameter.
-
-        Difference between medicis and pandora2d disparity maps may be linked to the difference
-        in the interpolation method used between the two tools when the subpix is greater than 1.
-        As pandora2d use the scipy zoom method (spline interpolation),
-        medicis use the same interpolation method as the one used for the dichotomy loop (bicubic or sinc).
-
-        When the threshold is 0, pandora2d is at least as effective as medicis.
-        When the threshold is > 0, the mean error of medicis
-        is better than the one of pandora2d by about the value of the threshold.
+        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
+        with sinc filter.
         """
 
-        # Run pandora2D pipeline
-        run_dir = run_pipeline(cfg_dichotomy)
-
-        # Get pandora2d disparity maps
-        with rasterio.open(run_dir / "output" / "row_disparity.tif") as src:
-            row_map_pandora2d = src.read(1)
-        with rasterio.open(run_dir / "output" / "columns_disparity.tif") as src:
-            col_map_pandora2d = src.read(1)
-
-        # Get medicis disparity maps
-        with rasterio.open(str(medicis_maps_path) + "row_disp.tif") as src:
-            row_map_medicis = src.read(1)
-        with rasterio.open(str(medicis_maps_path) + "col_disp.tif") as src:
-            col_map_medicis = src.read(1)
-
-        # Remove medicis edges on both pandora2d and medicis disparity maps
-        # in order to compare the same sample of points.
-        row_map_medicis, row_map_pandora2d = self.remove_edges(row_map_medicis, row_map_pandora2d)
-        col_map_medicis, col_map_pandora2d = self.remove_edges(col_map_medicis, col_map_pandora2d)
-
-        # Compute mean error between column disparities and real column shift
-        mean_error_pandora2d_col = np.nanmean(abs(col_map_pandora2d - col_shift))
-        mean_error_medicis_col = np.nanmean(abs(col_map_medicis - col_shift))
-
-        # Compute mean error between row disparities and real row shift
-        mean_error_pandora2d_row = np.nanmean(abs(row_map_pandora2d - row_shift))
-        mean_error_medicis_row = np.nanmean(abs(row_map_medicis - row_shift))
+        mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col = (
+            self.compute_mean_errors(run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift)
+        )
 
         assert mean_error_pandora2d_col <= mean_error_medicis_col + col_map_threshold
         assert mean_error_pandora2d_row <= mean_error_medicis_row + row_map_threshold
