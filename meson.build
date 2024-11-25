@@ -1,11 +1,16 @@
 project(
   'pandora2d',
   'cpp',
-  version: '0.4.0',
+  version: run_command(
+    'version.sh',
+    'get-vcs',
+  ).stdout().strip(),
   default_options: [
     'cpp_std=c++17',
   ],
 )
+
+meson.add_dist_script('version.sh', 'set-dist', meson.project_version())
 
 py = import('python').find_installation(pure: false)
 

@@ -1,6 +1,8 @@
 [build-system]
-requires = ["meson-python", "pybind11"]
+requires = ["meson-python", "pybind11", "setuptools-scm>=8"]
 build-backend = "mesonpy"
+
+[tool.setuptools_scm]
 
 [project]
 name = "pandora2d"
