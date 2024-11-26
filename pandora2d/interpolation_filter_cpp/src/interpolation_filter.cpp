@@ -70,14 +70,15 @@ namespace abstractfilter
         const Margins &my_margins = AbstractFilter::m_margins;
         const int filter_size = AbstractFilter::m_size;
 
-        for (int i = 0; i < col_positions.size(); ++i)
+        auto col_it = col_positions.begin();
+        auto row_it = row_positions.begin();
+        auto result_it = interpolated_positions.begin();
+
+        for (; col_it != col_positions.end() ; ++col_it, ++row_it, ++result_it)
         {
             // get_coeffs method receives positive coefficients
-            auto pos_col = col_positions[i];
-            auto pos_row = row_positions[i];
-
-            double fractional_row = std::abs(pos_row - std::floor(pos_row));
-            double fractional_col = std::abs(pos_col - std::floor(pos_col));
+            double fractional_row = std::abs(*row_it - std::floor(*row_it));
+            double fractional_col = std::abs(*col_it - std::floor(*col_it));
 
             // If the subpixel shift is too close to 1, max_fractional_value is returned to avoid rounding.
             if (1 - fractional_row < EPSILON)
@@ -99,15 +100,15 @@ namespace abstractfilter
             In cost_surface, row dimension is disp_col and column dimension is disp_row,
             then we use margins.left for row and margins.up for col
             */
-            int top_left_area_row = pos_row - my_margins.left;
-            int top_left_area_col = pos_col - my_margins.up;
+            int top_left_area_row = *row_it - my_margins.left;
+            int top_left_area_col = *col_it - my_margins.up;
 
             // Resampling area to which we will apply the interpolator coefficients
             t_Matrix resampling_area = image.block(top_left_area_row, top_left_area_col, filter_size, filter_size);
 
             // Application of the interpolator coefficients on resampling area
             const auto result = apply(resampling_area, coeffs_row, coeffs_col);
-            interpolated_positions[i] = result;
+            *result_it = result;
         }
 
         return interpolated_positions;
