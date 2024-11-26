@@ -6,27 +6,27 @@ repos:
       entry: black --line-length=120
       language: system
       files: \.py$
-      stages: [commit]
+      stages: [pre-commit]
       types: [python]
     - id: pylint
       name: PyLint
       entry: python -m pylint --rcfile=.pylintrc
       language: system
       files: \.py$
-      stages: [commit]
+      stages: [pre-commit]
     - id: mypy
       name: mypy
       entry: mypy
       language: system
       files: \.py$
-      stages: [ commit ]
+      stages: [ pre-commit ]
     - id: sphinx-checking
       name: Checking Sphinx building
       entry: python setup.py build_sphinx
       language: system
       files: ^(doc/.*|pandora2d/.*)$
       pass_filenames: False
-      stages: [ push ]
+      stages: [ pre-push ]
   - repo: https://github.com/kynan/nbstripout
     rev: 0.6.1
     hooks:

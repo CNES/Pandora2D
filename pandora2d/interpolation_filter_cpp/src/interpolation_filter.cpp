@@ -21,8 +21,7 @@
 This module contains functions associated to the Abstract filter class for cpp.
 */
 
-#include "../include/interpolation_filter.hpp"
-#include <iostream>
+#include "interpolation_filter.hpp"
 #include <limits>
 #include <cmath>
 

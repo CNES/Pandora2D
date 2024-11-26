@@ -47,12 +47,15 @@ help: ## this help
 .PHONY: venv
 venv: ## create virtualenv in PANDORA2D_VENV directory if not exists
 	@test -d ${PANDORA2D_VENV} || python3 -m venv ${PANDORA2D_VENV}
-	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip setuptools wheel # no check to upgrade each time
-	@touch ${PANDORA2D_VENV}/bin/activate
+	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip meson-python meson ninja "setuptools-scm>=8" "setuptools>=61" # no check to upgrade each time
+
+.PHONY: cpp_deps
+cpp_deps: ## retrieve cpp dependencies
+	@${PANDORA2D_VENV}/bin/meson wrap update-db
 
 .PHONY: install
-install: venv ## install pandora2D (pip editable mode) without plugins
-	@test -f ${PANDORA2D_VENV}/bin/pandora2d || ${PANDORA2D_VENV}/bin/pip install -e .[dev,docs,notebook]
+install: venv cpp_deps ## install pandora2D (pip editable mode) without plugins
+	@test -f ${PANDORA2D_VENV}/bin/pandora2d || . ${PANDORA2D_VENV}/bin/activate; ${PANDORA2D_VENV}/bin/pip install --no-build-isolation --editable .[dev,docs,notebook]
 	@test -f .git/hooks/pre-commit || echo "  Install pre-commit hook"
 	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
 	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
@@ -113,7 +116,7 @@ format: install format/black  ## run black formatting (depends install)
 .PHONY: format/black
 format/black: install  ## run black formatting (depends install) (source venv before)
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/black pandora2d tests ./*.py notebooks/snippets/*.py
+	@${PANDORA2D_VENV}/bin/black pandora2d tests notebooks/snippets/*.py
 
 ### Check code quality and linting : black, mypy, pylint
 
@@ -123,7 +126,7 @@ lint: install lint/black lint/mypy lint/pylint ## check code quality and linting
 .PHONY: lint/black
 lint/black: ## check global style with black
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/black --check pandora2d tests ./*.py notebooks/snippets/*.py
+	@${PANDORA2D_VENV}/bin/black --check pandora2d tests notebooks/snippets/*.py
 
 .PHONY: lint/mypy
 lint/mypy: ## check linting with mypy
@@ -133,7 +136,7 @@ lint/mypy: ## check linting with mypy
 .PHONY: lint/pylint
 lint/pylint: ## check linting with pylint
 	@echo "+ $@"
-	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests ./*.py --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
+	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
 
 ## Documentation section
 
