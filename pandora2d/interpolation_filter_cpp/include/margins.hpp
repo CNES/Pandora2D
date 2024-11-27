@@ -26,9 +26,8 @@ This module contains Margins struct and associated operators.
 
 #include <Eigen/Dense>
 
-// Margins
 /**
- * @brief
+ * @brief Margins struct
  *
  *
  */
@@ -46,7 +45,10 @@ struct Margins
         : left(left_), up(up_), right(right_), down(down_) {}
 
 
-    int left, up, right, down; ///< left, up, right and down attributes
+    int left ; ///< left margins attribute
+    int up ; ///< up margins attribute
+    int right ; ///< right margins attribute
+    int down ; ///< down margins attribute
 
     /**
      * @brief Operator == for Margins

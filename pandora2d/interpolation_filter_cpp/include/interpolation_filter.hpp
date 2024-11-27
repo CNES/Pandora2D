@@ -101,8 +101,8 @@ namespace abstractfilter
         Margins get_margins() const { return m_margins; }
 
     protected:
-        int m_size = 4;
-        Margins m_margins{0, 0, 0, 0};
+        int m_size = 4; ///< filter size
+        Margins m_margins{0, 0, 0, 0}; ///< filter margins
     };
 }
 

@@ -26,6 +26,11 @@ This module contains functions associated to the Bicubic filter class for cpp.
 
 #include "interpolation_filter.hpp"
 
+/**
+ * @brief This struct allows for the instantiation of a bicubic filter.
+ *
+ *
+ */
 struct Bicubic : public abstractfilter::AbstractFilter
 {
 
@@ -59,7 +64,7 @@ struct Bicubic : public abstractfilter::AbstractFilter
     float get_alpha() const { return m_alpha; }
 
 private:
-    float m_alpha = -0.5;
+    float m_alpha = -0.5; ///< alpha coefficient
 };
 
 #endif
