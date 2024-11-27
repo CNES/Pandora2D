@@ -81,6 +81,11 @@ test-unit: install ## run unit tests only (for dev) + coverage (source venv befo
 	@echo "Run unit tests"
 	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
 
+.PHONY: test-unit-cpp
+test-unit-cpp: install ## run unit cpp tests only for dev
+	@echo "Run unit cpp tests"
+	. ${PANDORA2D_VENV}/bin/activate; meson test -C build/$(shell ls build)/ -v
+
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
 	@echo "Run functional tests"
@@ -137,6 +142,18 @@ lint/mypy: ## check linting with mypy
 lint/pylint: ## check linting with pylint
 	@echo "+ $@"
 	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
+
+
+## Check cpp code quality
+
+.PHONY: coverage-cpp 
+coverage-cpp: install  ## Gcovr (depends on gcovr in venv)
+	. ${PANDORA2D_VENV}/bin/activate; gcovr --sonarqube -r . -f pandora2d/interpolation_filter_cpp > gcovr-report.xml
+
+.PHONY: cppcheck
+cppcheck: ## C++ cppcheck for CI (depends cppcheck)
+	@cppcheck -v --enable=all --xml -Ipandora2d/interpolation_filter_cpp/*.build pandora2d/interpolation_filter_cpp 2> cppcheck-report.xml
+
 
 ## Documentation section
 
