@@ -143,6 +143,13 @@ lint/pylint: ## check linting with pylint
 	@echo "+ $@"
 	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
 
+
+## Check cpp code quality
+.PHONY: cppcheck
+cppcheck: ## C++ cppcheck for CI (depends cppcheck)
+	@cppcheck -v --enable=all --xml -Ipandora2d/interpolation_filter_cpp/*.build pandora2d/interpolation_filter_cpp 2> cppcheck-report.xml
+
+
 ## Documentation section
 
 .PHONY: docs
