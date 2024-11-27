@@ -81,6 +81,11 @@ test-unit: install ## run unit tests only (for dev) + coverage (source venv befo
 	@echo "Run unit tests"
 	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
 
+.PHONY: test-unit-cpp
+test-unit-cpp: install ## run unit cpp tests only for dev
+	@echo "Run unit cpp tests"
+	. ${PANDORA2D_VENV}/bin/activate; meson test -C build/$(shell ls build)/ -v
+
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
 	@echo "Run functional tests"
