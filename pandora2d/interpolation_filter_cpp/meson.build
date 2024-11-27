@@ -9,3 +9,14 @@ py.extension_module(
     include_directories: interpolation_filter_includes,
     dependencies: [pybind11_dep, eigen_dep, doctest_dep],
 )
+
+bicubic_src = files('src/bicubic.cpp')
+
+py.extension_module(
+    'bicubic_cpp',
+    bicubic_src,
+    subdir: 'pandora2d',
+    install: true,
+    include_directories: interpolation_filter_includes,
+    dependencies: [pybind11_dep, eigen_dep, doctest_dep],
+)

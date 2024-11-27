@@ -18,38 +18,37 @@
  */
 
 /*
-This module contains type and struct associated to the Abstract filter class for cpp.
+This module contains types and constants associated to the Abstract filter class for cpp.
 */
 
-#ifndef INTERPOLATION_FILTER_COMMON_HPP
-#define INTERPOLATION_FILTER_COMMON_HPP
+#ifndef INTERPOLATION_FILTER_ALIAS_HPP
+#define INTERPOLATION_FILTER_ALIAS_HPP
 
 #include <Eigen/Dense>
 
-// Alias for eigen type
-using t_Matrix = Eigen::MatrixXd;
-using t_Vector = Eigen::VectorXd;
-
-// Margins
 /**
- * @brief 
- * 
+ * @brief type used for matrix
  * 
  */
-struct Margins
-{
-    /**
-     * @brief Construct a new Margins object
-     * 
-     * @param left_ 
-     * @param up_ 
-     * @param right_ 
-     * @param down_ 
-     */
-    Margins(int left_, int up_, int right_, int down_)
-        : left(left_), up(up_), right(right_), down(down_) {}
+using t_Matrix = Eigen::MatrixXd;
+/**
+ * @brief type used for vectors
+ * 
+ */
+using t_Vector = Eigen::VectorXd;
 
-    int left, up, right, down;
-};
+/**
+ * @brief MAX_FRACTIONAL_VALUE=0.998046875 corresponds to 1-1/2**9
+ * where 9 is the maximal number of iterations for dichotomy
+ *
+ */;
+const double MAX_FRACTIONAL_VALUE = 1 - (1. / pow(2, 9));
+
+/**
+ * @brief Numeric limit of float type. We use the same numeric limit
+ * used by Medicis.
+ * 
+ */
+const double EPSILON = std::numeric_limits<float>::epsilon();
 
 #endif
