@@ -28,27 +28,19 @@ This module contains types and constants associated to the Abstract filter class
 
 /**
  * @brief type used for matrix
- * 
+ *
  */
 using t_Matrix = Eigen::MatrixXd;
 /**
  * @brief type used for vectors
- * 
+ *
  */
 using t_Vector = Eigen::VectorXd;
 
-/**
- * @brief MAX_FRACTIONAL_VALUE=0.998046875 corresponds to 1-1/2**9
- * where 9 is the maximal number of iterations for dichotomy
- *
- */;
-const double MAX_FRACTIONAL_VALUE = 1 - (1. / pow(2, 9));
+const double MAX_FRACTIONAL_VALUE = 1 - (1. / pow(2, 9)); ///< MAX_FRACTIONAL_VALUE=0.998046875
+///< corresponds to 1-1/2**9 where 9 is the maximal number of iterations for dichotomy
 
-/**
- * @brief Numeric limit of float type. We use the same numeric limit
- * used by Medicis.
- * 
- */
-const double EPSILON = std::numeric_limits<float>::epsilon();
+const double EPSILON = std::numeric_limits<float>::epsilon(); ///< Numeric limit of float type. 
+///< We use the same numeric limit used by Medicis.
 
 #endif
