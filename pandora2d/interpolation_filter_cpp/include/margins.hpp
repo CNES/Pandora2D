@@ -45,11 +45,8 @@ struct Margins
     Margins(int left_, int up_, int right_, int down_)
         : left(left_), up(up_), right(right_), down(down_) {}
 
-    /**
-     * @brief left, up, right and down attributes
-     * 
-     */
-    int left, up, right, down;
+
+    int left, up, right, down; ///< left, up, right and down attributes
 
     /**
      * @brief Operator == for Margins
