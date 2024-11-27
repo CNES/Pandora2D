@@ -145,6 +145,11 @@ lint/pylint: ## check linting with pylint
 
 
 ## Check cpp code quality
+
+.PHONY: coverage-cpp 
+coverage-cpp: install  ## Gcovr (depends on gcovr in venv)
+	. ${PANDORA2D_VENV}/bin/activate; gcovr --sonarqube -r . -f pandora2d/interpolation_filter_cpp > gcovr-report.xml
+
 .PHONY: cppcheck
 cppcheck: ## C++ cppcheck for CI (depends cppcheck)
 	@cppcheck -v --enable=all --xml -Ipandora2d/interpolation_filter_cpp/*.build pandora2d/interpolation_filter_cpp 2> cppcheck-report.xml

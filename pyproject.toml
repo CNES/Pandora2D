@@ -60,6 +60,7 @@ dev = [
     "pytest-monitor",
     "setuptools_scm", # version from git tag
     "types-psutil",
+    "gcovr",
 ]
 
 docs = ["sphinx", "sphinx_autoapi", "sphinx_rtd_theme", "sphinx_tabs"]
