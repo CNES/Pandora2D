@@ -80,7 +80,8 @@ namespace abstractfilter
             double fractional_row = std::abs(*row_it - std::floor(*row_it));
             double fractional_col = std::abs(*col_it - std::floor(*col_it));
 
-            // If the subpixel shift is too close to 1, max_fractional_value is returned to avoid rounding.
+            // If the subpixel shift is too close to 1, max_fractional_value is returned 
+            // to avoid rounding.
             if (1 - fractional_row < EPSILON)
             {
                 fractional_row = max_fractional_value;
@@ -104,7 +105,8 @@ namespace abstractfilter
             int top_left_area_col = *col_it - my_margins.up;
 
             // Resampling area to which we will apply the interpolator coefficients
-            t_Matrix resampling_area = image.block(top_left_area_row, top_left_area_col, filter_size, filter_size);
+            t_Matrix resampling_area = image.block(top_left_area_row, top_left_area_col, 
+            filter_size, filter_size);
 
             // Application of the interpolator coefficients on resampling area
             const auto result = apply(resampling_area, coeffs_row, coeffs_col);
