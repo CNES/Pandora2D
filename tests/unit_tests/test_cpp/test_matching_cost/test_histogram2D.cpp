@@ -69,7 +69,7 @@ TEST_CASE("Test constructor")
     SUBCASE("With two histogram1D")
     {
         Histogram2D hist = Histogram2D(left_hist, right_hist);
-        check_inside_eigen_element(hist.getValues(), Eigen::MatrixXd::Zero(2,2));
+        check_inside_eigen_element(hist.values(), Eigen::MatrixXd::Zero(2,2));
     }
 
     Eigen::MatrixXd values(2,2);
@@ -79,7 +79,7 @@ TEST_CASE("Test constructor")
     SUBCASE("With values and two histogram1D")
     {
         Histogram2D hist = Histogram2D(values, left_hist, right_hist);
-        check_inside_eigen_element(hist.getValues(), values);
+        check_inside_eigen_element(hist.values(), values);
     }
 }
 

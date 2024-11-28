@@ -63,14 +63,14 @@ public:
      * 
      * @return const Eigen::MatrixXd& 
      */
-    const Eigen::MatrixXd& getValues() const { return m_values; };
+    const Eigen::MatrixXd& values() const { return m_values; };
 
     /**
      * @brief Set the Values object
      * 
      * @param values 
      */
-    void setValues(const Eigen::MatrixXd& values) { m_values = values; };
+    void set_values(const Eigen::MatrixXd& values) { m_values = values; };
 
 
 private:

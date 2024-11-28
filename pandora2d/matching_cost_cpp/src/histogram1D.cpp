@@ -104,6 +104,6 @@ Histogram1D calculate_histogram1D(const Eigen::MatrixXd &img)
         hist_values[index] += 1;
     }
 
-    hist.setValues(hist_values);
+    hist.set_values(hist_values);
     return hist;
 }

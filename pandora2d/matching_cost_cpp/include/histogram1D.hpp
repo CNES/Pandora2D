@@ -71,35 +71,35 @@ public:
      * 
      * @return const Eigen::VectorXd& 
      */
-    const Eigen::VectorXd& getValues() const { return m_values; };
+    const Eigen::VectorXd& values() const { return m_values; };
 
     /**
      * @brief Get the Nb Bins object
      * 
      * @return std::size_t 
      */
-    std::size_t getNbBins() const { return m_nb_bins; };
+    std::size_t nb_bins() const { return m_nb_bins; };
 
     /**
      * @brief Get the Low Bound object
      * 
      * @return double 
      */
-    double getLowBound() const { return m_low_bound; };
+    double low_bound() const { return m_low_bound; };
 
     /**
      * @brief Get the Bin Width object
      * 
      * @return double 
      */
-    double getBinWidth() const { return m_bins_width; };
+    double bins_width() const { return m_bins_width; };
 
     /**
      * @brief Set the Values object
      * 
      * @param values 
      */
-    void setValues(const Eigen::VectorXd& values) { m_values = values; };
+    void set_values(const Eigen::VectorXd& values) { m_values = values; };
 
 
 private:

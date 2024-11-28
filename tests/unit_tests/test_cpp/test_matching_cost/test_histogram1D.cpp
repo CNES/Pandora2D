@@ -110,10 +110,10 @@ TEST_CASE("Test constructor")
         Eigen::VectorXd m = Eigen::VectorXd::Zero(3);
         Histogram1D hist = Histogram1D(m);
 
-        check_inside_eigen_element(hist.getValues(), Eigen::VectorXd::Zero(1));
-        CHECK(hist.getNbBins() == 1);
-        CHECK(hist.getLowBound() == -0.5);
-        CHECK(hist.getBinWidth() == 1);
+        check_inside_eigen_element(hist.values(), Eigen::VectorXd::Zero(1));
+        CHECK(hist.nb_bins() == 1);
+        CHECK(hist.low_bound() == -0.5);
+        CHECK(hist.bins_width() == 1);
     }
 
     SUBCASE("With Eigen::VectorXd {1,2,3,4}")
@@ -134,20 +134,20 @@ TEST_CASE("Test constructor")
         Eigen::VectorXd m = Eigen::VectorXd::Ones(3);
         Histogram1D hist = Histogram1D(m, 3, 0.1, 1.3);
         
-        check_inside_eigen_element(hist.getValues(), m);
-        CHECK(hist.getNbBins() == 3);
-        CHECK(hist.getLowBound() == 0.1);
-        CHECK(hist.getBinWidth() == 1.3);
+        check_inside_eigen_element(hist.values(), m);
+        CHECK(hist.nb_bins() == 3);
+        CHECK(hist.low_bound() == 0.1);
+        CHECK(hist.bins_width() == 1.3);
     }
 
     SUBCASE("Second constructor")
     {
         Histogram1D hist = Histogram1D(2, 0.1, 1.3);
         
-        check_inside_eigen_element(hist.getValues(), Eigen::VectorXd::Zero(2));
-        CHECK(hist.getNbBins() == 2);
-        CHECK(hist.getLowBound() == 0.1);
-        CHECK(hist.getBinWidth() == 1.3);
+        check_inside_eigen_element(hist.values(), Eigen::VectorXd::Zero(2));
+        CHECK(hist.nb_bins() == 2);
+        CHECK(hist.low_bound() == 0.1);
+        CHECK(hist.bins_width() == 1.3);
     }
 }
 
