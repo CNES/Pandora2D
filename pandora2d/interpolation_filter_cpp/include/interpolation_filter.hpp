@@ -42,12 +42,21 @@ namespace abstractfilter
          * @brief Construct a new Abstract Filter object
          *
          */
-        AbstractFilter();
+        AbstractFilter()=default;
+
+        /**
+         * @brief Construct a new Abstract Filter object
+         *
+         * @param size size of the filter
+         * @param margins margins of the fiter
+         */
+        AbstractFilter(int size, Margins margins);
+
         /**
          * @brief Destroy the Abstract Filter object
          *
          */
-        virtual ~AbstractFilter();
+         ~AbstractFilter()=default;
 
         /**
          * @brief Get the coeffs object

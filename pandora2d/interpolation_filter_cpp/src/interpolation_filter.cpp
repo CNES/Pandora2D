@@ -30,14 +30,9 @@ namespace abstractfilter
 {
 
     // Constructor
-    AbstractFilter::AbstractFilter()
-        : m_size(4),
-          m_margins({0, 0, 0, 0})
-    {
-    }
-
-    // Destructor
-    AbstractFilter::~AbstractFilter()
+    AbstractFilter::AbstractFilter(int size = 4, Margins margins = {0, 0, 0, 0}) :
+        m_size(size),
+        m_margins(margins)
     {
     }
 
@@ -74,13 +69,13 @@ namespace abstractfilter
         auto row_it = row_positions.begin();
         auto result_it = interpolated_positions.begin();
 
-        for (; col_it != col_positions.end() ; ++col_it, ++row_it, ++result_it)
+        for (; col_it != col_positions.end(); ++col_it, ++row_it, ++result_it)
         {
             // get_coeffs method receives positive coefficients
             double fractional_row = std::abs(*row_it - std::floor(*row_it));
             double fractional_col = std::abs(*col_it - std::floor(*col_it));
 
-            // If the subpixel shift is too close to 1, max_fractional_value is returned 
+            // If the subpixel shift is too close to 1, max_fractional_value is returned
             // to avoid rounding.
             if (1 - fractional_row < EPSILON)
             {
@@ -105,8 +100,8 @@ namespace abstractfilter
             int top_left_area_col = *col_it - my_margins.up;
 
             // Resampling area to which we will apply the interpolator coefficients
-            t_Matrix resampling_area = image.block(top_left_area_row, top_left_area_col, 
-            filter_size, filter_size);
+            t_Matrix resampling_area = image.block(top_left_area_row, top_left_area_col,
+                                                   filter_size, filter_size);
 
             // Application of the interpolator coefficients on resampling area
             const auto result = apply(resampling_area, coeffs_row, coeffs_col);
