@@ -16,44 +16,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""This module contains bicubic interpolation filter."""
-
-from functools import lru_cache
+"""This module contains cpp bicubic interpolation filter."""
 
 import numpy as np
+
 from pandora.margins import Margins
 
+import interpolation_filter_bind  # type: ignore[import-not-found] # pylint:disable=import-error
 from .interpolation_filter import AbstractFilter
 
 
-@AbstractFilter.register_subclass("bicubic_python")
-class BicubicPython(AbstractFilter):
-    """Implementation of the Bicubic filter.
+@AbstractFilter.register_subclass("bicubic")
+class Bicubic(AbstractFilter):
+    """
+    Implementation of the Bicubic filter in cpp.
 
     With `alpha = -0.5` and a size of 4.
     """
 
-    _ALPHA = -0.5
-    _SIZE = 4
-
     def __init__(self, cfg, **_):
         """
-        Initialize a BicubicPython instance.
+        Initialize a cpp Bicubic instance.
 
         :param cfg: optional configuration, {}
         :type cfg: dict
         :return: None
         """
 
-        self.schema = {"method": "bicubic_python"}
+        self.schema = {"method": "bicubic"}
         super().__init__(cfg)
+        self.cpp_instance = interpolation_filter_bind.Bicubic()
 
     @property
     def margins(self) -> Margins:
         """Return filter's Margins."""
-        return Margins(1, 1, 2, 2)
 
-    @lru_cache
+        cpp_margins = self.cpp_instance.get_margins()
+
+        return Margins(cpp_margins.left, cpp_margins.up, cpp_margins.right, cpp_margins.down)
+
     def get_coeffs(self, fractional_shift: float) -> np.ndarray:
         """
         Returns the interpolator coefficients to be applied to the resampling area.
@@ -67,15 +68,7 @@ class BicubicPython(AbstractFilter):
         :return: a array of interpolator coefficients whose size depends on the filter margins
         :rtype: np.ndarray
         """
-        tab_coeffs = np.empty(4)
-        alpha = self._ALPHA
 
-        for i in range(4):
-            dist = abs(-1.0 + i - fractional_shift)
-
-            if dist <= 1.0:
-                tab_coeffs[i] = (((alpha + 2.0) * dist - (alpha + 3.0)) * dist * dist) + 1.0
-            else:
-                tab_coeffs[i] = (((alpha * dist - 5.0 * alpha) * dist) + 8.0 * alpha) * dist - 4.0 * alpha
+        tab_coeffs = self.cpp_instance.get_coeffs(fractional_shift)
 
         return tab_coeffs

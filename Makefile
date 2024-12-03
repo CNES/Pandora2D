@@ -47,7 +47,7 @@ help: ## this help
 .PHONY: venv
 venv: ## create virtualenv in PANDORA2D_VENV directory if not exists
 	@test -d ${PANDORA2D_VENV} || python3 -m venv ${PANDORA2D_VENV}
-	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip meson-python meson ninja "setuptools-scm>=8" "setuptools>=61" # no check to upgrade each time
+	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip meson-python meson ninja pybind11 "setuptools-scm>=8" "setuptools>=61" # no check to upgrade each time
 
 .PHONY: cpp_deps
 cpp_deps: ## retrieve cpp dependencies

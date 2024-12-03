@@ -41,7 +41,6 @@ class AbstractFilter(ABC):
     _interpolation_filter_method = None
     margins = NullMargins()
     _SIZE = 4
-    schema = {}
 
     def __new__(cls, cfg: dict | None = None, **kwargs):
         """
@@ -69,8 +68,7 @@ class AbstractFilter(ABC):
         """
         self.cfg = self.check_conf(cfg)
 
-    @classmethod
-    def check_conf(cls, cfg: Dict) -> Dict:
+    def check_conf(self, cfg: Dict) -> Dict:
         """
         Check the refinement method configuration.
 
@@ -79,7 +77,7 @@ class AbstractFilter(ABC):
         :return: cfg: global configuration
         :rtype: cfg: dict
         """
-        checker = Checker(cls.schema)
+        checker = Checker(self.schema)  # type: ignore[attr-defined]
         checker.validate(cfg)
 
         return cfg
