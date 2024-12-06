@@ -25,27 +25,10 @@ This module contains tests associated to histogram 1D.
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 #include "histogram1D.hpp"
+#include "conftest.hpp"
 
 #include <Eigen/Dense>
 #include <iostream>
-
-
-/**
- * @brief Check size and element on vector with a groundtruth
- * 
- * @param data: vector to test
- * @param expected: the groundtruth
- */
-static void check_inside_eigen_element(Eigen::VectorXd data, Eigen::VectorXd expected)
-{
-    REQUIRE(data.size() == expected.size());
-    auto d = data.data();
-    auto e = expected.data();
-    for (; e != (expected.data() + expected.size()); ++d, ++e)
-    {
-        CHECK(*d == *e);
-    }
-}
 
 
 /**

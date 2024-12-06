@@ -27,4 +27,3 @@ install_subdir(
 subdir('pandora2d/interpolation_filter_cpp')
 subdir('pandora2d/matching_cost_cpp')
 subdir('tests/unit_tests/test_cpp')
-subdir('tests/unit_tests/test_cpp/test_matching_cost')

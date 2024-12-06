@@ -1,19 +1,6 @@
-test(
-    'Filter',
-    executable(
-        'test_filter',
-        ['test_filter.cpp', interpolation_filter_src, bicubic_src],
-        include_directories: interpolation_filter_includes,
-        dependencies: [eigen_dep, doctest_dep],
-    ),
-)
+test_includes = include_directories('.')
+test_src = files('conftest.cpp')
 
-test(
-    'Bicubic',
-    executable(
-        'test_bicubic',
-        ['test_bicubic.cpp', interpolation_filter_src, bicubic_src],
-        include_directories: interpolation_filter_includes,
-        dependencies: [eigen_dep, doctest_dep],
-    ),
-)
+
+subdir('test_interpolation_filter')
+subdir('test_matching_cost')
