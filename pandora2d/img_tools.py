@@ -502,8 +502,8 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
     :type img_right: xarray.Dataset
     :param subpix: subpixel precision = (1 or pair number)
     :type subpix: int
-    :param column: column to shift (otherwise row)
-    :type column: bool
+    :param row: row to shift (otherwise column)
+    :type row: bool
     :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
     :type order: int, optional
     :return: an array that contains the shifted right images
@@ -539,3 +539,30 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
                 )
 
     return img_right_shift
+
+
+def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> List[xr.Dataset]:
+    """
+    Return an array that contains the shifted right images in rows and columns
+
+    :param img_right: Dataset image containing the image im : 2D (row, col) xarray.Dataset
+    :type img_right: xarray.Dataset
+    :param subpix: subpixel precision = (1 or pair number)
+    :type subpix: int
+    :param column: column to shift (otherwise row)
+    :type column: bool
+    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
+    :type order: int, optional
+    :return: an array that contains the shifted right images
+    :rtype: array of xarray.Dataset
+    """
+
+    # Row shifted images
+    img_right_shift = shift_subpix_img(img_right, subpix, row=True, order=order)
+    img_right_shift_2d = []
+
+    # Columns shifted images
+    for _, img in enumerate(img_right_shift):
+        img_right_shift_2d += shift_subpix_img(img, subpix, row=False, order=order)
+
+    return img_right_shift_2d
