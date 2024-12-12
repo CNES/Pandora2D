@@ -46,3 +46,4 @@ double std_dev(const Eigen::MatrixXd &m);
 double moment_centre(const Eigen::MatrixXd &m);
 
 #endif
+
