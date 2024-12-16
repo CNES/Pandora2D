@@ -47,3 +47,13 @@ test(
         dependencies: [eigen_dep, doctest_dep],
     ),
 )
+
+test(
+    'CostVolumes',
+    executable(
+        'test_cost_volumes',
+        ['test_cost_volumes.cpp', matching_cost_src, test_src],
+        include_directories:[matching_cost_includes, test_includes],
+        dependencies: [eigen_dep, doctest_dep],
+    ),
+)
