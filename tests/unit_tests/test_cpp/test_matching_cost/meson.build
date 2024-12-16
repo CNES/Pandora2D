@@ -37,3 +37,13 @@ test(
         dependencies: [eigen_dep, doctest_dep],
     ),
 )
+
+test(
+    'MutualInformation',
+    executable(
+        'test_mutual_information',
+        ['test_mutual_information.cpp', matching_cost_src],
+        include_directories:matching_cost_includes,
+        dependencies: [eigen_dep, doctest_dep],
+    ),
+)
