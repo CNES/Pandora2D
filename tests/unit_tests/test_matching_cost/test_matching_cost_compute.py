@@ -296,6 +296,7 @@ def test_compute_cv_zncc():
     np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 1, 0], ad_ground_truth_2_2_1_0, rtol=1e-06)
 
 
+@pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
 @pytest.mark.parametrize(
     ["roi", "step", "col_expected", "row_expected"],
     [
@@ -406,7 +407,9 @@ def test_compute_cv_zncc():
         ),
     ],
 )
-def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_config, col_expected, row_expected):
+def test_cost_volume_coordinates_with_roi(
+    roi, input_config, matching_cost_config, matching_cost_object, col_expected, row_expected
+):
     """
     Description : Test that we have the correct cost_volumes coordinates with a ROI
     Data :
@@ -419,11 +422,12 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
 
     img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
-    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost_object(matching_cost_config)
 
     matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
-    np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
+    if matching_cost_config["matching_cost_method"] == "zncc":
+        np.testing.assert_array_equal(matching_cost_matcher.grid.attrs["col_to_compute"], col_expected)
 
     # compute cost volumes with roi
     cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
@@ -432,6 +436,7 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
+@pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
 @pytest.mark.parametrize(
     ["step", "col_expected", "row_expected"],
     [
@@ -479,7 +484,9 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
         ),
     ],
 )
-def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config, col_expected, row_expected):
+def test_cost_volume_coordinates_without_roi(
+    input_config, matching_cost_config, matching_cost_object, col_expected, row_expected
+):
     """
     Description : Test that we have the correct cost_volumes coordinates without a ROI
     Data :
@@ -495,11 +502,12 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
 
     img_left, img_right = create_datasets_from_inputs(input_config)
 
-    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost_object(matching_cost_config)
 
     matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
-    np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
+    if matching_cost_config["matching_cost_method"] == "zncc":
+        np.testing.assert_array_equal(matching_cost_matcher.grid.attrs["col_to_compute"], col_expected)
 
     # compute cost volumes without roi
     cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
@@ -606,7 +614,7 @@ def make_image_fixture():
 
 
 @pytest.fixture()
-def make_cost_volumes(make_image_fixture, request):
+def make_cost_volumes(make_image_fixture, method, request):
     """
     Instantiate a matching_cost and compute cost_volumes
     """
@@ -614,7 +622,7 @@ def make_cost_volumes(make_image_fixture, request):
     cfg = {
         "pipeline": {
             "matching_cost": {
-                "matching_cost_method": "ssd",
+                "matching_cost_method": method,
                 "window_size": 1,
                 "step": request.param["step"],
                 "subpix": request.param["subpix"],
@@ -628,7 +636,10 @@ def make_cost_volumes(make_image_fixture, request):
     img_left = make_image_fixture(disp_row, disp_col, request.param["data_left"])
     img_right = make_image_fixture(disp_row, disp_col, request.param["data_right"])
 
-    matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
+    matching_cost_object = matching_cost.MatchingCostRegistry.get(
+        cfg["pipeline"]["matching_cost"]["matching_cost_method"]
+    )
+    matching_cost_ = matching_cost_object(cfg["pipeline"]["matching_cost"])
 
     matching_cost_.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
@@ -657,12 +668,14 @@ class TestDisparityGrid:
         return 7
 
     @pytest.fixture()
-    def cost_volumes(self, nb_rows, nb_cols, nb_disp_rows, nb_disp_cols):
+    def cost_volumes(self, nb_rows, nb_cols, nb_disp_rows, nb_disp_cols, correct_pipeline):
         """cost_volumes full of zeros."""
         # only need because allocate_cost_volumes delete it
         fake_pandora_attrs = {"col_to_compute": 1, "sampling_interval": 1}
-        return matching_cost.PandoraMatchingCostMethods.allocate_cost_volumes(
-            fake_pandora_attrs,
+
+        matching_cost_object = matching_cost.PandoraMatchingCostMethods(correct_pipeline["pipeline"]["matching_cost"])
+        return matching_cost_object.allocate_cost_volumes(
+            cost_volume_attr=fake_pandora_attrs,
             row=np.arange(nb_rows),
             col=np.arange(nb_cols),
             disp_range_row=np.arange(-5, -5 + nb_disp_rows),
@@ -793,9 +806,15 @@ class TestDisparityGrid:
         assert mock_set_out_of_disparity_range_to_nan.called
 
 
+@pytest.fixture()
+def method():
+    return "ssd"
+
+
 class TestSubpix:
     """Test subpix parameter"""
 
+    @pytest.mark.parametrize("method", ["ssd", "mutual_information"])
     @pytest.mark.parametrize(
         ["make_cost_volumes", "shape_expected", "row_disparity", "col_disparity"],
         [
@@ -1432,7 +1451,7 @@ class TestDisparityMargins:
 
         return left, right
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc", "mutual_information"])
     @pytest.mark.parametrize(
         ["margins", "subpix", "gt_cv_shape", "gt_disp_col", "gt_disp_row"],
         [
@@ -1579,7 +1598,10 @@ class TestDisparityMargins:
         left, right = create_datasets
 
         # Initialize matching_cost
-        matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
+        matching_cost_object = matching_cost.MatchingCostRegistry.get(
+            cfg["pipeline"]["matching_cost"]["matching_cost_method"]
+        )
+        matching_cost_matcher = matching_cost_object(cfg["pipeline"]["matching_cost"])
 
         # Allocate cost volume
         matching_cost_matcher.allocate(

@@ -87,8 +87,29 @@ def input_config(left_image, right_image):
 
 
 @pytest.fixture()
-def matching_cost_config(step):
-    return {"matching_cost_method": "zncc", "window_size": 3, "step": step}
+def matching_cost_method():
+    return "zncc"
+
+
+@pytest.fixture()
+def window_size():
+    return 3
+
+
+@pytest.fixture()
+def matching_cost_config(step, matching_cost_method, window_size):
+    return {"matching_cost_method": matching_cost_method, "window_size": window_size, "step": step}
+
+
+@pytest.fixture()
+def matching_cost_object(matching_cost_config):
+    """
+    Return the right matching cost object according to matching cost method
+    """
+
+    matching_cost_object = matching_cost.MatchingCostRegistry.get(matching_cost_config["matching_cost_method"])
+
+    return matching_cost_object
 
 
 @pytest.fixture()
