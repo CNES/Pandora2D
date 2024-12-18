@@ -22,8 +22,8 @@ import numpy as np
 
 from pandora.margins import Margins
 
-import interpolation_filter_bind  # type: ignore[import-not-found] # pylint:disable=import-error
 from .interpolation_filter import AbstractFilter
+from ..interpolation_filter_cpp import interpolation_filter_bind
 
 
 @AbstractFilter.register_subclass("bicubic")
