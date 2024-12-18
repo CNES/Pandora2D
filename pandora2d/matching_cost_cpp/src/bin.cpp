@@ -19,37 +19,32 @@
 
 #include "bin.hpp"
 
-
 /**
  * @brief Scott method to compute bin width
  * @param img : the Eigen matrix
- * 
+ *
  */
-double get_bins_width_scott(const Eigen::MatrixXd &img)
-{
-    auto standard_deviation = std_dev(img);
-    if (standard_deviation == 0.)
-        return 1.;
-    
-    double size = static_cast<double>(img.size());
-    return SCOTT_FACTOR * standard_deviation * pow(size,-1./3.);
-}
+double get_bins_width_scott(const Eigen::MatrixXd& img) {
+  auto standard_deviation = std_dev(img);
+  if (standard_deviation == 0.)
+    return 1.;
 
+  double size = static_cast<double>(img.size());
+  return SCOTT_FACTOR * standard_deviation * pow(size, -1. / 3.);
+}
 
 /**
  * Get bin width depending on bin_method
  * @param img : the Eigen matrix
  * @param method : the bin_method, default is scott
- * 
+ *
  * @throws std::invalid_argument if provided method is not known
  */
-double get_bins_width(const Eigen::MatrixXd &img, bin_method method)
-{
-    switch(method)
-    {
-        case bin_method::scott:
-            return get_bins_width_scott(img);
-        default:
-            throw std::invalid_argument( "method to compute bins width does not exist" );
-    }
+double get_bins_width(const Eigen::MatrixXd& img, bin_method method) {
+  switch (method) {
+    case bin_method::scott:
+      return get_bins_width_scott(img);
+    default:
+      throw std::invalid_argument("method to compute bins width does not exist");
+  }
 }

@@ -21,31 +21,28 @@
 This file contains useful function definitions for tests.
 */
 
-
 #include <Eigen/Dense>
 
 /**
  * @brief Check size and element on vector with a groundtruth
- * 
+ *
  * @param data: vector to test
  * @param expected: the groundtruth
  */
 void check_inside_eigen_element(Eigen::VectorXd data, Eigen::VectorXd expected);
 
-
 /**
  * @brief Create normal matrix for test
- * 
+ *
  * @param size: image shape
  * @param mean: image mean
  * @param std: image standard deviation
  */
 Eigen::MatrixXd create_normal_matrix(std::size_t size, float mean, float std);
 
-
 /**
  * @brief Create an image for tests
- * 
+ *
  * @param size: image shape
  * @param mean: image mean
  * @param std: image standard deviation

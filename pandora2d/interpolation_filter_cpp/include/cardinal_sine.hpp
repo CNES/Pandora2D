@@ -38,8 +38,9 @@ cpp.
  *
  * @return Eigen::Index
  */
-Eigen::Index find_or_throw(const double value, const t_Vector &container,
-                           const std::string &message);
+Eigen::Index find_or_throw(const double value,
+                           const t_Vector& container,
+                           const std::string& message);
 
 /**
  * @brief Compute Cardinal Sine of x (with PI).
@@ -51,9 +52,9 @@ double sinc(double x);
 
 /**
  * @brief Contruct a vector of fractional shifts in interval [0,1[ with a step of fractional shift.
- * 
- * @param fractional_shift 
- * @return t_Vector 
+ *
+ * @param fractional_shift
+ * @return t_Vector
  */
 t_Vector fractional_range(double fractional_shift);
 
@@ -72,15 +73,13 @@ t_Vector fractional_range(double fractional_shift);
  * @param fractional_shifts fractional shifts where to compute coefficients.
  * @return t_Matrix (2*filter_size + 1) coeffcients for each fractional shift.
  */
-t_Matrix compute_coefficient_table(int filter_size,
-                                   const t_Vector &fractional_shifts);
+t_Matrix compute_coefficient_table(int filter_size, const t_Vector& fractional_shifts);
 
 /**
  * @brief Cardinal sine filter
  *
  */
-struct CardinalSine : public abstractfilter::AbstractFilter
-{
+struct CardinalSine : public abstractfilter::AbstractFilter {
   /**
    * @brief Construct a new CardinalSine object
    *
@@ -116,9 +115,9 @@ struct CardinalSine : public abstractfilter::AbstractFilter
    */
   t_Vector get_coeffs(const double fractional_shift) override;
 
-private:
-  int m_half_size;              ///< Half filter size
-  t_Vector m_fractional_shifts; ///< Fractional shifts used to compute coefficients
-  t_Matrix m_coeffs;            ///< Pre-computed coefficients
+ private:
+  int m_half_size;               ///< Half filter size
+  t_Vector m_fractional_shifts;  ///< Fractional shifts used to compute coefficients
+  t_Matrix m_coeffs;             ///< Pre-computed coefficients
 };
 #endif

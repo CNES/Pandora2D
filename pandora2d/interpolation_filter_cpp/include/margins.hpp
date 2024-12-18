@@ -31,53 +31,48 @@ This module contains Margins struct and associated operators.
  *
  *
  */
-struct Margins
-{
-    /**
-     * @brief Construct a new Margins object
-     *
-     * @param left_
-     * @param up_
-     * @param right_
-     * @param down_
-     */
-    Margins(int left_, int up_, int right_, int down_)
-        : left(left_), up(up_), right(right_), down(down_) {}
+struct Margins {
+  /**
+   * @brief Construct a new Margins object
+   *
+   * @param left_
+   * @param up_
+   * @param right_
+   * @param down_
+   */
+  Margins(int left_, int up_, int right_, int down_)
+      : left(left_), up(up_), right(right_), down(down_) {}
 
+  int left;   ///< left margins attribute
+  int up;     ///< up margins attribute
+  int right;  ///< right margins attribute
+  int down;   ///< down margins attribute
 
-    int left ; ///< left margins attribute
-    int up ; ///< up margins attribute
-    int right ; ///< right margins attribute
-    int down ; ///< down margins attribute
+  /**
+   * @brief Operator == for Margins
+   *
+   * @param m1 Margins
+   * @param m2 Margins
+   * @return true or false
+   */
+  friend bool operator==(Margins const& m1, Margins const& m2) {
+    return ((m1.left == m2.left) & (m1.up == m2.up) & (m1.right == m2.right) &
+            (m1.down == m2.down));
+  }
 
-    /**
-     * @brief Operator == for Margins
-     * 
-     * @param m1 Margins
-     * @param m2 Margins
-     * @return true or false
-     */
-    friend bool operator==(Margins const &m1, Margins const &m2)
-    {
-        return ((m1.left == m2.left) & (m1.up == m2.up) & (m1.right == m2.right) 
-        & (m1.down == m2.down));
-    }
+  /**
+   * @brief Operator << for margins
+   *
+   * @param output std::ostream &
+   * @param m const Margins &
+   * @return std::ostream&
+   */
+  friend std::ostream& operator<<(std::ostream& output, const Margins& m) {
+    output << "{ " << m.left << " " << m.up << " " << m.right << " " << m.down << " }";
 
-    /**
-     * @brief Operator << for margins
-     * 
-     * @param output std::ostream &
-     * @param m const Margins & 
-     * @return std::ostream& 
-     */
-    friend std::ostream &operator<<(std::ostream &output, const Margins &m)
-    {
-
-        output << "{ " << m.left << " " << m.up << " " << m.right << " " << m.down << " }";
-
-        output << std::endl;
-        return output;
-    }
+    output << std::endl;
+    return output;
+  }
 };
 
 #endif
