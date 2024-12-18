@@ -65,14 +65,6 @@ Eigen::MatrixXd create_normal_matrix(std::size_t size, float mean, float std) {
  */
 Eigen::MatrixXd create_image(std::size_t size, float mean, float std, double nb_bins) {
   auto matrix = create_normal_matrix(size, mean, std);
-  auto h0 = get_bins_width(matrix);
-  auto dynamique = matrix.maxCoeff() - matrix.minCoeff();
-  auto expected_bin = dynamique / h0;
-
-  if (expected_bin >= nb_bins)
-    return matrix;
-
-  auto new_dynamique = std::ceil(nb_bins * h0);
 
   auto check_nb_bins = [](auto& matrix) -> double {
     auto h0 = get_bins_width(matrix);
@@ -80,15 +72,20 @@ Eigen::MatrixXd create_image(std::size_t size, float mean, float std, double nb_
     return dynamique / h0;
   };
 
-  auto elt = 2;
-  while (check_nb_bins(matrix) < nb_bins) {
-    for (auto m = matrix.data(); m < matrix.data() + elt; ++m) {
-      *m = static_cast<double>(mean) - new_dynamique / 2.;
-    }
+  if (check_nb_bins(matrix) >= nb_bins)
+    return matrix;
 
-    for (auto m = matrix.data() + elt; m < matrix.data() + 2 * elt; ++m) {
-      *m = static_cast<double>(mean) + new_dynamique / 2.;
-    }
+  auto h0 = get_bins_width(matrix);
+  auto new_dynamique = std::ceil(nb_bins * h0);
+
+  auto elt = 2;
+  for (auto m = matrix.data(); m < matrix.data() + elt; ++m) {
+    *m = static_cast<double>(mean) - new_dynamique / 2.;
   }
+
+  for (auto m = matrix.data() + elt; m < matrix.data() + 2 * elt; ++m) {
+    *m = static_cast<double>(mean) + new_dynamique / 2.;
+  }
+
   return matrix;
 }
