@@ -10,9 +10,13 @@ repos:
       types: [python]
     - id: pylint
       name: PyLint
-      entry: python -m pylint --rcfile=.pylintrc
+      entry: pylint
       language: system
-      files: \.py$
+      types: [python]
+      require_serial: true
+      args: [
+        "--rcfile=.pylintrc"
+      ]
       stages: [pre-commit]
     - id: mypy
       name: mypy
