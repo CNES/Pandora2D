@@ -24,37 +24,34 @@ This module contains functions associated to bin (width, number).
 #ifndef BIN_HPP
 #define BIN_HPP
 
-#include "operation.hpp"
 #include <Eigen/Dense>
+#include "operation.hpp"
 
-constexpr uint NB_BINS_MAX = 100; ///< Limit of number bins for histogram
-constexpr double SCOTT_FACTOR = 3.491; ///< factor for scott formula
-
+constexpr uint NB_BINS_MAX = 100;       ///< Limit of number bins for histogram
+constexpr double SCOTT_FACTOR = 3.491;  ///< factor for scott formula
 
 /**
  * @brief All methods to compute the bin width
- * 
+ *
  */
-typedef enum bin_method
-{
-    scott, ///< Scott method https://www.stat.cmu.edu/~rnugent/PCMI2016/papers/ScottBandwidth.pdf
+typedef enum bin_method {
+  scott,  ///< Scott method https://www.stat.cmu.edu/~rnugent/PCMI2016/papers/ScottBandwidth.pdf
 } bin_method;
 
 /**
  * @brief Scott method to compute bin width
  * @param img : the Eigen matrix
- * 
+ *
  */
-double get_bins_width_scott(const Eigen::MatrixXd &img);
-
+double get_bins_width_scott(const Eigen::MatrixXd& img);
 
 /**
  * @brief Get bin width depending on bin_method
  * @param img : the Eigen matrix
  * @param method : the bin_method, default is scott
- * 
+ *
  * @throws std::invalid_argument if provided method is not known
  */
-double get_bins_width(const Eigen::MatrixXd &img, bin_method method = bin_method::scott);
+double get_bins_width(const Eigen::MatrixXd& img, bin_method method = bin_method::scott);
 
 #endif

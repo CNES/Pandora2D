@@ -24,31 +24,23 @@ This module contains functions associated to the Bicubic filter class for cpp.
 #include "bicubic.hpp"
 
 // Constructor with no parameter
-Bicubic::Bicubic()
-{
-    m_margins = Margins(1, 1, 2, 2);
+Bicubic::Bicubic() {
+  m_margins = Margins(1, 1, 2, 2);
 }
 
 // Get coefficients
-t_Vector Bicubic::get_coeffs(const double fractional_shift)
-{
+t_Vector Bicubic::get_coeffs(const double fractional_shift) {
+  t_Vector tab_coeffs(m_size);
 
-    t_Vector tab_coeffs(m_size);
+  for (int i = 0; i < m_size; ++i) {
+    double dist = std::abs(-1.0 + i - fractional_shift);
+    if (dist <= 1.0) {
+      tab_coeffs[i] = (((m_alpha + 2.0) * dist - (m_alpha + 3.0)) * dist * dist) + 1.0;
+    } else {
+      tab_coeffs[i] =
+          (((m_alpha * dist - 5.0 * m_alpha) * dist) + 8.0 * m_alpha) * dist - 4.0 * m_alpha;
+    }
+  };
 
-    for (int i = 0; i < m_size; ++i)
-    {
-
-        double dist = std::abs(-1.0 + i - fractional_shift);
-        if (dist <= 1.0)
-        {
-            tab_coeffs[i] = (((m_alpha + 2.0) * dist - (m_alpha + 3.0)) * dist * dist) + 1.0;
-        }
-        else
-        {
-            tab_coeffs[i] = (((m_alpha * dist - 5.0 * m_alpha) * dist) + 8.0 * m_alpha) * dist 
-            - 4.0 * m_alpha;
-        }
-    };
-
-    return tab_coeffs;
+  return tab_coeffs;
 };

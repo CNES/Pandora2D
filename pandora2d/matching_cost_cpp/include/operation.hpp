@@ -29,10 +29,9 @@ This module contains functions, struct and other elements associated to the matc
 /**
  * @brief Standard deviation with Eigen matrix
  * @param m : the Eigen matrix
- * 
+ *
  */
-double std_dev(const Eigen::MatrixXd &m);
-
+double std_dev(const Eigen::MatrixXd& m);
 
 /**
  * @brief Method of centring the histogram
@@ -41,9 +40,8 @@ double std_dev(const Eigen::MatrixXd &m);
  * random_var_d.c#L588
  *
  * @param m : the Eigen matrix
- * 
+ *
  */
-double moment_centre(const Eigen::MatrixXd &m);
+double moment_centre(const Eigen::MatrixXd& m);
 
 #endif
-

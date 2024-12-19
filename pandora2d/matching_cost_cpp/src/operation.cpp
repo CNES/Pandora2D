@@ -19,17 +19,14 @@
 
 #include "operation.hpp"
 
-
 /**
  * @brief Standard deviation with Eigen matrix
  * @param m : the Eigen matrix
- * 
+ *
  */
-double std_dev(const Eigen::MatrixXd &m)
-{
-    return sqrt((m.array() - m.mean()).square().sum() / (m.size()));
+double std_dev(const Eigen::MatrixXd& m) {
+  return sqrt((m.array() - m.mean()).square().sum() / (m.size()));
 }
-
 
 /**
  * @brief Method of centring the histogram
@@ -38,11 +35,10 @@ double std_dev(const Eigen::MatrixXd &m)
  * random_var_d.c#L588
  *
  * @param m : the Eigen matrix
- * 
+ *
  */
-double moment_centre(const Eigen::MatrixXd &m)
-{
-    double moment1 = (m.array().sum()) / (m.size());
-    double moment2 = (m.array().square().sum()) / (m.size());
-    return moment2 - (moment1 * moment1);
+double moment_centre(const Eigen::MatrixXd& m) {
+  double moment1 = (m.array().sum()) / (m.size());
+  double moment2 = (m.array().square().sum()) / (m.size());
+  return moment2 - (moment1 * moment1);
 }

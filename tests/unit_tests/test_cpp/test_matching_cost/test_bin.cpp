@@ -27,35 +27,27 @@ This module contains tests associated to bin for histogram.
 
 #include <Eigen/Dense>
 
+TEST_CASE("get_bins_width_scott method") {
+  Eigen::MatrixXd image(2, 4);
 
-TEST_CASE("get_bins_width_scott method")
-{
-    Eigen::MatrixXd image(2,4);
+  SUBCASE("same cols") {
+    image << 0, 1, 2, 3, 0, 1, 2, 3;
 
-    SUBCASE("same cols")
-    {
-        image << 0, 1, 2, 3,
-                 0, 1, 2, 3;
+    auto bin_width = get_bins_width_scott(image);
+    CHECK(bin_width == doctest::Approx(1.9515283).epsilon(1e-7));
+  }
 
-        auto bin_width = get_bins_width_scott(image);
-        CHECK(bin_width == doctest::Approx(1.9515283).epsilon(1e-7));
-    }
+  SUBCASE("same rows") {
+    image << 0, 0, 0, 0, 2, 2, 2, 2;
 
-    SUBCASE("same rows")
-    {
-        image << 0, 0, 0, 0,
-                 2, 2, 2, 2;
+    auto bin_width = get_bins_width_scott(image);
+    CHECK(bin_width == 1.7455);
+  }
 
-        auto bin_width = get_bins_width_scott(image);
-        CHECK(bin_width == 1.7455);
-    }
+  SUBCASE("null matrix") {
+    image << 0, 0, 0, 0, 0, 0, 0, 0;
 
-    SUBCASE("null matrix")
-    {
-        image << 0, 0, 0, 0,
-                 0, 0, 0, 0;
-
-        auto bin_width = get_bins_width_scott(image);
-        CHECK(bin_width == 1);
-    }
+    auto bin_width = get_bins_width_scott(image);
+    CHECK(bin_width == 1);
+  }
 }

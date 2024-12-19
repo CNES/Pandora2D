@@ -31,40 +31,38 @@ This module contains functions associated to the Bicubic filter class for cpp.
  *
  *
  */
-struct Bicubic : public abstractfilter::AbstractFilter
-{
+struct Bicubic : public abstractfilter::AbstractFilter {
+  /**
+   * @brief Construct a new Bicubic object
+   *
+   */
+  Bicubic();
 
-    /**
-     * @brief Construct a new Bicubic object
-     *
-     */
-    Bicubic();
+  /**
+   * @brief Destroy the Bicubic object
+   *
+   */
+  ~Bicubic() = default;
 
-    /**
-     * @brief Destroy the Bicubic object
-     *
-     */
-    ~Bicubic() = default;
+  /**
+   * @brief Get the coeffs object
+   *
+   * @param fractional_shift positive fractional shift of the subpixel
+   * position to be interpolated
+   * @return t_Vector, an array of interpolator coefficients
+   * whose size depends on the filter margins
+   */
+  t_Vector get_coeffs(const double fractional_shift) override;
 
-    /**
-     * @brief Get the coeffs object
-     *
-     * @param fractional_shift positive fractional shift of the subpixel
-     * position to be interpolated
-     * @return t_Vector, an array of interpolator coefficients
-     * whose size depends on the filter margins
-     */
-    t_Vector get_coeffs(const double fractional_shift) override;
+  /**
+   * @brief Get the alpha attribute
+   *
+   * @return float
+   */
+  float get_alpha() const { return m_alpha; }
 
-    /**
-     * @brief Get the alpha attribute
-     *
-     * @return float
-     */
-    float get_alpha() const { return m_alpha; }
-
-private:
-    float m_alpha = -0.5; ///< alpha coefficient
+ private:
+  float m_alpha = -0.5;  ///< alpha coefficient
 };
 
 #endif

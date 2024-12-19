@@ -22,40 +22,35 @@ This module contains tests associated to the Bicubic filter class for cpp.
 */
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest.h"
 #include "bicubic.hpp"
+#include "doctest.h"
 
 #include <iostream>
 
-TEST_CASE("Test constructor")
-{
-    Bicubic b;
+TEST_CASE("Test constructor") {
+  Bicubic b;
 
-    CHECK(b.get_alpha() == -0.5);
-    CHECK(b.get_size() == 4);
-    CHECK(b.get_margins() == Margins(1, 1, 2, 2));
+  CHECK(b.get_alpha() == -0.5);
+  CHECK(b.get_size() == 4);
+  CHECK(b.get_margins() == Margins(1, 1, 2, 2));
 }
 
-TEST_CASE("Test result of get_coeffs computation")
-{
-    Bicubic b;
-    t_Vector expected_vec(4);
+TEST_CASE("Test result of get_coeffs computation") {
+  Bicubic b;
+  t_Vector expected_vec(4);
 
-    SUBCASE("fractional_shift = 0.0")
-    {
-        expected_vec << 0, 1, 0, 0;
-        CHECK(b.get_coeffs(0.0) == expected_vec);
-    }
+  SUBCASE("fractional_shift = 0.0") {
+    expected_vec << 0, 1, 0, 0;
+    CHECK(b.get_coeffs(0.0) == expected_vec);
+  }
 
-    SUBCASE("fractional_shift = 0.5")
-    {
-        expected_vec << -0.0625, 0.5625, 0.5625, -0.0625;
-        CHECK(b.get_coeffs(0.5) == expected_vec);
-    }
+  SUBCASE("fractional_shift = 0.5") {
+    expected_vec << -0.0625, 0.5625, 0.5625, -0.0625;
+    CHECK(b.get_coeffs(0.5) == expected_vec);
+  }
 
-    SUBCASE("fractional_shift=0.25")
-    {
-        expected_vec << -0.0703125, 0.8671875, 0.2265625, -0.0234375;
-        CHECK(b.get_coeffs(0.25) == expected_vec);
-    }
+  SUBCASE("fractional_shift=0.25") {
+    expected_vec << -0.0703125, 0.8671875, 0.2265625, -0.0234375;
+    CHECK(b.get_coeffs(0.25) == expected_vec);
+  }
 }

@@ -73,6 +73,7 @@ autoapi_options = [
     "show-module-summary",
     "special-members",
 ]
+suppress_warnings = ["ref.python"]
 # Add any paths that contain templates here, relative to this directory.cd
 templates_path = ["_templates"]
 

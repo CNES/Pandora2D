@@ -10,9 +10,13 @@ repos:
       types: [python]
     - id: pylint
       name: PyLint
-      entry: python -m pylint --rcfile=.pylintrc
+      entry: pylint
       language: system
-      files: \.py$
+      types: [python]
+      require_serial: true
+      args: [
+        "--rcfile=.pylintrc"
+      ]
       stages: [pre-commit]
     - id: mypy
       name: mypy
@@ -31,3 +35,9 @@ repos:
     rev: 0.6.1
     hooks:
       - id: nbstripout
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.4
+    hooks:
+    - id: clang-format
+      types_or: [c++, c, cuda]

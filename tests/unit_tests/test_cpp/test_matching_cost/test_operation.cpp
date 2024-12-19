@@ -21,69 +21,60 @@
 This module contains tests associated to the operation functions define on operation.hpp file.
 */
 
-
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 #include "operation.hpp"
 
 #include <Eigen/Dense>
 
-
 /**
  * @brief Standard deviation calculation medicis version
- * The standard deviation is calculated here: 
+ * The standard deviation is calculated here:
  * https://gitlab.cnes.fr/OutilsCommuns/medicis/-/blob/master/SOURCES/sources/QPEC/Library/sources/
  * random_var_d.c#L433
  * The square root part is calculated here:
  * https://gitlab.cnes.fr/OutilsCommuns/medicis/-/blob/master/SOURCES/sources/QPEC/Library/sources/
  * random_var_d.c#L588
- * 
+ *
  * @param m : the Eigen matrix
  */
-double std_dev_medicis(const Eigen::MatrixXd &m)
-{
-    return sqrt(moment_centre(m));
+double std_dev_medicis(const Eigen::MatrixXd& m) {
+  return sqrt(moment_centre(m));
 }
 
+TEST_CASE("standard deviation with null matrix") {
+  Eigen::MatrixXd image(2, 4);
 
-TEST_CASE("standard deviation with null matrix")
-{
-    Eigen::MatrixXd image(2,4);
+  image << 0, 0, 0, 0, 0, 0, 0, 0;
 
-    image << 0, 0, 0, 0,
-             0, 0, 0, 0;
-
-    auto standard_deviation = std_dev(image);
-    CHECK(standard_deviation == 0);
+  auto standard_deviation = std_dev(image);
+  CHECK(standard_deviation == 0);
 }
 
-TEST_CASE("standard deviation with VectorXd")
-{
-    Eigen::VectorXd image(2,4);
+TEST_CASE("standard deviation with VectorXd") {
+  Eigen::VectorXd image(2, 4);
 
-    image << 1, 2, 3;
+  image << 1, 2, 3;
 
-    auto standard_deviation = std_dev(image);
-    CHECK(standard_deviation == 0.5);
+  auto standard_deviation = std_dev(image);
+  CHECK(standard_deviation == 0.5);
 }
 
-TEST_CASE("standard deviation with MatrixXd one line")
-{
-    Eigen::MatrixXd image(1,4);
+TEST_CASE("standard deviation with MatrixXd one line") {
+  Eigen::MatrixXd image(1, 4);
 
-    image << 1, 2, 3, 4;
+  image << 1, 2, 3, 4;
 
-    auto standard_deviation = std_dev(image);
-    CHECK(standard_deviation == doctest::Approx(1.118033989).epsilon(1e-9));
+  auto standard_deviation = std_dev(image);
+  CHECK(standard_deviation == doctest::Approx(1.118033989).epsilon(1e-9));
 }
 
-TEST_CASE("comparison of standard deviation with that of medicis")
-{
-    Eigen::MatrixXd image(1,4);
+TEST_CASE("comparison of standard deviation with that of medicis") {
+  Eigen::MatrixXd image(1, 4);
 
-    image << 1, 2, 3, 4;
+  image << 1, 2, 3, 4;
 
-    auto standard_deviation = std_dev(image);
-    double standard_deviation_medicis = std_dev_medicis(image);
-    CHECK(standard_deviation == standard_deviation_medicis);
+  auto standard_deviation = std_dev(image);
+  double standard_deviation_medicis = std_dev_medicis(image);
+  CHECK(standard_deviation == standard_deviation_medicis);
 }

@@ -29,63 +29,58 @@ This module contains functions associated to the histogram for cpp.
 
 /**
  * @brief Instanciation of Histogram on 2D (two dimension)
- * 
+ *
  */
-class Histogram2D
-{
+class Histogram2D {
+ public:
+  /**
+   * @brief Construct a new Histogram2D object
+   * @param values: on histogram
+   * @param row_hist: Histogram1D
+   * @param col_hist: Histogram1D
+   */
+  Histogram2D(Eigen::MatrixXd& values, Histogram1D row_hist, Histogram1D col_hist);
 
-public:
+  /**
+   * @brief Construct a new Histogram2D object
+   * @param row_hist: Histogram1D
+   * @param col_hist: Histogram1D
+   *
+   */
+  Histogram2D(Histogram1D row_hist, Histogram1D col_hist);
 
-    /**
-     * @brief Construct a new Histogram2D object
-     * @param values: on histogram
-     * @param row_hist: Histogram1D
-     * @param col_hist: Histogram1D
-     */
-    Histogram2D(Eigen::MatrixXd &values, Histogram1D row_hist, Histogram1D col_hist);
+  /**
+   * @brief Destroy the Histogram2D object
+   *
+   */
+  ~Histogram2D() = default;
 
-    /**
-     * @brief Construct a new Histogram2D object
-     * @param row_hist: Histogram1D
-     * @param col_hist: Histogram1D
-     * 
-     */
-    Histogram2D(Histogram1D row_hist, Histogram1D col_hist);
-    
-    /**
-     * @brief Destroy the Histogram2D object
-     * 
-     */
-    ~Histogram2D() = default;
+  /**
+   * @brief Get the Values object
+   *
+   * @return const Eigen::MatrixXd&
+   */
+  const Eigen::MatrixXd& values() const { return m_values; };
 
-    /**
-     * @brief Get the Values object
-     * 
-     * @return const Eigen::MatrixXd& 
-     */
-    const Eigen::MatrixXd& values() const { return m_values; };
+  /**
+   * @brief Set the Values object
+   *
+   * @param values
+   */
+  void set_values(const Eigen::MatrixXd& values) { m_values = values; };
 
-    /**
-     * @brief Set the Values object
-     * 
-     * @param values 
-     */
-    void set_values(const Eigen::MatrixXd& values) { m_values = values; };
-
-
-private:
-    Eigen::MatrixXd m_values;  ///< values on histogram
-    Histogram1D m_row_hist;    ///< row dimension (number of bins, size of bin, low bound)
-    Histogram1D m_col_hist;    ///< col dimension (number of bins, size of bin, low bound)
+ private:
+  Eigen::MatrixXd m_values;  ///< values on histogram
+  Histogram1D m_row_hist;    ///< row dimension (number of bins, size of bin, low bound)
+  Histogram1D m_col_hist;    ///< col dimension (number of bins, size of bin, low bound)
 };
-
 
 /**
  * @brief Compute histogram 2D based on two images
- * 
+ *
  * @param img_l : left image
  * @param img_r : right image
- * @return Histogram2D 
+ * @return Histogram2D
  */
 Histogram2D calculate_histogram2D(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& img_r);
 
