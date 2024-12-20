@@ -4,4 +4,4 @@ test_src = files('conftest.cpp')
 
 subdir('test_interpolation_filter')
 subdir('test_matching_cost')
-
+subdir('test_refinement')
