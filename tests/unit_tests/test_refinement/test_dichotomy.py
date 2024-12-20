@@ -19,8 +19,10 @@
 Test the refinement.dichotomy module.
 """
 
+# Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
+# pylint: disable=too-many-positional-arguments
 
 import logging
 import copy
@@ -141,9 +143,9 @@ class TestCheckConf:
                 {
                     "refinement_method": "dichotomy_python",
                     "iterations": 1,
-                    "filter": {"method": "sinc"},
+                    "filter": {"method": "sinc_python"},
                 },
-                id="sinc",
+                id="sinc_python",
             ),
             pytest.param(
                 {
@@ -157,9 +159,9 @@ class TestCheckConf:
                 {
                     "refinement_method": "dichotomy_cpp",
                     "iterations": 1,
-                    "filter": {"method": "sinc"},
+                    "filter": {"method": "sinc_python"},
                 },
-                id="sinc",
+                id="sinc_python",
             ),
         ],
     )
@@ -183,19 +185,19 @@ class TestCheckConf:
                 {
                     "refinement_method": "dichotomy_python",
                     "iterations": 1,
-                    "filter": {"method": "sinc", "size": 42},
+                    "filter": {"method": "sinc_python", "size": 42},
                 },
                 refinement.dichotomy.DichotomyPython,
-                id="sinc",
+                id="sinc_python",
             ),
             pytest.param(
                 {
                     "refinement_method": "dichotomy_cpp",
                     "iterations": 1,
-                    "filter": {"method": "sinc", "size": 42},
+                    "filter": {"method": "sinc_python", "size": 42},
                 },
                 refinement.dichotomy_cpp.DichotomyCPP,
-                id="sinc",
+                id="sinc_python",
             ),
         ],
     )
@@ -482,8 +484,8 @@ class TestRefinementMethod:
 @pytest.mark.parametrize(
     ["filter_name", "iterations", "expected"],
     [
-        pytest.param("sinc", 1, [0, 0.5], id="sinc - 1 iteration"),
-        pytest.param("sinc", 2, [0, 0.25, 0.5, 0.75], id="sinc - 2 iteration"),
+        pytest.param("sinc_python", 1, [0, 0.5], id="sinc_python - 1 iteration"),
+        pytest.param("sinc_python", 2, [0, 0.25, 0.5, 0.75], id="sinc_python - 2 iteration"),
     ],
 )
 def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expected):
@@ -504,7 +506,7 @@ def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expect
         pytest.param(1, {"method": "bicubic"}, Margins(1, 1, 2, 2)),
         pytest.param(
             1,
-            {"method": "sinc", "size": 7},
+            {"method": "sinc_python", "size": 7},
             Margins(7, 7, 7, 7),
         ),
     ],

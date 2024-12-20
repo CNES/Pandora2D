@@ -19,6 +19,9 @@
 Test the refinement.dichotomy pipeline.
 """
 
+# Make pylint happy with fixtures:
+# pylint: disable=too-many-positional-arguments
+
 from typing import Tuple
 from pathlib import Path
 
@@ -301,112 +304,102 @@ class TestComparisonMedicis:
             pytest.param(
                 "T19KER/r+0.00c+0.50/",
                 1,
-                "sinc",
                 "zncc_dicho_nappe_sinc/gri_zncc_dicho_nappe_sinc_",
                 0.0,
                 0.5,
                 0.0001,
                 0.0001,
-                id="T19KER (Calama, Chile) shifted of 0.5 in columns with sinc, 9 iter and subpix=1",
+                id="T19KER (Calama, Chile) shifted of 0.5 in columns with sinc_python, 9 iter and subpix=1",
             ),
             pytest.param(
                 "T50JML/r+0.00c+0.50/",
                 1,
-                "sinc",
                 "zncc_dicho_nappe_sinc/gri_zncc_dicho_nappe_sinc_",
                 0.0,
                 0.5,
                 0.0,
                 0.0,
-                id="T50JML (Perth, Australia) shifted of 0.5 in columns with sinc, 9 iter and subpix=1",
+                id="T50JML (Perth, Australia) shifted of 0.5 in columns with sinc_python, 9 iter and subpix=1",
             ),
             pytest.param(
                 "T19KER/r+0.00c+0.25/",
                 1,
-                "sinc",
                 "zncc_dicho_nappe_sinc/gri_zncc_dicho_nappe_sinc_",
                 0.0,
                 0.25,
                 0.0,
                 0.0,
-                id="T19KER (Calama, Chile) shifted of 0.25 in columns with sinc, 9 iter and subpix=1",
+                id="T19KER (Calama, Chile) shifted of 0.25 in columns with sinc_python, 9 iter and subpix=1",
             ),
             pytest.param(
                 "T50JML/r+0.00c+0.25/",
                 1,
-                "sinc",
                 "zncc_dicho_nappe_sinc/gri_zncc_dicho_nappe_sinc_",
                 0.0,
                 0.25,
                 0.00001,
                 0.00001,
-                id="T50JML (Perth, Australia) shifted of 0.25 in columns with sinc, 9 iter and subpix=1",
+                id="T50JML (Perth, Australia) shifted of 0.25 in columns with sinc_python, 9 iter and subpix=1",
             ),
             pytest.param(
                 "T19KER/r+0.00c-0.25/",
                 4,
-                "sinc",
                 "zncc_dicho_nappe_surech_sinc/gri_zncc_dicho_nappe_surech_sinc_",
                 0.0,
                 -0.25,
                 0.003,
                 0.01,
-                id="T19KER (Calama, Chile) shifted of -0.25 in columns with sinc, 9 iter and subpix=4",
+                id="T19KER (Calama, Chile) shifted of -0.25 in columns with sinc_python, 9 iter and subpix=4",
             ),
             pytest.param(
                 "T50JML/r+0.00c-0.25/",
                 4,
-                "sinc",
                 "zncc_dicho_nappe_surech_sinc/gri_zncc_dicho_nappe_surech_sinc_",
                 0.0,
                 -0.25,
                 0.004,
                 0.005,
-                id="T50JML (Perth, Australia) shifted of -0.25 in columns with sinc, 9 iter and subpix=4",
+                id="T50JML (Perth, Australia) shifted of -0.25 in columns with sinc_python, 9 iter and subpix=4",
             ),
             pytest.param(
                 "T19KER/r+0.00c+0.50/",
                 4,
-                "sinc",
                 "zncc_dicho_nappe_surech_sinc/gri_zncc_dicho_nappe_surech_sinc_",
                 0.0,
                 0.5,
                 0.003,
                 0.004,
-                id="T19KER (Calama, Chile) shifted of 0.5 in columns with sinc, 9 iter and subpix=4",
+                id="T19KER (Calama, Chile) shifted of 0.5 in columns with sinc_python, 9 iter and subpix=4",
             ),
             pytest.param(
                 "T50JML/r+0.00c+0.50/",
                 4,
-                "sinc",
                 "zncc_dicho_nappe_surech_sinc/gri_zncc_dicho_nappe_surech_sinc_",
                 0.0,
                 0.5,
                 0.003,
                 0.003,
-                id="T50JML (Perth, Australia) shifted of 0.5 in columns with sinc, 9 iter and subpix=4",
+                id="T50JML (Perth, Australia) shifted of 0.5 in columns with sinc_python, 9 iter and subpix=4",
             ),
             pytest.param(
                 "T19KER/r+0.25c+0.25/",
                 4,
-                "sinc",
                 "zncc_dicho_nappe_surech_sinc/gri_zncc_dicho_nappe_surech_sinc_",
                 0.25,
                 0.25,
                 0.01,
                 0.007,
-                id="T19KER (Calama, Chile) shifted of 0.25 in col and in rows with sinc, 9 iter and subpix=4",
+                id="T19KER (Calama, Chile) shifted of 0.25 in col and in rows with sinc_python, 9 iter and subpix=4",
             ),
             pytest.param(
                 "T50JML/r+0.25c+0.25/",
                 4,
-                "sinc",
                 "zncc_dicho_nappe_surech_sinc/gri_zncc_dicho_nappe_surech_sinc_",
                 0.25,
                 0.25,
                 0.004,
                 0.005,
-                id="T50JML (Perth, Australia) shifted of 0.25 in col and in rows with sinc, 9 iter and subpix=4",
+                id="T50JML (Perth, Australia) shifted of 0.25 in col and in rows with sinc_python, 9 iter and subpix=4",
             ),
         ],
     )
@@ -415,7 +408,7 @@ class TestComparisonMedicis:
     ):
         """
         Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
-        with sinc filter.
+        with sinc_python filter.
         """
 
         mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col = (

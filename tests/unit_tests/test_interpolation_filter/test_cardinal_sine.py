@@ -42,7 +42,7 @@ def fractional_shift():
 
 @pytest.fixture()
 def config(size):
-    return {"method": "sinc", "size": size}
+    return {"method": "sinc_python", "size": size}
 
 
 @pytest.fixture()
@@ -54,31 +54,31 @@ def filter_instance(config, fractional_shift):
 
 
 def test_factory(filter_instance):
-    assert isinstance(filter_instance, pandora2d.interpolation_filter.cardinal_sine.CardinalSine)
+    assert isinstance(filter_instance, pandora2d.interpolation_filter.cardinal_sine.CardinalSinePython)
 
 
 class TestCheckConf:
     """Test the check_conf method."""
 
     def test_method_field(self, config):
-        """An exception should be raised if `method` is not `sinc`."""
+        """An exception should be raised if `method` is not `sinc_python`."""
         config["method"] = "invalid_method"
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            pandora2d.interpolation_filter.cardinal_sine.CardinalSine(config)
+            pandora2d.interpolation_filter.cardinal_sine.CardinalSinePython(config)
         assert "invalid_method" in err.value.args[0]
 
     @pytest.mark.parametrize("size", [5, 22])
     def test_out_of_bound_size_field(self, config):
         """An exception should be raised if `size` is not between 6 and 21."""
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            pandora2d.interpolation_filter.cardinal_sine.CardinalSine(config)
+            pandora2d.interpolation_filter.cardinal_sine.CardinalSinePython(config)
         assert "size" in err.value.args[0]
 
     def test_size_is_optional_and_default_value(self):
         """If size is not given into config it should default to 6."""
-        config = {"method": "sinc"}
-        sinc_filter = pandora2d.interpolation_filter.cardinal_sine.CardinalSine(config)
+        config = {"method": "sinc_python"}
+        sinc_filter = pandora2d.interpolation_filter.cardinal_sine.CardinalSinePython(config)
         assert sinc_filter._HALF_SIZE == 6
         assert sinc_filter._SIZE == 13
 
