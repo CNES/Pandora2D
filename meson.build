@@ -26,4 +26,5 @@ install_subdir(
 
 subdir('pandora2d/interpolation_filter_cpp')
 subdir('pandora2d/matching_cost_cpp')
+subdir('pandora2d/refinement_cpp')
 subdir('tests/unit_tests/test_cpp')
