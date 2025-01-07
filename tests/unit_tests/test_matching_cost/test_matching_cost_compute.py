@@ -30,6 +30,7 @@ import numpy as np
 import xarray as xr
 from pytest_mock import MockerFixture
 from rasterio import Affine
+from skimage.io import imsave
 
 import pytest
 from pandora.margins import Margins
@@ -1621,3 +1622,187 @@ class TestDisparityMargins:
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].shape, gt_cv_shape)
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].disp_col, gt_disp_col)
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].disp_row, gt_disp_row)
+
+
+# we want to ignore warnings indicating that our images are “low contrast images”.
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@pytest.mark.parametrize("matching_cost_method", ["mutual_information"])
+class TestMutualInformation:
+    """
+    Test the cost volumes computation with mutual information method
+    """
+
+    @pytest.fixture()
+    def left_image(self, tmp_path):
+        """
+        Create a fake left image (identical to the one used in cpp tests)
+        """
+        image_path = tmp_path / "left_img_mi.png"
+        data = np.array(
+            [
+                [1.0, 2.0, 3.0, 4.0, 5.0],
+                [6.0, 7.0, 8.0, 9.0, 10.0],
+                [11.0, 12.0, 13.0, 14.0, 15.0],
+                [16.0, 17.0, 18.0, 19.0, 20.0],
+                [21.0, 22.0, 23.0, 24.0, 25.0],
+            ],
+            dtype=np.uint8,
+        )
+        imsave(image_path, data)
+
+        return image_path
+
+    @pytest.fixture()
+    def right_image(self, tmp_path):
+        """
+        Create a fake right image (identical to the one used in cpp tests)
+        """
+        image_path = tmp_path / "right_img_mi.png"
+        data = np.array(
+            [
+                [1.0, 2.0, 3.0, 4.0, 2.0],
+                [2.0, 2.0, 2.0, 2.0, 2.0],
+                [4.0, 3.0, 2.0, 1.0, 4.0],
+                [1.0, 3.0, 3.0, 3.0, 1.0],
+                [1.0, 3.0, 2.0, 4.0, 4.0],
+            ],
+            dtype=np.uint8,
+        )
+
+        imsave(image_path, data)
+
+        return image_path
+
+    @pytest.fixture()
+    def row_disparity(self):
+        return {"init": 0, "range": 1}
+
+    @pytest.fixture()
+    def col_disparity(self):
+        return {"init": 0, "range": 2}
+
+    @pytest.mark.parametrize(
+        ["step", "subpix", "point", "expected"],
+        [
+            pytest.param(
+                [1, 1],
+                1,
+                [0, 0],  # [row, col]
+                np.array([[0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.3112781, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0]]),
+                id="Cost surface of top left point",
+            ),
+            pytest.param(
+                [1, 1],
+                1,
+                [2, 2],  # [row, col]
+                np.array(
+                    [
+                        [0.0, 0.2247875, 0.2247875, 0.07278022, 0.0],
+                        [0.0, 0.2247875, 0.1021872, 0.3788788, 0.0],
+                        [0.0, 0.00721462, 0.2247875, 0.00721462, 0.0],
+                    ]
+                ),
+                id="Cost surface of center point",
+            ),
+            pytest.param(
+                [2, 3],
+                1,
+                [1, 1],  # [row, col]
+                np.array(
+                    [
+                        [0.2247875, 0.2247875, 0.07278023, 0.0, 0.0],
+                        [0.2247875, 0.1021872, 0.3788788, 0.0, 0.0],
+                        [0.007214618, 0.2247875, 0.007214618, 0.0, 0.0],
+                    ]
+                ),
+                id="Cost surface with step=[2,3]",
+            ),
+            pytest.param(
+                [1, 1],
+                2,
+                [2, 2],  # [row, col]
+                np.array(
+                    [
+                        [0, 0, 0.2247875, 0.007214618, 0.2247875, 0.3244094, 0.07278023, 0, 0],
+                        [0, 0, 0.07278023, 0.002565287, 0.09109101, 0.1455605, 0.007214618, 0, 0],
+                        [0, 0, 0.2247875, 0.09109101, 0.1021872, 0.09109101, 0.3788788, 0, 0],
+                        [0, 0, 0.1021872, 0.007214618, 0.07278023, 0.09109101, 0.1021872, 0, 0],
+                        [0, 0, 0.007214618, 0.07278023, 0.2247875, 0.1021872, 0.007214618, 0, 0],
+                    ]
+                ),
+                id="Cost surface with subpix=2",
+            ),
+        ],
+    )
+    def test_mutual_information_values(self, input_config, matching_cost_config, matching_cost_object, point, expected):
+        """
+        Test that the cost volumes values are correct
+        """
+
+        cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}}
+
+        img_left, img_right = create_datasets_from_inputs(input_config)
+
+        matching_cost_matcher = matching_cost_object(matching_cost_config)
+
+        matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
+
+        cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
+
+        np.testing.assert_array_almost_equal(
+            cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=7
+        )
+
+    @pytest.mark.parametrize(
+        ["step", "subpix", "point", "roi", "expected"],
+        [
+            pytest.param(
+                [1, 1],
+                1,
+                [2, 2],  # [row, col]
+                {"col": {"first": 2, "last": 2}, "row": {"first": 2, "last": 2}, "margins": [2, 2, 2, 2]},
+                np.array(
+                    [
+                        [0.0, 0.2247875, 0.2247875, 0.07278022, 0.0],
+                        [0.0, 0.2247875, 0.1021872, 0.3788788, 0.0],
+                        [0.0, 0.00721462, 0.2247875, 0.00721462, 0.0],
+                    ]
+                ),
+                id="ROI without step",
+            ),
+            pytest.param(
+                [1, 2],
+                1,
+                [1, 0],  # [row, col]
+                {"col": {"first": 1, "last": 3}, "row": {"first": 1, "last": 3}, "margins": [1, 1, 1, 1]},
+                np.array(
+                    [
+                        [0.0, 0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.22478751, 0.22478751, 0.0727802258],
+                        [0.0, 0.0, 0.22478751, 0.102187171, 0.378878837],
+                    ]
+                ),
+                id="ROI with step = [1,2]",
+            ),
+        ],
+    )
+    def test_mutual_information_values_roi(
+        self, input_config, matching_cost_config, matching_cost_object, point, roi, expected
+    ):
+        """
+        Test that the cost volumes values are correct
+        """
+
+        cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}, "ROI": roi}
+
+        img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
+
+        matching_cost_matcher = matching_cost_object(matching_cost_config)
+
+        matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
+
+        cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
+
+        np.testing.assert_array_almost_equal(
+            cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=7
+        )
