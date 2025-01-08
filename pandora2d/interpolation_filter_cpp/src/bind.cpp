@@ -94,8 +94,19 @@ PYBIND11_MODULE(interpolation_filter_bind, m) {
             :rtype: np.ndarray
             )mydelimiter");
 
-  py::class_<CardinalSine, abstractfilter::AbstractFilter>(m, "CardinalSine")
-      .def(py::init<>())
+  py::class_<CardinalSine, abstractfilter::AbstractFilter>(m, "CardinalSine",
+            R"mydelimiter(
+                                                           R"mydelimiter(
+            )mydelimiter")
+      .def(py::init<const int, const double>(), "half_size"_a = 6, "fractional_shift"_a = 0.25,
+            R"mydelimiter(
+           R"mydelimiter(
+            :type cfg: dict
+            :param fractional_shift: interval between each interpolated point, sometimes referred to as precision.
+                                    Expected value in the range [0,1[.
+            :type fractional_shift: float
+
+            )mydelimiter")
       .def("get_coeffs", &CardinalSine::get_coeffs, "fractional_shift"_a,
            R"mydelimiter(
             Returns the interpolator coefficients to be applied to the resampling area.

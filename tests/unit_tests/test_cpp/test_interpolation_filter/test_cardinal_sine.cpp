@@ -109,6 +109,7 @@ TEST_SUITE("CardinalSine") {
     CHECK(result.cols() == 1);
     CHECK(result.rows() == (1 + 2 * 6));
     CHECK(result.isApprox(expected, 1e-6));
+    CHECK(filter.get_size() == 13);
   }
 
   TEST_CASE("Parmetrized constructor") {

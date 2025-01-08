@@ -293,7 +293,6 @@ class TestComparisonMedicis:
         [
             "img_path",
             "subpix",
-            "filter_method",
             "medicis_method_path",
             "row_shift",
             "col_shift",
@@ -403,6 +402,7 @@ class TestComparisonMedicis:
             ),
         ],
     )
+    @pytest.mark.parametrize("filter_method", ["sinc_python", "sinc"])
     def test_pandora2d_medicis_dichotomy_sinc(
         self, run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift, row_map_threshold, col_map_threshold
     ):
