@@ -30,17 +30,8 @@ This file contains useful function declarations for tests.
 #include <random>
 
 /**
- * Check size and element on vector with a groundtruth
+ * @brief Create a normal matrix object
  */
-void check_inside_eigen_element(Eigen::VectorXd data, Eigen::VectorXd expected) {
-  REQUIRE(data.size() == expected.size());
-  auto d = data.data();
-  auto e = expected.data();
-  for (; e != (expected.data() + expected.size()); ++d, ++e) {
-    CHECK(*d == doctest::Approx(*e).epsilon(1e-16));
-  }
-}
-
 Eigen::MatrixXd create_normal_matrix(std::size_t size, float mean, float std) {
   // random device class instance, source of 'true' randomness for initializing random seed
   std::random_device rd{};

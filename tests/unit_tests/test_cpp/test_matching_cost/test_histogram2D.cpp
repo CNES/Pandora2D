@@ -23,26 +23,12 @@ This module contains tests associated to histogram 2D.
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
+#include "conftest.hpp"
 #include "histogram1D.hpp"
 #include "histogram2D.hpp"
 
 #include <Eigen/Dense>
 #include <iostream>
-
-/**
- * @brief Check size and element on matrix with a groundtruth
- *
- * @param data: matrix to test
- * @param expected: the groundtruth
- */
-static void check_inside_eigen_element(Eigen::MatrixXd data, Eigen::MatrixXd expected) {
-  REQUIRE(data.size() == expected.size());
-  auto d = data.data();
-  auto e = expected.data();
-  for (; e != (expected.data() + expected.size()); ++d, ++e) {
-    CHECK(*d == *e);
-  }
-}
 
 TEST_CASE("Test constructor") {
   Eigen::MatrixXd left(4, 4);
@@ -57,7 +43,7 @@ TEST_CASE("Test constructor") {
 
   SUBCASE("With two histogram1D") {
     Histogram2D hist = Histogram2D(left_hist, right_hist);
-    check_inside_eigen_element(hist.values(), Eigen::MatrixXd::Zero(2, 2));
+    check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), Eigen::MatrixXd::Zero(2, 2));
   }
 
   Eigen::MatrixXd values(2, 2);
@@ -65,7 +51,7 @@ TEST_CASE("Test constructor") {
 
   SUBCASE("With values and two histogram1D") {
     Histogram2D hist = Histogram2D(values, left_hist, right_hist);
-    check_inside_eigen_element(hist.values(), values);
+    check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), values);
   }
 }
 
@@ -82,7 +68,7 @@ TEST_CASE("Test calculate_histogram2D function") {
     expected_values << 8, 4, 0, 4;
 
     Histogram2D hist = calculate_histogram2D(left, right);
-    check_inside_eigen_element(hist.values(), expected_values);
+    check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), expected_values);
   }
 
   SUBCASE("With float matrix") {
@@ -97,6 +83,6 @@ TEST_CASE("Test calculate_histogram2D function") {
     expected_values << 1, 3, 1, 0, 5, 1, 2, 3, 0;
 
     Histogram2D hist = calculate_histogram2D(left, right);
-    check_inside_eigen_element(hist.values(), expected_values);
+    check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), expected_values);
   }
 }

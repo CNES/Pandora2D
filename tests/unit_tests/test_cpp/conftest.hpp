@@ -21,15 +21,26 @@
 This file contains useful function definitions for tests.
 */
 
+#ifndef CONFTEST_HPP
+#define CONFTEST_HPP
+
 #include <Eigen/Dense>
 
 /**
  * @brief Check size and element on vector with a groundtruth
  *
- * @param data: vector to test
+ * @param data: (vector or matrix) to test
  * @param expected: the groundtruth
  */
-void check_inside_eigen_element(Eigen::VectorXd data, Eigen::VectorXd expected);
+template <typename T>
+void check_inside_eigen_element(const T& data, const T& expected) {
+  REQUIRE(data.size() == expected.size());
+  auto d = data.data();
+  auto e = expected.data();
+  for (; e != (expected.data() + expected.size()); ++d, ++e) {
+    CHECK(*d == *e);
+  }
+}
 
 /**
  * @brief Create normal matrix for test
@@ -49,3 +60,5 @@ Eigen::MatrixXd create_normal_matrix(std::size_t size, float mean, float std);
  * @param nb_bins: bins number for image histogram
  */
 Eigen::MatrixXd create_image(std::size_t size, float mean, float std, double nb_bins = 120);
+
+#endif
