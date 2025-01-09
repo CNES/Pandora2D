@@ -213,6 +213,24 @@ TEST_CASE("Test get_index_right method") {
   }
 }
 
+TEST_CASE("Test contains_element method") {
+  Eigen::MatrixXd mat(3, 3);
+  mat << 1.0, 2.0, 3.0, 4.0, 3.0, 6.0, 2.0, 1.0, 0.0;
+
+  SUBCASE("Test if a double is in a matrix") {
+    CHECK(contains_element(mat, 0.0) == true);
+    CHECK(contains_element(mat, 5.0) == false);
+  }
+
+  SUBCASE("Test if a nan is in a matrix") {
+    Eigen::MatrixXd mat_nan(3, 3);
+    mat_nan << 1.0, 2.0, nan("1"), 4.0, 3.0, 6.0, 2.0, 1.0, 0.0;
+
+    CHECK(contains_element(mat, nan("1")) == false);
+    CHECK(contains_element(mat_nan, nan("1")) == true);
+  }
+}
+
 TEST_CASE("Test compute_cost_volumes_cpp method") {
   // Left image
   Eigen::MatrixXd img_left(5, 5);
@@ -261,10 +279,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   Eigen::Vector2i step;
   step << 1, 1;
 
+  // img no data value
+  double no_data = -9999;
+
   SUBCASE("Cost surface of top left point") {
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step);
+                             step, no_data);
 
     Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 0, 0);
 
@@ -283,7 +304,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   SUBCASE("Cost surface of center point") {
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step);
+                             step, no_data);
 
     Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
 
@@ -315,7 +336,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step);
+                             step, no_data);
 
     Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
 
@@ -339,7 +360,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step);
+                             step, no_data);
 
     Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 1, 1);
 
@@ -401,7 +422,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step);
+                             step, no_data);
 
     Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
 
@@ -452,18 +473,128 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     check_inside_eigen_element(cost_surface, cost_surface_gt);
   };
 
+  SUBCASE("Cost surface with subpix=2 and no data values") {
+    // When subpix=2, we have 4 right images
+
+    Eigen::MatrixXd right_2(5, 5);
+    // clang-format off
+    right_2 << 1.5, 2.5, 3.5, 3., -9999., 
+               2., 2., 2., 2., -9999., 
+               3.5, 2.5, 1.5, 2.5, -9999., 
+               2., 3., 3., 2., -9999., 
+               2., 2.5, 3., 4., -9999.;
+    // clang-format on
+
+    Eigen::MatrixXd right_3(5, 5);
+    // clang-format off
+    right_3 << 1.5, 2., 2.5, 3., 2., 
+               3., 2.5, 2., 1.5, 3., 
+               2.5, 3., 2.5, 2., 2.5, 
+               1., 3., 2.5, 3.5, 2.5, 
+               -9999., -9999., -9999., -9999., -9999.;
+    // clang-format on
+
+    Eigen::MatrixXd right_4(5, 5);
+    // clang-format off
+    right_4 << 1.75, 2.25, 2.75, 2.5, -9999., 
+               2.75, 2.25, 1.75, 2.25, -9999., 
+               2.75, 2.75, 2.25, 2.25, -9999., 
+               2., 2.75, 3., 3., -9999., 
+               -9999., -9999., -9999., -9999., -9999.;
+    // clang-format on
+
+    imgs_right.push_back(right_2);
+    imgs_right.push_back(right_3);
+    imgs_right.push_back(right_4);
+
+    // Biggest shape with subpix=2
+    Eigen::Vector4i cv_shape;
+    cv_shape << 5, 5, 5, 9;
+    Eigen::VectorXd cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+
+    // Largest disparity ranges with subpix=2
+    Eigen::VectorXd disp_range_row(5);
+    disp_range_row << -1.0, -0.5, 0.0, 0.5, 1.0;
+    Eigen::VectorXd disp_range_col(9);
+    disp_range_col << -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0;
+
+    // Offset between cv and image first points
+    int offset_cv_img_row = 0;
+    int offset_cv_img_col = 0;
+
+    // Window size
+    int window_size = 3;
+    // [step_row, step_col]
+    Eigen::Vector2i step;
+    step << 1, 1;
+
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, no_data);
+
+    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+
+    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+
+    // clang-format off
+    cost_surface_gt <<
+    // d_col    -2          -1.5         -1                               d_row
+          INIT_VALUE_CV, INIT_VALUE_CV, 0.22478750958935989,              // -1
+        //     -0.5                      0              0.5
+        0.0072146184745174313, 0.22478750958935989, 0.32440939317155548,  // -1
+        //        1                      1.5             2
+        0.072780225783732888,       INIT_VALUE_CV,  INIT_VALUE_CV,        //-1
+
+
+    // d_col   -2           -1.5         -1                               d_row
+        INIT_VALUE_CV, INIT_VALUE_CV, 0.072780225783732666,               // -0.5
+        //  -0.5                          0              0.5
+        0.0025652873671377918, 0.091091007603791629, 0.14556045156746578, // -0.5
+        //   1                            1.5            2
+        0.0072146184745172093,       INIT_VALUE_CV, INIT_VALUE_CV,       // -0.5
+
+
+    // d_col  -2            -1.5         -1                               d_row
+        INIT_VALUE_CV, INIT_VALUE_CV, 0.22478750958935989,                // 0
+        //  -0.5                          0               0.5
+        0.091091007603791851, 0.10218717094933361, 0.091091007603791851,  // 0
+        //  1                             1.5              2
+        0.37887883713522919,         INIT_VALUE_CV,   INIT_VALUE_CV,      // 0
+
+
+    // d_col -2              -1.5        -1                               d_row
+        INIT_VALUE_CV, INIT_VALUE_CV, 0.10218717094933361,                // 0.5
+        //  -0.5                          0               0.5
+        0.0072146184745172093, 0.072780225783732, 0.091091007603791851,   // 0.5
+        //  1                             1.5             2
+        0.10218717094933316,         INIT_VALUE_CV,  INIT_VALUE_CV,       // 0.5
+
+
+    // d_col -2               -1.5        -1                              d_row
+        INIT_VALUE_CV, INIT_VALUE_CV, 0.0072146184745172093,              // 1
+        //  -0.5                          0               0.5
+        0.072780225783732666, 0.22478750958935989, 0.10218717094933316,   // 1
+        //  1                             1.5             2
+        0.0072146184745172093,       INIT_VALUE_CV,  INIT_VALUE_CV;       // 1
+    // clang-format on
+
+    CHECK(cv_values.size() == shape_1d(cv_shape));
+    check_inside_eigen_element(cost_surface, cost_surface_gt);
+  };
+
   SUBCASE("Cost surface with ROI") {
     // Smallest shape with ROI
     cv_shape << 3, 2, 3, 5;
     cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
 
-    // When ROI is used, we have an offset between image and cv first index
+    // When ROI is used, we can have an offset between image and cv first index
+    // to be sure to compute the first point of ROI
     offset_cv_img_row = 2;
     offset_cv_img_col = 3;
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step);
+                             step, no_data);
 
     Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 0, 0);
 
@@ -473,6 +604,36 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     cost_surface_gt << 0.22478750958935989, 0.22478750958935989, 0.072780225783732888, INIT_VALUE_CV, INIT_VALUE_CV, 
                        0.22478750958935989, 0.10218717094933361, 0.37887883713522919, INIT_VALUE_CV, INIT_VALUE_CV, 
                        0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV, INIT_VALUE_CV;
+    // clang-format on
+
+    CHECK(cv_values.size() == shape_1d(cv_shape));
+    check_inside_eigen_element(cost_surface, cost_surface_gt);
+  }
+
+  SUBCASE("Cost surface with ROI and step=[1,2]") {
+    // Smallest shape with ROI
+    cv_shape << 5, 2, 3, 5;
+    cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+
+    // When ROI is used, we can have an offset between image and cv first index
+    // to be sure to compute the first point of ROI
+    offset_cv_img_col = 1;
+
+    step << 1, 2;
+    ;
+
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, no_data);
+
+    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 1, 0);
+
+    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+
+    // clang-format off
+    cost_surface_gt << INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV,
+                       INIT_VALUE_CV, INIT_VALUE_CV, 0.22478750958935989,  0.22478750958935989, 0.072780225783732888, 
+                       INIT_VALUE_CV, INIT_VALUE_CV,  0.22478750958935989,  0.10218717094933361,  0.37887883713522919;
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
