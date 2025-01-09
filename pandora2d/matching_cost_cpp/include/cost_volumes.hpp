@@ -27,14 +27,6 @@ This module contains functions associated to the computation of cost volumes in 
 #define COST_VOLUMES_HPP
 
 /**
- * @brief All methods to compute the cost volumes
- *
- */
-typedef enum cv_method {
-  mutual_information,  ///< Mutual information method
-} cv_method;
-
-/**
  * @brief Get the matching cost window
  *
  * @param img image
@@ -60,6 +52,16 @@ Eigen::MatrixXd get_window(const Eigen::MatrixXd& img,
 int interpolated_right_image_index(int subpix, double disp_row, double disp_col);
 
 /**
+ * @brief Check if en Eigen matrix contains an element given as parameter
+ *
+ * @param matrix Eigen matrix
+ * @param element to check
+ * @return true
+ * @return false
+ */
+bool contains_element(const Eigen::MatrixXd& matrix, double element);
+
+/**
  * @brief Compute the cost values
  *
  * @param left image
@@ -72,15 +74,13 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  * @param offset_cv_img_col col offset between first index of cv and image (ROI case)
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
- * @param method similarity measure (default=mutual_information)
- *
- * @throws std::invalid_argument if provided method is not known
+ * @param no_data no data value in img
  *
  * @return Eigen::VectorXd computed cost values
  */
 void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
                               const std::vector<Eigen::MatrixXd>& right,
-                              Eigen::VectorXd& cv_values,
+                              Eigen::Ref<Eigen::VectorXd> cv_values,
                               const Eigen::Vector4i& cv_shape,
                               const Eigen::VectorXd& disp_range_row,
                               const Eigen::VectorXd& disp_range_col,
@@ -88,6 +88,6 @@ void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
                               int offset_cv_img_col,
                               int window_size,
                               const Eigen::Vector2i& step,
-                              cv_method method = cv_method::mutual_information);
+                              const double no_data);
 
 #endif
