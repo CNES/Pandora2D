@@ -54,7 +54,7 @@ cpp_deps: ## retrieve cpp dependencies
 	@${PANDORA2D_VENV}/bin/meson wrap update-db
 
 .PHONY: install
-install: venv cpp_deps ## install pandora2D (pip editable mode) without plugins
+install: venv ## install pandora2D (pip editable mode) without plugins
 	@test -f ${PANDORA2D_VENV}/bin/pandora2d || . ${PANDORA2D_VENV}/bin/activate; ${PANDORA2D_VENV}/bin/pip install --no-build-isolation --config-settings=editable-verbose=true --editable .[dev,docs,notebook]
 	@test -f .git/hooks/pre-commit || echo "  Install pre-commit hook"
 	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
