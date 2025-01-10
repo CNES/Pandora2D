@@ -2,6 +2,9 @@
 requires = ["meson-python", "pybind11", "setuptools-scm>=8"]
 build-backend = "mesonpy"
 
+[tool.meson-python.args]
+compile = ['-j0']
+
 [tool.setuptools_scm]
 
 [project]

@@ -155,7 +155,7 @@ class TestRefinement:
         run_pipeline(configuration)
 
     @pytest.mark.parametrize("iterations", iteration_list)
-    @pytest.mark.parametrize("filter_method", ["sinc", "bicubic"])
+    @pytest.mark.parametrize("filter_method", ["sinc_python", "bicubic"])
     def test_dichotomy(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
         """Test dichotomy."""
         configuration = {
@@ -167,7 +167,7 @@ class TestRefinement:
         run_pipeline(configuration)
 
     @pytest.mark.parametrize("iterations", iteration_list)
-    @pytest.mark.parametrize("filter_method", ["sinc", "bicubic"])
+    @pytest.mark.parametrize("filter_method", ["sinc_python", "bicubic"])
     def test_dichotomy_with_estimation(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
         """Test dichotomy with estimation."""
         configuration = {

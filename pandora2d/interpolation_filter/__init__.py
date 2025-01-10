@@ -22,4 +22,4 @@ Init file for interpolation filter module
 """
 
 from .interpolation_filter import AbstractFilter
-from . import bicubic, cardinal_sine, bicubic_cpp
+from . import bicubic, cardinal_sine, cardinal_sine_cpp, bicubic_cpp

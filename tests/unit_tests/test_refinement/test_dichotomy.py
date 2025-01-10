@@ -19,8 +19,10 @@
 Test the refinement.dichotomy module.
 """
 
+# Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
+# pylint: disable=too-many-positional-arguments
 
 import logging
 import copy
@@ -115,55 +117,24 @@ class TestCheckConf:
 
     @pytest.mark.parametrize("iterations", [1, 9])
     @pytest.mark.parametrize(
-        "dichotomy_class", [refinement.dichotomy.DichotomyPython, refinement.dichotomy_cpp.DichotomyCPP]
+        "dichotomy_instance_name",
+        ["dichotomy_python_instance", "dichotomy_cpp_instance"],
     )
-    def test_iterations_in_allowed_range(
-        self, iterations, dichotomy_class, dichotomy_python_instance, dichotomy_cpp_instance
-    ):
+    def test_iterations_in_allowed_range(self, request, iterations, dichotomy_instance_name):
         """It should not fail."""
-        if dichotomy_class == "dichotomy_python":
-            assert dichotomy_python_instance.cfg["iterations"] == iterations
-        else:
-            assert dichotomy_cpp_instance.cfg["iterations"] == iterations
+        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+        assert dichotomy_instance.cfg["iterations"] == iterations
 
     @pytest.mark.parametrize(
-        ["config_dict"],
+        ["dichotomy_instance_name", "filter_name"],
         [
-            pytest.param(
-                {
-                    "refinement_method": "dichotomy_python",
-                    "iterations": 1,
-                    "filter": {"method": "bicubic"},
-                },
-                id="bicubic",
-            ),
-            pytest.param(
-                {
-                    "refinement_method": "dichotomy_python",
-                    "iterations": 1,
-                    "filter": {"method": "sinc"},
-                },
-                id="sinc",
-            ),
-            pytest.param(
-                {
-                    "refinement_method": "dichotomy_cpp",
-                    "iterations": 1,
-                    "filter": {"method": "bicubic"},
-                },
-                id="bicubic",
-            ),
-            pytest.param(
-                {
-                    "refinement_method": "dichotomy_cpp",
-                    "iterations": 1,
-                    "filter": {"method": "sinc"},
-                },
-                id="sinc",
-            ),
+            ("dichotomy_python_instance", "bicubic"),
+            ("dichotomy_python_instance", "sinc_python"),
+            ("dichotomy_cpp_instance", "bicubic"),
+            ("dichotomy_cpp_instance", "sinc_python"),
         ],
     )
-    def test_valid_filter_names(self, config_dict, config_dichotomy, dichotomy_python_instance, dichotomy_cpp_instance):
+    def test_valid_filter_names(self, request, config_dichotomy, dichotomy_instance_name):
         """
         Description : Test accepted filter names.
         Data :
@@ -171,10 +142,8 @@ class TestCheckConf:
                * EX_REF_BCO_00
                * EX_REF_SINC_00
         """
-        if config_dict["refinement_method"] == "dichotomy_python":
-            assert dichotomy_python_instance.cfg["filter"] == config_dichotomy["filter"]
-        else:
-            assert dichotomy_cpp_instance.cfg["filter"] == config_dichotomy["filter"]
+        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+        assert dichotomy_instance.cfg["filter"] == config_dichotomy["filter"]
 
     @pytest.mark.parametrize(
         ["config_dict", "dichotomy_class"],
@@ -183,19 +152,19 @@ class TestCheckConf:
                 {
                     "refinement_method": "dichotomy_python",
                     "iterations": 1,
-                    "filter": {"method": "sinc", "size": 42},
+                    "filter": {"method": "sinc_python", "size": 42},
                 },
                 refinement.dichotomy.DichotomyPython,
-                id="sinc",
+                id="sinc_python",
             ),
             pytest.param(
                 {
                     "refinement_method": "dichotomy_cpp",
                     "iterations": 1,
-                    "filter": {"method": "sinc", "size": 42},
+                    "filter": {"method": "sinc_python", "size": 42},
                 },
                 refinement.dichotomy_cpp.DichotomyCPP,
-                id="sinc",
+                id="sinc_python",
             ),
         ],
     )
@@ -243,6 +212,7 @@ class TestCheckConf:
 
     def test_fails_on_unexpected_key(self, config_dichotomy):
         """Should raise an error when an unexpected key is given."""
+        config_dichotomy["refinement_method"] = "dichotomy_python"
         config_dichotomy["unexpected_key"] = "unexpected_value"
 
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError) as err:
@@ -482,8 +452,8 @@ class TestRefinementMethod:
 @pytest.mark.parametrize(
     ["filter_name", "iterations", "expected"],
     [
-        pytest.param("sinc", 1, [0, 0.5], id="sinc - 1 iteration"),
-        pytest.param("sinc", 2, [0, 0.25, 0.5, 0.75], id="sinc - 2 iteration"),
+        pytest.param("sinc_python", 1, [0, 0.5], id="sinc_python - 1 iteration"),
+        pytest.param("sinc_python", 2, [0, 0.25, 0.5, 0.75], id="sinc_python - 2 iteration"),
     ],
 )
 def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expected):
@@ -504,7 +474,7 @@ def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expect
         pytest.param(1, {"method": "bicubic"}, Margins(1, 1, 2, 2)),
         pytest.param(
             1,
-            {"method": "sinc", "size": 7},
+            {"method": "sinc_python", "size": 7},
             Margins(7, 7, 7, 7),
         ),
     ],

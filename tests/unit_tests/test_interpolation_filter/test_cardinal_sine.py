@@ -21,13 +21,19 @@ Test Cardinal sine filter.
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name, protected-access
 
-import json_checker
+import json_checker.core.exceptions
 import numpy as np
 import pytest
 
 from pandora.margins import Margins
 
 import pandora2d.interpolation_filter
+import pandora2d.interpolation_filter_cpp.interpolation_filter_bind
+
+
+@pytest.fixture()
+def method():
+    return "sinc_python"
 
 
 @pytest.fixture()
@@ -41,8 +47,8 @@ def fractional_shift():
 
 
 @pytest.fixture()
-def config(size):
-    return {"method": "sinc", "size": size}
+def config(method, size):
+    return {"method": method, "size": size}
 
 
 @pytest.fixture()
@@ -53,36 +59,87 @@ def filter_instance(config, fractional_shift):
     )  # type: ignore[abstract]
 
 
-def test_factory(filter_instance):
-    assert isinstance(filter_instance, pandora2d.interpolation_filter.cardinal_sine.CardinalSine)
+@pytest.mark.parametrize(
+    ["method", "expected_class"],
+    [
+        pytest.param(
+            "sinc_python",
+            pandora2d.interpolation_filter.cardinal_sine.CardinalSinePython,
+            id="sinc_python",
+        ),
+        pytest.param(
+            "sinc",
+            pandora2d.interpolation_filter.cardinal_sine_cpp.CardinalSine,
+            id="sinc",
+        ),
+    ],
+)
+def test_factory(filter_instance, expected_class):
+    """Returned instance depends on method name."""
+    assert isinstance(filter_instance, expected_class)
 
 
+class TestCppInitBinding:
+    """Test that binding of init arguments are done."""
+
+    def test_no_arguments(self):
+        """Init should have default values and be callable without arguments."""
+        pandora2d.interpolation_filter_cpp.interpolation_filter_bind.CardinalSine()
+
+    def test_only_half_size(self):
+        """Should be able to be called with only half_size argument."""
+        pandora2d.interpolation_filter_cpp.interpolation_filter_bind.CardinalSine(7)
+
+    def test_only_named_half_size(self):
+        """Should be able to be called with only half_size argument."""
+        pandora2d.interpolation_filter_cpp.interpolation_filter_bind.CardinalSine(half_size=7)
+
+    def test_only_named_fractional_shift(self):
+        """Should be able to be called with only half_size argument."""
+        pandora2d.interpolation_filter_cpp.interpolation_filter_bind.CardinalSine(fractional_shift=0.5)
+
+
+@pytest.mark.parametrize(
+    ["filter_class", "method"],
+    [
+        pytest.param(
+            pandora2d.interpolation_filter.cardinal_sine.CardinalSinePython,
+            "sinc_python",
+            id="python",
+        ),
+        pytest.param(
+            pandora2d.interpolation_filter.cardinal_sine_cpp.CardinalSine,
+            "sinc",
+            id="cpp",
+        ),
+    ],
+)
 class TestCheckConf:
     """Test the check_conf method."""
 
-    def test_method_field(self, config):
-        """An exception should be raised if `method` is not `sinc`."""
+    def test_method_field(self, config, filter_class):
+        """An exception should be raised if `method` is not `sinc_python`."""
+        # Can not use `method` fixture because it is already used at class level
         config["method"] = "invalid_method"
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            pandora2d.interpolation_filter.cardinal_sine.CardinalSine(config)
+            filter_class(config)
         assert "invalid_method" in err.value.args[0]
 
     @pytest.mark.parametrize("size", [5, 22])
-    def test_out_of_bound_size_field(self, config):
+    def test_out_of_bound_size_field(self, config, filter_class):
         """An exception should be raised if `size` is not between 6 and 21."""
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            pandora2d.interpolation_filter.cardinal_sine.CardinalSine(config)
+            filter_class(config)
         assert "size" in err.value.args[0]
 
-    def test_size_is_optional_and_default_value(self):
+    def test_size_is_optional_and_default_value(self, config, filter_class):
         """If size is not given into config it should default to 6."""
-        config = {"method": "sinc"}
-        sinc_filter = pandora2d.interpolation_filter.cardinal_sine.CardinalSine(config)
-        assert sinc_filter._HALF_SIZE == 6
+        sinc_filter = filter_class(config)
         assert sinc_filter._SIZE == 13
 
 
+@pytest.mark.parametrize("method", ["sinc_python", "sinc"])
 @pytest.mark.parametrize("fractional_shift", [-0.5, 1, 4])
 def test_raise_error_with_invalid_fractional(config, fractional_shift):
     """Test an exception is raised if not in range [0,1[."""
@@ -96,6 +153,7 @@ def test_raise_error_with_invalid_fractional(config, fractional_shift):
         )  # type: ignore[abstract]
 
 
+@pytest.mark.parametrize("method", ["sinc_python", "sinc"])
 @pytest.mark.parametrize("size", [6, 21])
 def test_margins(filter_instance, size):
     assert filter_instance.margins == Margins(size, size, size, size)
@@ -137,11 +195,11 @@ def test_compute_coefficient_table(reference_implementation, size, subpixel):
     np.testing.assert_array_almost_equal(result, reference_implementation)
 
 
-def test_get_coeffs(filter_instance, size):
+@pytest.mark.parametrize("size", [6])
+@pytest.mark.parametrize("subpixel", [4])
+@pytest.mark.parametrize("method", ["sinc_python", "sinc"])
+def test_get_coeffs(filter_instance, reference_implementation):
     """Test retrieve good coefficients from computed table."""
-    fractional_shifts = np.arange(4) / 4
-    coeffs = pandora2d.interpolation_filter.cardinal_sine.compute_coefficient_table(size, fractional_shifts)
-
-    np.testing.assert_array_equal(filter_instance.get_coeffs(0.25), coeffs[1])
-    np.testing.assert_array_equal(filter_instance.get_coeffs(0.5), coeffs[2])
-    np.testing.assert_array_equal(filter_instance.get_coeffs(0.75), coeffs[3])
+    np.testing.assert_array_almost_equal(filter_instance.get_coeffs(0.25), reference_implementation[1])
+    np.testing.assert_array_almost_equal(filter_instance.get_coeffs(0.5), reference_implementation[2])
+    np.testing.assert_array_almost_equal(filter_instance.get_coeffs(0.75), reference_implementation[3])

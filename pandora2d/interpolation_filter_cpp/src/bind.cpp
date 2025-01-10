@@ -25,19 +25,101 @@ This module contains functions associated to the binding pybind of cpp filter me
 #include <pybind11/pybind11.h>
 
 #include "bicubic.hpp"
+#include "cardinal_sine.hpp"
 
 namespace py = pybind11;
+using namespace pybind11::literals;
 
 PYBIND11_MODULE(interpolation_filter_bind, m) {
   py::class_<abstractfilter::AbstractFilter>(m, "AbstractFilter")
-      .def("get_coeffs", &abstractfilter::AbstractFilter::get_coeffs)
-      .def("apply", &abstractfilter::AbstractFilter::apply)
-      .def("interpolate", &abstractfilter::AbstractFilter::interpolate)
-      .def("get_margins", &abstractfilter::AbstractFilter::get_margins);
+      .def_property_readonly("size", &abstractfilter::AbstractFilter::get_size,
+                             "Return filter's size.")
+      .def("get_coeffs", &abstractfilter::AbstractFilter::get_coeffs, "fractional_shift"_a,
+           R"mydelimiter(
+            Returns the interpolator coefficients to be applied to the resampling area.
+
+            The size of the returned array depends on the filter margins:
+                - For a row shift, returned array size = up_margin + down_margin + 1
+                - For a column shift, returned array size = left_margin + right_margin + 1
+
+            :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
+            :type fractional_shift: float
+            :return: a array of interpolator coefficients whose size depends on the filter margins
+            :rtype: np.ndarray
+            )mydelimiter")
+      .def("apply", &abstractfilter::AbstractFilter::apply, "resampling_area"_a, "row_coeff"_a,
+           "col_coeff"_a,
+           R"mydelimiter(
+            Returns the value of the interpolated position
+
+            :param resampling_area: area on which interpolator coefficients will be applied
+            :type resampling_area: np.ndarray
+            :param row_coeff: interpolator coefficients in rows
+            :type row_coeff: np.ndarray
+            :param col_coeff: interpolator coefficients in columns
+            :type col_coeff: np.ndarray
+            :return: the interpolated value of the position corresponding to col_coeff and row_coeff
+            :rtype: float
+            )mydelimiter")
+      .def("interpolate", &abstractfilter::AbstractFilter::interpolate, "image"_a,
+           "col_positions"_a, "row_positions"_a, "max_fractional_value"_a,
+           R"mydelimiter(
+            Returns the values of the 8 interpolated positions
+
+            :param image: image
+            :type image: np.ndarray
+            :param positions: subpix positions to be interpolated
+            :type positions: Tuple[np.ndarray, np.ndarray]
+            :param max_fractional_value: maximum fractional value used to get coefficients
+            :type max_fractional_value: float
+            :return: the interpolated values of the corresponding subpix positions
+            :rtype: List of float
+            )mydelimiter")
+      .def("get_margins", &abstractfilter::AbstractFilter::get_margins,
+           "Return margins used by the filter.");
 
   py::class_<Bicubic, abstractfilter::AbstractFilter>(m, "Bicubic")
       .def(py::init<>())
-      .def("get_coeffs", &Bicubic::get_coeffs);
+      .def("get_coeffs", &Bicubic::get_coeffs, "fractional_shift"_a,
+           R"mydelimiter(
+            Returns the interpolator coefficients to be applied to the resampling area.
+
+            The size of the returned array depends on the filter margins:
+                - For a row shift, returned array size = up_margin + down_margin + 1
+                - For a column shift, returned array size = left_margin + right_margin + 1
+
+            :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
+            :type fractional_shift: float
+            :return: a array of interpolator coefficients whose size depends on the filter margins
+            :rtype: np.ndarray
+            )mydelimiter");
+
+  py::class_<CardinalSine, abstractfilter::AbstractFilter>(m, "CardinalSine",
+            R"mydelimiter(
+                                                           R"mydelimiter(
+            )mydelimiter")
+      .def(py::init<const int, const double>(), "half_size"_a = 6, "fractional_shift"_a = 0.25,
+            R"mydelimiter(
+           R"mydelimiter(
+            :type cfg: dict
+            :param fractional_shift: interval between each interpolated point, sometimes referred to as precision.
+                                    Expected value in the range [0,1[.
+            :type fractional_shift: float
+
+            )mydelimiter")
+      .def("get_coeffs", &CardinalSine::get_coeffs, "fractional_shift"_a,
+           R"mydelimiter(
+            Returns the interpolator coefficients to be applied to the resampling area.
+
+            The size of the returned array depends on the filter margins:
+                - For a row shift, returned array size = up_margin + down_margin + 1
+                - For a column shift, returned array size = left_margin + right_margin + 1
+
+            :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
+            :type fractional_shift: float
+            :return: a array of interpolator coefficients whose size depends on the filter margins
+            :rtype: np.ndarray
+            )mydelimiter");
 
   py::class_<Margins>(m, "Margins")
       .def_readwrite("up", &Margins::up)

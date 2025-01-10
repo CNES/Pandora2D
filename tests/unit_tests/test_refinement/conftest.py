@@ -20,6 +20,8 @@
 Conftest for dichotomy cpp and python versions module.
 """
 
+# Make pylint happy with fixtures:
+# pylint: disable=too-many-positional-arguments
 
 import numpy as np
 import pytest
@@ -203,14 +205,8 @@ def filter_name():
 
 
 @pytest.fixture()
-def refinement_method_name():
-    return "dichotomy_python"
-
-
-@pytest.fixture()
-def config_dichotomy(iterations, filter_name, refinement_method_name):
+def config_dichotomy(iterations, filter_name):
     return {
-        "refinement_method": refinement_method_name,
         "iterations": iterations,
         "filter": {"method": filter_name},
     }
@@ -218,6 +214,7 @@ def config_dichotomy(iterations, filter_name, refinement_method_name):
 
 @pytest.fixture()
 def dichotomy_python_instance(config_dichotomy):
+    config_dichotomy["refinement_method"] = "dichotomy_python"
     return refinement.dichotomy.DichotomyPython(config_dichotomy)
 
 

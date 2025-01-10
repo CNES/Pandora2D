@@ -29,11 +29,11 @@ from pandora.margins import Margins
 from .interpolation_filter import AbstractFilter
 
 
-@AbstractFilter.register_subclass("sinc")
-class CardinalSine(AbstractFilter):
+@AbstractFilter.register_subclass("sinc_python")
+class CardinalSinePython(AbstractFilter):
     """Implementation of the Normalized Cardinal Sine filter."""
 
-    schema = {"method": "sinc", OptionalKey("size"): And(int, lambda a: 6 <= a <= 21)}
+    schema = {"method": "sinc_python", OptionalKey("size"): And(int, lambda a: 6 <= a <= 21)}
 
     def __init__(self, cfg: Dict, fractional_shift: float = 0.5):
         """
