@@ -115,9 +115,9 @@ class TestSaveDataset:
 
         dataset = xr.Dataset(
             {
-                "row_map": xr.DataArray(row, dims=dims, coords=coords),
-                "col_map": xr.DataArray(col, dims=dims, coords=coords),
-                "correlation_score": xr.DataArray(score, dims=dims, coords=coords),
+                "kill_map": xr.DataArray(row, dims=dims, coords=coords),
+                "power_map": xr.DataArray(col, dims=dims, coords=coords),
+                "super_score": xr.DataArray(score, dims=dims, coords=coords),
             },
             attrs=attributes,
         )
@@ -132,7 +132,7 @@ class TestSaveDataset:
 
     @pytest.mark.parametrize(
         "file_name",
-        ["columns_disparity.tif", "row_disparity.tif", "correlation_score.tif"],
+        ["power_map.tif", "kill_map.tif", "super_score.tif"],
     )
     def test_save_dataset(self, save_dataset, attributes, file_name):
         """

@@ -117,7 +117,7 @@ def configuration(left_path, right_path, correct_pipeline_without_refinement, st
         pytest.param([11, 11], (0, 0), id="Step > image"),  # Disp map corner match ROI corner
     ],
 )
-@pytest.mark.parametrize("output_file", ["columns_disparity.tif", "row_disparity.tif", "correlation_score.tif"])
+@pytest.mark.parametrize("output_file", ["col_map.tif", "row_map.tif", "correlation_score.tif"])
 def test_georeferencement(
     run_pipeline,
     configuration,
@@ -187,7 +187,7 @@ def configuration_with_roi(configuration, roi):
         ),
     ],
 )
-@pytest.mark.parametrize("output_file", ["columns_disparity.tif", "row_disparity.tif", "correlation_score.tif"])
+@pytest.mark.parametrize("output_file", ["col_map.tif", "row_map.tif", "correlation_score.tif"])
 def test_roi_georeferencement(
     run_pipeline,
     configuration_with_roi,
