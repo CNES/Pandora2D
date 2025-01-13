@@ -42,7 +42,8 @@ PYBIND11_MODULE(interpolation_filter_bind, m) {
                 - For a row shift, returned array size = up_margin + down_margin + 1
                 - For a column shift, returned array size = left_margin + right_margin + 1
 
-            :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
+            :param fractional_shift:
+                positive fractional shift of the subpixel position to be interpolated
             :type fractional_shift: float
             :return: a array of interpolator coefficients whose size depends on the filter margins
             :rtype: np.ndarray
@@ -88,22 +89,24 @@ PYBIND11_MODULE(interpolation_filter_bind, m) {
                 - For a row shift, returned array size = up_margin + down_margin + 1
                 - For a column shift, returned array size = left_margin + right_margin + 1
 
-            :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
+            :param fractional_shift:
+                positive fractional shift of the subpixel position to be interpolated.
             :type fractional_shift: float
-            :return: a array of interpolator coefficients whose size depends on the filter margins
+            :return: an array of interpolator coefficients whose size depends on the filter margins
             :rtype: np.ndarray
             )mydelimiter");
 
   py::class_<CardinalSine, abstractfilter::AbstractFilter>(m, "CardinalSine",
-            R"mydelimiter(
+                                                           R"mydelimiter(
                                                            R"mydelimiter(
             )mydelimiter")
       .def(py::init<const int, const double>(), "half_size"_a = 6, "fractional_shift"_a = 0.25,
-            R"mydelimiter(
+           R"mydelimiter(
            R"mydelimiter(
             :type cfg: dict
-            :param fractional_shift: interval between each interpolated point, sometimes referred to as precision.
-                                    Expected value in the range [0,1[.
+            :param fractional_shift:
+                interval between each interpolated point, sometimes referred to as precision.
+                Expected value in the range [0,1[.
             :type fractional_shift: float
 
             )mydelimiter")
@@ -115,7 +118,8 @@ PYBIND11_MODULE(interpolation_filter_bind, m) {
                 - For a row shift, returned array size = up_margin + down_margin + 1
                 - For a column shift, returned array size = left_margin + right_margin + 1
 
-            :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
+            :param fractional_shift:
+                positive fractional shift of the subpixel position to be interpolated.
             :type fractional_shift: float
             :return: a array of interpolator coefficients whose size depends on the filter margins
             :rtype: np.ndarray
