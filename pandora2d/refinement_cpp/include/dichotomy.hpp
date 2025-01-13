@@ -91,19 +91,49 @@ struct Position2D {
  * Structure containing the 4D size of a cost volume
  */
 struct Cost_volume_size {
+  /**
+   * @brief Construct a new Cost_volume_size object
+   *
+   * @param _r : Number of rows on cost_volume element
+   * @param _c : Number of columns on cost_volume element
+   * @param _dr : Number of row disparities
+   * @param _dc : Number of col disparities
+   */
   Cost_volume_size(unsigned int _r, unsigned int _c, unsigned int _dr, unsigned int _dc)
       : nb_row(_r), nb_col(_c), nb_disp_row(_dr), nb_disp_col(_dc) {};
+
+  /**
+   * @brief Construct a new Cost_volume_size object
+   *
+   */
   Cost_volume_size() : Cost_volume_size(0u, 0u, 0u, 0u) {};
+
+  /**
+   * @brief Construct a new Cost_volume_size object
+   *
+   * @param cv_size : Vector with cost_volume size informations
+   */
   Cost_volume_size(Eigen::VectorXd& cv_size)
       : Cost_volume_size(cv_size[0], cv_size[1], cv_size[2], cv_size[3]) {};
 
+  /**
+   * @brief Get the cost volume size : nb_row * nb_col * nb_disp_row * nb_disp_col
+   *
+   * @return unsigned int
+   */
   unsigned int size() { return nb_row * nb_col * nb_disp_row * nb_disp_col; };
+
+  /**
+   * @brief Get the disparity number : nb_disp_row * nb_disp_col
+   *
+   * @return unsigned int
+   */
   unsigned int nb_disps() { return nb_disp_row * nb_disp_col; };
 
-  unsigned int nb_row;       //< Number of rows on cost_volume element
-  unsigned int nb_col;       //< Number of columns on cost_volume element
-  unsigned int nb_disp_row;  //< Number of row disparities
-  unsigned int nb_disp_col;  //< Number of col disparities
+  unsigned int nb_row;       ///< Number of rows on cost_volume element
+  unsigned int nb_col;       ///< Number of columns on cost_volume element
+  unsigned int nb_disp_row;  ///< Number of row disparities
+  unsigned int nb_disp_col;  ///< Number of col disparities
 };
 
 /**
