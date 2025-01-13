@@ -178,7 +178,7 @@ void search_new_best_point(const Eigen::MatrixXd& cost_surface,
  * @param score_map : 1D score data of size nb_row * nb_col
  * @param criteria_map : 1D criteria data of size nb_row * nb_col
  * @param cv_size : cost volume size information
- * @param subpixel :sub-sampling of cost_volume
+ * @param subpixel : sub-sampling of cost_volume
  * @param nb_iterations : number of iterations of the dichotomy
  * @param filter : interpolation filter
  * @param method_matching_cost : max or min
