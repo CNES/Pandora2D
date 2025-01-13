@@ -26,7 +26,6 @@ Test common
 """
 
 # pylint: disable=redefined-outer-name
-import os
 
 import numpy as np
 import pytest
@@ -40,6 +39,11 @@ from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d import matching_cost, disparity, refinement
 from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.constants import Criteria
+
+
+@pytest.fixture(scope="class")
+def save_folder(tmp_path_factory):
+    return tmp_path_factory.mktemp("save_folder")
 
 
 class TestRegistry:
@@ -81,10 +85,21 @@ class TestRegistry:
         assert registry.get("unregistered") is Example
 
 
+@pytest.mark.parametrize(
+    "attributes",
+    [
+        {
+            "crs": "EPSG:32632",
+            "transform": Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03),
+        },
+        {"crs": None, "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)},
+    ],
+    scope="class",
+)
 class TestSaveDataset:
     """Test save_dataset method"""
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def create_test_dataset(self, attributes):
         """
         Create a test dataset
@@ -98,54 +113,41 @@ class TestSaveDataset:
 
         dims = ("row", "col")
 
-        dataarray_row = xr.DataArray(row, dims=dims, coords=coords)
-        dataarray_col = xr.DataArray(col, dims=dims, coords=coords)
-        dataarray_score = xr.DataArray(score, dims=dims, coords=coords)
-
         dataset = xr.Dataset(
-            {"row_map": dataarray_row, "col_map": dataarray_col, "correlation_score": dataarray_score},
+            {
+                "row_map": xr.DataArray(row, dims=dims, coords=coords),
+                "col_map": xr.DataArray(col, dims=dims, coords=coords),
+                "correlation_score": xr.DataArray(score, dims=dims, coords=coords),
+            },
             attrs=attributes,
         )
 
         return dataset
 
+    @pytest.fixture(scope="class")
+    def save_dataset(self, save_folder, class_scoped_correct_input_cfg, create_test_dataset):
+        output_dir = save_folder / "output_dataset"
+        common.save_dataset(create_test_dataset, class_scoped_correct_input_cfg, str(output_dir))
+        return output_dir
+
     @pytest.mark.parametrize(
-        "attributes",
-        [
-            {"crs": "EPSG:32632", "transform": Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03)},
-            {"crs": None, "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)},
-        ],
+        "file_name",
+        ["columns_disparity.tif", "row_disparity.tif", "correlation_score.tif"],
     )
-    def test_save_dataset(self, create_test_dataset, correct_input_cfg, attributes):
+    def test_save_dataset(self, save_dataset, attributes, file_name):
         """
         Function for testing the dataset_save function
         """
 
-        common.save_dataset(create_test_dataset, correct_input_cfg, "./tests/res_test/")
-        assert os.path.exists("./tests/res_test/")
+        file = save_dataset / file_name
 
-        # Test columns disparity map
-        assert os.path.exists("./tests/res_test/columns_disparity.tif")
-        columns_disparity = rasterio.open("./tests/res_test/columns_disparity.tif")
-        assert columns_disparity.crs == attributes["crs"]
-        assert columns_disparity.transform == attributes["transform"]
+        assert save_dataset.exists()
+        assert file.exists()
 
-        # Test row disparity map
-        assert os.path.exists("./tests/res_test/row_disparity.tif")
-        row_disparity = rasterio.open("./tests/res_test/row_disparity.tif")
-        assert row_disparity.crs == attributes["crs"]
-        assert row_disparity.transform == attributes["transform"]
+        data = rasterio.open(file)
 
-        # Test correlation score map
-        assert os.path.exists("./tests/res_test/correlation_score.tif")
-        correlation_score = rasterio.open("./tests/res_test/correlation_score.tif")
-        assert correlation_score.crs == attributes["crs"]
-        assert correlation_score.transform == attributes["transform"]
-
-        os.remove("./tests/res_test/columns_disparity.tif")
-        os.remove("./tests/res_test/row_disparity.tif")
-        os.remove("./tests/res_test/correlation_score.tif")
-        os.rmdir("./tests/res_test")
+        assert data.crs == attributes["crs"]
+        assert data.transform == attributes["transform"]
 
 
 def create_dataset_coords(data_row, data_col, data_score, row, col):

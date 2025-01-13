@@ -98,27 +98,27 @@ def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
     report.requirement = re.findall(pattern, str(item.function.__doc__))
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def classic_config():
     return "./tests/data/json_conf_files/classic_cfg.json"
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def left_img_path():
     return "./tests/data/images/cones/monoband/left.png"
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def right_img_path():
     return "./tests/data/images/cones/monoband/right.png"
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def left_rgb_path():
     return "./tests/data/images/cones/multibands/left.tif"
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def right_rgb_path():
     return "./tests/data/images/cones/multibands/right.tif"
 

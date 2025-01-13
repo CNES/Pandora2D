@@ -67,8 +67,7 @@ def make_empty_image(tmp_path):
     return make
 
 
-@pytest.fixture
-def correct_input_cfg(left_img_path, right_img_path):
+def _correct_input_cfg(left_img_path, right_img_path):
     return {
         "input": {
             "left": {
@@ -80,6 +79,16 @@ def correct_input_cfg(left_img_path, right_img_path):
             "row_disparity": {"init": 1, "range": 2},
         }
     }
+
+
+@pytest.fixture(scope="function")
+def correct_input_cfg(left_img_path, right_img_path):
+    return _correct_input_cfg(left_img_path, right_img_path)
+
+
+@pytest.fixture(scope="class")
+def class_scoped_correct_input_cfg(left_img_path, right_img_path):
+    return _correct_input_cfg(left_img_path, right_img_path)
 
 
 @pytest.fixture
