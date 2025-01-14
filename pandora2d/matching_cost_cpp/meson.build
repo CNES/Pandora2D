@@ -1,6 +1,6 @@
 matching_cost_includes = include_directories('include')
 matching_cost_src = files('src/histogram1D.cpp', 'src/histogram2D.cpp', 'src/operation.cpp', 'src/bin.cpp', 
-                            'src/mutual_information.cpp')
+                            'src/mutual_information.cpp', 'src/cost_volumes.cpp')
 
 py.extension_module(
     'matching_cost_cpp',

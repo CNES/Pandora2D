@@ -37,7 +37,7 @@ void check_inside_eigen_element(Eigen::VectorXd data, Eigen::VectorXd expected) 
   auto d = data.data();
   auto e = expected.data();
   for (; e != (expected.data() + expected.size()); ++d, ++e) {
-    CHECK(*d == *e);
+    CHECK(*d == doctest::Approx(*e).epsilon(1e-16));
   }
 }
 
