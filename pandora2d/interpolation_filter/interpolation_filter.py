@@ -41,6 +41,7 @@ class AbstractFilter(ABC):
     _interpolation_filter_method = None
     margins = NullMargins()
     _SIZE = 4
+    cpp_instance = None
 
     def __new__(cls, cfg: dict | None = None, **kwargs):
         """

@@ -26,6 +26,7 @@ import xarray as xr
 from json_checker import And
 
 from ..interpolation_filter import AbstractFilter
+from ..refinement_cpp import refinement_bind
 from . import refinement
 
 
@@ -108,8 +109,119 @@ class Dichotomy(refinement.AbstractRefinement):
             "are being returned."
         )
 
-        col_map = disp_map["col"].data
-        row_map = disp_map["row"].data
-        cost_values = cost_volumes["cost_volumes"].data
+        # Initial disparity maps
+        row_map = disp_map["row_map"]
+        col_map = disp_map["col_map"]
+
+        # Get score map
+        cost_values, invalid_disparity_map_mask = create_cost_values_map(cost_volumes, disp_map)
+
+        # Get fake criteria_map
+        # TO BE REMOVE WHEN CRITERIA MAP WILL BE FINISHED
+        criteria_map = create_criteria_map(cost_volumes, disp_map, img_left, invalid_disparity_map_mask)
+
+        # Convert disparity maps to np.array to optimise performance
+        # Transforming disparity maps into index maps
+        row_map = (row_map.to_numpy() - cost_volumes.disp_row.values[0]).astype(np.float64)
+        col_map = (col_map.to_numpy() - cost_volumes.disp_col.values[0]).astype(np.float64)
+
+        refinement_bind.compute_dichotomy(
+            cost_volumes.cost_volumes.data.ravel().astype(np.float64),
+            col_map.ravel(),
+            row_map.ravel(),
+            cost_values.ravel().astype(np.float64),
+            criteria_map.ravel(),
+            refinement_bind.Cost_volume_size(cost_volumes.cost_volumes.shape),
+            cost_volumes.attrs["subpixel"],
+            self.cfg["iterations"],
+            self.filter.cpp_instance,
+            cost_volumes.attrs["type_measure"],
+        )
+        # Inverse transforming index maps into disparity maps
+        col_map += cost_volumes.disp_col.values[0]
+        row_map += cost_volumes.disp_row.values[0]
+
+        # Log about precision
+        subpixel_to_iteration = cost_volumes.attrs["subpixel"].bit_length() - 1
+        precision = 1 / 2 ** max(self.cfg["iterations"], subpixel_to_iteration)
+        logging.info("Dichotomy precision reached: %s", precision)
 
         return col_map, row_map, cost_values
+
+
+def create_cost_values_map(cost_volumes: xr.Dataset, disp_map: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Return the map with best matching score
+
+    :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
+    :type cost_volumes: xarray.Dataset
+    :param disp_map: pixel disparity maps
+    :type disp_map: xarray.Dataset
+    :return: the cost_value map and the invalid_disparity_map
+    :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
+    """
+    # Initial disparity maps
+    row_map = disp_map["row_map"]
+    col_map = disp_map["col_map"]
+
+    # With invalid data in disparity maps, there is no corresponding data in cost volume, so we temporarily
+    # replace them by an existing value to permits the extraction, then we put NaNs at corresponding coordinates
+    # in values dataset.
+    invalid_disparity = disp_map.attrs["invalid_disp"]
+    invalid_row_disparity_map_mask: np.ndarray = (
+        row_map.isnull().data if np.isnan(invalid_disparity) else row_map.isin(invalid_disparity).data
+    )
+    invalid_col_disparity_map_mask: np.ndarray = (
+        col_map.isnull().data if np.isnan(invalid_disparity) else col_map.isin(invalid_disparity).data
+    )
+    cost_values = cost_volumes.cost_volumes.sel(
+        disp_row=row_map.where(~invalid_row_disparity_map_mask, cost_volumes.coords["disp_row"][0]),
+        disp_col=col_map.where(~invalid_col_disparity_map_mask, cost_volumes.coords["disp_col"][0]),
+    ).data
+    # Values are NaN if either row or column disparities are invalid
+    invalid_disparity_map_mask = invalid_row_disparity_map_mask | invalid_col_disparity_map_mask
+    cost_values[invalid_disparity_map_mask] = np.nan
+
+    return cost_values, invalid_disparity_map_mask
+
+
+def create_criteria_map(
+    cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, invalid_disparity_map_mask: np.ndarray
+) -> np.ndarray:
+    """
+    Return the map with PEAK_ON EDGE and invalid disparity
+
+    TO BE REMOVE WHEN CRITERIA MAP WILL BE FINISHED
+
+    :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
+    :type cost_volumes: xarray.Dataset
+    :param disp_map: pixel disparity maps
+    :type disp_map: xarray.Dataset
+    :param img_left: left image dataset
+    :type img_left: xarray.Dataset
+    :return: the crriteria map
+    :rtype: np.ndarray
+    """
+
+    # Initial disparity maps
+    row_map = disp_map["row_map"]
+    col_map = disp_map["col_map"]
+
+    # Select correct rows and columns in case of a step different from 1.
+    row_cv = cost_volumes.row.values
+    col_cv = cost_volumes.col.values
+    # Column's min, max disparities
+    disp_min_col = img_left["col_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
+    disp_max_col = img_left["col_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
+    # Row's min, max disparities
+    disp_min_row = img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
+    disp_max_row = img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
+    # Create a fake criteria_map with PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE & INVALID_DISPARITY
+    criteria_map = np.full(row_map.shape, 0.0, dtype=np.float64)
+    criteria_map[row_map == disp_min_row] = 1.0
+    criteria_map[row_map == disp_max_row] = 1.0
+    criteria_map[col_map == disp_min_col] = 1.0
+    criteria_map[col_map == disp_max_col] = 1.0
+    criteria_map[invalid_disparity_map_mask] = 1.0
+
+    return criteria_map
