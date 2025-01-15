@@ -220,5 +220,5 @@ def dichotomy_python_instance(config_dichotomy):
 
 @pytest.fixture()
 def dichotomy_cpp_instance(config_dichotomy):
-    config_dichotomy["refinement_method"] = "dichotomy_cpp"
-    return refinement.dichotomy_cpp.DichotomyCPP(config_dichotomy)
+    config_dichotomy["refinement_method"] = "dichotomy"
+    return refinement.dichotomy_cpp.Dichotomy(config_dichotomy)

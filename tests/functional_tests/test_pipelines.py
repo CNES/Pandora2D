@@ -19,13 +19,11 @@
 """
 Run pandora2d configurations from end to end.
 """
-import glob
 
 # pylint: disable=redefined-outer-name
+# pylint: disable=too-many-positional-arguments
 
 import json
-import os
-import re
 from copy import deepcopy
 from typing import Dict
 
@@ -251,7 +249,7 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
         ),
         pytest.param(
             {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
-            "correct_pipeline_with_dichotomy",
+            "correct_pipeline_with_dichotomy_python",
             id="Pipeline with disparity grids and dichotomy",
         ),
     ],

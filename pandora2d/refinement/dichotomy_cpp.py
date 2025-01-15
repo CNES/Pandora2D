@@ -29,13 +29,13 @@ from ..interpolation_filter import AbstractFilter
 from . import refinement
 
 
-@refinement.AbstractRefinement.register_subclass("dichotomy_cpp")
-class DichotomyCPP(refinement.AbstractRefinement):
+@refinement.AbstractRefinement.register_subclass("dichotomy")
+class Dichotomy(refinement.AbstractRefinement):
     """Subpixel refinement method by dichotomy (cpp version)."""
 
     NB_MAX_ITER = 9
     schema = {
-        "refinement_method": And(str, lambda x: x in ["dichotomy_cpp"]),
+        "refinement_method": And(str, lambda x: x in ["dichotomy"]),
         "iterations": And(int, lambda it: it > 0),
         "filter": And(dict, lambda method: method["method"] in AbstractFilter.interpolation_filter_methods_avail),
     }

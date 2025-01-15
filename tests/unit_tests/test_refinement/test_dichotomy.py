@@ -50,7 +50,7 @@ def test_factory(dichotomy_python_instance, dichotomy_cpp_instance):
     assert isinstance(dichotomy_python_instance, refinement.dichotomy.DichotomyPython)
     assert isinstance(dichotomy_python_instance, refinement.AbstractRefinement)
 
-    assert isinstance(dichotomy_cpp_instance, refinement.dichotomy_cpp.DichotomyCPP)
+    assert isinstance(dichotomy_cpp_instance, refinement.dichotomy_cpp.Dichotomy)
     assert isinstance(dichotomy_cpp_instance, refinement.AbstractRefinement)
 
 
@@ -64,7 +64,7 @@ class TestCheckConf:
         ["wrong_refinement_method_name", "dichotomy_class"],
         [
             pytest.param("invalid_name", refinement.dichotomy.DichotomyPython),
-            pytest.param("invalid_name", refinement.dichotomy_cpp.DichotomyCPP),
+            pytest.param("invalid_name", refinement.dichotomy_cpp.Dichotomy),
         ],
     )
     def test_method_field(self, config_dichotomy, wrong_refinement_method_name, dichotomy_class):
@@ -81,7 +81,7 @@ class TestCheckConf:
         "dichotomy_class, dichotomy_class_str",
         [
             (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
         ],
     )
     def test_iterations_below_minimum(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
@@ -97,7 +97,7 @@ class TestCheckConf:
         "dichotomy_class, dichotomy_class_str",
         [
             (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
         ],
     )
     def test_iterations_above_maximum(self, config_dichotomy, caplog, dichotomy_class, dichotomy_class_str):
@@ -159,11 +159,11 @@ class TestCheckConf:
             ),
             pytest.param(
                 {
-                    "refinement_method": "dichotomy_cpp",
+                    "refinement_method": "dichotomy",
                     "iterations": 1,
                     "filter": {"method": "sinc_python", "size": 42},
                 },
-                refinement.dichotomy_cpp.DichotomyCPP,
+                refinement.dichotomy_cpp.Dichotomy,
                 id="sinc_python",
             ),
         ],
@@ -179,7 +179,7 @@ class TestCheckConf:
         ["dichotomy_class", "dichotomy_class_str"],
         [
             pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            pytest.param(refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
         ],
     )
     def test_faild_with_invalid_filter_name(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
@@ -194,7 +194,7 @@ class TestCheckConf:
         "dichotomy_class, dichotomy_class_str",
         [
             (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.DichotomyCPP, "dichotomy_cpp"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
         ],
     )
     def test_fails_on_missing_keys(self, config_dichotomy, missing, dichotomy_class, dichotomy_class_str):
@@ -465,7 +465,7 @@ def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expect
     ["refinement_method", "dichotomy_class"],
     [
         pytest.param("dichotomy_python", refinement.dichotomy.DichotomyPython),
-        pytest.param("dichotomy_cpp", refinement.dichotomy_cpp.DichotomyCPP),
+        pytest.param("dichotomy", refinement.dichotomy_cpp.Dichotomy),
     ],
 )
 @pytest.mark.parametrize(
