@@ -227,12 +227,12 @@ def random_generator(random_seed):
 def run_pipeline(tmp_path):
     """Fixture that returns a function to run a pipeline and which returns the output directory path."""
 
-    def run(configuration, output_dir="output"):
+    def run(configuration):
         config_path = tmp_path / "config.json"
         with config_path.open("w", encoding="utf-8") as file_:
             json.dump(configuration, file_, indent=2)
 
-        pandora2d.main(str(config_path), str(tmp_path / output_dir), verbose=False)
+        pandora2d.main(config_path, verbose=False)
         return tmp_path
 
     return run

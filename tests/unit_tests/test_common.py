@@ -391,6 +391,7 @@ def test_disparity_map_output_georef(correct_pipeline, correct_input_cfg):
     del correct_pipeline["pipeline"]["refinement"]
 
     correct_input_cfg.update(correct_pipeline)
+    correct_input_cfg.update({"output": {"path": "tatoo"}})
 
     checked_cfg = check_conf(correct_input_cfg, pandora2d_machine)
 

@@ -68,6 +68,7 @@ def make_cfg_for_dichotomy(
                 "filter": {"method": filter_method},
             },
         },
+        "output": {"path": "home"},
     }
 
     return user_cfg

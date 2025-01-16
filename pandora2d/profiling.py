@@ -287,7 +287,7 @@ def generate_figure(
     return fig
 
 
-def generate_summary(path_output: str, expert_mode_cfg: dict):
+def generate_summary(path_output: os.PathLike, expert_mode_cfg: dict):
     """
     Generate graphs referencing memory management and time for each step.
 
