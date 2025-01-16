@@ -281,6 +281,10 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         grid_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
         grid_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
 
+        if margins is not None:
+            grid_min_col -= margins.left
+            grid_max_col += margins.right
+
         # Adapt Pandora matching cost configuration
         img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
 
