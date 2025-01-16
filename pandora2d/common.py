@@ -22,6 +22,8 @@
 """
 This module contains functions allowing to save the results and the configuration of Pandora pipeline.
 """
+from pathlib import Path
+
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable=useless-import-alias
 
@@ -33,7 +35,6 @@ try:
 except ImportError:
     from xarray import Coordinate as Coordinates
 
-import os
 from typing import Dict, Union, Tuple, List, Generic, TypeVar, Callable, Type
 import xarray as xr
 import numpy as np
@@ -41,7 +42,7 @@ from numpy.typing import NDArray
 
 from rasterio import Affine
 
-from pandora.common import mkdir_p, write_data_array
+from pandora.common import write_data_array
 from pandora2d.img_tools import remove_roi_margins
 from pandora2d.constants import Criteria
 
@@ -119,31 +120,15 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     if dataset.attrs["transform"] is not None:
         adjust_georeferencement(dataset, cfg)
     # create output dir
-    mkdir_p(output)
-
-    # save disp map for row
-    write_data_array(
-        dataset["row_map"],
-        os.path.join(output, "row_disparity.tif"),
-        crs=dataset.attrs["crs"],
-        transform=dataset.attrs["transform"],
-    )
-
-    # save disp map for columns
-    write_data_array(
-        dataset["col_map"],
-        os.path.join(output, "columns_disparity.tif"),
-        crs=dataset.attrs["crs"],
-        transform=dataset.attrs["transform"],
-    )
-
-    # save correlation score
-    write_data_array(
-        dataset["correlation_score"],
-        os.path.join(output, "correlation_score.tif"),
-        crs=dataset.attrs["crs"],
-        transform=dataset.attrs["transform"],
-    )
+    output = Path(output)
+    output.mkdir(exist_ok=True)
+    for name, data in dataset.items():
+        write_data_array(
+            data,
+            str((output / str(name)).with_suffix(".tif")),
+            crs=dataset.attrs["crs"],
+            transform=dataset.attrs["transform"],
+        )
 
 
 def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:

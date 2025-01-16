@@ -271,9 +271,9 @@ def test_disparity_grids(run_pipeline, make_input_cfg, pipeline, request):
 
     run_dir = run_pipeline(configuration)
 
-    with rasterio.open(run_dir / "output" / "row_disparity.tif") as src:
+    with rasterio.open(run_dir / "output" / "row_map.tif") as src:
         row_map = src.read(1)
-    with rasterio.open(run_dir / "output" / "columns_disparity.tif") as src:
+    with rasterio.open(run_dir / "output" / "col_map.tif") as src:
         col_map = src.read(1)
 
     non_nan_row_map = ~np.isnan(row_map)

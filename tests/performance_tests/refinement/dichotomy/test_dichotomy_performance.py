@@ -83,9 +83,9 @@ class TestComparisonMedicis:
         run_dir = run_pipeline(cfg_dichotomy)
 
         # Get pandora2d disparity maps
-        with rasterio.open(run_dir / "output" / "row_disparity.tif") as src:
+        with rasterio.open(run_dir / "output" / "row_map.tif") as src:
             row_map_pandora2d = src.read(1)
-        with rasterio.open(run_dir / "output" / "columns_disparity.tif") as src:
+        with rasterio.open(run_dir / "output" / "col_map.tif") as src:
             col_map_pandora2d = src.read(1)
 
         # Get medicis disparity maps
