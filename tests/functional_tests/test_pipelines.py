@@ -250,7 +250,12 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
         pytest.param(
             {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
             "correct_pipeline_with_dichotomy_python",
-            id="Pipeline with disparity grids and dichotomy",
+            id="Pipeline with disparity grids and dichotomy python",
+        ),
+        pytest.param(
+            {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
+            "correct_pipeline_with_dichotomy_cpp",
+            id="Pipeline with disparity grids and dichotomy cpp",
         ),
     ],
     indirect=["make_input_cfg"],

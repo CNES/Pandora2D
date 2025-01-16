@@ -22,6 +22,7 @@ Test used resources during execution of a configuration.
 """
 
 # pylint: disable=redefined-outer-name
+# pylint: disable=too-many-positional-arguments
 
 import numpy as np
 import pytest
@@ -111,13 +112,13 @@ class TestRefinement:
         }
 
     @pytest.fixture()
-    def dichotomy_pipeline(self, matching_cost_method, subpix, iterations, filter_method):
+    def dichotomy_pipeline(self, matching_cost_method, subpix, iterations, dicho_method, filter_method):
         """Pipeline for a dichotomy refinement."""
         return {
             "matching_cost": {"matching_cost_method": matching_cost_method, "subpix": subpix},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {
-                "refinement_method": "dichotomy_python",
+                "refinement_method": dicho_method,
                 "iterations": iterations,
                 "filter": {"method": filter_method},
             },
@@ -155,7 +156,15 @@ class TestRefinement:
         run_pipeline(configuration)
 
     @pytest.mark.parametrize("iterations", iteration_list)
-    @pytest.mark.parametrize("filter_method", ["sinc_python", "bicubic"])
+    @pytest.mark.parametrize(
+        ("dicho_method", "filter_method"),
+        [
+            ("dichotomy_python", "bicubic_python"),
+            ("dichotomy_python", "sinc_python"),
+            ("dichotomy", "bicubic"),
+            ("dichotomy", "sinc"),
+        ],
+    )
     def test_dichotomy(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
         """Test dichotomy."""
         configuration = {
@@ -167,7 +176,15 @@ class TestRefinement:
         run_pipeline(configuration)
 
     @pytest.mark.parametrize("iterations", iteration_list)
-    @pytest.mark.parametrize("filter_method", ["sinc_python", "bicubic"])
+    @pytest.mark.parametrize(
+        ("dicho_method", "filter_method"),
+        [
+            ("dichotomy_python", "bicubic_python"),
+            ("dichotomy_python", "sinc_python"),
+            ("dichotomy", "bicubic"),
+            ("dichotomy", "sinc"),
+        ],
+    )
     def test_dichotomy_with_estimation(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
         """Test dichotomy with estimation."""
         configuration = {
