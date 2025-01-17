@@ -122,7 +122,7 @@ TEST_SUITE("CardinalSine") {
   TEST_CASE("Out of bound fractional_shift") {
     auto filter = CardinalSine(6, 0.25);
 
-    CHECK_THROWS_WITH_AS(filter.get_coeffs(0.9), "Unknown fractional shift.",
+    CHECK_THROWS_WITH_AS(filter.get_coeffs(0.9), "Unknown fractional shift: 0.900000",
                          std::invalid_argument);
   }
 }
