@@ -26,5 +26,8 @@
         "iterations": 2,
         "filter": { "method": "bicubic"}
       }
-    }
+    },
+  "output": {
+    "path": "a_dichotomy_pipeline_output"
   }
+}

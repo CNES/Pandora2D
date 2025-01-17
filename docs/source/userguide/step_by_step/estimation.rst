@@ -68,14 +68,15 @@ Configuration and parameters
 
 **Example**
 
-.. sourcecode:: text
+.. code:: json
+    :name: Estimation example
 
     {
-        "input" :
+        "input":
         {
-            ...
+            // ...
         },
-        "pipeline" :
+        "pipeline":
         {
             "estimation":
             {
@@ -84,7 +85,11 @@ Configuration and parameters
                 "range_row": 5,
                 "sample_factor": 20
             }
-            ...
+            // ...
+        },
+        "output":
+        {
+            // ...
         }
     }
 

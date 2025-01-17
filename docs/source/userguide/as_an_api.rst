@@ -47,7 +47,10 @@ Pandora2D provides a full python API which can be used to compute disparity maps
             "refinement" : {
                 "refinement_method" : "optical_flow"
             }
-        }
+        },
+        "output": {
+            "path": "as_an_api_output"
+        },
     }
 
     # read images

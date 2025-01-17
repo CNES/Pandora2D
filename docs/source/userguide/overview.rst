@@ -74,6 +74,10 @@ Pandora2D works with JSON formatted data with the following nested structures.
         "pipeline" :
         {
             // pipeline content
+        },
+        "output":
+        {
+            // output content
         }
     }
 
@@ -118,11 +122,14 @@ Example
         "refinement": {
           "refinement_method": "optical_flow"
         }
-      }
+      },
+      "output": {
+          "path": "overview_example_output"
+      },
     }
 
 3. Run Pandora2D
 
 .. code-block:: bash
 
-    pandora2d ./config.json output/
+    pandora2d ./config.json

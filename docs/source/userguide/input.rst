@@ -131,9 +131,13 @@ Examples
             "row_disparity": {"init": 0, "range": 3}
         }
         ,
-        "pipeline" :
+        "pipeline":
         {
             // pipeline content
+        },
+        "output":
+        {
+            // output content
         }
     }
 
@@ -161,5 +165,9 @@ Examples
         "pipeline" :
         {
             // pipeline content
+        },
+        "output":
+        {
+            // output content
         }
     }
