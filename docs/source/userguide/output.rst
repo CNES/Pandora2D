@@ -8,7 +8,7 @@ Pandora2D will store several data in the output folder.
 Saved images
 ************
 
-- *row_disparity.tif*, *columns_disparity.tif* : disparity maps for row and columns.
+- *row_map.tif*, *col_map.tif* : disparity maps for row and columns.
 - *correlation_score.tif* : correlation score map.
 
 .. warning::
