@@ -31,7 +31,7 @@ from PIL import Image
 pytestmark = pytest.mark.monitor_test
 
 subpix_list = [1, 2, 4]
-matching_cost_methods = ["zncc", "sad", "ssd"]
+matching_cost_methods = ["zncc", "sad", "ssd", "mutual_information"]
 iteration_list = [1, 4, 9]
 
 
