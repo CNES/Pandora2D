@@ -71,7 +71,17 @@ def right_image(tmp_path, squared_image_size):
 
 
 @pytest.fixture()
-def input_config(left_image, right_image):
+def col_disparity():
+    return {"init": 1, "range": 1}
+
+
+@pytest.fixture()
+def row_disparity():
+    return {"init": 1, "range": 2}
+
+
+@pytest.fixture()
+def input_config(left_image, right_image, col_disparity, row_disparity):
     return {
         "left": {
             "img": left_image,
@@ -81,8 +91,8 @@ def input_config(left_image, right_image):
             "img": right_image,
             "nodata": -9999,
         },
-        "col_disparity": {"init": 1, "range": 1},
-        "row_disparity": {"init": 1, "range": 2},
+        "col_disparity": col_disparity,
+        "row_disparity": row_disparity,
     }
 
 
@@ -97,8 +107,13 @@ def window_size():
 
 
 @pytest.fixture()
-def matching_cost_config(step, matching_cost_method, window_size):
-    return {"matching_cost_method": matching_cost_method, "window_size": window_size, "step": step}
+def subpix():
+    return 1
+
+
+@pytest.fixture()
+def matching_cost_config(step, matching_cost_method, window_size, subpix):
+    return {"matching_cost_method": matching_cost_method, "window_size": window_size, "step": step, "subpix": subpix}
 
 
 @pytest.fixture()

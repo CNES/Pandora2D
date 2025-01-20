@@ -76,6 +76,22 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
 };
 
 /**
+ * @brief Check if en Eigen matrix contains an element given as parameter
+ *
+ * @param matrix Eigen matrix
+ * @param element to check
+ * @return true
+ * @return false
+ */
+bool contains_element(const Eigen::MatrixXd& matrix, double element) {
+  if (std::isnan(element)) {
+    return (matrix.array().isNaN()).any();
+  } else {
+    return (matrix.array() == element).any();
+  }
+}
+
+/**
  * @brief Compute the cost values
  *
  * @param left image
@@ -88,7 +104,7 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  * @param offset_cv_img_col col offset between first index of cv and image (ROI case)
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
- * @param method similarity measure (default=mutual_information)
+ * @param no_data no data value in img
  *
  * @throws std::invalid_argument if provided method is not known
  *
@@ -96,7 +112,7 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  */
 void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
                               const std::vector<Eigen::MatrixXd>& right,
-                              Eigen::VectorXd& cv_values,
+                              Eigen::Ref<Eigen::VectorXd> cv_values,
                               const Eigen::Vector4i& cv_shape,
                               const Eigen::VectorXd& disp_range_row,
                               const Eigen::VectorXd& disp_range_col,
@@ -104,7 +120,7 @@ void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
                               int offset_cv_img_col,
                               int window_size,
                               const Eigen::Vector2i& step,
-                              cv_method method) {
+                              const double no_data) {
   int nb_rows_cv = cv_shape[0];
   int nb_cols_cv = cv_shape[1];
   int nb_d_rows_cv = cv_shape[2];
@@ -115,17 +131,23 @@ void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
 
   int subpix = sqrt(right.size());
 
+  // ind_cv corresponds to:
+  // row * nb_d_cols_cv * nb_d_rows_cv * nb_cols_cv + col * nb_d_cols_cv * nb_d_rows_cv
+  // Computation to be changed when criteria will be used in mutual information
+  int ind_cv = 0;
+
   for (int row = 0; row < nb_rows_cv; ++row) {
     for (int col = 0; col < nb_cols_cv; ++col)
 
     {
       // Window computation for left image for point (row,col)
-      // définir les window left et right au début
       window_left = get_window(left, window_size, offset_cv_img_row + row * step[0],
                                offset_cv_img_col + col * step[1]);
 
+      auto left_has_no_data = contains_element(window_left, no_data);
+
       for (int d_row = 0; d_row < nb_d_rows_cv; ++d_row) {
-        for (int d_col = 0; d_col < nb_d_cols_cv; ++d_col) {
+        for (int d_col = 0; d_col < nb_d_cols_cv; ++d_col, ind_cv++) {
           int index_right =
               interpolated_right_image_index(subpix, disp_range_row[d_row], disp_range_col[d_col]);
 
@@ -135,22 +157,16 @@ void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
                          offset_cv_img_row + row * step[0] + floor(disp_range_row[d_row]),
                          offset_cv_img_col + col * step[1] + floor(disp_range_col[d_col]));
 
-          // To compute the similarity value, the left and right windows must have the same size.
-          if (window_right.size() != window_left.size()) {
+          // To compute the similarity value, the left and right windows must have the same
+          // size.
+          if ((window_right.size() != window_left.size())) {
             continue;
           }
-          // Choice of similarity measure
-          switch (method) {
-            case cv_method::mutual_information:
-
-              cv_values[d_col + d_row * nb_d_cols_cv + col * nb_d_cols_cv * nb_d_rows_cv +
-                        row * nb_d_cols_cv * nb_d_rows_cv * nb_cols_cv] =
-                  calculate_mutual_information(window_left, window_right);
-              break;
-
-            default:
-              throw std::invalid_argument("method to compute cost volumes does not exist");
+          // To be replaced with a condition on criteria map
+          if (contains_element(window_right, no_data) or left_has_no_data) {
+            continue;
           }
+          cv_values[ind_cv] = calculate_mutual_information(window_left, window_right);
         }
       }
     }

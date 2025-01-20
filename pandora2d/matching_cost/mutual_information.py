@@ -32,8 +32,11 @@ from pandora import matching_cost as pandora_matching_cost
 from pandora.margins import Margins
 from pandora.margins.descriptors import HalfWindowMargins
 
+from pandora2d.img_tools import shift_subpix_img_2d
 from pandora2d.matching_cost.registry import MatchingCostRegistry
 from .base import BaseMatchingCost
+
+from ..matching_cost_cpp import matching_cost_bind
 
 
 @MatchingCostRegistry.add("mutual_information")
@@ -187,5 +190,36 @@ class MutualInformation(BaseMatchingCost):
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
+
+        imgs_right_dataset = shift_subpix_img_2d(img_right, self.grid_4d.attrs["subpixel"])
+
+        imgs_right = [right["im"].values for right in imgs_right_dataset]
+        cv_values = self.grid_4d["cost_volumes"].data.ravel().astype(np.float64)
+        cv_shape = self.grid_4d["cost_volumes"].shape
+        disp_range_row = self.grid_4d.disp_row.data
+        disp_range_col = self.grid_4d.disp_col.data
+        offset_cv_img_row = self.grid_4d.row.data[0] - img_left.row.data[0]
+        offset_cv_img_col = self.grid_4d.col.data[0] - img_left.col.data[0]
+        window_size = self.grid_4d.attrs["window_size"]
+        step = self.grid_4d.attrs["step"]
+        no_data = self.grid_4d.attrs["no_data_img"]
+
+        # Call compute_cost_volumes_cpp
+        matching_cost_bind.compute_cost_volumes_cpp(
+            img_left["im"].data,
+            imgs_right,
+            cv_values,
+            cv_shape,
+            disp_range_row,
+            disp_range_col,
+            offset_cv_img_row,
+            offset_cv_img_col,
+            window_size,
+            step,
+            no_data,
+        )
+
+        cv_values_reshaped = cv_values.reshape(self.grid_4d["cost_volumes"].shape)
+        self.grid_4d["cost_volumes"] = (("row", "col", "disp_row", "disp_col"), cv_values_reshaped)
 
         return self.grid_4d
