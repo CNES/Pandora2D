@@ -58,9 +58,9 @@ class TestComparisonMedicis:
         output_path = Path(cfg_dichotomy["output"]["path"])
 
         # Get pandora2d disparity maps
-        with rasterio.open(output_path / "row_map.tif") as src:
+        with rasterio.open(output_path / "disparity_map" / "row_map.tif") as src:
             row_map_pandora2d = src.read(1)
-        with rasterio.open(output_path / "col_map.tif") as src:
+        with rasterio.open(output_path / "disparity_map" / "col_map.tif") as src:
             col_map_pandora2d = src.read(1)
 
         # Get medicis disparity maps
