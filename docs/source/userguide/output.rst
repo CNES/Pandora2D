@@ -49,6 +49,21 @@ file.
         }
     }
 
+The configuration given in this example will result in the following tree structure:
+
+.. code::
+    :name: Output tree structure
+
+    output
+    └── path
+        ├── config.json
+        └── disparity_map
+            ├── col_map.tif
+            ├── correlation_score.tif
+            ├── report.json
+            └── row_map.tif
+
+
 Saved images
 ************
 
