@@ -103,6 +103,11 @@ It’s an iterative process that will, at each iteration:
 
 Available filters are described in :ref:`interpolation_filters`.
 
+.. note::
+    Two dichotomy implementations are available in Pandora2d: one in C++ and one in Python. 
+    By default, the C++ dichotomy is used when using the “dichotomy” refinement method. 
+    To use the Python version, enter “dichotomy_python” as the refinement method in the configuration file. 
+ 
 
 Configuration and parameters
 ----------------------------
@@ -215,7 +220,7 @@ Configuration and parameters
                       - Refinement method
                       - string
                       -
-                      - "dichotomy_python"
+                      - "dichotomy", "dichotomy_python"
                       - Yes
                     * - *iterations*
                       - Number of iterations
@@ -233,7 +238,7 @@ Configuration and parameters
                       - {"method": "bicubic"}
                       - Yes
 
-                Configuration example with dichotomy : 
+                Configuration example with dichotomy c++ : 
 
                 .. code:: json
 
@@ -249,6 +254,28 @@ Configuration and parameters
                             {
                               "refinement_method": "dichotomy",
                               "filter": {"method": "bicubic"},
+                              "iterations" : 7
+                            },
+                            // ...
+                        }
+                    }
+                
+                Configuration example with dichotomy python : 
+
+                .. code:: json
+
+                    {
+                        "input" :
+                        {
+                            // input content
+                        },
+                        "pipeline" :
+                        {
+                            // ...
+                            "refinement":
+                            {
+                              "refinement_method": "dichotomy_python",
+                              "filter": {"method": "bicubic_python"},
                               "iterations" : 7
                             },
                             // ...
@@ -272,7 +299,7 @@ Configuration and parameters
                       - Refinement method
                       - string
                       -
-                      - "dichotomy"
+                      - "dichotomy", "dichotomy_python"
                       - Yes
                     * - *iterations*
                       - Number of iterations
@@ -294,7 +321,7 @@ Configuration and parameters
                         | }
                       - Yes
 
-                Configuration example with dichotomy : 
+                Configuration example with dichotomy c++ : 
 
                 .. code:: json
 
@@ -311,6 +338,31 @@ Configuration and parameters
                               "refinement_method": "dichotomy",
                               "filter": {
                                 "method": "sinc",
+                                "size": 9
+                              },
+                              "iterations" : 7
+                            },
+                            // ...
+                        }
+                    }
+
+                Configuration example with dichotomy python : 
+
+                .. code:: json
+
+                    {
+                        "input" :
+                        {
+                            // input content
+                        },
+                        "pipeline" :
+                        {
+                            // ...
+                            "refinement":
+                            {
+                              "refinement_method": "dichotomy_python",
+                              "filter": {
+                                "method": "sinc_python",
                                 "size": 9
                               },
                               "iterations" : 7
