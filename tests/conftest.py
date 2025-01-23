@@ -99,28 +99,33 @@ def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
 
 
 @pytest.fixture(scope="session")
-def classic_config():
-    return "./tests/data/json_conf_files/classic_cfg.json"
+def classic_config(root_dir):
+    return str(root_dir / "tests/data/json_conf_files/classic_cfg.json")
 
 
 @pytest.fixture(scope="session")
-def left_img_path():
-    return "./tests/data/images/cones/monoband/left.png"
+def root_dir(request):
+    return request.session.path
 
 
 @pytest.fixture(scope="session")
-def right_img_path():
-    return "./tests/data/images/cones/monoband/right.png"
+def left_img_path(root_dir):
+    return str(root_dir / "tests/data/images/cones/monoband/left.png")
 
 
 @pytest.fixture(scope="session")
-def left_rgb_path():
-    return "./tests/data/images/cones/multibands/left.tif"
+def right_img_path(root_dir):
+    return str(root_dir / "tests/data/images/cones/monoband/right.png")
 
 
 @pytest.fixture(scope="session")
-def right_rgb_path():
-    return "./tests/data/images/cones/multibands/right.tif"
+def left_rgb_path(root_dir):
+    return str(root_dir / "tests/data/images/cones/multibands/left.tif")
+
+
+@pytest.fixture(scope="session")
+def right_rgb_path(root_dir):
+    return str(root_dir / "tests/data/images/cones/multibands/right.tif")
 
 
 @pytest.fixture

@@ -1,11 +1,11 @@
 {
   "input": {
     "left": {
-      "img": "./maricopa/left.tif",
+      "img": "../images/maricopa/left.tif",
       "nodata": -9999
     },
     "right": {
-      "img": "./maricopa/right.tif",
+      "img": "../images/maricopa/right.tif",
       "nodata": -9999
     }
   },

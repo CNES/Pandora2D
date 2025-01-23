@@ -24,9 +24,11 @@
 """
 Test common
 """
-import json
 
 # pylint: disable=redefined-outer-name
+
+import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -139,6 +141,23 @@ class TestSaveConfig:
 
         with existing_file.open() as fd:
             assert json.load(fd)
+
+
+@pytest.mark.parametrize(
+    ["relative_to", "path_string", "expected"],
+    [
+        pytest.param("/tmp", "/home/user/out", Path("/home/user/out"), id="absolute"),
+        pytest.param("/tnt", "./re/lative", Path("/tnt/re/lative"), id="relative"),
+        pytest.param(Path("/tnt"), "./re/lative", Path("/tnt/re/lative"), id="relative with Path"),
+        pytest.param("/a/tnt", "../re/lative", Path("/a/re/lative"), id="relative go up"),
+        pytest.param("/a/tnt", "~/work", Path.home() / "work", id="expand user"),
+    ],
+)
+def test_string_to_path(relative_to, path_string, expected):
+    """Check string_to_path behavior."""
+    result = common.string_to_path(path_string, relative_to)
+
+    assert result == expected
 
 
 @pytest.mark.parametrize(
@@ -736,3 +755,76 @@ class TestSetOutOfDisparity:
         assert np.all(expected_above_max == value)
         assert np.all(expected_zeros_on_odd_columns == init_value)
         assert np.all(expected_zeros_on_even_columns == init_value)
+
+
+@pytest.mark.parametrize(
+    ["col_disparity", "expected_col_disparity", "row_disparity", "expected_row_disparity"],
+    [
+        pytest.param(
+            "../disp/col.tif",
+            "/home/disp/col.tif",
+            "../disp/row.tif",
+            "/home/disp/row.tif",
+            id="relative disparity grid path",
+        ),
+        pytest.param(
+            2,
+            2,
+            0,
+            0,
+            id="disparity value",
+        ),
+    ],
+)
+def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_disparity, expected_row_disparity):
+    """Test all paths are converted in the resulting configuration."""
+    config_path = Path("/home/dir/config.json")
+    config = {
+        "input": {
+            "left": {
+                "img": "./data/left.tif",
+            },
+            "right": {
+                "img": "./right.tif",
+            },
+            "col_disparity": {
+                "init": col_disparity,
+                "range": 3,
+            },
+            "row_disparity": {
+                "init": row_disparity,
+                "range": 4,
+            },
+        },
+        "pipeline": {},
+        "output": {
+            "path": "../out/example",
+        },
+    }
+
+    expected = {
+        "input": {
+            "left": {
+                "img": "/home/dir/data/left.tif",
+            },
+            "right": {
+                "img": "/home/dir/right.tif",
+            },
+            "col_disparity": {
+                "init": expected_col_disparity,
+                "range": 3,
+            },
+            "row_disparity": {
+                "init": expected_row_disparity,
+                "range": 4,
+            },
+        },
+        "pipeline": {},
+        "output": {
+            "path": "/home/out/example",
+        },
+    }
+
+    result = common.resolve_path_in_config(config, config_path)
+
+    assert result == expected

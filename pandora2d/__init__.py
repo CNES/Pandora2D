@@ -31,6 +31,7 @@ from pandora import read_config_file, setup_logging, import_plugin
 
 from pandora2d import common
 from pandora2d.check_configuration import check_conf, check_datasets
+from pandora2d.common import string_to_path, resolve_path_in_config
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.profiling import generate_summary, expert_mode_config
@@ -87,8 +88,11 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     # Import pandora plugins
     import_plugin()
 
+    cfg_path = Path(cfg_path)
+
     # read the user input's configuration
     user_cfg = read_config_file(cfg_path)
+    user_cfg = resolve_path_in_config(user_cfg, cfg_path)
 
     pandora2d_machine = Pandora2DMachine()
 
@@ -118,7 +122,6 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     # run pandora 2D and store disp maps in a dataset
     dataset_disp_maps, completed_cfg = run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
 
-    path_output = Path(user_cfg["output"]["path"])
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):
         common.save_disparity_maps(dataset_disp_maps, completed_cfg)
@@ -130,4 +133,5 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
 
     # Profiling results
     if "expert_mode" in completed_cfg:
+        path_output = Path(user_cfg["output"]["path"])
         generate_summary(path_output, completed_cfg["expert_mode"]["profiling"])
