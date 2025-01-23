@@ -131,7 +131,7 @@ class TestComparisonMedicis:
         return shift_path / medicis_method_path
 
     @pytest.fixture()
-    def cfg_dichotomy(self, shift_path, subpix, filter_method):
+    def cfg_dichotomy(self, shift_path, subpix, dicho_method, filter_method):
         """
         Make user configuration for dichotomy loop
         """
@@ -153,14 +153,21 @@ class TestComparisonMedicis:
                 },  # we use spline_order=3 to get better results when subpix is different from 1
                 "disparity": {"disparity_method": "wta", "invalid_disparity": np.nan},
                 "refinement": {
-                    "refinement_method": "dichotomy_python",
+                    "refinement_method": dicho_method,
                     "iterations": 9,
                     "filter": {"method": filter_method},
                 },
             },
         }
 
-    @pytest.mark.parametrize("filter_method", ["bicubic", "bicubic_python"])
+    @pytest.mark.parametrize(
+        ("dicho_method", "filter_method"),
+        [
+            ("dichotomy_python", "bicubic"),
+            ("dichotomy_python", "bicubic_python"),
+            ("dichotomy", "bicubic"),
+        ],
+    )
     @pytest.mark.parametrize(
         [
             "img_path",
@@ -402,7 +409,14 @@ class TestComparisonMedicis:
             ),
         ],
     )
-    @pytest.mark.parametrize("filter_method", ["sinc_python", "sinc"])
+    @pytest.mark.parametrize(
+        ("dicho_method", "filter_method"),
+        [
+            ("dichotomy_python", "sinc"),
+            ("dichotomy_python", "sinc_python"),
+            ("dichotomy", "sinc"),
+        ],
+    )
     def test_pandora2d_medicis_dichotomy_sinc(
         self, run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift, row_map_threshold, col_map_threshold
     ):

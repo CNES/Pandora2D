@@ -76,14 +76,14 @@ TEST_CASE("Test get_window method") {
     Eigen::MatrixXd window_gt(1, 1);
     window_gt << 8.0;
     Eigen::MatrixXd window = get_window(img, 1, 1, 2);
-    check_inside_eigen_element(window, window_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
   }
 
   SUBCASE("3x3 window") {
     Eigen::MatrixXd window_gt(3, 3);
     window_gt << 7.0, 8.0, 9.0, 12.0, 13.0, 14.0, 17.0, 18.0, 19.0;
     Eigen::MatrixXd window = get_window(img, 3, 2, 2);
-    check_inside_eigen_element(window, window_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
   }
 
   SUBCASE("3x3 window on the border") {
@@ -91,27 +91,27 @@ TEST_CASE("Test get_window method") {
     window_gt << 1.0, 2.0, 6.0, 7.0;
 
     Eigen::MatrixXd window = get_window(img, 3, 0, 0);
-    check_inside_eigen_element(window, window_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
   }
 
   SUBCASE("3x3 window on the border with negative index") {
     Eigen::MatrixXd window_gt(2, 1);
     window_gt << 1.0, 6.0;
     Eigen::MatrixXd window = get_window(img, 3, 0, -1);
-    check_inside_eigen_element(window, window_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
     ;
   }
 
   SUBCASE("3x3 window out of the image") {
     Eigen::MatrixXd window_gt(0, 0);
     Eigen::MatrixXd window = get_window(img, 3, -2, -2);
-    check_inside_eigen_element(window, window_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
     ;
   }
 
   SUBCASE("5x5 window") {
     Eigen::MatrixXd window = get_window(img, 5, 2, 2);
-    check_inside_eigen_element(window, img);
+    check_inside_eigen_element<Eigen::MatrixXd>(window, img);
   }
 
   SUBCASE("5x5 window on the border") {
@@ -122,7 +122,7 @@ TEST_CASE("Test get_window method") {
                  21.0, 22.0, 23.0, 24.0, 25.0;
     // clang-format on
     Eigen::MatrixXd window = get_window(img, 5, 4, 2);
-    check_inside_eigen_element(window, window_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
   }
 }
 
@@ -298,7 +298,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element(cost_surface, cost_surface_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface of center point") {
@@ -317,7 +317,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element(cost_surface, cost_surface_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface of center point with not centered disparities") {
@@ -349,7 +349,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element(cost_surface, cost_surface_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface with step_row=2 and step_col=3") {
@@ -373,7 +373,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element(cost_surface, cost_surface_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface with subpix=2") {
@@ -470,7 +470,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element(cost_surface, cost_surface_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
   };
 
   SUBCASE("Cost surface with subpix=2 and no data values") {
@@ -579,7 +579,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element(cost_surface, cost_surface_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
   };
 
   SUBCASE("Cost surface with ROI") {
@@ -607,7 +607,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element(cost_surface, cost_surface_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface with ROI and step=[1,2]") {
@@ -637,6 +637,6 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element(cost_surface, cost_surface_gt);
+    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
   }
 }

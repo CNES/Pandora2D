@@ -86,6 +86,7 @@ CardinalSine::CardinalSine(int half_size, double fractional_shift)
 
 t_Vector CardinalSine::get_coeffs(const double fractional_shift) {
   Eigen::Index index =
-      find_or_throw(fractional_shift, m_fractional_shifts, "Unknown fractional shift.");
+      find_or_throw(fractional_shift, m_fractional_shifts,
+                    "Unknown fractional shift: " + std::to_string(fractional_shift));
   return m_coeffs.row(index);
 }

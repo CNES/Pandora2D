@@ -38,10 +38,11 @@ from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 
 
 @pytest.fixture()
-def make_cfg_for_dichotomy_python(  # pylint: disable=too-many-arguments
+def make_cfg_for_dichotomy(  # pylint: disable=too-many-arguments
     left_img_path,
     right_img_path,
-    method,
+    dicho_method,
+    filter_method,
     subpix,
     step,
     iterations,
@@ -79,9 +80,9 @@ def make_cfg_for_dichotomy_python(  # pylint: disable=too-many-arguments
                 "invalid_disparity": -9999,
             },
             "refinement": {
-                "refinement_method": "dichotomy_python",
+                "refinement_method": dicho_method,
                 "iterations": iterations,
-                "filter": {"method": method},
+                "filter": {"method": filter_method},
             },
         },
     }
@@ -89,14 +90,22 @@ def make_cfg_for_dichotomy_python(  # pylint: disable=too-many-arguments
     return user_cfg
 
 
-@pytest.mark.parametrize("method", ["bicubic_python", "bicubic", "sinc_python", "sinc"])
+@pytest.mark.parametrize(
+    ("dicho_method", "filter_method"),
+    [
+        ("dichotomy_python", "bicubic_python"),
+        ("dichotomy_python", "sinc_python"),
+        ("dichotomy", "bicubic"),
+        # ("dichotomy", "sinc"),
+    ],
+)
 @pytest.mark.parametrize("subpix", [1, 2, 4])
 @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
 @pytest.mark.parametrize("iterations", [1, 2])
 @pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
 @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
 @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
-def test_dichotomy_execution(make_cfg_for_dichotomy_python):
+def test_dichotomy_execution(make_cfg_for_dichotomy):
     """
     Description : Test that execution of Pandora2d with a dichotomy refinement does not fail.
     Data :
@@ -108,7 +117,7 @@ def test_dichotomy_execution(make_cfg_for_dichotomy_python):
     """
     pandora2d_machine = Pandora2DMachine()
 
-    cfg = check_conf(make_cfg_for_dichotomy_python, pandora2d_machine)
+    cfg = check_conf(make_cfg_for_dichotomy, pandora2d_machine)
 
     cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
     roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
@@ -123,7 +132,15 @@ def test_dichotomy_execution(make_cfg_for_dichotomy_python):
         assert np.all(np.isnan(dataset_disp_maps.col_map.data))
 
 
-@pytest.mark.parametrize("method", ["bicubic"])
+@pytest.mark.parametrize(
+    ("dicho_method", "filter_method"),
+    [
+        ("dichotomy_python", "bicubic_python"),
+        ("dichotomy_python", "sinc_python"),
+        ("dichotomy", "bicubic"),
+        # ("dichotomy", "sinc"),
+    ],
+)
 @pytest.mark.parametrize("subpix", [1])
 @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
 @pytest.mark.parametrize("iterations", [1, 2])
@@ -135,7 +152,7 @@ def test_dichotomy_execution(make_cfg_for_dichotomy_python):
 # this type of disparity will also need to be tested here.
 @pytest.mark.parametrize("col_disparity", [{"init": -1, "range": 1}])
 @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 1}])
-def test_extrema_disparities_not_processed(make_cfg_for_dichotomy_python):
+def test_extrema_disparities_not_processed(make_cfg_for_dichotomy):
     """
     Description : Test that execution of Pandora2d with a dichotomy refinement does not
     take into account points for which best cost value is found at the edge of the disparity range.
@@ -145,7 +162,7 @@ def test_extrema_disparities_not_processed(make_cfg_for_dichotomy_python):
     """
     pandora2d_machine = pandora2d.state_machine.Pandora2DMachine()
 
-    cfg = check_conf(make_cfg_for_dichotomy_python, pandora2d_machine)
+    cfg = check_conf(make_cfg_for_dichotomy, pandora2d_machine)
 
     cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
     roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])

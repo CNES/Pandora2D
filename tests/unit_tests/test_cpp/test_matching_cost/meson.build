@@ -12,8 +12,8 @@ test(
     'Histogram2D',
     executable(
         'test_histogram2D',
-        ['test_histogram2D.cpp', matching_cost_src],
-        include_directories:matching_cost_includes,
+        ['test_histogram2D.cpp', matching_cost_src, test_src],
+        include_directories:[matching_cost_includes, test_includes],
         dependencies: [eigen_dep, doctest_dep],
     ),
 )

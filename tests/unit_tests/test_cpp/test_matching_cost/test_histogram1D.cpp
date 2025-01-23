@@ -35,7 +35,7 @@ TEST_CASE("Test constructor") {
     Eigen::VectorXd m = Eigen::VectorXd::Zero(3);
     Histogram1D hist = Histogram1D(m);
 
-    check_inside_eigen_element(hist.values(), Eigen::VectorXd::Zero(1));
+    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Zero(1));
     CHECK(hist.nb_bins() == 1);
     CHECK(hist.low_bound() == -0.5);
     CHECK(hist.bins_width() == 1);
@@ -47,7 +47,7 @@ TEST_CASE("Test constructor") {
 
     Histogram1D hist = Histogram1D(m);
 
-    check_inside_eigen_element(hist.values(), Eigen::VectorXd::Zero(2));
+    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Zero(2));
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
@@ -57,7 +57,7 @@ TEST_CASE("Test constructor") {
     Eigen::VectorXd m = Eigen::VectorXd::Ones(3);
     Histogram1D hist = Histogram1D(m, 3, 0.1, 1.3);
 
-    check_inside_eigen_element(hist.values(), m);
+    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), m);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == 0.1);
     CHECK(hist.bins_width() == 1.3);
@@ -66,7 +66,7 @@ TEST_CASE("Test constructor") {
   SUBCASE("Second constructor") {
     Histogram1D hist = Histogram1D(2, 0.1, 1.3);
 
-    check_inside_eigen_element(hist.values(), Eigen::VectorXd::Zero(2));
+    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Zero(2));
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == 0.1);
     CHECK(hist.bins_width() == 1.3);
@@ -80,7 +80,7 @@ TEST_CASE("Test calculate_histogram1D function") {
 
     auto hist = calculate_histogram1D(m);
 
-    check_inside_eigen_element(hist.values(), Eigen::VectorXd::Ones(2) * 2);
+    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Ones(2) * 2);
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
@@ -95,7 +95,7 @@ TEST_CASE("Test calculate_histogram1D function") {
 
     auto hist = calculate_histogram1D(m);
 
-    check_inside_eigen_element(hist.values(), hist_expected);
+    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), hist_expected);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == doctest::Approx(-1.0795972).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(6.3863981).epsilon(1e-7));
@@ -107,7 +107,7 @@ TEST_CASE("Test calculate_histogram1D function") {
 
     auto hist = calculate_histogram1D(m);
 
-    check_inside_eigen_element(hist.values(), Eigen::VectorXd::Ones(2) * 2);
+    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Ones(2) * 2);
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(-14.9587716).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
@@ -123,7 +123,7 @@ TEST_CASE("Test calculate_histogram1D function") {
 
     auto hist = calculate_histogram1D(m);
 
-    check_inside_eigen_element(hist.values(), hist_expected);
+    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), hist_expected);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == doctest::Approx(-0.6199559).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(0.5466373).epsilon(1e-7));

@@ -87,7 +87,12 @@ class TestPandora2D:
             pytest.param(
                 {"refinement_method": "dichotomy_python", "iterations": 3, "filter": {"method": "bicubic"}},
                 Margins(1, 1, 2, 2),
-                id="dichotomy with bicubic filter",
+                id="dichotomy python with bicubic filter",
+            ),
+            pytest.param(
+                {"refinement_method": "dichotomy", "iterations": 3, "filter": {"method": "bicubic"}},
+                Margins(1, 1, 2, 2),
+                id="dichotomy cpp with bicubic filter",
             ),
         ],
     )
