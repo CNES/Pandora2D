@@ -24,6 +24,7 @@
 """
 Test common
 """
+import json
 
 # pylint: disable=redefined-outer-name
 
@@ -83,6 +84,60 @@ class TestRegistry:
         registry = common.Registry(default=Example)
 
         assert registry.get("unregistered") is Example
+
+
+class TestSaveConfig:
+    """Test save_config behavior."""
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            pytest.param("my_output", id="simple"),
+            pytest.param("subdir/my_output", id="with subdir"),
+        ],
+    )
+    def test_parents_do_not_exist(self, tmp_path, correct_input_cfg, correct_pipeline_without_refinement, path):
+        """Parents do not exist."""
+        output_path = tmp_path / path
+        config = {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            "output": {"path": str(output_path)},
+        }
+
+        common.save_config(config)
+
+        assert (output_path / "config.json").is_file()
+
+    def test_parents_exist(self, tmp_path, correct_input_cfg, correct_pipeline_without_refinement):
+        """Should not fail if parents exist."""
+        output_path = tmp_path / "out"
+        output_path.mkdir()
+        config = {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            "output": {"path": str(output_path)},
+        }
+
+        common.save_config(config)
+
+        assert (output_path / "config.json").is_file()
+
+    def test_overwrite(self, tmp_path, correct_input_cfg, correct_pipeline_without_refinement):
+        """Overwrite file in exists."""
+        existing_file = tmp_path / "config.json"
+        existing_file.write_text("not json loadable")
+
+        config = {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            "output": {"path": str(tmp_path)},
+        }
+
+        common.save_config(config)
+
+        with existing_file.open() as fd:
+            assert json.load(fd)
 
 
 @pytest.mark.parametrize(

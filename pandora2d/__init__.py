@@ -132,8 +132,7 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     completed_cfg["margins_disp"] = pandora2d_machine.margins_disp.to_dict()
     completed_cfg["margins"] = pandora2d_machine.margins_img.to_dict()
     # save config
-    with open(Path(path_output) / "config.json", "w", encoding="utf8") as fd:
-        json.dump(completed_cfg, fd, indent=2)
+    common.save_config(completed_cfg)
 
     # Profiling results
     if "expert_mode" in completed_cfg:

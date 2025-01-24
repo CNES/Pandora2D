@@ -22,6 +22,7 @@
 """
 This module contains functions allowing to save the results and the configuration of Pandora pipeline.
 """
+import json
 from pathlib import Path
 
 # mypy: disable-error-code="attr-defined, no-redef"
@@ -322,3 +323,17 @@ def set_out_of_col_disparity_range_to_other_value(
                 )
             )
         data.data[masking[0], masking[1], :, disp_col] = value
+
+
+def save_config(config: Dict) -> None:
+    """
+    Save config to json file in directory given by the key `output/path`.
+
+    Create file tree if it does not exist,
+    :param config: configuration to save
+    :type config: Dict
+    """
+    path_output = Path(config["output"]["path"])
+    path_output.mkdir(parents=True, exist_ok=True)
+    with open(path_output / "config.json", "w", encoding="utf8") as fd:
+        json.dump(config, fd, indent=2)
