@@ -25,7 +25,9 @@
       "invalid_disparity": "NaN"
     },
     "refinement": {
-      "refinement_method": "interpolation"
+        "refinement_method": "dichotomy",
+        "iterations": 2,
+        "filter": { "method": "bicubic"}
     }
   }
 }

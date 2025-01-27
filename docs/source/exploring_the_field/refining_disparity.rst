@@ -6,10 +6,11 @@ The purpose of this step is to refine the disparity identified in the previous s
 So, the refinement step involves transforming a pixel disparity map into a sub-pixel disparity map.
 
 
-Three methods are available in pandora2d:
+Four methods are available in pandora2d:
 
 - Interpolation
 - Optical flow
+- Dichotomy (c++ version)
 - Dichotomy (python version)
 
 .. warning::
