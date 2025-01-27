@@ -21,7 +21,6 @@
 This module contains functions to run Pandora pipeline.
 """
 
-import json
 from os import PathLike
 from pathlib import Path
 from typing import Dict, Union
@@ -34,8 +33,6 @@ from pandora2d import common
 from pandora2d.check_configuration import check_conf, check_datasets
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 from pandora2d.state_machine import Pandora2DMachine
-from pandora2d import reporting
-from pandora2d.reporting import NumpyPrimitiveEncoder
 from pandora2d.profiling import generate_summary, expert_mode_config
 
 
@@ -124,10 +121,7 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     path_output = Path(user_cfg["output"]["path"])
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):
-        common.save_dataset(dataset_disp_maps, completed_cfg, str(path_output))
-        report = {"statistics": {"disparity": reporting.report_disparities(dataset_disp_maps)}}
-        with open(Path(path_output) / "report.json", "w", encoding="utf8") as fd:
-            json.dump(report, fd, indent=2, cls=NumpyPrimitiveEncoder)
+        common.save_disparity_maps(dataset_disp_maps, completed_cfg)
     # Update output configuration with detailed margins
     completed_cfg["margins_disp"] = pandora2d_machine.margins_disp.to_dict()
     completed_cfg["margins"] = pandora2d_machine.margins_img.to_dict()

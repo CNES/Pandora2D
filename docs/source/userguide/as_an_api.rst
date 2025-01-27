@@ -16,9 +16,6 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     from pandora2d import check_configuration, common
     from pandora2d.img_tools import create_datasets_from_inputs
 
-    # path to save disparity maps
-    path_output = "./res"
-
     # Paths to left and right images
     img_left_path = "data/left.tif"
     img_right_path = "data/right.tif"
@@ -78,7 +75,7 @@ Pandora2D provides a full python API which can be used to compute disparity maps
         )
 
     # save dataset
-    common.save_dataset(dataset, completed_cfg, path_output)
+    common.save_disparity_maps(dataset, completed_cfg)
 
 
 Pandora2D's data

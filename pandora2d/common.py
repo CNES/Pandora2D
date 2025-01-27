@@ -25,6 +25,9 @@ This module contains functions allowing to save the results and the configuratio
 import json
 from pathlib import Path
 
+from pandora2d import reporting
+from pandora2d.reporting import NumpyPrimitiveEncoder
+
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable=useless-import-alias
 
@@ -99,9 +102,9 @@ class Registry(Generic[T]):
         return self.registered.get(name, self.default)
 
 
-def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
+def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
     """
-    Save results in the output directory
+    Save disparity maps into directory defined by cfg's `output/path` key.
 
     :param dataset: Dataset which contains:
 
@@ -110,8 +113,6 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     :type dataset: xr.Dataset
     :param cfg: user configuration
     :type cfg: Dict
-    :param output: output directory
-    :type output: string
     :return: None
     """
 
@@ -121,7 +122,34 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     if dataset.attrs["transform"] is not None:
         adjust_georeferencement(dataset, cfg)
     # create output dir
-    output = Path(output)
+    output = Path(cfg["output"]["path"])
+    _save_dataset(dataset, output)
+    _save_disparity_maps_report(dataset, output)
+
+
+def _save_disparity_maps_report(dataset: xr.Dataset, output: Path) -> None:
+    """
+    Generate a report about disparities statistics and save it to json file.
+    :param dataset: disparity maps
+    :type dataset: xr.Dataset
+    :param output: path where to save report
+    :type output: Path
+    """
+    report = {"statistics": {"disparity": reporting.report_disparities(dataset)}}
+    with open(output / "report.json", "w", encoding="utf8") as fd:
+        json.dump(report, fd, indent=2, cls=NumpyPrimitiveEncoder)
+
+
+def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
+    """
+    Save data_vars in the output directory.
+
+    :param dataset: Dataset
+    :type dataset: xr.Dataset
+    :param output: output directory
+    :type output: Path
+    :return: None
+    """
     output.mkdir(exist_ok=True)
     for name, data in dataset.items():
         write_data_array(
