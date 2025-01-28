@@ -369,3 +369,129 @@ def test_expert_mode(
     if output_expert_dir.exists():
         file_extensions = [f.suffix for f in output_expert_dir.iterdir() if f.is_file()]
         assert set(file_extensions) == set(ground_truth)
+
+
+class TestAttributes:
+    """
+    Test that attributes are correctly saved in output directory
+    """
+
+    @pytest.mark.parametrize(
+        ["step"],
+        [
+            pytest.param(
+                [1, 1],
+                id="without ROI and step=[1,1]",
+            ),
+            pytest.param(
+                [3, 2],
+                id="without ROI and step=[3,2]",
+            ),
+        ],
+    )
+    def test_attributes(self, run_pipeline, configuration, step, tmp_path):
+        """
+        Description : Test saved attributes without ROI.
+        """
+
+        run_pipeline(configuration)
+
+        with rasterio.open(configuration["input"]["left"]["img"]) as src:
+            left_crs = src.crs
+            left_transform = src.transform
+
+        # Test for attributes
+        with open(tmp_path / "disparity_map" / "attributes.json", encoding="utf8") as attrs_file:
+            attrs = json.load(attrs_file)
+            attrs["transform"] = rasterio.Affine(*attrs["transform"])
+
+        assert attrs["offset"]["row"] == 0
+        assert attrs["offset"]["col"] == 0
+        assert attrs["step"]["row"] == step[0]
+        assert attrs["step"]["col"] == step[1]
+        assert attrs["crs"] == left_crs
+        # Apply the same transformation as the one done in common.adjust_georeferencement because we have a step
+        assert attrs["transform"] == left_transform * rasterio.Affine.scale(step[1], step[0])
+        assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]
+
+    @pytest.mark.parametrize(
+        ["roi", "step"],
+        [
+            pytest.param(
+                {
+                    "col": {"first": 3, "last": 7},
+                    "row": {"first": 5, "last": 8},
+                },
+                [1, 1],
+                id="with ROI and step=[1,1]",
+            ),
+            pytest.param(
+                {
+                    "col": {"first": 3, "last": 7},
+                    "row": {"first": 5, "last": 8},
+                },
+                [3, 2],
+                id="with ROI and step=[3,2]",
+            ),
+        ],
+    )
+    def test_attributes_with_roi(self, run_pipeline, configuration, roi, step, tmp_path):
+        """
+        Description : Test saved attributes with ROI.
+        """
+
+        configuration["ROI"] = roi
+
+        run_pipeline(configuration)
+
+        with rasterio.open(configuration["input"]["left"]["img"]) as src:
+            left_crs = src.crs
+            left_transform = src.transform
+
+        # Test for attributes
+        with open(tmp_path / "disparity_map" / "attributes.json", encoding="utf8") as attrs_file:
+            attrs = json.load(attrs_file)
+            attrs["transform"] = rasterio.Affine(*attrs["transform"])
+
+        assert attrs["offset"]["row"] == roi["row"]["first"]
+        assert attrs["offset"]["col"] == roi["col"]["first"]
+        assert attrs["step"]["row"] == step[0]
+        assert attrs["step"]["col"] == step[1]
+        assert attrs["crs"] == left_crs
+        # Apply the same transformation as the one done in common.adjust_georeferencement because we have a ROI and step
+        assert attrs["transform"] == left_transform * rasterio.Affine.translation(
+            roi["col"]["first"], roi["row"]["first"]
+        ) * rasterio.Affine.scale(step[1], step[0])
+        assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]
+
+    def test_attributes_without_step(
+        self, run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, tmp_path
+    ):
+        """
+        Description : Test saved attributes when step is not given in user cfg.
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        """
+
+        # The configuration used in this test is different from the one used in the other tests of the class,
+        # because here we want to test a configuration where the step value is not specified.
+        configuration = {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            **{"output": {"path": str(tmp_path)}},
+        }
+
+        run_pipeline(configuration)
+
+        # Test for attributes
+        with open(tmp_path / "disparity_map" / "attributes.json", encoding="utf8") as attrs_file:
+            attrs = json.load(attrs_file)
+
+        assert attrs["offset"]["row"] == 0
+        assert attrs["offset"]["col"] == 0
+        assert attrs["step"]["row"] == 1
+        assert attrs["step"]["col"] == 1
+        assert attrs["crs"] is None
+        assert attrs["transform"] is None
+        assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]
