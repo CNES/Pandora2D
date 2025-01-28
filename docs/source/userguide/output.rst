@@ -84,3 +84,15 @@ Saved configuration
 *******************
 
 - `output/path/config.json` : the config file used to run Pandora2D and estimation information if computed.
+
+Saved attributes
+****************
+
+- `output/path/disparity_map/attributes.json` : the disparity maps dataset attributes saved in a json file. These attributes include: 
+
+    - offset (row/col) to find the first point of the user ROI when one is used 
+    - step (row/col) corresponding to the matching cost step value
+    - crs and transform 
+    - invalid disparity value
+
+   An example of these attributes is shown in the disparity map section of the :ref:`as_an_api` documentation part.
