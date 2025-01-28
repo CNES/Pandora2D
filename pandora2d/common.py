@@ -27,6 +27,7 @@ import json
 from copy import deepcopy
 from pathlib import Path
 from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
+from os import PathLike
 
 import numpy as np
 import xarray as xr
@@ -159,6 +160,33 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
             crs=dataset.attrs["crs"],
             transform=dataset.attrs["transform"],
         )
+
+    save_attributes(dataset, output)
+
+
+def save_attributes(dataset: xr.Dataset, output: Union[str, PathLike]) -> None:
+    """
+    Save dataset attributes in a json file
+
+    :param dataset: Dataset which contains:
+
+        - row_map : the disparity map for the lines 2D DataArray (row, col)
+        - col_map : the disparity map for the columns 2D DataArray (row, col)
+    :type dataset: xr.Dataset
+    :param output: output directory
+    :type output: Union[str, PathLike]
+    :return: None
+    """
+
+    # Check if crs attribute is json serializable, and if not, converts it to well known text (wkt)
+    if "crs" in dataset.attrs:
+        try:
+            json.dumps(dataset.attrs["crs"])
+        except TypeError:
+            dataset.attrs["crs"] = dataset.attrs["crs"].to_wkt()
+
+    with open(output / Path("attributes.json"), "w", encoding="utf8") as fd:
+        json.dump(dataset.attrs, fd, indent=2)
 
 
 def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:
