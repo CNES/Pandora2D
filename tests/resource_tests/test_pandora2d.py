@@ -22,7 +22,6 @@ Test used resources during execution of a configuration.
 """
 
 # pylint: disable=redefined-outer-name
-# pylint: disable=too-many-positional-arguments
 
 import numpy as np
 import pytest

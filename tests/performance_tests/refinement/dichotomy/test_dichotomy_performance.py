@@ -20,17 +20,14 @@ Test the refinement.dichotomy pipeline.
 """
 
 # Make pylint happy with fixtures:
-# pylint: disable=too-many-positional-arguments
+# pylint: disable=too-many-arguments
 
 from typing import Tuple
-from pathlib import Path
 
 import pytest
 
 import numpy as np
 import rasterio
-
-from numpy.typing import NDArray
 
 
 class TestComparisonMedicis:
@@ -48,32 +45,8 @@ class TestComparisonMedicis:
     is better than the one of pandora2d by about the value of the threshold.
     """
 
-    def remove_edges(
-        self, medicis_map: NDArray[np.floating], pandora2d_map: NDArray[np.floating]
-    ) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
-        """
-        Get reduced disparity maps after removing medicis edges full of nans (greater than pandora2d edges)
-        on both pandora2d and medicis disparity maps.
-        """
-
-        # Gets coordinates for which medicis col_map is different from nan
-        # i.e. points that are not within the edges
-        non_nan_row_indexes, non_nan_col_indexes = np.where(~np.isnan(medicis_map))
-
-        # Remove medicis edges
-        medicis_map = medicis_map[
-            non_nan_row_indexes[0] : non_nan_row_indexes[-1] + 1, non_nan_col_indexes[0] : non_nan_col_indexes[-1] + 1
-        ]
-
-        # Remove pandora2d edges to get the same points as the ones in medicis disparity maps
-        pandora2d_map = pandora2d_map[
-            non_nan_row_indexes[0] : non_nan_row_indexes[-1] + 1, non_nan_col_indexes[0] : non_nan_col_indexes[-1] + 1
-        ]
-
-        return medicis_map, pandora2d_map
-
     def compute_mean_errors(
-        self, run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift
+        self, run_pipeline, remove_edges, cfg_dichotomy, medicis_maps_path, row_shift, col_shift
     ) -> Tuple[float, float, float, float]:
         """
         Compute mean errors of medicis and pandora2d disparity maps
@@ -96,8 +69,8 @@ class TestComparisonMedicis:
 
         # Remove medicis edges on both pandora2d and medicis disparity maps
         # in order to compare the same sample of points.
-        row_map_medicis, row_map_pandora2d = self.remove_edges(row_map_medicis, row_map_pandora2d)
-        col_map_medicis, col_map_pandora2d = self.remove_edges(col_map_medicis, col_map_pandora2d)
+        row_map_medicis, row_map_pandora2d = remove_edges(row_map_medicis, row_map_pandora2d)
+        col_map_medicis, col_map_pandora2d = remove_edges(col_map_medicis, col_map_pandora2d)
 
         # Compute mean error between column disparities and real column shift
         mean_error_pandora2d_col = np.nanmean(abs(col_map_pandora2d - col_shift))
@@ -108,27 +81,6 @@ class TestComparisonMedicis:
         mean_error_medicis_row = np.nanmean(abs(row_map_medicis - row_shift))
 
         return mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col
-
-    @pytest.fixture()
-    def data_path(self):
-        """
-        Return path to get left and right images and medicis data
-        """
-        return Path("tests/performance_tests/refinement/dichotomy/data_medicis/")
-
-    @pytest.fixture()
-    def shift_path(self, data_path, img_path):
-        """
-        Return path to get left and right images and medicis data
-        """
-        return data_path / img_path
-
-    @pytest.fixture()
-    def medicis_maps_path(self, shift_path, medicis_method_path):
-        """
-        Return path to get medicis data
-        """
-        return shift_path / medicis_method_path
 
     @pytest.fixture()
     def cfg_dichotomy(self, shift_path, subpix, dicho_method, filter_method):
@@ -282,7 +234,15 @@ class TestComparisonMedicis:
         ],
     )
     def test_pandora2d_medicis_dichotomy_bicubic(
-        self, run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift, row_map_threshold, col_map_threshold
+        self,
+        run_pipeline,
+        remove_edges,
+        cfg_dichotomy,
+        medicis_maps_path,
+        row_shift,
+        col_shift,
+        row_map_threshold,
+        col_map_threshold,
     ):
         """
         Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
@@ -290,7 +250,7 @@ class TestComparisonMedicis:
         """
 
         mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col = (
-            self.compute_mean_errors(run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift)
+            self.compute_mean_errors(run_pipeline, remove_edges, cfg_dichotomy, medicis_maps_path, row_shift, col_shift)
         )
 
         assert mean_error_pandora2d_col <= mean_error_medicis_col + col_map_threshold
@@ -418,7 +378,15 @@ class TestComparisonMedicis:
         ],
     )
     def test_pandora2d_medicis_dichotomy_sinc(
-        self, run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift, row_map_threshold, col_map_threshold
+        self,
+        run_pipeline,
+        remove_edges,
+        cfg_dichotomy,
+        medicis_maps_path,
+        row_shift,
+        col_shift,
+        row_map_threshold,
+        col_map_threshold,
     ):
         """
         Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
@@ -426,7 +394,7 @@ class TestComparisonMedicis:
         """
 
         mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col = (
-            self.compute_mean_errors(run_pipeline, cfg_dichotomy, medicis_maps_path, row_shift, col_shift)
+            self.compute_mean_errors(run_pipeline, remove_edges, cfg_dichotomy, medicis_maps_path, row_shift, col_shift)
         )
 
         assert mean_error_pandora2d_col <= mean_error_medicis_col + col_map_threshold

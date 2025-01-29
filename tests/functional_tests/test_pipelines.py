@@ -21,7 +21,6 @@ Run pandora2d configurations from end to end.
 """
 
 # pylint: disable=redefined-outer-name
-# pylint: disable=too-many-positional-arguments
 
 import json
 from copy import deepcopy
