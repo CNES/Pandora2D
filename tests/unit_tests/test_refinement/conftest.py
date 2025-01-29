@@ -20,9 +20,6 @@
 Conftest for dichotomy cpp and python versions module.
 """
 
-# Make pylint happy with fixtures:
-# pylint: disable=too-many-positional-arguments
-
 import numpy as np
 import pytest
 

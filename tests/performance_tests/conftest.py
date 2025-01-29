@@ -18,6 +18,9 @@
 #
 """Module with global performance test fixtures and methods."""
 
+# Make pylint happy with fixtures:
+# pylint: disable=redefined-outer-name
+
 from typing import Tuple
 from pathlib import Path
 

@@ -39,12 +39,9 @@ class TestMutualInformation:
     """
 
     @pytest.fixture()
-    def make_cfg_for_mutual_information(  # pylint: disable=too-many-arguments
+    def make_cfg_for_mutual_information(
         self,
-        left_img_path,
-        right_img_path,
-        col_disparity,
-        row_disparity,
+        correct_input_for_functional_tests,
         window_size,
         subpix,
         step,
@@ -55,18 +52,7 @@ class TestMutualInformation:
         """
 
         user_cfg = {
-            "input": {
-                "left": {
-                    "img": str(left_img_path),
-                    "nodata": "NaN",
-                },
-                "right": {
-                    "img": str(right_img_path),
-                    "nodata": "NaN",
-                },
-                "col_disparity": col_disparity,
-                "row_disparity": row_disparity,
-            },
+            **correct_input_for_functional_tests,
             "ROI": roi,
             "pipeline": {
                 "matching_cost": {

@@ -20,7 +20,6 @@ Test the refinement.dichotomy pipeline.
 """
 
 # Make pylint happy with fixtures:
-# pylint: disable=too-many-positional-arguments
 # pylint: disable=too-many-arguments
 
 from typing import Tuple

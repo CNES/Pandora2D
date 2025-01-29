@@ -52,3 +52,21 @@ def correct_pipeline_with_dichotomy_cpp():
             "refinement": {"refinement_method": "dichotomy", "iterations": 2, "filter": {"method": "bicubic"}},
         }
     }
+
+
+@pytest.fixture()
+def correct_input_for_functional_tests(left_img_path, right_img_path, col_disparity, row_disparity):
+    return {
+        "input": {
+            "left": {
+                "img": str(left_img_path),
+                "nodata": "NaN",
+            },
+            "right": {
+                "img": str(right_img_path),
+                "nodata": "NaN",
+            },
+            "col_disparity": col_disparity,
+            "row_disparity": row_disparity,
+        }
+    }

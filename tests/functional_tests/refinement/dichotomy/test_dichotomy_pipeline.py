@@ -19,9 +19,6 @@
 Test the refinement.dichotomy pipeline.
 """
 
-# Make pylint happy with fixtures:
-# pylint: disable=too-many-positional-arguments
-
 import copy
 import pytest
 
@@ -38,35 +35,21 @@ from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 
 
 @pytest.fixture()
-def make_cfg_for_dichotomy(  # pylint: disable=too-many-arguments
-    left_img_path,
-    right_img_path,
+def make_cfg_for_dichotomy(
+    correct_input_for_functional_tests,
     dicho_method,
     filter_method,
     subpix,
     step,
     iterations,
     roi,
-    col_disparity,
-    row_disparity,
 ):
     """
     Creates user configuration to test dichotomy loop
     """
 
     user_cfg = {
-        "input": {
-            "left": {
-                "img": str(left_img_path),
-                "nodata": "NaN",
-            },
-            "right": {
-                "img": str(right_img_path),
-                "nodata": "NaN",
-            },
-            "col_disparity": col_disparity,
-            "row_disparity": row_disparity,
-        },
+        **correct_input_for_functional_tests,
         "ROI": roi,
         "pipeline": {
             "matching_cost": {

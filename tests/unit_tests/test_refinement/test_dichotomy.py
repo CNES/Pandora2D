@@ -22,7 +22,7 @@ Test the refinement.dichotomy module.
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
-# pylint: disable=too-many-positional-arguments
+# pylint: disable=too-many-arguments
 
 import logging
 import copy
