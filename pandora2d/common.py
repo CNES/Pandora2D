@@ -24,8 +24,17 @@ This module contains functions allowing to save the results and the configuratio
 """
 import json
 from pathlib import Path
+from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
+
+import numpy as np
+import xarray as xr
+from numpy.typing import NDArray
+from pandora.common import write_data_array
+from rasterio import Affine
 
 from pandora2d import reporting
+from pandora2d.constants import Criteria
+from pandora2d.img_tools import remove_roi_margins
 from pandora2d.reporting import NumpyPrimitiveEncoder
 
 # mypy: disable-error-code="attr-defined, no-redef"
@@ -38,17 +47,6 @@ try:
     from xarray import Coordinates as Coordinates
 except ImportError:
     from xarray import Coordinate as Coordinates
-
-from typing import Dict, Union, Tuple, List, Generic, TypeVar, Callable, Type
-import xarray as xr
-import numpy as np
-from numpy.typing import NDArray
-
-from rasterio import Affine
-
-from pandora.common import write_data_array
-from pandora2d.img_tools import remove_roi_margins
-from pandora2d.constants import Criteria
 
 T = TypeVar("T")
 
