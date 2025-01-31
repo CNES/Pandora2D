@@ -66,6 +66,7 @@ class TestMutualInformation:
                     "invalid_disparity": -9999,
                 },
             },
+            "output": {"path": "where"},
         }
 
         return user_cfg

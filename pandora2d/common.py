@@ -22,7 +22,20 @@
 """
 This module contains functions allowing to save the results and the configuration of Pandora pipeline.
 """
+import json
 from pathlib import Path
+from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
+
+import numpy as np
+import xarray as xr
+from numpy.typing import NDArray
+from pandora.common import write_data_array
+from rasterio import Affine
+
+from pandora2d import reporting
+from pandora2d.constants import Criteria
+from pandora2d.img_tools import remove_roi_margins
+from pandora2d.reporting import NumpyPrimitiveEncoder
 
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable=useless-import-alias
@@ -34,17 +47,6 @@ try:
     from xarray import Coordinates as Coordinates
 except ImportError:
     from xarray import Coordinate as Coordinates
-
-from typing import Dict, Union, Tuple, List, Generic, TypeVar, Callable, Type
-import xarray as xr
-import numpy as np
-from numpy.typing import NDArray
-
-from rasterio import Affine
-
-from pandora.common import write_data_array
-from pandora2d.img_tools import remove_roi_margins
-from pandora2d.constants import Criteria
 
 T = TypeVar("T")
 
@@ -98,9 +100,9 @@ class Registry(Generic[T]):
         return self.registered.get(name, self.default)
 
 
-def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
+def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
     """
-    Save results in the output directory
+    Save disparity maps into directory defined by cfg's `output/path` key.
 
     :param dataset: Dataset which contains:
 
@@ -109,8 +111,6 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     :type dataset: xr.Dataset
     :param cfg: user configuration
     :type cfg: Dict
-    :param output: output directory
-    :type output: string
     :return: None
     """
 
@@ -120,7 +120,34 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     if dataset.attrs["transform"] is not None:
         adjust_georeferencement(dataset, cfg)
     # create output dir
-    output = Path(output)
+    output = Path(cfg["output"]["path"])
+    _save_dataset(dataset, output)
+    _save_disparity_maps_report(dataset, output)
+
+
+def _save_disparity_maps_report(dataset: xr.Dataset, output: Path) -> None:
+    """
+    Generate a report about disparities statistics and save it to json file.
+    :param dataset: disparity maps
+    :type dataset: xr.Dataset
+    :param output: path where to save report
+    :type output: Path
+    """
+    report = {"statistics": {"disparity": reporting.report_disparities(dataset)}}
+    with open(output / "report.json", "w", encoding="utf8") as fd:
+        json.dump(report, fd, indent=2, cls=NumpyPrimitiveEncoder)
+
+
+def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
+    """
+    Save data_vars in the output directory.
+
+    :param dataset: Dataset
+    :type dataset: xr.Dataset
+    :param output: output directory
+    :type output: Path
+    :return: None
+    """
     output.mkdir(exist_ok=True)
     for name, data in dataset.items():
         write_data_array(
@@ -322,3 +349,17 @@ def set_out_of_col_disparity_range_to_other_value(
                 )
             )
         data.data[masking[0], masking[1], :, disp_col] = value
+
+
+def save_config(config: Dict) -> None:
+    """
+    Save config to json file in directory given by the key `output/path`.
+
+    Create file tree if it does not exist,
+    :param config: configuration to save
+    :type config: Dict
+    """
+    path_output = Path(config["output"]["path"])
+    path_output.mkdir(parents=True, exist_ok=True)
+    with open(path_output / "config.json", "w", encoding="utf8") as fd:
+        json.dump(config, fd, indent=2)

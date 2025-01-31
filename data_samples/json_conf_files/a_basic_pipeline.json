@@ -19,9 +19,9 @@
     "disparity": {
       "disparity_method": "wta",
       "invalid_disparity": "NaN"
-    },
-    "refinement": {
-      "refinement_method": "optical_flow"
     }
+  },
+  "output": {
+    "path": "a_basic_pipeline_output"
   }
 }

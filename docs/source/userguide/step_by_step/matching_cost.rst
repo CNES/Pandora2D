@@ -99,5 +99,9 @@ Configuration and parameters
                 "subpix": 4,
             },
             //...
+        },
+        "output":
+        {
+            //...
         }
     }

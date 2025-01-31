@@ -18,10 +18,10 @@
 """
 Test the refinement.dichotomy pipeline.
 """
-
 # Make pylint happy with fixtures:
 # pylint: disable=too-many-arguments
 
+from pathlib import Path
 from typing import Tuple
 
 import pytest
@@ -53,12 +53,14 @@ class TestComparisonMedicis:
         """
 
         # Run pandora2D pipeline
-        run_dir = run_pipeline(cfg_dichotomy)
+        run_pipeline(cfg_dichotomy)
+
+        output_path = Path(cfg_dichotomy["output"]["path"])
 
         # Get pandora2d disparity maps
-        with rasterio.open(run_dir / "output" / "row_map.tif") as src:
+        with rasterio.open(output_path / "row_map.tif") as src:
             row_map_pandora2d = src.read(1)
-        with rasterio.open(run_dir / "output" / "col_map.tif") as src:
+        with rasterio.open(output_path / "col_map.tif") as src:
             col_map_pandora2d = src.read(1)
 
         # Get medicis disparity maps
@@ -83,7 +85,7 @@ class TestComparisonMedicis:
         return mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col
 
     @pytest.fixture()
-    def cfg_dichotomy(self, shift_path, subpix, dicho_method, filter_method):
+    def cfg_dichotomy(self, shift_path, subpix, dicho_method, filter_method, tmp_path):
         """
         Make user configuration for dichotomy loop
         """
@@ -110,6 +112,7 @@ class TestComparisonMedicis:
                     "filter": {"method": filter_method},
                 },
             },
+            "output": {"path": str(tmp_path)},
         }
 
     @pytest.mark.parametrize(

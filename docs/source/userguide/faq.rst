@@ -39,6 +39,9 @@ It is possible to add a step parameter in the configuration file. This parameter
                 "refinement_method": "interpolation",
             },
         },
+        "output": {
+            "path": "step_output"
+        },
     }
 
 How do I choose to process only a certain part of the image? 
@@ -80,6 +83,9 @@ It is possible to work on only one section of the image with an ROI. For this, t
             "refinement": {
                 "refinement_method": "interpolation",
             },
+        },
+        "output": {
+            "path": "roi_output"
         },
     }
 

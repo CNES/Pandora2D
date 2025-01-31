@@ -28,6 +28,7 @@ This module contains the general function to run Pandora 2D pipeline.
 # pylint: disable=invalid-name
 
 import argparse
+from pathlib import Path
 
 import pandora2d
 
@@ -42,10 +43,10 @@ def get_parser():
     parser = argparse.ArgumentParser(description="Pandora 2D")
     parser.add_argument(
         "config",
+        type=Path,
         help="path to a json file containing the input/output files paths and \
             algorithm parameters",
     )
-    parser.add_argument("path_output", help="path to the output directory for disparity maps")
     parser.add_argument("-v", "--verbose", help="Increase output verbosity", action="store_true")
     return parser
 
@@ -60,7 +61,7 @@ def main():
     args = parser.parse_args()
 
     # Run the Pandora 2D pipeline
-    pandora2d.main(args.config, args.path_output, args.verbose)
+    pandora2d.main(args.config, args.verbose)
 
 
 if __name__ == "__main__":

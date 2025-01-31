@@ -19,6 +19,7 @@
 """
 Run pandora2d configurations with ROI from end to end.
 """
+from pathlib import Path
 
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
@@ -89,7 +90,7 @@ def right_path(tmp_path, right_data, crs, transform):
 
 
 @pytest.fixture()
-def configuration(left_path, right_path, correct_pipeline_without_refinement, step):
+def configuration(left_path, right_path, correct_pipeline_without_refinement, step, tmp_path):
     correct_pipeline_without_refinement["pipeline"]["matching_cost"]["step"] = step
     return {
         "input": {
@@ -103,6 +104,7 @@ def configuration(left_path, right_path, correct_pipeline_without_refinement, st
             "row_disparity": {"init": 1, "range": 2},
         },
         **correct_pipeline_without_refinement,
+        "output": {"path": str(tmp_path.absolute())},
     }
 
 
@@ -127,9 +129,9 @@ def test_georeferencement(
     output_file,
 ):
     """Test that top left and bottom right corners are well georeferenced."""
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    output = rasterio.open(run_dir / "output" / output_file)
+    output = rasterio.open(Path(configuration["output"]["path"]) / output_file)
     bottom_right_disparity_indexes = output.width - 1, output.height - 1
 
     assert output.crs == crs
@@ -197,9 +199,9 @@ def test_roi_georeferencement(
     output_file,
 ):
     """Test that top left and bottom right corners are well georeferenced."""
-    run_dir = run_pipeline(configuration_with_roi)
+    run_pipeline(configuration_with_roi)
 
-    output = rasterio.open(run_dir / "output" / output_file)
+    output = rasterio.open(Path(configuration_with_roi["output"]["path"]) / output_file)
     bottom_right_disparity_indexes = output.width - 1, output.height - 1
 
     assert output.crs == crs

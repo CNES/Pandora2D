@@ -149,7 +149,11 @@ Configuration and parameters
                       "refinement_method": "interpolation"
                     },
                     // ...
-                }
+                },
+               "output":
+               {
+                  // ...
+               }
             }
 
     .. tab:: Optical-flow
@@ -196,7 +200,11 @@ Configuration and parameters
                       "iterations" : 7
                     },
                     // ...
-                }
+                },
+                "output":
+                  {
+                     // ...
+                  }
             }
 
     .. tab:: Dichotomy
@@ -257,6 +265,10 @@ Configuration and parameters
                               "iterations" : 7
                             },
                             // ...
+                        },
+                        "output":
+                        {
+                           // ...
                         }
                     }
                 
@@ -343,6 +355,10 @@ Configuration and parameters
                               "iterations" : 7
                             },
                             // ...
+                        },
+                        "output":
+                        {
+                           // ...
                         }
                     }
 

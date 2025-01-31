@@ -3,12 +3,56 @@
 Outputs
 =======
 
-Pandora2D will store several data in the output folder.
+Pandora2D will store several data in the output folder which path is given in the `output` entry of the configuration
+file.
+
+.. list-table:: Parameters
+    :header-rows: 1
+
+
+    * - Name
+      - Description
+      - Type
+      - Default value
+      - Available value
+      - Required
+    * - *path*
+      - path where to save outputs
+      - string
+      -
+      -
+      - Yes
+    * - *format*
+      - format used to save data
+      - string
+      - tiff
+      - tiff
+      - No
+
+.. code:: json
+    :name: Output example
+
+    {
+        "input":
+        {
+            // input content
+        }
+        ,
+        "pipeline" :
+        {
+            // pipeline content
+        },
+        "output":
+        {
+            "path": "output/path",
+            "format": "tiff"
+        }
+    }
 
 Saved images
 ************
 
-- *row_disparity.tif*, *columns_disparity.tif* : disparity maps for row and columns.
+- *row_map.tif*, *col_map.tif* : disparity maps for row and columns.
 - *correlation_score.tif* : correlation score map.
 
 .. warning::
@@ -24,4 +68,4 @@ Saved images
 Saved configuration
 *******************
 
-- ./res/cfg/config.json : the config file used to run Pandora2D and estimation information if computed
+- `output/path/config.json` : the config file used to run Pandora2D and estimation information if computed.

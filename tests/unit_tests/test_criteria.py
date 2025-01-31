@@ -1390,7 +1390,7 @@ def test_criteria_datarray_created_in_state_machine(
     Test that pandora2d machine contains the criteria dataarray
     """
 
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement}
+    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, "output": {"path": "rala"}}
 
     img_left, img_right = create_datasets_from_inputs(input_config=correct_input_cfg["input"])
 

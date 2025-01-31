@@ -50,5 +50,9 @@ Configuration and parameters
                 "invalid_disparity": "NaN"
             },
             // ...
+        },
+        "output":
+        {
+            // ...
         }
     }

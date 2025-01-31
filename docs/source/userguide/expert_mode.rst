@@ -70,6 +70,9 @@ Expert mode profiling section is composed of the following keys:
         {
             "profiling":
             {
-                "folder_name": "expert_mode_outputs"
+                "folder_name": "profiling_output"
         }
+        "output": {
+            "path": "expert_mode_output"
+        },
     }

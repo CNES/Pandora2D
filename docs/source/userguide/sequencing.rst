@@ -68,5 +68,9 @@ interpolation method.
             {
                 "refinement_method": "optical_flow"
             }
+        },
+        "output":
+        {
+            "output": "sequencing_example_output"
         }
     }

@@ -20,6 +20,9 @@
 Conftest for dichotomy cpp and python versions module.
 """
 
+# Make pylint happy with fixtures:
+# pylint: disable=redefined-outer-name
+
 import numpy as np
 import pytest
 
@@ -27,9 +30,6 @@ import xarray as xr
 
 from pandora2d.matching_cost import PandoraMatchingCostMethods
 from pandora2d import refinement
-
-# Make pylint happy with fixtures:
-# pylint: disable=redefined-outer-name
 
 
 @pytest.fixture()
