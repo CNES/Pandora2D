@@ -1191,3 +1191,98 @@ class TestExtremaOnEdges:
         # For point [1,0] col disparity range is not [min_disparity_col, max_disparity_col] but [min_disparity_col, 0],
         # we check that resulting disparity row is in this range.
         assert result_disp_col[1, 0] in range(min_disparity_col, 0 + 1)
+
+
+class TestChangeDisparityToIndex:
+
+    @pytest.mark.parametrize(
+        ["map", "shift", "subpixel", "expected"],
+        [
+            pytest.param(
+                xr.DataArray(
+                    data=[[1, 2, 3], [2, 2, 3]],
+                    dims=("row", "col"),
+                    coords={"row": np.arange(2), "col": np.arange(3)},
+                ),
+                1,  # disparity range starts at 1
+                1,
+                np.array([[0, 1, 2], [1, 1, 2]]),
+                id="positive disparity",
+            ),
+            pytest.param(
+                xr.DataArray(
+                    data=[[-1, -2, -3], [-2, -2, -3]],
+                    dims=("row", "col"),
+                    coords={"row": np.arange(2), "col": np.arange(3)},
+                ),
+                -4,  # disparity range starts at -4
+                1,
+                np.array([[3, 2, 1], [2, 2, 1]]),
+                id="negative disparity",
+            ),
+            pytest.param(
+                xr.DataArray(
+                    data=[[-1, -2.5, -3], [-2, -2.5, -3]],
+                    dims=("row", "col"),
+                    coords={"row": np.arange(2), "col": np.arange(3)},
+                ),
+                -4,  # disparity range starts at -4
+                2,
+                np.array([[6, 3, 2], [4, 3, 2]]),
+                id="negative disparity and subpixel=0.5",
+            ),
+            pytest.param(
+                xr.DataArray(
+                    data=[[-1, -2.5, -3], [-2, -2.5, -3]],
+                    dims=("row", "col"),
+                    coords={"row": np.arange(2), "col": np.arange(3)},
+                ),
+                -4,  # disparity range starts at -4
+                4,
+                np.array([[12.0, 6, 4.0], [8, 6, 4]]),
+                id="negative disparity and subpixel=0.25",
+            ),
+        ],
+    )
+    def test_disparity_to_index(self, map, shift, subpixel, expected):
+        """Test disparity_to_index method"""
+        result = refinement.dichotomy_cpp.disparity_to_index(map, shift, subpixel)
+        np.testing.assert_array_equal(result, expected)
+
+    @pytest.mark.parametrize(
+        ["map", "shift", "subpixel", "expected"],
+        [
+            pytest.param(
+                np.array([[0, 1, 2], [1, 1, 2]]),
+                1,  # disparity range starts at 1
+                1,
+                np.array([[1, 2, 3], [2, 2, 3]]),
+                id="positive disparity",
+            ),
+            pytest.param(
+                np.array([[3, 2, 1], [2, 2, 1]]),
+                -4,  # disparity range starts at -4
+                1,
+                np.array([[-1, -2, -3], [-2, -2, -3]]),
+                id="negative disparity",
+            ),
+            pytest.param(
+                np.array([[3.0625, 2, 1.0625], [2, 2, 1]]),
+                -4,  # disparity range starts at -4 and precision = 0.0625
+                2,
+                np.array([[-2.46875, -3.0, -3.46875], [-3.0, -3.0, -3.5]]),
+                id="negative disparity and subpixel=0.5",
+            ),
+            pytest.param(
+                np.array([[3.0625, 2, 1.0625], [2, 2, 1]]),
+                -4,  # disparity range starts at -4 and precision = 0.0625
+                4,
+                np.array([[-3.234375, -3.5, -3.734375], [-3.5, -3.5, -3.75]]),
+                id="negative disparity and subpixel=0.5",
+            ),
+        ],
+    )
+    def test_index_to_disparity(self, map, shift, subpixel, expected):
+        """Test index_to_disparity_method"""
+        result = refinement.dichotomy_cpp.index_to_disparity(map, shift, subpixel)
+        np.testing.assert_array_equal(result, expected)
