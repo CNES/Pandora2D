@@ -120,10 +120,12 @@ class Dichotomy(refinement.AbstractRefinement):
         # TO BE REMOVE WHEN CRITERIA MAP WILL BE FINISHED
         criteria_map = create_criteria_map(cost_volumes, disp_map, img_left, invalid_disparity_map_mask)
 
+        subpixel = cost_volumes.attrs["subpixel"]
+
         # Convert disparity maps to np.array to optimise performance
         # Transforming disparity maps into index maps
-        row_map = (row_map.to_numpy() - cost_volumes.disp_row.values[0]).astype(np.float64)
-        col_map = (col_map.to_numpy() - cost_volumes.disp_col.values[0]).astype(np.float64)
+        row_map = (disparity_to_index(row_map, cost_volumes.disp_row.values[0], subpixel)).astype(np.float64)
+        col_map = (disparity_to_index(col_map, cost_volumes.disp_col.values[0], subpixel)).astype(np.float64)
 
         refinement_bind.compute_dichotomy(
             cost_volumes.cost_volumes.data.ravel().astype(np.float64),
@@ -132,14 +134,14 @@ class Dichotomy(refinement.AbstractRefinement):
             cost_values.ravel().astype(np.float64),
             criteria_map.ravel(),
             refinement_bind.Cost_volume_size(cost_volumes.cost_volumes.shape),
-            cost_volumes.attrs["subpixel"],
+            subpixel,
             self.cfg["iterations"],
             self.filter.cpp_instance,
             cost_volumes.attrs["type_measure"],
         )
         # Inverse transforming index maps into disparity maps
-        col_map += cost_volumes.disp_col.values[0]
-        row_map += cost_volumes.disp_row.values[0]
+        col_map = index_to_disparity(col_map, cost_volumes.disp_col.values[0], subpixel)
+        row_map = index_to_disparity(row_map, cost_volumes.disp_row.values[0], subpixel)
 
         # Log about precision
         subpixel_to_iteration = cost_volumes.attrs["subpixel"].bit_length() - 1
@@ -147,6 +149,65 @@ class Dichotomy(refinement.AbstractRefinement):
         logging.info("Dichotomy precision reached: %s", precision)
 
         return col_map, row_map, cost_values
+
+
+def disparity_to_index(disparity_map: xr.DataArray, shift: int, subpixel: int) -> np.ndarray:
+    """
+    Transform a disparity map to index map. Indexes correspond to (row/col) disparities in cost volume.
+
+    Example:
+        - with subpixel=1 :
+
+            * disparity_map = -2 -1 -1  1
+                              -1  0 -1 -1
+                               0  1  1  1
+
+            * disparities range = [-4 -3 -2 -1 0 1 2 3]
+
+            * index_map = 2 3 3 5
+                          3 4 3 3
+                          4 5 5 5
+
+        - with subpixel=2 :
+
+            * disparity_map = -4  -2   -1.5 -2.5
+                              -4  -1   -1   -1
+                              -4  -1.5 -1   -1.5
+
+            * disparities range = [-4 -3.5 -3 -2.5 -2 -1.5 -1]
+
+            * index_map = 0 4 5 3
+                          0 6 6 6
+                          0 5 6 5
+
+    :param disparity_map: 2D map
+    :type disparity_map: xarray.DataArray
+    :param shift: the first value of the disparity coordinates in the cost volume
+    :type shift: int
+    :param subpixel: :sub-sampling of cost_volume
+    :type subpixel: int
+    :return: the index map
+    :rtype: np.ndarray
+    """
+    return (disparity_map.to_numpy() - shift) * subpixel
+
+
+def index_to_disparity(index_map: np.ndarray, shift: int, subpixel: int) -> np.ndarray:
+    """
+    Transform an index map to disparity map. Indexes correspond to (row/col) disparities in cost volume.
+
+    For examples, see disparity_to_index method.
+
+    :param index_map: 2D map
+    :type index_map: np.ndarray
+    :param shift: the first value of the disparity coordinates in the cost volume
+    :type shift: int
+    :param subpixel: :sub-sampling of cost_volume
+    :type subpixel: int
+    :return: the index map
+    :rtype: np.ndarray
+    """
+    return (index_map / subpixel) + shift
 
 
 def create_cost_values_map(cost_volumes: xr.Dataset, disp_map: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
