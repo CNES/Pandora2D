@@ -18,6 +18,7 @@
 """
 Test the refinement.dichotomy pipeline.
 """
+from pathlib import Path
 
 import pytest
 import numpy as np
@@ -31,7 +32,7 @@ class TestComparisonMedicis:
     """
 
     @pytest.fixture()
-    def cfg_mutual_information(self, shift_path, subpix):
+    def cfg_mutual_information(self, shift_path, subpix, tmp_path):
         """
         Make user configuration for mutual information computation
         """
@@ -51,6 +52,9 @@ class TestComparisonMedicis:
                     "subpix": subpix,
                 },
                 "disparity": {"disparity_method": "wta", "invalid_disparity": np.nan},
+            },
+            "output": {
+                "path": str(tmp_path / "vs_medicis_output"),
             },
         }
 
@@ -93,14 +97,14 @@ class TestComparisonMedicis:
         """
         Compute mean errors of medicis and pandora2d disparity maps
         """
-
+        output_dir = Path(cfg_mutual_information["output"]["path"])
         # Run pandora2D pipeline
-        run_dir = run_pipeline(cfg_mutual_information)
+        run_pipeline(cfg_mutual_information)
 
         # Get pandora2d disparity maps
-        with rasterio.open(run_dir / "output" / "row_map.tif") as src:
+        with rasterio.open(output_dir / "disparity_map" / "row_map.tif") as src:
             row_map_pandora2d = src.read(1)
-        with rasterio.open(run_dir / "output" / "col_map.tif") as src:
+        with rasterio.open(output_dir / "disparity_map" / "col_map.tif") as src:
             col_map_pandora2d = src.read(1)
 
         # Get medicis disparity maps

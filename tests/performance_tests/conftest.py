@@ -22,7 +22,6 @@
 # pylint: disable=redefined-outer-name
 
 from typing import Tuple
-from pathlib import Path
 
 import pytest
 
@@ -65,11 +64,11 @@ def remove_edges():
 
 
 @pytest.fixture()
-def data_path():
+def data_path(root_dir):
     """
     Return path to get left and right images and medicis data
     """
-    return Path("tests/performance_tests/data_medicis/")
+    return root_dir / "tests/performance_tests/data_medicis/"
 
 
 @pytest.fixture()
