@@ -145,7 +145,7 @@ def test_monoband_with_nodata_not_nan(
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
     # Test for report
-    with open(tmp_path / "report.json", encoding="utf8") as report_file:
+    with open(tmp_path / "disparity_map" / "report.json", encoding="utf8") as report_file:
         report = json.load(report_file)
 
     assert report["statistics"]["disparity"].keys() == {"row", "col"}
@@ -247,7 +247,7 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
     # Test for report
-    with open(tmp_path / "report.json", encoding="utf8") as report_file:
+    with open(tmp_path / "disparity_map" / "report.json", encoding="utf8") as report_file:
         report = json.load(report_file)
 
     assert report["statistics"]["disparity"].keys() == {"row", "col"}
@@ -289,9 +289,9 @@ def test_disparity_grids(run_pipeline, make_input_cfg, pipeline, request, tmp_pa
 
     run_pipeline(configuration)
 
-    with rasterio.open(tmp_path / "row_map.tif") as src:
+    with rasterio.open(tmp_path / "disparity_map" / "row_map.tif") as src:
         row_map = src.read(1)
-    with rasterio.open(tmp_path / "col_map.tif") as src:
+    with rasterio.open(tmp_path / "disparity_map" / "col_map.tif") as src:
         col_map = src.read(1)
 
     non_nan_row_map = ~np.isnan(row_map)

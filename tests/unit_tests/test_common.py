@@ -200,7 +200,7 @@ class TestSaveDisparityMaps:
             create_test_dataset,
             {**class_scoped_correct_input_cfg, "output": {"path": str(output_dir)}},
         )
-        return output_dir
+        return output_dir / "disparity_map"
 
     @pytest.mark.parametrize(
         "file_name",

@@ -131,7 +131,7 @@ def test_georeferencement(
     """Test that top left and bottom right corners are well georeferenced."""
     run_pipeline(configuration)
 
-    output = rasterio.open(Path(configuration["output"]["path"]) / output_file)
+    output = rasterio.open(Path(configuration["output"]["path"]) / "disparity_map" / output_file)
     bottom_right_disparity_indexes = output.width - 1, output.height - 1
 
     assert output.crs == crs
@@ -201,7 +201,7 @@ def test_roi_georeferencement(
     """Test that top left and bottom right corners are well georeferenced."""
     run_pipeline(configuration_with_roi)
 
-    output = rasterio.open(Path(configuration_with_roi["output"]["path"]) / output_file)
+    output = rasterio.open(Path(configuration_with_roi["output"]["path"]) / "disparity_map" / output_file)
     bottom_right_disparity_indexes = output.width - 1, output.height - 1
 
     assert output.crs == crs

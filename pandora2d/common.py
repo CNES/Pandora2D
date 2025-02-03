@@ -22,6 +22,7 @@
 """
 This module contains functions allowing to save the results and the configuration of Pandora pipeline.
 """
+
 import json
 from pathlib import Path
 from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
@@ -120,7 +121,7 @@ def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
     if dataset.attrs["transform"] is not None:
         adjust_georeferencement(dataset, cfg)
     # create output dir
-    output = Path(cfg["output"]["path"])
+    output = Path(cfg["output"]["path"]) / "disparity_map"
     _save_dataset(dataset, output)
     _save_disparity_maps_report(dataset, output)
 
@@ -148,7 +149,7 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
     :type output: Path
     :return: None
     """
-    output.mkdir(exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
     for name, data in dataset.items():
         write_data_array(
             data,
@@ -250,7 +251,13 @@ def dataset_disp_maps(
     dataarray_col = xr.DataArray(delta_col, dims=dims, coords=coords)
     dataarray_score = xr.DataArray(correlation_score, dims=dims, coords=coords)
 
-    dataset = xr.Dataset({"row_map": dataarray_row, "col_map": dataarray_col, "correlation_score": dataarray_score})
+    dataset = xr.Dataset(
+        {
+            "row_map": dataarray_row,
+            "col_map": dataarray_col,
+            "correlation_score": dataarray_score,
+        }
+    )
 
     if attributes is not None:
         dataset.attrs = attributes
@@ -363,3 +370,29 @@ def save_config(config: Dict) -> None:
     path_output.mkdir(parents=True, exist_ok=True)
     with open(path_output / "config.json", "w", encoding="utf8") as fd:
         json.dump(config, fd, indent=2)
+
+
+def string_to_path(path: str, relative_to: Union[Path, str]) -> Path:
+    """
+    Get the absolute path of a given path string. If the path is not absolute,
+    it resolves it relative to the provided ``relative_to`` path.
+
+    :param path: The path string to convert to an absolute path.
+    :type path: str
+    :param relative_to: The base path to resolve the relative path.
+    :type relative_to: PathLike | str
+    :return: The absolute path of the given path string.
+    :rtype: Path
+
+    :Example:
+        >>> string_to_path('/absolute/path', Path('/home/user'))
+        PosixPath('/absolute/path')
+
+        >>> string_to_path('relative/path', Path('/home/user'))
+        PosixPath('/home/user/relative/path')
+
+        >>> string_to_path('~/mydir', Path('/home/user'))
+        PosixPath('/home/user/mydir')
+    """
+    path = Path(path).expanduser()
+    return path if path.is_absolute() else (relative_to / path).resolve()
