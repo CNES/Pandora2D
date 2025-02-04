@@ -1,11 +1,11 @@
 {
     "input": {
       "left": {
-        "img": "./maricopa/left.tif",
+        "img": "../images/maricopa/left.tif",
         "nodata": -9999
       },
       "right": {
-        "img": "./maricopa/right.tif",
+        "img": "../images/maricopa/right.tif",
         "nodata": -9999
       },
       "col_disparity": {"init": 0, "range": 2},
@@ -26,5 +26,8 @@
         "iterations": 4,
         "filter": { "method": "sinc_python"}
       }
+    },
+    "output": {
+      "path": "a_dichotomy_python_pipeline_output"
     }
   }

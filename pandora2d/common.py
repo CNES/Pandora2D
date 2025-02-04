@@ -24,6 +24,7 @@ This module contains functions allowing to save the results and the configuratio
 """
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
 
@@ -103,7 +104,8 @@ class Registry(Generic[T]):
 
 def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
     """
-    Save disparity maps into directory defined by cfg's `output/path` key.
+    Save disparity maps into directory defined by cfg's `output/path` key,
+    create it with its parents if necessary.
 
     :param dataset: Dataset which contains:
 
@@ -396,3 +398,29 @@ def string_to_path(path: str, relative_to: Union[Path, str]) -> Path:
     """
     path = Path(path).expanduser()
     return path if path.is_absolute() else (relative_to / path).resolve()
+
+
+def resolve_path_in_config(config: Dict, config_path: Path) -> Dict:
+    """
+    Create a copy of config with all path strings replaced by an absolute path string relative to
+    config_path.
+
+    :param config: config to modify
+    :type config: Dict
+    :param config_path: path to the config file.
+    :type config_path: Path
+    :return: The configuration with changed paths.
+    :rtype: Dict
+    """
+    result = deepcopy(config)
+    relative_to = config_path.parent
+    result["input"]["left"]["img"] = str(string_to_path(config["input"]["left"]["img"], relative_to))
+    result["input"]["right"]["img"] = str(string_to_path(config["input"]["right"]["img"], relative_to))
+    col_disparity_init = config["input"]["col_disparity"]["init"]
+    if isinstance(col_disparity_init, str):
+        result["input"]["col_disparity"]["init"] = str(string_to_path(col_disparity_init, relative_to))
+    row_disparity_init = config["input"]["row_disparity"]["init"]
+    if isinstance(row_disparity_init, str):
+        result["input"]["row_disparity"]["init"] = str(string_to_path(row_disparity_init, relative_to))
+    result["output"]["path"] = str(string_to_path(config["output"]["path"], relative_to))
+    return result

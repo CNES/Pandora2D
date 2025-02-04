@@ -130,7 +130,7 @@ def test_monoband_with_nodata_not_nan(
         **correct_input_cfg,
         **correct_pipeline_without_refinement,
         **roi,
-        **{"output": {"path": str(tmp_path)}},
+        **{"output": {"path": "relative"}},
     }
     configuration["input"]["left"]["nodata"] = -9999
 
@@ -145,7 +145,7 @@ def test_monoband_with_nodata_not_nan(
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
     # Test for report
-    with open(tmp_path / "disparity_map" / "report.json", encoding="utf8") as report_file:
+    with open(tmp_path / "relative" / "disparity_map" / "report.json", encoding="utf8") as report_file:
         report = json.load(report_file)
 
     assert report["statistics"]["disparity"].keys() == {"row", "col"}

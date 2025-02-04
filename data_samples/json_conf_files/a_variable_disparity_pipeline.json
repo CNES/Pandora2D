@@ -1,15 +1,15 @@
 {
     "input": {
       "left": {
-        "img": "./maricopa/left.tif",
+        "img": "../images/maricopa/left.tif",
         "nodata": -9999
       },
       "right": {
-        "img": "./maricopa/right.tif",
+        "img": "../images/maricopa/right.tif",
         "nodata": -9999
       },
-      "col_disparity": {"init": "./maricopa/init_col_disparity_grid.tif", "range": 5},
-      "row_disparity": {"init": "./maricopa/init_row_disparity_grid.tif", "range": 5}
+      "col_disparity": {"init": "../images/maricopa/init_col_disparity_grid.tif", "range": 5},
+      "row_disparity": {"init": "../images/maricopa/init_row_disparity_grid.tif", "range": 5}
     },
     "pipeline": {
       "matching_cost": {

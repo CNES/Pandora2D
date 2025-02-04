@@ -56,20 +56,21 @@ def right_img_path(tmp_path, right_img_path):
     return str(path)
 
 
-def test_estimation(run_pipeline, correct_input_cfg):
+def test_estimation(run_pipeline, correct_input_cfg, tmp_path):
     """Test a configuration with only an estimation in the pipeline."""
     configuration = {
         **correct_input_cfg,
         "pipeline": {
             "estimation": {"estimation_method": "phase_cross_correlation"},
         },
+        "output": {"path": str(tmp_path)},
     }
     run_pipeline(configuration)
 
 
 @pytest.mark.parametrize("subpix", subpix_list)
 @pytest.mark.parametrize("matching_cost_method", matching_cost_methods)
-def test_matching_cost_with_disparity(run_pipeline, correct_input_cfg, matching_cost_method, subpix):
+def test_matching_cost_with_disparity(run_pipeline, correct_input_cfg, matching_cost_method, subpix, tmp_path):
     """Test pipeline with a matching_cost and a disparity steps."""
     configuration = {
         **correct_input_cfg,
@@ -77,13 +78,16 @@ def test_matching_cost_with_disparity(run_pipeline, correct_input_cfg, matching_
             "matching_cost": {"matching_cost_method": matching_cost_method, "subpix": subpix},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         },
+        "output": {"path": str(tmp_path)},
     }
     run_pipeline(configuration)
 
 
 @pytest.mark.parametrize("subpix", subpix_list)
 @pytest.mark.parametrize("matching_cost_method", matching_cost_methods)
-def test_matching_cost_with_estimation_and_disparity(run_pipeline, correct_input_cfg, matching_cost_method, subpix):
+def test_matching_cost_with_estimation_and_disparity(
+    run_pipeline, correct_input_cfg, matching_cost_method, subpix, tmp_path
+):
     """Test pipeline with an estimation, a matching_cost and a disparity steps."""
     configuration = {
         **correct_input_cfg,
@@ -92,6 +96,7 @@ def test_matching_cost_with_estimation_and_disparity(run_pipeline, correct_input
             "matching_cost": {"matching_cost_method": matching_cost_method, "subpix": subpix},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         },
+        "output": {"path": str(tmp_path)},
     }
     run_pipeline(configuration)
 
@@ -135,15 +140,16 @@ class TestRefinement:
             },
         }
 
-    def test_interpolation(self, run_pipeline, correct_input_cfg, interpolation_pipeline):
+    def test_interpolation(self, run_pipeline, correct_input_cfg, interpolation_pipeline, tmp_path):
         """Test interpolation."""
         configuration = {
             **correct_input_cfg,
             "pipeline": {**interpolation_pipeline},
+            "output": {"path": str(tmp_path)},
         }
         run_pipeline(configuration)
 
-    def test_interpolation_with_estimation(self, run_pipeline, correct_input_cfg, interpolation_pipeline):
+    def test_interpolation_with_estimation(self, run_pipeline, correct_input_cfg, interpolation_pipeline, tmp_path):
         """Test interpolation with estimation."""
         configuration = {
             **correct_input_cfg,
@@ -151,6 +157,7 @@ class TestRefinement:
                 "estimation": {"estimation_method": "phase_cross_correlation"},
                 **interpolation_pipeline,
             },
+            "output": {"path": str(tmp_path)},
         }
         run_pipeline(configuration)
 
@@ -164,13 +171,14 @@ class TestRefinement:
             # ("dichotomy", "sinc"),
         ],
     )
-    def test_dichotomy(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
+    def test_dichotomy(self, run_pipeline, correct_input_cfg, dichotomy_pipeline, tmp_path):
         """Test dichotomy."""
         configuration = {
             **correct_input_cfg,
             "pipeline": {
                 **dichotomy_pipeline,
             },
+            "output": {"path": str(tmp_path)},
         }
         run_pipeline(configuration)
 
@@ -184,7 +192,7 @@ class TestRefinement:
             # ("dichotomy", "sinc"),
         ],
     )
-    def test_dichotomy_with_estimation(self, run_pipeline, correct_input_cfg, dichotomy_pipeline):
+    def test_dichotomy_with_estimation(self, run_pipeline, correct_input_cfg, dichotomy_pipeline, tmp_path):
         """Test dichotomy with estimation."""
         configuration = {
             **correct_input_cfg,
@@ -192,22 +200,24 @@ class TestRefinement:
                 "estimation": {"estimation_method": "phase_cross_correlation"},
                 **dichotomy_pipeline,
             },
+            "output": {"path": str(tmp_path)},
         }
         run_pipeline(configuration)
 
     @pytest.mark.parametrize("iterations", iteration_list)
-    def test_optical_flows(self, run_pipeline, correct_input_cfg, optical_flow_pipeline):
+    def test_optical_flows(self, run_pipeline, correct_input_cfg, optical_flow_pipeline, tmp_path):
         """Test optical flows."""
         configuration = {
             **correct_input_cfg,
             "pipeline": {
                 **optical_flow_pipeline,
             },
+            "output": {"path": str(tmp_path)},
         }
         run_pipeline(configuration)
 
     @pytest.mark.parametrize("iterations", iteration_list)
-    def test_optical_flows_with_estimation(self, run_pipeline, correct_input_cfg, optical_flow_pipeline):
+    def test_optical_flows_with_estimation(self, run_pipeline, correct_input_cfg, optical_flow_pipeline, tmp_path):
         """Test optical flows with estimation."""
         configuration = {
             **correct_input_cfg,
@@ -215,5 +225,6 @@ class TestRefinement:
                 "estimation": {"estimation_method": "phase_cross_correlation"},
                 **optical_flow_pipeline,
             },
+            "output": {"path": str(tmp_path)},
         }
         run_pipeline(configuration)
