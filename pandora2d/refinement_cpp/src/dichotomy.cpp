@@ -86,11 +86,12 @@ bool all_same(const Eigen::VectorXd& data) {
  * @param cv_size : the structure containing the dimensions of the cost volume
  * @return EEigen::MatrixXd of size nb_disp_row * nb_disp_col
  */
-Eigen::MatrixXd get_cost_surface(const Eigen::VectorXd& cost_volume,
+Eigen::MatrixXd get_cost_surface(const Eigen::VectorXf& cost_volume,
                                  unsigned int index,
                                  Cost_volume_size& cv_size) {
   return cost_volume.segment(index, cv_size.nb_disps())
-      .reshaped<Eigen::RowMajor>(cv_size.nb_disp_row, cv_size.nb_disp_col);
+      .reshaped<Eigen::RowMajor>(cv_size.nb_disp_row, cv_size.nb_disp_col)
+      .cast<double>();
 }
 
 /**
@@ -160,7 +161,7 @@ void search_new_best_point(const Eigen::MatrixXd& cost_surface,
  * @param filter : interpolation filter
  * @param method_matching_cost : max or min
  */
-void compute_dichotomy(Eigen::VectorXd& cost_volume,
+void compute_dichotomy(Eigen::VectorXf& cost_volume,
                        Eigen::Ref<Eigen::VectorXd> disparity_map_col,
                        Eigen::Ref<Eigen::VectorXd> disparity_map_row,
                        Eigen::Ref<Eigen::VectorXd> score_map,

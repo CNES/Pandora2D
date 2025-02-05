@@ -128,7 +128,7 @@ class Dichotomy(refinement.AbstractRefinement):
         col_map = (disparity_to_index(col_map, cost_volumes.disp_col.values[0], subpixel)).astype(np.float64)
 
         refinement_bind.compute_dichotomy(
-            cost_volumes.cost_volumes.data.ravel().astype(np.float64),
+            cost_volumes.cost_volumes.data.ravel(),
             col_map.ravel(),
             row_map.ravel(),
             cost_values.ravel().astype(np.float64),
