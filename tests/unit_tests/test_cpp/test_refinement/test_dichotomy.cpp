@@ -32,11 +32,11 @@ This module contains tests associated to dichotomy.
 /**
  * Create cost volume
  */
-Eigen::MatrixXd cost_volume_4_4_2_3() {
+Eigen::MatrixXf cost_volume_4_4_2_3() {
   // Cost volume for (4,4) image and row disp [4, 5] and col disp [-2, -1, 0]
   // pixel-by-pixel filling
   unsigned int cv_size = 4 * 4 * 2 * 3;
-  Eigen::VectorXd cost_volume(cv_size);
+  Eigen::VectorXf cost_volume(cv_size);
   // clang-format off
   cost_volume << 0.680375, 0.211234, 0.566198, 0.59688, 0.823295, 0.604897,
                  0.329554, 0.536459, 0.444451, 0.10794, 0.045205, 0.257742,

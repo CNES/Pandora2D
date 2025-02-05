@@ -24,6 +24,7 @@ This file contains useful function definitions for tests.
 #ifndef CONFTEST_HPP
 #define CONFTEST_HPP
 
+#include <doctest.h>
 #include <Eigen/Dense>
 
 /**
@@ -38,7 +39,7 @@ void check_inside_eigen_element(const T& data, const T& expected) {
   auto d = data.data();
   auto e = expected.data();
   for (; e != (expected.data() + expected.size()); ++d, ++e) {
-    CHECK(*d == *e);
+    CHECK(*d == doctest::Approx(*e).epsilon(1e-6));
   }
 }
 
