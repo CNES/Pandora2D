@@ -34,6 +34,7 @@ import xarray as xr
 from numpy.typing import NDArray
 from pandora.common import write_data_array
 from rasterio import Affine
+from rasterio.crs import CRS
 
 from pandora2d import reporting
 from pandora2d.constants import Criteria
@@ -101,6 +102,15 @@ class Registry(Generic[T]):
         if self.default is None and name not in self.registered:
             raise KeyError(f"No class registered with name `{name}`.")
         return self.registered.get(name, self.default)
+
+
+class AllPrimitiveEncoder(json.JSONEncoder):
+    """JSON Encoder to serialize all elements"""
+
+    def default(self, o):
+        if isinstance(o, CRS):
+            return o.to_wkt()
+        return super().default(o)
 
 
 def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
@@ -177,16 +187,8 @@ def save_attributes(dataset: xr.Dataset, output: Union[str, PathLike]) -> None:
     :type output: Union[str, PathLike]
     :return: None
     """
-
-    # Check if crs attribute is json serializable, and if not, converts it to well known text (wkt)
-    if "crs" in dataset.attrs:
-        try:
-            json.dumps(dataset.attrs["crs"])
-        except TypeError:
-            dataset.attrs["crs"] = dataset.attrs["crs"].to_wkt()
-
     with open(output / Path("attributes.json"), "w", encoding="utf8") as fd:
-        json.dump(dataset.attrs, fd, indent=2)
+        json.dump(dataset.attrs, fd, indent=2, cls=AllPrimitiveEncoder)
 
 
 def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:
