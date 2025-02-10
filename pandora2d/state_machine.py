@@ -380,6 +380,14 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             self.cost_volumes.coords,
             correlation_score,
             {
+                "offset": {
+                    "row": cfg.get("ROI", {}).get("row", {}).get("first", 0),
+                    "col": cfg.get("ROI", {}).get("col", {}).get("first", 0),
+                },
+                "step": {
+                    "row": cfg["pipeline"]["matching_cost"]["step"][0],
+                    "col": cfg["pipeline"]["matching_cost"]["step"][1],
+                },
                 "invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"],
                 "crs": self.left_img.crs,
                 "transform": self.left_img.transform,

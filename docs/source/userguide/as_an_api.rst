@@ -1,3 +1,5 @@
+.. _as_an_api:
+
 As an API
 =========
 
@@ -181,7 +183,11 @@ stored in a xarray.Dataset.
         col_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         correlation_score  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
     Attributes:
-        invalid_disp: nan
+        offset:       {'row': 0, 'col': 0}
+        step:         {'row': 1, 'col': 1}
+        invalid_disp: -9999
+        crs:          None
+        transform:    | 1.00, 0.00, 0.00|| 0.00, 1.00, 0.00|| 0.00, 0.00, 1.00|
 
 Border management
 #################

@@ -79,7 +79,7 @@ class TestSubpix:
         """
         return {
             "pipeline": {
-                "matching_cost": {"matching_cost_method": "ssd", "window_size": 1, "subpix": subpix},
+                "matching_cost": {"matching_cost_method": "ssd", "window_size": 1, "step": [1, 1], "subpix": subpix},
                 "disparity": {"disparity_method": "wta", "invalid_disparity": -5},
             }
         }
