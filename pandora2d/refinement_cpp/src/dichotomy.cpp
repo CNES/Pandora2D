@@ -24,6 +24,8 @@ This module contains functions associated to the Dichotomy refinement method.
 #include "dichotomy.hpp"
 #include "alias.hpp"
 
+namespace py = pybind11;
+
 /**
  * @brief Function to find the index of the minimum element, ignoring NaNs
  *
@@ -84,14 +86,34 @@ bool all_same(const Eigen::VectorXd& data) {
  * @param cost_volume : 1D data
  * @param index : pixel index to find its cost surface
  * @param cv_size : the structure containing the dimensions of the cost volume
- * @return EEigen::MatrixXd of size nb_disp_row * nb_disp_col
+ * @return Eigen::MatrixXd of size nb_disp_row * nb_disp_col
  */
-Eigen::MatrixXd get_cost_surface(const Eigen::VectorXf& cost_volume,
+Eigen::MatrixXd get_cost_surface(py::array_t<float>& cost_volume,
                                  unsigned int index,
                                  Cost_volume_size& cv_size) {
-  return cost_volume.segment(index, cv_size.nb_disps())
-      .reshaped<Eigen::RowMajor>(cv_size.nb_disp_row, cv_size.nb_disp_col)
-      .cast<double>();
+  auto index_to_position = [](unsigned int index, Cost_volume_size& cv_size) -> Position2D {
+    int quot = index / (cv_size.nb_col * cv_size.nb_disps());
+    int rem = index % (cv_size.nb_col * cv_size.nb_disps());
+    return Position2D(quot, rem / cv_size.nb_disps());
+  };
+
+  // Recover pixel index
+  Position2D p = index_to_position(index, cv_size);
+
+  // Access to array data - 4 for cost volume dimension
+  auto r_cost_volume = cost_volume.unchecked<4>();
+
+  // Matrix creation
+  Eigen::MatrixXd cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
+
+  // Data copy
+  for (std::size_t k_disp_row = 0; k_disp_row < cv_size.nb_disp_row; ++k_disp_row) {
+    for (std::size_t l_disp_col = 0; l_disp_col < cv_size.nb_disp_col; ++l_disp_col) {
+      cost_surface(k_disp_row, l_disp_col) = r_cost_volume(p.row, p.col, k_disp_row, l_disp_col);
+    }
+  }
+
+  return cost_surface;
 }
 
 /**
@@ -155,18 +177,16 @@ void search_new_best_point(const Eigen::MatrixXd& cost_surface,
  * @param disparity_map_row : 1D row disparity data of size nb_row * nb_col
  * @param score_map : 1D score data of size nb_row * nb_col
  * @param criteria_map : 1D criteria data of size nb_row * nb_col
- * @param cv_size : cost volume size information
  * @param subpixel :sub-sampling of cost_volume
  * @param nb_iterations : number of iterations of the dichotomy
  * @param filter : interpolation filter
  * @param method_matching_cost : max or min
  */
-void compute_dichotomy(Eigen::VectorXf& cost_volume,
+void compute_dichotomy(py::array_t<float> cost_volume,
                        Eigen::Ref<Eigen::VectorXd> disparity_map_col,
                        Eigen::Ref<Eigen::VectorXd> disparity_map_row,
                        Eigen::Ref<Eigen::VectorXd> score_map,
                        Eigen::VectorXd& criteria_map,
-                       Cost_volume_size& cv_size,
                        int subpixel,
                        int nb_iterations,
                        abstractfilter::AbstractFilter& filter,
@@ -177,6 +197,8 @@ void compute_dichotomy(Eigen::VectorXf& cost_volume,
   auto pos_disp_row_it = disparity_map_row.begin();
   auto score_it = score_map.begin();
   auto crit_it = criteria_map.begin();
+  Cost_volume_size cv_size = Cost_volume_size(cost_volume.shape(0), cost_volume.shape(1),
+                                              cost_volume.shape(2), cost_volume.shape(3));
   auto nb_disps = cv_size.nb_disps();
 
   unsigned int index = -nb_disps;  //< Index on disparity_map less the first occurance

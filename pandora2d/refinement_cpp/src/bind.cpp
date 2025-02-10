@@ -23,6 +23,7 @@ This module contains functions associated to the binding pybind of cpp dichotomy
 
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
+#include <vector>
 
 #include "dichotomy.hpp"
 
@@ -30,8 +31,8 @@ using namespace pybind11::literals;
 
 PYBIND11_MODULE(refinement_bind, m) {
   m.def("compute_dichotomy", &compute_dichotomy, "cost_volume"_a, "disparity_map_col"_a,
-        "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "cv_size"_a, "subpixel"_a,
-        "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
+        "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "subpixel"_a, "nb_iterations"_a,
+        "filter"_a, "method_matching_cost"_a,
         R"mydelimiter(
             Dichotomy calculation
 
@@ -45,8 +46,6 @@ PYBIND11_MODULE(refinement_bind, m) {
             :type score_map: NDArray[np.floating]
             :param criteria_map: criteria map data
             :type criteria_map: NDArray[np.floating]
-            :param cv_size: cost_volume size [nb_row, nb_col, nb_disp_row, nb_disp_col]
-            :type cv_size: Cost_volume_size
             :param subpixel: sub-sampling of cost_volume
             :type subpixel: int
             :param nb_iterations: number of iterations of the dichotomy
@@ -60,6 +59,7 @@ PYBIND11_MODULE(refinement_bind, m) {
   pybind11::class_<Cost_volume_size>(m, "Cost_volume_size")
       .def(pybind11::init<>())
       .def(pybind11::init<Eigen::VectorXd&>())
+      .def(pybind11::init<std::vector<size_t>&>())
       .def(pybind11::init<unsigned int, unsigned int, unsigned int, unsigned int>())
       .def_property_readonly("size", &Cost_volume_size::size, R"mydelimiter(
             Returns the cost_volume size nb_row * nb_col * nb_disp_row * nb_disp_col.
