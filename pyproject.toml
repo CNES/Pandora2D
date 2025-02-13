@@ -66,6 +66,7 @@ dev = [
     "gcovr",
 ]
 
+# If updated, align with docs/requirements.txt for Readthedocs CI
 docs = ["sphinx", "sphinx_autoapi", "sphinx_rtd_theme", "sphinx_tabs"]
 
 notebook = ["graphviz", "notebook"]
