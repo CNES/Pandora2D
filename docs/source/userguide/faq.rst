@@ -10,7 +10,7 @@ How do I use a step parameter in the matching cost computation?
 
 It is possible to add a step parameter in the configuration file. This parameter ensures that not all pixels are calculated during the matching cost computation.
 
-.. code:: ipython3
+.. code:: python
 
     user_cfg = {
         "input": {
@@ -51,7 +51,7 @@ How do I choose to process only a certain part of the image?
 
 It is possible to work on only one section of the image with an ROI. For this, the user can specify the area he wants in the configuration file. 
 
-.. code:: ipython3
+.. code:: python
 
     user_cfg = {
         "input": {
@@ -89,12 +89,12 @@ It is possible to work on only one section of the image with an ROI. For this, t
         },
     }
 
-.. code:: ipython3
+.. code:: python
 
     user_cfg["ROI"]["margins"] = pandora2d_machine.global_margins.astuple()
     roi = get_roi_processing(user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"])
 
-.. code:: ipython3
+.. code:: python
 
     img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=roi)
     img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=roi)
