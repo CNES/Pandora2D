@@ -5,23 +5,8 @@ Matching cost computation
 
 Theoretical basics
 ------------------
-The first step computes from the pair of images a cost volumes containing the similarity coefficients. The cost volumes is a 4D tensor with dims
-[row, col, disp_row, disp_col].
 
-For each disparity in the input vertical disparity range (disp_min_row, disp_max_row),
-Pandora2D will shift the right image by the corresponding vertical disparity
-and call Pandora to compute a cost volume with the input horizontal disparity range (disp_min_col, disp_max_col).
-
-.. figure:: ./Images/pandora2d.gif
-    :align: center
-
-Different measures of similarity are available in Pandora2D :
-
-- SAD (Sum of Absolute Differences)
-- SSD (Sum of Squared Differences)
-- ZNCC (Zero mean Normalized Cross Correlation)
-- MCCNN (Neural network which computes a similarity measure) (MANDATORY: pandora_plugin_mccnn) (please see: `pandora documentation <https://pandora.readthedocs.io/en/stable/userguide/plugins/plugin_mccnn.html>`_)
-
+Theory is detailed in the exploring the field section (:ref:`exploring_the_field_matching_cost`).
 
 Configuration and parameters
 ----------------------------
@@ -41,7 +26,11 @@ Configuration and parameters
      - Similarity measure
      - str
      -
-     - "ssd" , "sad", "zncc", "mc_cnn"
+     - * "ssd"
+       * "sad"
+       * "zncc"
+       * "mc_cnn"
+       * "mutual_information"
      - Yes.
    * - window_size
      - Window size for similarity measure
