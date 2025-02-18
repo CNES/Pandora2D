@@ -271,9 +271,10 @@ class Disparity:
         invalid_mc = np.all(indices_nan, axis=(2, 3))
         cost_volumes_user["cost_volumes"].data[indices_nan] = np.nan
 
-        disp_map_col = disp_map_col.astype("float32")
-        disp_map_row = disp_map_row.astype("float32")
-        score_map = score_map.astype("float32")
+        if cost_volumes["cost_volumes"].data.dtype != disp_map_col.dtype:
+            disp_map_col = disp_map_col.astype(cost_volumes["cost_volumes"].data.dtype)
+            disp_map_row = disp_map_row.astype(cost_volumes["cost_volumes"].data.dtype)
+            score_map = score_map.astype(cost_volumes["cost_volumes"].data.dtype)
 
         disp_map_col[invalid_mc] = self._invalid_disparity
         disp_map_row[invalid_mc] = self._invalid_disparity

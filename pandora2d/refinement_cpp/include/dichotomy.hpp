@@ -157,9 +157,34 @@ struct Cost_volume_size {
  * @param cv_size : the structure containing the dimensions of the cost volume
  * @return Eigen::MatrixXd of size nb_disp_row * nb_disp_col
  */
-Eigen::MatrixXd get_cost_surface(py::array_t<float>& cost_volume,
+template <typename T>
+Eigen::MatrixXd get_cost_surface(py::array_t<T>& cost_volume,
                                  unsigned int index,
-                                 Cost_volume_size& cv_size);
+                                 Cost_volume_size& cv_size) {
+  auto index_to_position = [](unsigned int index, Cost_volume_size& cv_size) -> Position2D {
+    int quot = index / (cv_size.nb_col * cv_size.nb_disps());
+    int rem = index % (cv_size.nb_col * cv_size.nb_disps());
+    return Position2D(quot, rem / cv_size.nb_disps());
+  };
+
+  // Recover pixel index
+  Position2D p = index_to_position(index, cv_size);
+
+  // Access to array data - 4 for cost volume dimension
+  auto r_cost_volume = cost_volume.template unchecked<4>();
+
+  // Matrix creation
+  Eigen::MatrixXd cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
+
+  // Data copy
+  for (std::size_t k_disp_row = 0; k_disp_row < cv_size.nb_disp_row; ++k_disp_row) {
+    for (std::size_t l_disp_col = 0; l_disp_col < cv_size.nb_disp_col; ++l_disp_col) {
+      cost_surface(k_disp_row, l_disp_col) = r_cost_volume(p.row, p.col, k_disp_row, l_disp_col);
+    }
+  }
+
+  return cost_surface;
+}
 
 /**
  * @brief Search for the new best position
@@ -195,14 +220,66 @@ void search_new_best_point(const Eigen::MatrixXd& cost_surface,
  * @param filter : interpolation filter
  * @param method_matching_cost : max or min
  */
-void compute_dichotomy(py::array_t<float> cost_volume,
-                       Eigen::Ref<Eigen::VectorXd> disparity_map_col,
-                       Eigen::Ref<Eigen::VectorXd> disparity_map_row,
-                       Eigen::Ref<Eigen::VectorXd> score_map,
-                       Eigen::VectorXd& criteria_map,
+template <typename T, typename U>
+void compute_dichotomy(py::array_t<T> cost_volume,
+                       Eigen::Ref<U> disparity_map_col,
+                       Eigen::Ref<U> disparity_map_row,
+                       Eigen::Ref<U> score_map,
+                       U& criteria_map,
                        int subpixel,
                        int nb_iterations,
                        abstractfilter::AbstractFilter& filter,
-                       std::string method_matching_cost);
+                       std::string method_matching_cost) {
+  // Get parameters
+  auto first_iterations = (subpixel != 4) ? subpixel : 3;  //< subpixel is 1, 2 or 4
+  auto pos_disp_col_it = disparity_map_col.begin();
+  auto pos_disp_row_it = disparity_map_row.begin();
+  auto score_it = score_map.begin();
+  auto crit_it = criteria_map.begin();
+  Cost_volume_size cv_size = Cost_volume_size(cost_volume.shape(0), cost_volume.shape(1),
+                                              cost_volume.shape(2), cost_volume.shape(3));
+  auto nb_disps = cv_size.nb_disps();
+
+  unsigned int index = -nb_disps;  //< Index on disparity_map less the first occurance
+  Eigen::MatrixXd cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
+  double precision = 0.;
+
+  // Loop on each image point calculated
+  for (; pos_disp_col_it != disparity_map_col.end();
+       ++pos_disp_col_it, ++pos_disp_row_it, ++score_it, ++crit_it) {
+    // update index
+    index += nb_disps;
+
+    // taking into account the peak at the edge & invalid disparities (== 1 in the array)
+    if (*crit_it == 1.)
+      continue;
+
+    // Check initial disparity is not nan
+    if (std::isnan(*pos_disp_row_it) or std::isnan(*pos_disp_col_it))
+      continue;
+
+    // get cost_surface
+    cost_surface = get_cost_surface<T>(cost_volume, index, cv_size);
+    double pos_row_disp =
+        (std::is_same_v<T, float>) ? static_cast<double>(*pos_disp_row_it) : *pos_disp_row_it;
+    double pos_col_disp =
+        (std::is_same_v<T, float>) ? static_cast<double>(*pos_disp_col_it) : *pos_disp_col_it;
+    double score = (std::is_same_v<T, float>) ? static_cast<double>(*score_it) : *score_it;
+
+    // Loop on nb_iterations
+    precision = 1. / pow(2, first_iterations);  //< Reset precision before iterations
+    for (auto it = first_iterations; it <= nb_iterations; ++it) {
+      search_new_best_point(cost_surface, precision, subpixel, pos_row_disp, pos_col_disp, score,
+                            filter, method_matching_cost);
+      // update precision
+      precision /= 2.;
+    }
+
+    // update informations
+    *pos_disp_row_it = (std::is_same_v<T, float>) ? static_cast<float>(pos_row_disp) : pos_row_disp;
+    *pos_disp_col_it = (std::is_same_v<T, float>) ? static_cast<float>(pos_col_disp) : pos_col_disp;
+    *score_it = (std::is_same_v<T, float>) ? static_cast<float>(score) : score;
+  }
+}
 
 #endif

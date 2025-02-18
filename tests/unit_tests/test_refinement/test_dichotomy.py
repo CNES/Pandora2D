@@ -414,7 +414,7 @@ class TestRefinementMethod:
         config_dichotomy["refinement_method"] = dichotomy_class_str
         dichotomy_instance = dichotomy_class(config_dichotomy)
         # Convert disp_map to float so that it can store NaNs:
-        disp_map = disp_map.astype(np.float32)
+        disp_map = disp_map.astype(cost_volumes["cost_volumes"].data.dtype)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map[{"row": 1, "col": 0}] = np.nan
 
