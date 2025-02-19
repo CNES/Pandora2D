@@ -29,7 +29,8 @@ double std_dev(const Eigen::MatrixXd& m) {
 }
 
 /**
- * @brief Method of centring the histogram
+ * @brief Variance with Eigen matrix
+ * Method used to center the histogram
  * Link to Medicis code:
  * https://gitlab.cnes.fr/OutilsCommuns/medicis/-/blob/master/SOURCES/sources/QPEC/Library/sources/
  * random_var_d.c#L588
@@ -37,7 +38,7 @@ double std_dev(const Eigen::MatrixXd& m) {
  * @param m : the Eigen matrix
  *
  */
-double moment_centre(const Eigen::MatrixXd& m) {
+double variance(const Eigen::MatrixXd& m) {
   double moment1 = (m.array().sum()) / (m.size());
   double moment2 = (m.array().square().sum()) / (m.size());
   return moment2 - (moment1 * moment1);

@@ -68,19 +68,20 @@ Histogram1D::Histogram1D(const Eigen::MatrixXd& img) {
  */
 void Histogram1D::create(const Eigen::MatrixXd& img) {
   m_bins_width = get_bins_width(img);
-  double dynamique = img.maxCoeff() - img.minCoeff();
-  m_nb_bins = static_cast<int>(1. + (dynamique / m_bins_width));
+  double dynamic_range = img.maxCoeff() - img.minCoeff();
+  m_nb_bins = static_cast<int>(1. + (dynamic_range / m_bins_width));
 
   // check nb_bins > NB_BINS_MAX
   if (m_nb_bins > NB_BINS_MAX) {
     m_nb_bins = NB_BINS_MAX;
-    auto moment = moment_centre(img);
+    auto moment = variance(img);
     double max = std::min(4. * moment, img.maxCoeff());
     double min = std::max(-4. * moment, img.minCoeff());
-    dynamique = max - min;
+    dynamic_range = max - min;
   }
 
-  m_low_bound = img.minCoeff() - (static_cast<double>(m_nb_bins) * m_bins_width - dynamique) / 2.;
+  m_low_bound =
+      img.minCoeff() - (static_cast<double>(m_nb_bins) * m_bins_width - dynamic_range) / 2.;
 }
 
 /**

@@ -39,7 +39,7 @@ This module contains tests associated to the operation functions define on opera
  * @param m : the Eigen matrix
  */
 double std_dev_medicis(const Eigen::MatrixXd& m) {
-  return sqrt(moment_centre(m));
+  return sqrt(variance(m));
 }
 
 TEST_CASE("standard deviation with null matrix") {
