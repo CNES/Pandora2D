@@ -479,7 +479,7 @@ class TestDatasetDispMaps:
         cfg_disp = {"disparity_method": "wta", "invalid_disparity": -9999}
         disparity_matcher = disparity.Disparity(cfg_disp)
         # compute disparity maps
-        delta_row, delta_col, correlation_score = disparity_matcher.compute_disp_maps(cvs)
+        delta_col, delta_row, correlation_score = disparity_matcher.compute_disp_maps(cvs)
 
         # create dataset with dataset_disp_maps function
         disparity_maps = common.dataset_disp_maps(
@@ -497,7 +497,7 @@ class TestDatasetDispMaps:
 
         # create ground truth with create_dataset_coords method
         dataset_ground_truth = create_dataset_coords(
-            delta_x, delta_y, correlation_score, disparity_maps.row, disparity_maps.col
+            delta_y, delta_x, correlation_score, disparity_maps.row, disparity_maps.col
         )
 
         assert disparity_maps.equals(dataset_ground_truth)
