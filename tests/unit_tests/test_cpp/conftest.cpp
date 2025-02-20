@@ -59,23 +59,23 @@ Eigen::MatrixXd create_image(std::size_t size, float mean, float std, double nb_
 
   auto check_nb_bins = [](auto& matrix) -> double {
     auto h0 = get_bins_width(matrix);
-    auto dynamique = matrix.maxCoeff() - matrix.minCoeff();
-    return dynamique / h0;
+    auto dynamic_range = matrix.maxCoeff() - matrix.minCoeff();
+    return dynamic_range / h0;
   };
 
   if (check_nb_bins(matrix) >= nb_bins)
     return matrix;
 
   auto h0 = get_bins_width(matrix);
-  auto new_dynamique = std::ceil(nb_bins * h0);
+  auto new_dynamic_range = std::ceil(nb_bins * h0);
 
   auto elt = 2;
   for (auto m = matrix.data(); m < matrix.data() + elt; ++m) {
-    *m = static_cast<double>(mean) - new_dynamique / 2.;
+    *m = static_cast<double>(mean) - new_dynamic_range / 2.;
   }
 
   for (auto m = matrix.data() + elt; m < matrix.data() + 2 * elt; ++m) {
-    *m = static_cast<double>(mean) + new_dynamique / 2.;
+    *m = static_cast<double>(mean) + new_dynamic_range / 2.;
   }
 
   return matrix;
