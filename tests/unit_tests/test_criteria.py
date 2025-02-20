@@ -1398,9 +1398,141 @@ def test_criteria_datarray_created_in_state_machine(
 
     checked_cfg = check_conf(configuration, pandora2d_machine)
 
-    _, __ = run(pandora2d_machine, img_left, img_right, checked_cfg)
+    dataset_disp_maps, _ = run(pandora2d_machine, img_left, img_right, checked_cfg)
+
+    # Get peak on the edges to add Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE in ground_truth_criteria_dataarray
+    row_peak_mask = (
+        dataset_disp_maps["row_map"].data
+        == correct_input_cfg["input"]["row_disparity"]["init"] - correct_input_cfg["input"]["row_disparity"]["range"]
+    ) | (
+        dataset_disp_maps["row_map"].data
+        == correct_input_cfg["input"]["row_disparity"]["init"] + correct_input_cfg["input"]["row_disparity"]["range"]
+    )
+
+    col_peak_mask = (
+        dataset_disp_maps["col_map"].data
+        == correct_input_cfg["input"]["col_disparity"]["init"] - correct_input_cfg["input"]["col_disparity"]["range"]
+    ) | (
+        dataset_disp_maps["col_map"].data
+        == correct_input_cfg["input"]["col_disparity"]["init"] + correct_input_cfg["input"]["col_disparity"]["range"]
+    )
+
+    ground_truth_criteria_dataarray[row_peak_mask | col_peak_mask] |= Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
 
     # Check that criteria_dataarray exists and is the same shape as the cost_volumes object
     assert pandora2d_machine.cost_volumes.cost_volumes.sizes == pandora2d_machine.criteria_dataarray.sizes
     # Check that criteria dataarray contains correct criteria
     np.testing.assert_array_equal(pandora2d_machine.criteria_dataarray.data, ground_truth_criteria_dataarray)
+
+
+class TestPeakOnEdge:
+    """
+    Test the methods linked to PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE criteria
+    """
+
+    @pytest.fixture()
+    def row_map(self, img_size, disparity_cfg):
+        """
+        Row disparity map used for tests
+        """
+
+        row_map = np.full(img_size, 2)
+
+        # row_map[0,0] is equal to the minimum of the row disparity range
+        row_map[0, 0] = disparity_cfg[0]["init"] - disparity_cfg[0]["range"]
+        # row_map[3,3] is equal to the maximum of the row disparity range
+        row_map[3, 3] = disparity_cfg[0]["init"] + disparity_cfg[0]["range"]
+        return row_map
+
+    @pytest.fixture()
+    def col_map(self, img_size, disparity_cfg):
+        """
+        Col disparity map used for tests
+        """
+
+        col_map = np.full(img_size, -1)
+
+        # col_map[0,0] is equal to the maximum of the col disparity range
+        col_map[0, 0] = disparity_cfg[1]["init"] + disparity_cfg[1]["range"]
+        # col_map[0,0] is equal to the minimum of the col disparity range
+        col_map[4, 5] = disparity_cfg[1]["init"] - disparity_cfg[1]["range"]
+        return col_map
+
+    @pytest.fixture()
+    def row_map_full_peak(self, img_size, disparity_cfg):
+        """
+        Row disparity map with only peak on edges used for tests
+        """
+
+        # row_map is filled with the minimum of the row disparity range
+        row_map = np.full(img_size, disparity_cfg[0]["init"] - disparity_cfg[0]["range"])
+        return row_map
+
+    @pytest.fixture()
+    def col_map_full_peak(self, img_size, disparity_cfg):
+        """
+        Col disparity map with only peak on edges used for tests
+        """
+
+        # col_map is filled with the maximum of the col disparity range
+        col_map = np.full(img_size, disparity_cfg[1]["init"] + disparity_cfg[1]["range"])
+        return col_map
+
+    @pytest.fixture()
+    def map_without_peak(self, img_size):
+        """
+        Disparity map without peak on edges
+        """
+
+        return np.full(img_size, 1)
+
+    def test_apply_peak_on_edge(self, criteria_dataarray, image, cost_volumes, row_map, col_map):
+        """
+        Test the apply_peak_on_edge method
+        """
+
+        cost_volumes_coords = (cost_volumes.row.values, cost_volumes.col.values)
+
+        criteria.apply_peak_on_edge(criteria_dataarray, image, cost_volumes_coords, row_map, col_map)
+
+        assert (criteria_dataarray.data[0, 0, :, :] == Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data[4, 5, :, :] == Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data[3, 3, :, :] == Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
+
+    @pytest.mark.parametrize(
+        ["drow_map", "dcol_map"],
+        [
+            pytest.param("row_map_full_peak", "col_map_full_peak", id="Row and col disparity maps full of peaks"),
+            pytest.param("row_map_full_peak", "col_map", id="Row map full of peaks"),
+            pytest.param("map_without_peak", "col_map_full_peak", id="Col map full of peaks"),
+        ],
+    )
+    def test_apply_peak_on_edge_full_peak_map(
+        self, criteria_dataarray, image, cost_volumes, drow_map, dcol_map, request
+    ):
+        """
+        Test the apply_peak_on_edge method with disparity maps full of peaks on edges
+        """
+
+        cost_volumes_coords = (cost_volumes.row.values, cost_volumes.col.values)
+
+        criteria.apply_peak_on_edge(
+            criteria_dataarray,
+            image,
+            cost_volumes_coords,
+            request.getfixturevalue(drow_map),
+            request.getfixturevalue(dcol_map),
+        )
+
+        assert (criteria_dataarray.data == Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
+
+    def test_apply_peak_on_edge_without_peak(self, criteria_dataarray, image, cost_volumes, map_without_peak):
+        """
+        Test the apply_peak_on_edge method with maps without peaks on edges
+        """
+
+        cost_volumes_coords = (cost_volumes.row.values, cost_volumes.col.values)
+
+        criteria.apply_peak_on_edge(criteria_dataarray, image, cost_volumes_coords, map_without_peak, map_without_peak)
+
+        assert (criteria_dataarray.data != Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
