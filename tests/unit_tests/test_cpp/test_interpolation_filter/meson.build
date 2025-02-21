@@ -22,11 +22,7 @@ test(
     'Cardinal Sine',
     executable(
         'test_cardinal_sine',
-        [
-            'test_cardinal_sine.cpp',
-            interpolation_filter_src,
-            cardinal_sine_src,
-        ],
+        ['test_cardinal_sine.cpp', interpolation_filter_src, cardinal_sine_src],
         include_directories: interpolation_filter_includes,
         dependencies: [eigen_dep, doctest_dep],
     ),
