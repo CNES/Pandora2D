@@ -85,4 +85,16 @@ TEST_CASE("Test calculate_histogram2D function") {
     Histogram2D hist = calculate_histogram2D(left, right);
     check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), expected_values);
   }
+
+  SUBCASE("With 120 bins images") {
+    // Created images img_l and img_r produce histogram1D with 120 bins.
+    auto img_l = create_image(std::size_t(81), 0., 0.5);
+    auto img_r = create_image(std::size_t(81), 0., 0.5);
+    auto hist2d = calculate_histogram2D(img_l, img_r);
+
+    // As the number of bins of the two histograms 1D is initially greater than NB_BINS_MAX,
+    // it is fixed to 100 bins for each histogram 1D.
+    // Then, hist2d.values() shape is (100,100)
+    CHECK(hist2d.values().size() == 100 * 100);
+  }
 }
