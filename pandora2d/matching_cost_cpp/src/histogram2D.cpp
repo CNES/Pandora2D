@@ -57,9 +57,15 @@ Histogram2D calculate_histogram2D(const Eigen::MatrixXd& img_l, const Eigen::Mat
   Eigen::MatrixXd values = Eigen::MatrixXd::Zero(hist_l.nb_bins(), hist_r.nb_bins());
   auto pixel_l = img_l.data();
   auto pixel_r = img_r.data();
+  auto nb_bins_l = static_cast<int>(hist_l.nb_bins());
+  auto nb_bins_r = static_cast<int>(hist_r.nb_bins());
   for (; pixel_l != (img_l.data() + img_l.size()); ++pixel_l, ++pixel_r) {
-    auto index_l = (int)((*pixel_l - hist_l.low_bound()) / hist_l.bins_width());
-    auto index_r = (int)((*pixel_r - hist_r.low_bound()) / hist_r.bins_width());
+    auto index_l = std::max(
+        0, std::min(static_cast<int>((*pixel_l - hist_l.low_bound()) / hist_l.bins_width()),
+                    nb_bins_l));
+    auto index_r = std::max(
+        0, std::min(static_cast<int>((*pixel_r - hist_r.low_bound()) / hist_r.bins_width()),
+                    nb_bins_r));
     values(index_l, index_r) += 1;
   }
   return Histogram2D(values, hist_l, hist_r);
