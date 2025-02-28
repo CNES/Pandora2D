@@ -59,6 +59,11 @@ def valid_pixels():
 
 
 @pytest.fixture()
+def subpix():
+    return 1
+
+
+@pytest.fixture()
 def image(img_size, disparity_cfg, valid_pixels, no_data_mask):
     """Make image"""
     row, col = img_size
@@ -111,15 +116,30 @@ def cost_volumes(matching_cost_cfg, image):
 
 
 @pytest.fixture()
-def criteria_dataarray(img_size):
-    shape = (*img_size, 5, 9)
+def criteria_dataarray(img_size, subpix):
+    shape = (*img_size, len(np.arange(-1, 3.25, 1 / subpix)), len(np.arange(-5, 3.25, 1 / subpix)))
     return xr.DataArray(
         np.full(shape, Criteria.VALID),
         coords={
             "row": np.arange(shape[0]),
             "col": np.arange(shape[1]),
-            "disp_row": np.arange(-1, 4),
-            "disp_col": np.arange(-5, 4),
+            "disp_row": np.arange(-1, 3.25, 1 / subpix),
+            "disp_col": np.arange(-5, 3.25, 1 / subpix),
+        },
+        dims=["row", "col", "disp_row", "disp_col"],
+    )
+
+
+@pytest.fixture()
+def criteria_dataarray_subpix(img_size):
+    shape = (*img_size, 9, 17)
+    return xr.DataArray(
+        np.full(shape, Criteria.VALID),
+        coords={
+            "row": np.arange(shape[0]),
+            "col": np.arange(shape[1]),
+            "disp_row": np.arange(-1, 3.5, 0.5),
+            "disp_col": np.arange(-5, 3.5, 0.5),
         },
         dims=["row", "col", "disp_row", "disp_col"],
     )
@@ -481,7 +501,7 @@ class TestMaskRightNoData:
 
     @pytest.mark.usefixtures("mask_image")
     @pytest.mark.parametrize(
-        ["no_data_mask", "msk", "disp_row", "disp_col", "expected_criteria"],
+        ["no_data_mask", "msk", "disp_row", "disp_col", "subpix", "expected_criteria"],
         [
             # pylint: disable=line-too-long
             pytest.param(
@@ -496,6 +516,7 @@ class TestMaskRightNoData:
                 ),
                 -1,
                 -1,
+                1,
                 np.array(
                     # fmt: off
                     [
@@ -520,6 +541,7 @@ class TestMaskRightNoData:
                 ),
                 -1,
                 1,
+                1,
                 np.array(
                     # fmt: off
                     [
@@ -542,6 +564,7 @@ class TestMaskRightNoData:
                         [0, 0, 0, 0, 1],
                     ]
                 ),
+                1,
                 1,
                 1,
                 np.array(
@@ -568,6 +591,7 @@ class TestMaskRightNoData:
                 ),
                 2,
                 1,
+                1,
                 np.array(
                     # fmt: off
                     [
@@ -592,6 +616,7 @@ class TestMaskRightNoData:
                 ),
                 2,
                 1,
+                1,
                 np.array(
                     # fmt: off
                     [
@@ -603,6 +628,106 @@ class TestMaskRightNoData:
                     # fmt: on
                 ),
                 id="Disp 2 1 - other no_data_mask",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 1, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                2.5,
+                -1.5,
+                2,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 2.5 -1.5 - Pos (2,2), subpix=2",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [1, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                0,
+                -3.5,
+                2,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 0 -3.5 - Pos (2,0), subpix=2",
+            ),
+            pytest.param(
+                3,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 3, 0, 0],
+                        [1, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                0.75,
+                -2.25,
+                4,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 0.75 -2.25 - Pos (1,2), no_data_mask=3, subpix=4",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                1.75,
+                1,
+                4,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 1.75 1 - Pos (1,2), subpix=4",
             ),
         ],
         # pylint: enable=line-too-long
@@ -619,7 +744,7 @@ class TestMaskRightNoData:
 
     @pytest.mark.usefixtures("mask_image")
     @pytest.mark.parametrize(
-        ["no_data_mask", "msk", "disp_row", "disp_col", "expected_criteria"],
+        ["no_data_mask", "msk", "disp_row", "disp_col", "subpix", "expected_criteria"],
         # pylint: disable=line-too-long
         [
             pytest.param(
@@ -634,6 +759,7 @@ class TestMaskRightNoData:
                 ),
                 -1,
                 -1,
+                1,
                 np.array(
                     [
                         # fmt: off
@@ -658,6 +784,7 @@ class TestMaskRightNoData:
                 ),
                 -1,
                 1,
+                1,
                 np.array(
                     [
                         # fmt: off
@@ -680,6 +807,7 @@ class TestMaskRightNoData:
                         [0, 0, 0, 0, 0],
                     ]
                 ),
+                1,
                 1,
                 1,
                 np.array(
@@ -706,6 +834,7 @@ class TestMaskRightNoData:
                 ),
                 1,
                 1,
+                1,
                 np.array(
                     [
                         # fmt: off
@@ -730,6 +859,7 @@ class TestMaskRightNoData:
                 ),
                 2,
                 1,
+                1,
                 np.array(
                     [
                         # fmt: off
@@ -741,6 +871,106 @@ class TestMaskRightNoData:
                     ]
                 ),
                 id="Disp 2 1 - Pos (2,3)",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                2.5,
+                0.5,
+                2,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 2.5 0.5 - Pos (2,3), subpix=2",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [1, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                1.5,
+                -3.5,
+                2,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 1.5 -3.5 - Pos (2,0), subpix=2",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                2.25,
+                0.75,
+                4,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 2.25 0.75 - Pos (2,3), subpix=4",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [1, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                -0.75,
+                -2.25,
+                4,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp -0.75 -2.25 - Pos (0,0), subpix=4",
             ),
         ],
         # pylint: enable=line-too-long
@@ -845,7 +1075,7 @@ class TestMaskRightInvalid:
 
     @pytest.mark.usefixtures("mask_image")
     @pytest.mark.parametrize(
-        ["valid_pixels", "no_data_mask", "msk", "expected_criteria", "disp_col", "disp_row"],
+        ["valid_pixels", "no_data_mask", "msk", "expected_criteria", "disp_col", "disp_row", "subpix"],
         [
             # pylint: disable=line-too-long
             pytest.param(
@@ -871,6 +1101,7 @@ class TestMaskRightInvalid:
                 ),
                 -1,  # disp_col
                 -1,  # disp_row
+                1,  # subpix
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
@@ -896,6 +1127,7 @@ class TestMaskRightInvalid:
                 ),
                 2,  # disp_col
                 1,  # disp_row
+                1,  # subpix
                 id="Invalid point at center of right mask with disp_row=2 and disp_col=1",
             ),
             pytest.param(
@@ -921,6 +1153,7 @@ class TestMaskRightInvalid:
                 ),
                 -1,  # disp_col
                 -1,  # disp_row
+                1,  # subpix
                 id="Invalid point at right bottom corner of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
@@ -945,7 +1178,8 @@ class TestMaskRightInvalid:
                     ]
                 ),
                 -1,  # disp_col
-                -1,  # disp_row
+                -1,  # disp_row1, # subpix
+                1,  # subpix
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
@@ -971,6 +1205,7 @@ class TestMaskRightInvalid:
                 ),
                 0,  # disp_col
                 -1,  # disp_row
+                1,  # subpix
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=0",
             ),
             pytest.param(
@@ -996,7 +1231,242 @@ class TestMaskRightInvalid:
                 ),
                 0,  # disp_col
                 -1,  # disp_row
+                1,  # subpix
                 id="Invalid point at center of right mask with no_data_mask=4, valid_pixels=3, disp_row=-1 and disp_col=0",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                1.5,  # disp_col
+                -0.5,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, disp_row=-0.5 and disp_col=1.5",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0,  # disp_col
+                0,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, disp_row=0 and disp_col=0",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0.5,  # disp_col
+                0.5,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, disp_row=0.5 and disp_col=0.5",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                3,  # disp_col
+                2.5,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, disp_row=2.5 and disp_col=3",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 3],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                -1.5,  # disp_col
+                -1,  # disp_row
+                2,  # subpix
+                id="Invalid point at right bottom corner of right mask with subpix=2, disp_row=-1 and disp_col=-1.5",
+            ),
+            pytest.param(
+                3,
+                4,
+                np.array(  # msk
+                    [
+                        [3, 3, 3, 3, 3],
+                        [3, 3, 0, 3, 4],
+                        [3, 3, 4, 3, 3],
+                        [3, 4, 3, 3, 3],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0.5,  # disp_col
+                -1,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, no_data_mask=4, valid_pixels=3, disp_row=-1 and disp_col=0.5",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                1.25,  # disp_col
+                -0.75,  # disp_row
+                4,  # subpix
+                id="Invalid point at center of right mask with supix=4, disp_row=-0.75 and disp_col=1.25",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                2.75,  # disp_col
+                1.5,  # disp_row
+                4,  # subpix
+                id="Invalid point at center of right mask with supix=4, disp_row=2.75 and disp_col=1.5",
+            ),
+            pytest.param(
+                3,
+                4,
+                np.array(  # msk
+                    [
+                        [3, 3, 3, 3, 3],
+                        [3, 3, 0, 3, 4],
+                        [3, 3, 4, 3, 3],
+                        [3, 4, 3, 3, 3],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                1,  # disp_col
+                -0.25,  # disp_row
+                4,  # subpix
+                id="Invalid point at center of right mask with subpix=4, no_data_mask=4, valid_pixels=3, disp_row=-0.25 and disp_col=1",
             ),
             # pylint: enable=line-too-long
         ],
@@ -1472,8 +1942,6 @@ def test_criteria_datarray_created_in_state_machine(
 
     ground_truth_criteria_dataarray[row_peak_mask | col_peak_mask] |= Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
 
-    # Check that criteria_dataarray exists and is the same shape as the cost_volumes object
-    assert pandora2d_machine.cost_volumes.cost_volumes.sizes == pandora2d_machine.criteria_dataarray.sizes
     # Check that criteria dataarray contains correct criteria
     np.testing.assert_array_equal(pandora2d_machine.criteria_dataarray.data, ground_truth_criteria_dataarray)
 
