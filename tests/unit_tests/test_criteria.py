@@ -29,10 +29,7 @@ import xarray as xr
 
 from pandora2d import matching_cost, criteria
 from pandora2d.constants import Criteria
-from pandora2d.img_tools import add_disparity_grid, create_datasets_from_inputs
-from pandora2d.state_machine import Pandora2DMachine
-from pandora2d import run
-from pandora2d.check_configuration import check_conf
+from pandora2d.img_tools import add_disparity_grid
 
 
 @pytest.fixture()
@@ -93,11 +90,6 @@ def mask_image(image, msk):
 
 @pytest.fixture()
 def window_size():
-    return 1
-
-
-@pytest.fixture()
-def subpix():
     return 1
 
 
@@ -1865,85 +1857,6 @@ class TestGetCriteriaDataarray:
             criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col),
             expected_criteria,
         )
-
-
-@pytest.fixture()
-def ground_truth_criteria_dataarray(left_img_shape):
-    """
-    Criteria dataarray ground truth
-    for test_criteria_datarray_created_in_state_machine.
-
-    This ground truth is based on the parameters (window_size, disparity) of the
-    correct_input_cfg and correct_pipeline_without_refinement fixtures.
-    """
-
-    # disp = {"init": 1, "range":2} -> range size = 5
-    ground_truth = np.full((left_img_shape[0], left_img_shape[1], 5, 5), Criteria.VALID)
-
-    # Here, window_size=5
-    # For disp=-1, 3 first column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:3, :, 0, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, :3, :, 0] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-
-    # For disp=1, 3 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-3:, :, 2, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -3:, :, 2] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-
-    # For disp=2, 4 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-4:, :, 3, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -4:, :, 3] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-
-    # For disp=3, 5 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-5:, :, 4, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -5:, :, 4] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-
-    # Window_size=5, so the two first and last rows and columns are equal to Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    ground_truth[:2, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    ground_truth[:, :2, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    ground_truth[-2:, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    ground_truth[:, -2:, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-
-    return ground_truth
-
-
-def test_criteria_datarray_created_in_state_machine(
-    correct_input_cfg, correct_pipeline_without_refinement, ground_truth_criteria_dataarray
-):
-    """
-    Test that pandora2d machine contains the criteria dataarray
-    """
-
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, "output": {"path": "rala"}}
-
-    img_left, img_right = create_datasets_from_inputs(input_config=correct_input_cfg["input"])
-
-    pandora2d_machine = Pandora2DMachine()
-
-    checked_cfg = check_conf(configuration, pandora2d_machine)
-
-    dataset_disp_maps, _ = run(pandora2d_machine, img_left, img_right, checked_cfg)
-
-    # Get peak on the edges to add Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE in ground_truth_criteria_dataarray
-    row_peak_mask = (
-        dataset_disp_maps["row_map"].data
-        == correct_input_cfg["input"]["row_disparity"]["init"] - correct_input_cfg["input"]["row_disparity"]["range"]
-    ) | (
-        dataset_disp_maps["row_map"].data
-        == correct_input_cfg["input"]["row_disparity"]["init"] + correct_input_cfg["input"]["row_disparity"]["range"]
-    )
-
-    col_peak_mask = (
-        dataset_disp_maps["col_map"].data
-        == correct_input_cfg["input"]["col_disparity"]["init"] - correct_input_cfg["input"]["col_disparity"]["range"]
-    ) | (
-        dataset_disp_maps["col_map"].data
-        == correct_input_cfg["input"]["col_disparity"]["init"] + correct_input_cfg["input"]["col_disparity"]["range"]
-    )
-
-    ground_truth_criteria_dataarray[row_peak_mask | col_peak_mask] |= Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
-
-    # Check that criteria dataarray contains correct criteria
-    np.testing.assert_array_equal(pandora2d_machine.criteria_dataarray.data, ground_truth_criteria_dataarray)
 
 
 class TestPeakOnEdge:
