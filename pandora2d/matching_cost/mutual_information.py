@@ -33,6 +33,7 @@ from pandora.margins import Margins
 from pandora.margins.descriptors import HalfWindowMargins
 
 from pandora2d.img_tools import shift_subpix_img_2d
+from pandora2d.criteria import get_criteria_dataarray
 from pandora2d.matching_cost.registry import MatchingCostRegistry
 from .base import BaseMatchingCost
 
@@ -191,6 +192,7 @@ class MutualInformation(BaseMatchingCost):
         :rtype: cost_volumes: xr.Dataset
         """
 
+        self.grid_4d["criteria"] = get_criteria_dataarray(img_left, img_right, self.grid_4d)
         imgs_right_dataset = shift_subpix_img_2d(img_right, self.grid_4d.attrs["subpixel"])
 
         imgs_right = [right["im"].values for right in imgs_right_dataset]
