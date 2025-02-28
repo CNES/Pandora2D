@@ -365,13 +365,25 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_m
     for row_disp, col_disp in itertools.product(
         criteria_dataarray.coords["disp_row"], criteria_dataarray.coords["disp_col"]
     ):
-        row_disp, col_disp = row_disp.data, col_disp.data
-        # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
-        msk_row_slice = np.s_[:row_disp] if row_disp < 0 else np.s_[row_disp:]
-        msk_col_slice = np.s_[:col_disp] if col_disp < 0 else np.s_[col_disp:]
 
-        criteria_row_slice = np.s_[-row_disp:] if row_disp <= 0 else np.s_[:-row_disp]
-        criteria_col_slice = np.s_[-col_disp:] if col_disp <= 0 else np.s_[:-col_disp]
+        row_disp, col_disp = row_disp.data, col_disp.data
+
+        # If the subpix is different from 1 in the matching cost step, we have float disparities.
+        # For the moment, to decide whether to apply the PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+        # and PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT criteria to subpixel disparities,
+        # we use the nearest neighbor method, i.e. we apply the same criteria as to the nearest integer disparity.
+
+        # In a future issue, we will change this method to raise these criteria if one of the points used
+        # to interpolate the subpixel point has a no_data or invalid in the right mask.
+        row_dsp_int, col_dsp_int = int(np.round(row_disp)), int(np.round(col_disp))
+
+        # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
+        msk_row_slice = np.s_[:row_dsp_int] if row_dsp_int < 0 else np.s_[row_dsp_int:]  # type: ignore[index]
+        msk_col_slice = np.s_[:col_dsp_int] if col_dsp_int < 0 else np.s_[col_dsp_int:]  # type: ignore[index]
+
+        criteria_row_slice = np.s_[-row_dsp_int:] if row_dsp_int <= 0 else np.s_[:-row_dsp_int]  # type: ignore[index]
+        criteria_col_slice = np.s_[-col_dsp_int:] if col_dsp_int <= 0 else np.s_[:-col_dsp_int]  # type: ignore[index]
+
         criteria_dataarray.loc[
             {
                 "row": criteria_dataarray.coords["row"][criteria_row_slice],
@@ -416,3 +428,31 @@ def apply_peak_on_edge(
     criteria_dataarray.data[(col_map == d_min_col_grid) | (col_map == d_max_col_grid)] |= np.uint8(
         Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
     )
+
+
+def get_validity_mask(criteria_dataarray: xr.DataArray) -> xr.Dataset:
+    """
+    Generate a temporary validity mask with an additional 'criteria' dimension.
+
+    :param criteria_dataarray: criteria_dataarray used to create validity mask
+    :type criteria_dataarray: xr.DataArray
+    """
+
+    # In a future issue, we will change the list of names of the 'criteria' coordinate
+    # to get automatically the criteria names described in constants.py
+    coords = {
+        "row": criteria_dataarray.coords.get("row"),
+        "col": criteria_dataarray.coords.get("col"),
+        "criteria": ["validity_mask", "criteria_1"],
+    }
+
+    dims = ("row", "col", "criteria")
+
+    data_validity_mask = np.full((criteria_dataarray.shape[0], criteria_dataarray.shape[1]), 0, dtype=np.uint8)
+    data_band_1 = np.full((criteria_dataarray.shape[0], criteria_dataarray.shape[1]), 1, dtype=np.uint8)
+
+    data_combined = np.stack([data_validity_mask, data_band_1], axis=-1)
+
+    dataset = xr.Dataset({"validity": xr.DataArray(data_combined, dims=dims, coords=coords)})
+
+    return dataset
