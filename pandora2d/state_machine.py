@@ -356,8 +356,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             self.margins_disp.get("refinement"),
         )
 
-        self.criteria_dataarray = criteria.get_criteria_dataarray(self.left_img, self.right_img, self.cost_volumes)
-
     @mem_time_profile(name="Disparity step")
     def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -374,11 +372,15 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         disparity_run = disparity.Disparity(cfg["pipeline"][input_step])
 
         map_col, map_row, correlation_score = disparity_run.compute_disp_maps(self.cost_volumes)
+
+        dataset_validity = criteria.get_validity_mask(self.cost_volumes["criteria"])
+
         self.dataset_disp_maps = common.dataset_disp_maps(
             map_row,
             map_col,
             self.cost_volumes.coords,
             correlation_score,
+            dataset_validity,
             {
                 "offset": {
                     "row": cfg.get("ROI", {}).get("row", {}).get("first", 0),
@@ -397,7 +399,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         cv_coords = (self.cost_volumes.row.values, self.cost_volumes.col.values)
 
         criteria.apply_peak_on_edge(
-            self.criteria_dataarray,
+            self.cost_volumes["criteria"],
             self.left_img,
             cv_coords,
             self.dataset_disp_maps["row_map"].data,

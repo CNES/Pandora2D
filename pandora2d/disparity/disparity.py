@@ -193,7 +193,7 @@ class Disparity:
         :param cost_volumes: the cost volumes dataset with the data variables:
             - cost_volume 4D xarray.DataArray (row, col, disp_row, disp_col)
         :type cost_volumes: xr.Dataset
-        :return: Two numpy.array:
+        :return: three numpy.array:
 
                 - disp_map_col : disparity map for columns
                 - disp_map_row : disparity map for row

@@ -394,9 +394,10 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
         "row_map": (("row", "col"), dataset["row_map"].data[up:down, left:right]),
         "col_map": (("row", "col"), dataset["col_map"].data[up:down, left:right]),
         "correlation_score": (("row", "col"), dataset["correlation_score"].data[up:down, left:right]),
+        "validity": (("row", "col", "criteria"), dataset["validity"].data[up:down, left:right, :]),
     }
 
-    coords = {"row": row[up:down], "col": col[left:right]}
+    coords = {"row": row[up:down], "col": col[left:right], "criteria": dataset.criteria.values}
 
     new_dataset = xr.Dataset(data_variables, coords)
 

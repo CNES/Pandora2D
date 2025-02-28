@@ -166,10 +166,15 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
     :return: None
     """
     output.mkdir(parents=True, exist_ok=True)
+
+    # dataset["validity"] is the only item to have several bands,
+    # so the band_names list will only be used for it.
     for name, data in dataset.items():
         write_data_array(
             data,
             str((output / str(name)).with_suffix(".tif")),
+            dtype=data.dtype,
+            band_names=list(dataset.criteria.values) if name == "validity" else None,
             crs=dataset.attrs["crs"],
             transform=dataset.attrs["transform"],
         )
@@ -245,6 +250,7 @@ def dataset_disp_maps(
     delta_col: np.ndarray,
     coords: Coordinates,
     correlation_score: np.ndarray,
+    dataset_validity: xr.Dataset,
     attributes: dict = None,
 ) -> xr.Dataset:
     """
@@ -258,6 +264,8 @@ def dataset_disp_maps(
     :type coords: xr.Coordinates
     :param correlation_score: score map
     :type correlation_score: np.ndarray
+    :param dataset_validity: xr.Dataset containing validity informations
+    :type dataset_validity: xr.Dataset
     :param attributes: disparity map for col
     :type attributes: dict
     :return: dataset: Dataset with the disparity maps and score with the data variables :
@@ -293,6 +301,8 @@ def dataset_disp_maps(
             "correlation_score": dataarray_score,
         }
     )
+
+    dataset = xr.merge([dataset, dataset_validity])
 
     if attributes is not None:
         dataset.attrs = attributes
