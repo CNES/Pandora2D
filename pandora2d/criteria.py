@@ -20,7 +20,7 @@
 This module contains functions associated to the validity mask and criteria dataarray created in the cost volume step.
 """
 import itertools
-from typing import Union
+from typing import Union, Tuple
 import xarray as xr
 import numpy as np
 from numpy.typing import NDArray
@@ -31,6 +31,32 @@ from pandora2d.common import (
     set_out_of_col_disparity_range_to_other_value,
     set_out_of_row_disparity_range_to_other_value,
 )
+
+
+def get_disparity_grids(
+    left_image: xr.Dataset, cv_coords: Tuple[NDArray, NDArray]
+) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
+    """
+    Return disparity grid from left image according to cost_volumes row and col coordinates.
+    We need to use the cost volume coordinates to process the right points when the step is different from 1.
+
+    :param left_image: left image
+    :type left_image: xr.Dataset
+    :param cv_coords: cost volumes row and column coordinates
+    :type cv_coords: Tuple[NDArray, NDArray]
+    :return: 4 disparity grids
+    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
+    """
+
+    # Get rows disparity grid
+    d_min_row_grid = left_image["row_disparity"].sel(row=cv_coords[0], col=cv_coords[1], band_disp="min").data
+    d_max_row_grid = left_image["row_disparity"].sel(row=cv_coords[0], col=cv_coords[1], band_disp="max").data
+
+    # Get columns disparity grid
+    d_min_col_grid = left_image["col_disparity"].sel(row=cv_coords[0], col=cv_coords[1], band_disp="min").data
+    d_max_col_grid = left_image["col_disparity"].sel(row=cv_coords[0], col=cv_coords[1], band_disp="max").data
+
+    return d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid
 
 
 def allocate_criteria_dataarray(
@@ -61,6 +87,15 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     """
     This method fill the criteria dataarray with the different criteria obtained thanks to
     the methods implemented in this file
+
+    :param left_image: left image
+    :type left_image: xr.Dataset
+    :param right_image: right image
+    :type right_image: xr.Dataset
+    :param cv: cost_volumes
+    :type cv: 4D xarray.Dataset
+    :return: criteria_dataarray: 4D DataArray containing the criteria
+    :rtype: criteria_dataarray: xr.DataArray
     """
 
     # Allocate criteria dataarray
@@ -92,17 +127,10 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     # on the border according to offset value, for each disparity
     mask_border(cv.attrs["offset_row_col"], criteria_dataarray)
 
-    # Select correct rows and columns in case of a step different from 1.
-    row_cv = cv.row.values
-    col_cv = cv.col.values
-
-    # Get columns disparity grid
-    d_min_col_grid = left_image["col_disparity"].sel(row=row_cv, col=col_cv, band_disp="min").data
-    d_max_col_grid = left_image["col_disparity"].sel(row=row_cv, col=col_cv, band_disp="max").data
-
-    # Get rows disparity grid
-    d_min_row_grid = left_image["row_disparity"].sel(row=row_cv, col=col_cv, band_disp="min").data
-    d_max_row_grid = left_image["row_disparity"].sel(row=row_cv, col=col_cv, band_disp="max").data
+    # Get disparity grids according to cost volumes coordinates
+    d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(
+        left_image, (cv.row.values, cv.col.values)
+    )
 
     # Put PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
     # on points for which corresponding disparity is not processed
@@ -311,3 +339,39 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_m
                 "disp_row": row_disp,
             }
         ] |= right_criteria_mask[msk_row_slice, msk_col_slice]
+
+
+def apply_peak_on_edge(
+    criteria_dataarray: xr.DataArray,
+    left_image: xr.Dataset,
+    cv_coords: Tuple[NDArray, NDArray],
+    row_map: NDArray,
+    col_map: NDArray,
+):
+    """
+    This method raises PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE criteria for points (row, col)
+    for which the best matching cost is found for the edge of the disparity range.
+    This criteria is applied on point (row, col), for each disparity value.
+
+    :param criteria_dataaray: criteria dataarray to update
+    :type criteria_dataaray: xr.DataArray
+    :param left_image: left image
+    :type left_image: xr.Dataset
+    :param cv_coords: cost volumes row and column coordinates
+    :type cv_coords: Tuple[NDArray, NDArray]
+    :param row_map: row disparity map
+    :type row_map: NDArray
+    :param col_map: col disparity map
+    :type col_map: NDArray
+    """
+
+    # Get disparity grids according to cost volumes coordinates
+    d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(left_image, cv_coords)
+
+    # Apply PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE criteria
+    criteria_dataarray.data[
+        (row_map == d_min_row_grid) | (row_map == d_max_row_grid)
+    ] |= Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
+    criteria_dataarray.data[
+        (col_map == d_min_col_grid) | (col_map == d_max_col_grid)
+    ] |= Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE

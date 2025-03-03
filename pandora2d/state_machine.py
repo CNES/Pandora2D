@@ -394,6 +394,16 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             },
         )
 
+        cv_coords = (self.cost_volumes.row.values, self.cost_volumes.col.values)
+
+        criteria.apply_peak_on_edge(
+            self.criteria_dataarray,
+            self.left_img,
+            cv_coords,
+            self.dataset_disp_maps["row_map"].data,
+            self.dataset_disp_maps["col_map"].data,
+        )
+
     @mem_time_profile(name="Refinement step")
     def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
