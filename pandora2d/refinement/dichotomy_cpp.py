@@ -121,24 +121,32 @@ class Dichotomy(refinement.AbstractRefinement):
         criteria_map = create_criteria_map(cost_volumes, disp_map, img_left, invalid_disparity_map_mask)
 
         subpixel = cost_volumes.attrs["subpixel"]
+        cost_volume_type = cost_volumes["cost_volumes"].data.dtype
 
         # Convert disparity maps to np.array to optimise performance
         # Transforming disparity maps into index maps
-        row_map = (disparity_to_index(row_map, cost_volumes.disp_row.values[0], subpixel)).astype(np.float64)
-        col_map = (disparity_to_index(col_map, cost_volumes.disp_col.values[0], subpixel)).astype(np.float64)
+        row_map = disparity_to_index(row_map, cost_volumes.disp_row.values[0], subpixel).astype(cost_volume_type)
+        col_map = disparity_to_index(col_map, cost_volumes.disp_col.values[0], subpixel).astype(cost_volume_type)
 
-        refinement_bind.compute_dichotomy(
-            cost_volumes.cost_volumes.data.ravel().astype(np.float64),
+        if np.issubdtype(cost_volume_type, np.float32):
+            compute_dichotomy = refinement_bind.compute_dichotomy_float
+        elif np.issubdtype(cost_volume_type, np.float64):
+            compute_dichotomy = refinement_bind.compute_dichotomy_double
+        else:
+            raise TypeError("Cost volume must be in np.float32 or np.float64")
+
+        compute_dichotomy(
+            cost_volumes.cost_volumes.data,
             col_map.ravel(),
             row_map.ravel(),
-            cost_values.ravel().astype(np.float64),
+            cost_values.ravel(),
             criteria_map.ravel(),
-            refinement_bind.Cost_volume_size(cost_volumes.cost_volumes.shape),
             subpixel,
             self.cfg["iterations"],
             self.filter.cpp_instance,
             cost_volumes.attrs["type_measure"],
         )
+
         # Inverse transforming index maps into disparity maps
         col_map = index_to_disparity(col_map, cost_volumes.disp_col.values[0], subpixel)
         row_map = index_to_disparity(row_map, cost_volumes.disp_row.values[0], subpixel)
@@ -278,7 +286,7 @@ def create_criteria_map(
     disp_min_row = img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
     disp_max_row = img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
     # Create a fake criteria_map with PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE & INVALID_DISPARITY
-    criteria_map = np.full(row_map.shape, 0.0, dtype=np.float64)
+    criteria_map = np.full(row_map.shape, 0.0, dtype=cost_volumes["cost_volumes"].data.dtype)
     criteria_map[row_map == disp_min_row] = 1.0
     criteria_map[row_map == disp_max_row] = 1.0
     criteria_map[col_map == disp_min_col] = 1.0

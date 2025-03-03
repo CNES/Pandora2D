@@ -23,17 +23,19 @@ This module contains functions associated to the binding pybind of cpp dichotomy
 
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
+#include <Eigen/Dense>
+#include <vector>
 
 #include "dichotomy.hpp"
 
 using namespace pybind11::literals;
 
 PYBIND11_MODULE(refinement_bind, m) {
-  m.def("compute_dichotomy", &compute_dichotomy, "cost_volume"_a, "disparity_map_col"_a,
-        "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "cv_size"_a, "subpixel"_a,
+  m.def("compute_dichotomy_float", &compute_dichotomy<float, Eigen::VectorXf>, "cost_volume"_a,
+        "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "subpixel"_a,
         "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
         R"mydelimiter(
-            Dichotomy calculation
+            Dichotomy calculation with float data
 
             :param cost_volume: cost volume data
             :type cost_volume: NDArray[np.floating]
@@ -45,8 +47,32 @@ PYBIND11_MODULE(refinement_bind, m) {
             :type score_map: NDArray[np.floating]
             :param criteria_map: criteria map data
             :type criteria_map: NDArray[np.floating]
-            :param cv_size: cost_volume size [nb_row, nb_col, nb_disp_row, nb_disp_col]
-            :type cv_size: Cost_volume_size
+            :param subpixel: sub-sampling of cost_volume
+            :type subpixel: int
+            :param nb_iterations: number of iterations of the dichotomy
+            :type nb_iterations: int
+            :param filter: interpolation filter
+            :type filter: abstractfilter::AbstractFilter
+            :param method_matching_cost: max or min
+            :type method_matching_cost: str
+            )mydelimiter");
+
+  m.def("compute_dichotomy_double", &compute_dichotomy<double, Eigen::VectorXd>, "cost_volume"_a,
+        "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "subpixel"_a,
+        "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
+        R"mydelimiter(
+            Dichotomy calculation with double data
+
+            :param cost_volume: cost volume data
+            :type cost_volume: NDArray[np.floating]
+            :param disparity_map_col: column disparity map data
+            :type disparity_map_col: NDArray[np.floating]
+            :param disparity_map_row: row disparity map data
+            :type disparity_map_row: NDArray[np.floating]
+            :param score_map: score map data
+            :type score_map: NDArray[np.floating]
+            :param criteria_map: criteria map data
+            :type criteria_map: NDArray[np.floating]
             :param subpixel: sub-sampling of cost_volume
             :type subpixel: int
             :param nb_iterations: number of iterations of the dichotomy
@@ -60,6 +86,7 @@ PYBIND11_MODULE(refinement_bind, m) {
   pybind11::class_<Cost_volume_size>(m, "Cost_volume_size")
       .def(pybind11::init<>())
       .def(pybind11::init<Eigen::VectorXd&>())
+      .def(pybind11::init<std::vector<size_t>&>())
       .def(pybind11::init<unsigned int, unsigned int, unsigned int, unsigned int>())
       .def_property_readonly("size", &Cost_volume_size::size, R"mydelimiter(
             Returns the cost_volume size nb_row * nb_col * nb_disp_row * nb_disp_col.

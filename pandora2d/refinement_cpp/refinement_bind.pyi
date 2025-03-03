@@ -40,20 +40,19 @@ class Cost_volume_size:
         Returns the disparity number : nb_disp_row * nb_disp_col.
         """
 
-def compute_dichotomy(
+def compute_dichotomy_float(
     cost_volume: NDArray[np.floating],
     disparity_map_col: NDArray[np.floating],
     disparity_map_row: NDArray[np.floating],
     score_map: NDArray[np.floating],
     criteria_map: NDArray[np.floating],
-    cv_size: Cost_volume_size,
     subpixel: int,
     nb_iterations: int,
     filter: AbstractFilter,
     method_matching_cost: str,
 ) -> None:
     """
-    Dichotomy calculation
+    Dichotomy calculation with float data
 
     :param cost_volume: cost volume data
     :type cost_volume: NDArray[np.floating]
@@ -65,8 +64,40 @@ def compute_dichotomy(
     :type score_map: NDArray[np.floating]
     :param criteria_map: criteria map data
     :type criteria_map: NDArray[np.floating]
-    :param cv_size: cost_volume size [nb_row, nb_col, nb_disp_row, nb_disp_col]
-    :type cv_size: Cost_volume_size
+    :param subpixel: sub-sampling of cost_volume
+    :type subpixel: int
+    :param nb_iterations: number of iterations of the dichotomy
+    :type nb_iterations: int
+    :param filter: interpolation filter
+    :type filter: abstractfilter::AbstractFilter
+    :param method_matching_cost: max or min
+    :type method_matching_cost: str
+    """
+
+def compute_dichotomy_double(
+    cost_volume: NDArray[np.floating],
+    disparity_map_col: NDArray[np.floating],
+    disparity_map_row: NDArray[np.floating],
+    score_map: NDArray[np.floating],
+    criteria_map: NDArray[np.floating],
+    subpixel: int,
+    nb_iterations: int,
+    filter: AbstractFilter,
+    method_matching_cost: str,
+) -> None:
+    """
+    Dichotomy calculation with double data
+
+    :param cost_volume: cost volume data
+    :type cost_volume: NDArray[np.floating]
+    :param disparity_map_col: column disparity map data
+    :type disparity_map_col: NDArray[np.floating]
+    :param disparity_map_row: row disparity map data
+    :type disparity_map_row: NDArray[np.floating]
+    :param score_map: score map data
+    :type score_map: NDArray[np.floating]
+    :param criteria_map: criteria map data
+    :type criteria_map: NDArray[np.floating]
     :param subpixel: sub-sampling of cost_volume
     :type subpixel: int
     :param nb_iterations: number of iterations of the dichotomy

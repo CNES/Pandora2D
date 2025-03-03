@@ -17,6 +17,7 @@ py = import('python').find_installation(pure: false)
 pybind11_dep = dependency('pybind11')
 eigen_dep = dependency('eigen3')
 doctest_dep = dependency('doctest')
+python_dep = py.dependency(embed:true)
 
 install_subdir(
   'pandora2d',
