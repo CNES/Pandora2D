@@ -1,8 +1,9 @@
 [build-system]
-requires = ["meson-python", "pybind11", "setuptools-scm>=8"]
+requires = ["meson-python", "pybind11", "setuptools-scm>=8", "meson >= 1.1.0",]
 build-backend = "mesonpy"
 
 [tool.meson-python.args]
+setup = ["-Dbuild_cpp_tests=disabled"]
 compile = ['-j0']
 
 [tool.setuptools_scm]
@@ -87,3 +88,7 @@ pandora2d = "pandora2d.Pandora2d:main"
 # https://github.com/psf/black
 line-length = 120
 exclude = "(.eggs|.git|.mypy_cache|.nox|.tox|_build|build|dist|venv)"
+
+[tool.cibuildwheel]
+skip = ["pp*", "*-win32", "cp36-*", "cp37-*", "cp38-*"]
+config-settings = {"setup-args" = "-Dbuild_cpp_tests=disabled"}
