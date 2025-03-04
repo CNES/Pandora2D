@@ -39,7 +39,6 @@ from rasterio.crs import CRS
 from pandora2d import reporting
 from pandora2d.constants import Criteria
 from pandora2d.img_tools import remove_roi_margins
-from pandora2d.reporting import NumpyPrimitiveEncoder
 
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable=useless-import-alias
@@ -110,6 +109,10 @@ class AllPrimitiveEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, CRS):
             return o.to_wkt()
+        if isinstance(o, np.floating):
+            return float(o)
+        if isinstance(o, np.integer):
+            return int(o)
         return super().default(o)
 
 
@@ -149,7 +152,7 @@ def _save_disparity_maps_report(dataset: xr.Dataset, output: Path) -> None:
     """
     report = {"statistics": {"disparity": reporting.report_disparities(dataset)}}
     with open(output / "report.json", "w", encoding="utf8") as fd:
-        json.dump(report, fd, indent=2, cls=NumpyPrimitiveEncoder)
+        json.dump(report, fd, indent=2, cls=AllPrimitiveEncoder)
 
 
 def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
@@ -401,7 +404,7 @@ def save_config(config: Dict) -> None:
     path_output = Path(config["output"]["path"])
     path_output.mkdir(parents=True, exist_ok=True)
     with open(path_output / "config.json", "w", encoding="utf8") as fd:
-        json.dump(config, fd, indent=2)
+        json.dump(config, fd, indent=2, cls=AllPrimitiveEncoder)
 
 
 def string_to_path(path: str, relative_to: Union[Path, str]) -> Path:
