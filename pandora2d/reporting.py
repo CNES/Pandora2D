@@ -18,24 +18,11 @@
 
 """Functions to report information."""
 
-import json
 from typing import Dict
 
-import numpy as np
 import xarray as xr
 
 from .statistics import compute_statistics
-
-
-class NumpyPrimitiveEncoder(json.JSONEncoder):
-    """JSON Encoder to serialize numpy floats and integers."""
-
-    def default(self, o):
-        if isinstance(o, np.floating):
-            return float(o)
-        if isinstance(o, np.integer):
-            return int(o)
-        return super().default(o)
 
 
 def report_disparities(data: xr.Dataset) -> Dict:
