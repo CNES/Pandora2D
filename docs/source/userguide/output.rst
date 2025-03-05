@@ -69,6 +69,10 @@ Saved images
 
 - *row_map.tif*, *col_map.tif* : disparity maps for row and columns.
 - *correlation_score.tif* : correlation score map.
+- *validity.tif* : validity map containing several bands:
+
+    - a global band 'validity_mask' indicating whether a point is valid (value 0), partially valid (value 1) or invalid (value 2).
+    - a band for each criteria indicating whether the corresponding criteria is raised at the point or not.
 
 .. warning::
         The output correlation_score map with optical flow refinement method contains the disparity
@@ -79,6 +83,9 @@ Saved images
         the disparity maps stored at the output of the pandora2D machine will be smaller than the image or ROI given by the user in the :ref:`inputs`. 
 
         An issue has been opened on this subject, and the problem will be solved soon.  
+
+.. warning::
+    The validity.tif file is not yet operational as development is still in progress.
 
 Saved configuration
 *******************
