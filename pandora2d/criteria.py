@@ -23,7 +23,7 @@ import itertools
 from typing import Union, Tuple
 import xarray as xr
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import DTypeLike, NDArray
 
 from pandora.criteria import binary_dilation_msk
 from pandora2d.constants import Criteria
@@ -60,7 +60,7 @@ def get_disparity_grids(
 
 
 def allocate_criteria_dataarray(
-    cv: xr.Dataset, value: Union[int, float, Criteria] = Criteria.VALID, data_type: Union[np.dtype, None] = None
+    cv: xr.Dataset, value: Union[int, float, Criteria] = Criteria.VALID, data_type: Union[DTypeLike, None] = None
 ) -> xr.DataArray:
     """
     This method creates the criteria_dataarray with the same dimensions as cost_volumes (cv).
@@ -99,7 +99,7 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     """
 
     # Allocate criteria dataarray
-    criteria_dataarray = allocate_criteria_dataarray(cv)
+    criteria_dataarray = allocate_criteria_dataarray(cv, data_type=np.uint8)
 
     if "msk" in left_image.data_vars:
 
@@ -218,9 +218,8 @@ def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataA
     condition_swap = condition.data.swapaxes(1, 2)
 
     # Update criteria dataarray
-    criteria_dataarray.data[condition_swap] = (
-        criteria_dataarray.data[condition_swap] | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    )
+    # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
+    criteria_dataarray.data[condition_swap] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE)
 
 
 def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataaray: xr.DataArray) -> None:
@@ -236,7 +235,8 @@ def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataara
     :type criteria_dataaray: xr.DataArray
     """
     dilated_mask = binary_dilation_msk(left_image, window_size)
-    criteria_dataaray.data[dilated_mask, ...] |= Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
+    # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
+    criteria_dataaray.data[dilated_mask, ...] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA)
 
 
 def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarray: xr.DataArray) -> None:
@@ -251,9 +251,10 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
     :param criteria_dataarray:
     :type criteria_dataarray:
     """
-    right_criteria_mask = np.full_like(img_right["msk"], Criteria.VALID, dtype=Criteria)
+    right_criteria_mask = np.full_like(img_right["msk"], Criteria.VALID, dtype=np.uint8)
     right_binary_mask = binary_dilation_msk(img_right, window_size)
-    right_criteria_mask[right_binary_mask] |= Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+    # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
+    right_criteria_mask[right_binary_mask] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA)
 
     apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
 
@@ -272,7 +273,8 @@ def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) 
     """
     invalid_left_mask = get_invalid_mask(left_image)
 
-    criteria_dataarray.data[invalid_left_mask, ...] |= Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
+    # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
+    criteria_dataarray.data[invalid_left_mask, ...] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT)
 
 
 def mask_right_invalid(right_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
@@ -287,11 +289,12 @@ def mask_right_invalid(right_image: xr.Dataset, criteria_dataarray: xr.DataArray
     :param criteria_dataaray: criteria dataarray to update
     :type criteria_dataaray: xr.DataArray
     """
-    right_criteria_mask = np.full_like(right_image["msk"], Criteria.VALID, dtype=Criteria)
+    right_criteria_mask = np.full_like(right_image["msk"], Criteria.VALID, dtype=np.uint8)
 
     invalid_right_mask = get_invalid_mask(right_image)
 
-    right_criteria_mask[invalid_right_mask] |= Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+    # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
+    right_criteria_mask[invalid_right_mask] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT)
 
     apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
 
@@ -369,9 +372,9 @@ def apply_peak_on_edge(
     d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(left_image, cv_coords)
 
     # Apply PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE criteria
-    criteria_dataarray.data[
-        (row_map == d_min_row_grid) | (row_map == d_max_row_grid)
-    ] |= Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
-    criteria_dataarray.data[
-        (col_map == d_min_col_grid) | (col_map == d_max_col_grid)
-    ] |= Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
+    criteria_dataarray.data[(row_map == d_min_row_grid) | (row_map == d_max_row_grid)] |= np.uint8(
+        Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
+    )
+    criteria_dataarray.data[(col_map == d_min_col_grid) | (col_map == d_max_col_grid)] |= np.uint8(
+        Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
+    )

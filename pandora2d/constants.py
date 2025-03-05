@@ -20,10 +20,10 @@
 This module contains all the parameters related to the criteria dataset, defining each bit.
 """
 
-from enum import Flag, auto
+from enum import auto, IntFlag
 
 
-class Criteria(Flag):
+class Criteria(IntFlag):
     """
     Criteria class
     """

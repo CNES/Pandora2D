@@ -125,6 +125,15 @@ def criteria_dataarray(img_size):
     )
 
 
+class TestCriteria:
+    """Test the Criteria Enum."""
+
+    def test_can_be_stored_in_uint8_np_array(self):
+        """Criteria can be stored in uint8 numpy array."""
+        result = np.array([Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER], dtype=np.uint8)
+        assert result.dtype == np.uint8
+
+
 class TestAllocateCriteriaDataset:
     """Test create a criteria xarray.Dataset."""
 
