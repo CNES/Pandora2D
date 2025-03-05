@@ -22,6 +22,8 @@ This module contains all the parameters related to the criteria dataset, definin
 
 from enum import auto, IntFlag
 
+from numpy.typing import NDArray
+
 
 class Criteria(IntFlag):
     """
@@ -49,3 +51,7 @@ class Criteria(IntFlag):
     """
     PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED = auto()
     """The disparity is not processed because not included in the disparity range of the current point."""
+
+    def is_in(self, array: NDArray):
+        """Returns a bool array, where True if Criteria value is part of array element."""
+        return array & self._value_ == self._value_
