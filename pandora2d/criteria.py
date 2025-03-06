@@ -20,10 +20,11 @@
 This module contains functions associated to the validity mask and criteria dataarray created in the cost volume step.
 """
 import itertools
-from typing import Union, Tuple
+from enum import IntFlag
+from typing import Union, Type, Tuple
 import xarray as xr
 import numpy as np
-from numpy.typing import DTypeLike, NDArray
+from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 from pandora.criteria import binary_dilation_msk
 from pandora2d.constants import Criteria
@@ -31,6 +32,43 @@ from pandora2d.common import (
     set_out_of_col_disparity_range_to_other_value,
     set_out_of_row_disparity_range_to_other_value,
 )
+
+
+class FlagArray(np.ndarray):
+    """NDArray subclass that expects to be filled with Flags and with dedicated repr."""
+
+    def __new__(cls, input_array: ArrayLike, flag: Type[IntFlag], dtype: DTypeLike = np.uint8):
+        # Input array is an already formed ndarray instance
+        # We first cast to be our class type
+        obj = np.asarray(input_array, dtype=dtype).view(cls)
+        # add the new attribute to the created instance
+        obj.flag = flag
+        # Finally, we must return the newly created object:
+        return obj
+
+    def __array_finalize__(self, obj):
+        # see InfoArray.__array_finalize__ for comments
+        if obj is None:
+            return
+        self.flag = getattr(obj, "flag", None)  # pylint: disable=attribute-defined-outside-init
+
+    def __repr__(self):
+        if self.flag is None:
+            return super().__repr__()
+        max_line_width = np.get_printoptions()["linewidth"]
+
+        flag_reprs = [repr(self.flag(i)).replace(self.flag.__name__ + ".", "") for i in range(sum(self.flag))]
+        prefix = f"{self.__class__.__name__}<{self.flag.__name__}>"
+        suffix = f"dtype={self.dtype}"
+        array_repr = np.array2string(
+            self,
+            prefix=prefix,
+            formatter={"int_kind": lambda x: flag_reprs[x]},
+            separator=", ",
+            suffix=suffix,
+            max_line_width=max_line_width,
+        )
+        return f"{prefix}({array_repr}, {suffix})"
 
 
 def get_disparity_grids(
@@ -76,7 +114,7 @@ def allocate_criteria_dataarray(
     :rtype: criteria_dataarray: xr.DataArray
     """
     return xr.DataArray(
-        np.full(cv.cost_volumes.shape, value, data_type),
+        FlagArray(np.full(cv.cost_volumes.shape, value, data_type), Criteria, data_type),
         coords=cv["cost_volumes"].coords,
         dims=cv["cost_volumes"].dims,
         name="criteria",
