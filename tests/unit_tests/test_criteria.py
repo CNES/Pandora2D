@@ -125,6 +125,59 @@ def criteria_dataarray(img_size):
     )
 
 
+class TestCriteria:
+    """Test the Criteria Enum."""
+
+    def test_can_be_stored_in_uint8_np_array(self):
+        """Criteria can be stored in uint8 numpy array."""
+        result = np.array([Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER], dtype=np.uint8)
+        assert result.dtype == np.uint8
+
+    def test_is_in(self):
+        """Test method to see if a Criteria is part of an array."""
+        data = np.array(
+            [
+                Criteria.VALID,
+                Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER,
+                Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER | Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE,
+            ],
+            dtype=np.uint8,
+        )
+
+        np.testing.assert_array_equal(Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER.is_in(data), [False, True, True])
+        np.testing.assert_array_equal(Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE.is_in(data), [False, False, True])
+
+
+class TestFlagArray:
+    """Test flag array."""
+
+    @pytest.fixture(scope="class")
+    def flag_array(self):
+        return criteria.FlagArray(
+            [
+                Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE,
+                Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA,
+            ],
+            Criteria,
+        )
+
+    def test_default_dtype(self, flag_array):
+        assert flag_array.dtype == np.uint8
+
+    def test_repr(self, flag_array):
+        """Test repr."""
+        prefix = "FlagArray<Criteria>"
+        prefix_offset = " " * (len(prefix) + 1)
+        expected = (
+            f"{prefix}([<PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE: "
+            f"{Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE.value}>,\n{prefix_offset}"
+            f"<PANDORA2D_MSK_PIXEL_RIGHT_NODATA: "
+            f"{Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA.value}>], "
+            f"dtype=uint8)"
+        )
+        assert repr(flag_array) == expected
+
+
 class TestAllocateCriteriaDataset:
     """Test create a criteria xarray.Dataset."""
 
