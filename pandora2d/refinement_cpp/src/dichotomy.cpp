@@ -22,7 +22,7 @@ This module contains functions associated to the Dichotomy refinement method.
 */
 
 #include "dichotomy.hpp"
-#include "alias.hpp"
+#include "constant.hpp"
 
 namespace py = pybind11;
 

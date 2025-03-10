@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+/* Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
  *
  * This file is part of PANDORA2D
  *
@@ -18,15 +18,15 @@
  */
 
 /*
-This module contains types and constants associated to the Abstract filter class for cpp.
+This module contains constant for cpp.
 */
 
-#ifndef INTERPOLATION_FILTER_ALIAS_HPP
-#define INTERPOLATION_FILTER_ALIAS_HPP
+#ifndef COMMON_CONSTANT_HPP
+#define COMMON_CONSTANT_HPP
 
-#include <limits>
+#include <math.h> /* pow */
 
-const double EPSILON = std::numeric_limits<float>::epsilon();  ///< Numeric limit of float type.
-///< We use the same numeric limit used by Medicis.
+const double MAX_FRACTIONAL_VALUE = 1 - (1. / pow(2, 9));  ///< MAX_FRACTIONAL_VALUE=0.998046875
+///< corresponds to 1-1/2**9 where 9 is the maximal number of iterations for dichotomy
 
 #endif

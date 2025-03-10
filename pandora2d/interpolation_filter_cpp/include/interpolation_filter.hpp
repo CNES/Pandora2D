@@ -25,6 +25,7 @@ This module contains functions associated to the Abstract filter class for cpp.
 #define INTERPOLATIONFILTER_HPP
 
 #include "alias.hpp"
+#include "constant.hpp"
 #include "eigen_type.hpp"
 #include "margins.hpp"
 
