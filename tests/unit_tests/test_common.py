@@ -40,7 +40,7 @@ from rasterio import Affine
 from pandora2d import common, run
 from pandora2d.check_configuration import check_conf
 from pandora2d.img_tools import create_datasets_from_inputs
-from pandora2d import matching_cost, disparity, refinement
+from pandora2d import matching_cost, disparity, refinement, criteria
 from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.constants import Criteria
 
@@ -195,11 +195,17 @@ class TestSaveDisparityMaps:
 
         dims = ("row", "col")
 
+        criteria_values = ["validity_mask", "criteria_1"]
+        validity = np.full((2, 2, len(criteria_values)), 1)
+
         dataset = xr.Dataset(
             {
                 "kill_map": xr.DataArray(row, dims=dims, coords=coords),
                 "power_map": xr.DataArray(col, dims=dims, coords=coords),
                 "super_score": xr.DataArray(score, dims=dims, coords=coords),
+                "fake_validity": xr.DataArray(
+                    validity, dims=("row", "col", "criteria"), coords={**coords, "criteria": criteria_values}
+                ),
             },
             attrs=attributes,
         )
@@ -277,20 +283,26 @@ class TestSaveDisparityMaps:
         assert result == attributes
 
 
-def create_dataset_coords(data_row, data_col, data_score, row, col):
+def create_dataset_coords(data_row, data_col, data_score, data_validity, row, col):
     """
-    Create xr.Dataset with data_row and data_col as data variables and row and col as coordinates
+    Create xr.Dataset with data_row, data_col, data_score and data_validity
+    as data variables and row and col as coordinates
     """
 
-    data_variables = {
-        "row_map": (("row", "col"), data_row),
-        "col_map": (("row", "col"), data_col),
-        "correlation_score": (("row", "col"), data_score),
-    }
-
+    criteria_values = ["validity_mask", "criteria_1"]
     coords = {"row": row, "col": col}
+    dims = ("row", "col")
 
-    dataset = xr.Dataset(data_variables, coords)
+    dataset = xr.Dataset(
+        {
+            "row_map": xr.DataArray(data_row, dims=dims, coords=coords),
+            "col_map": xr.DataArray(data_col, dims=dims, coords=coords),
+            "correlation_score": xr.DataArray(data_score, dims=dims, coords=coords),
+            "validity": xr.DataArray(
+                data_validity, dims=("row", "col", "criteria"), coords={**coords, "criteria": criteria_values}
+            ),
+        },
+    )
 
     return dataset
 
@@ -320,6 +332,30 @@ class TestDatasetDispMaps:
 
         return image_path
 
+    @pytest.fixture()
+    def dataset_validity(self, row, col):
+        """
+        Create a fake validity dataset to test dataset_disp_maps method
+        """
+
+        coords = {
+            "row": row,
+            "col": col,
+        }
+
+        criteria_values = ["validity_mask", "criteria_1"]
+        validity = np.full((len(row), len(col), len(criteria_values)), 1)
+
+        dataset_validity = xr.Dataset(
+            {
+                "validity": xr.DataArray(
+                    validity, dims=("row", "col", "criteria"), coords={**coords, "criteria": criteria_values}
+                ),
+            },
+        )
+
+        return dataset_validity
+
     @pytest.mark.parametrize(
         ["row", "col"],
         [
@@ -345,7 +381,7 @@ class TestDatasetDispMaps:
             ),
         ],
     )
-    def test_dataset_disp_maps(self, row, col):
+    def test_dataset_disp_maps(self, row, col, dataset_validity):
         """
         Test for dataset_disp_maps method
         """
@@ -354,6 +390,7 @@ class TestDatasetDispMaps:
             np.full((len(row), len(col)), 1),
             np.full((len(row), len(col)), 1),
             np.full((len(row), len(col)), 1),
+            dataset_validity["validity"].data,
             row,
             col,
         )
@@ -364,6 +401,7 @@ class TestDatasetDispMaps:
             dataset_test.col_map,
             dataset_test.coords,
             np.full((len(row), len(col)), 1),
+            dataset_validity,
             {"invalid_disp": -9999},
         )
 
@@ -397,9 +435,15 @@ class TestDatasetDispMaps:
             "col_map": ((coord), np.full((len(coord_value)), 1)),
         }
 
+        data_variables_validity = {
+            "validity_mask": ((coord), np.full((len(coord_value)), 0)),
+            "criteria_1": ((coord), np.full((len(coord_value)), 1)),
+        }
+
         coords = {coord: coord_value}
 
         dataset_test = xr.Dataset(data_variables, coords)
+        dataset_validity = xr.Dataset(data_variables_validity, coords)
 
         # create dataset with dataset_disp_maps function
         with pytest.raises(ValueError, match=string_match):
@@ -408,6 +452,7 @@ class TestDatasetDispMaps:
                 dataset_test.col_map,
                 dataset_test.coords,
                 np.full((len(coord_value)), 1),
+                dataset_validity,
                 {"invalid_disp": -9999},
             )
 
@@ -481,9 +526,12 @@ class TestDatasetDispMaps:
         # compute disparity maps
         delta_col, delta_row, correlation_score = disparity_matcher.compute_disp_maps(cvs)
 
+        # Create validity dataset
+        dataset_validity = criteria.get_validity_mask(cvs["criteria"])
+
         # create dataset with dataset_disp_maps function
         disparity_maps = common.dataset_disp_maps(
-            delta_row, delta_col, cvs.coords, correlation_score, {"invalid_disp": -9999}
+            delta_row, delta_col, cvs.coords, correlation_score, dataset_validity, {"invalid_disp": -9999}
         )
 
         interpolation = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
@@ -497,7 +545,12 @@ class TestDatasetDispMaps:
 
         # create ground truth with create_dataset_coords method
         dataset_ground_truth = create_dataset_coords(
-            delta_y, delta_x, correlation_score, disparity_maps.row, disparity_maps.col
+            delta_y,
+            delta_x,
+            correlation_score,
+            dataset_validity["validity"].data,
+            disparity_maps.row,
+            disparity_maps.col,
         )
 
         assert disparity_maps.equals(dataset_ground_truth)

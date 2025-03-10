@@ -31,7 +31,7 @@ import pytest
 import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
 from pandora.margins import Margins
-from pandora2d import refinement, common, matching_cost, disparity
+from pandora2d import refinement, common, matching_cost, disparity, criteria
 from pandora2d.refinement.optical_flow import OpticalFlow
 from pandora2d.img_tools import add_disparity_grid
 
@@ -491,6 +491,9 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
     """
     Instantiate a disparity dataset
     """
+
+    dataset_validity = criteria.get_validity_mask(dataset_cv["criteria"])
+
     disparity_matcher = disparity.Disparity(cfg_disp)
     delta_x, delta_y, score = disparity_matcher.compute_disp_maps(dataset_cv)
 
@@ -506,6 +509,7 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
         dataset.col_map,
         dataset.coords,
         dataset.correlation_score,
+        dataset_validity,
         attributes={"invalid_disp": np.nan},
     )
     return dataset_disp_map
@@ -694,6 +698,8 @@ class TestDisparityGrids:
             img_right=image,
         )
 
+        dataset_validity = criteria.get_validity_mask(cost_volumes["criteria"])
+
         disparity_matcher = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": invalid_value})
 
         disp_map_col, disp_map_row, correlation_score = disparity_matcher.compute_disp_maps(cost_volumes)
@@ -713,6 +719,7 @@ class TestDisparityGrids:
             dataset.col_map,
             dataset.coords,
             dataset.correlation_score,
+            dataset_validity,
             attributes={"invalid_disp": invalid_value},
         )
 

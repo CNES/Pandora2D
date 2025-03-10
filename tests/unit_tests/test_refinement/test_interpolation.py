@@ -32,7 +32,7 @@ import json_checker
 
 from pandora.margins import Margins
 
-from pandora2d import common, refinement
+from pandora2d import common, refinement, criteria
 
 
 @pytest.fixture()
@@ -57,9 +57,19 @@ def cv_dataset():
     disparity_range_col = np.arange(-2, 2 + 1)
     disparity_range_row = np.arange(-2, 2 + 1)
 
+    criteria_data = np.full((len(row), len(col), len(disparity_range_col), len(disparity_range_row)), 0)
+
     cost_volumes_test = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},
-        coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
+        {
+            "cost_volumes": (["row", "col", "disp_col", "disp_row"], cv),
+            "criteria": (["row", "col", "disp_col", "disp_row"], criteria_data),
+        },
+        coords={
+            "row": row,
+            "col": col,
+            "disp_col": disparity_range_col,
+            "disp_row": disparity_range_row,
+        },
     )
 
     cost_volumes_test.attrs["measure"] = "zncc"
@@ -105,10 +115,12 @@ def test_refinement_method_subpixel(cv_dataset):
 
     coords = {"row": np.arange(3), "col": np.arange(3)}
 
+    dataset_validity = criteria.get_validity_mask(cost_volumes_test["criteria"])
+
     dataset = xr.Dataset(data_variables, coords)
 
     dataset_disp_map = common.dataset_disp_maps(
-        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score
+        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score, dataset_validity
     )
 
     test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
@@ -148,10 +160,12 @@ def test_refinement_method_pixel(cv_dataset):
 
     coords = {"row": np.arange(3), "col": np.arange(3)}
 
+    dataset_validity = criteria.get_validity_mask(cost_volumes_test["criteria"])
+
     dataset = xr.Dataset(data_variables, coords)
 
     dataset_disp_map = common.dataset_disp_maps(
-        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score
+        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score, dataset_validity
     )
 
     test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
@@ -178,10 +192,12 @@ def test_refinement_correlation_score(cv_dataset):
 
     coords = {"row": np.arange(3), "col": np.arange(3)}
 
+    dataset_validity = criteria.get_validity_mask(cost_volumes_test["criteria"])
+
     dataset = xr.Dataset(data_variables, coords)
 
     dataset_disp_map = common.dataset_disp_maps(
-        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score
+        dataset.row_map, dataset.col_map, dataset.coords, dataset.correlation_score, dataset_validity
     )
 
     test = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]

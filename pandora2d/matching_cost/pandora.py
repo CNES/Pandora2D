@@ -31,6 +31,7 @@ from pandora.criteria import validity_mask
 from pandora.margins import Margins
 
 from pandora2d import img_tools
+from pandora2d.criteria import get_criteria_dataarray
 from pandora2d.common import (
     set_out_of_col_disparity_range_to_other_value,
     set_out_of_row_disparity_range_to_other_value,
@@ -351,6 +352,8 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
             # Add current cost volume to the cost_volumes dataset
             cost_volumes["cost_volumes"].data[:, :, idx, :] = cost_volume["cost_volume"].data[row_index, :, :]
+
+        cost_volumes["criteria"] = get_criteria_dataarray(img_left, img_right, cost_volumes)
 
         # Add disparity source
         del cost_volumes.attrs["disparity_source"]

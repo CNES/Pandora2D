@@ -168,26 +168,35 @@ Disparity map
 
 The *Disparity computation* step generates two disparity maps in cost volume geometry. One named **row_map** for the
 vertical disparity and one named **col_map** for the horizontal disparity. These maps are float32 type 2D xarray.DataArray,
-stored in a xarray.Dataset.
+stored in a xarray.Dataset. 
 
+This xr.Dataset also contains the **validity maps** stored in uint8: 
+
+    * A global validity map 'validity_mask' indicating whether each point is valid (value 0), partially valid (value 1) or invalid (value 2).
+    * A map for each criteria, indicating for each point whether the corresponding criteria has been raised at that point (value 0) or not (value 1).
 
 ::
 
     <xarray.Dataset>
-    Dimensions:  (col: 450, row: 375)
+    Dimensions:  (col: 450, row: 375, criteria: 2)
     Coordinates:
       * row      (row) int64 0 1 2 3 4 5 6 7 8 ... 367 368 369 370 371 372 373 374
       * col      (col) int64 0 1 2 3 4 5 6 7 8 ... 442 443 444 445 446 447 448 449
+      * criteria (criteria) <U13 'validity_mask' 'criteria_1'
     Data variables:
         row_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         col_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         correlation_score  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
+        validity  (row, col, criteria) uint8 0 1 0 0 2 0 ... 0 1 0 0 0
     Attributes:
         offset:       {'row': 0, 'col': 0}
         step:         {'row': 1, 'col': 1}
         invalid_disp: -9999
         crs:          None
         transform:    | 1.00, 0.00, 0.00|| 0.00, 1.00, 0.00|| 0.00, 0.00, 1.00|
+
+.. warning::
+    The validity maps are not yet operational as development is still in progress.
 
 Border management
 #################
