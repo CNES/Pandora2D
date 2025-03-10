@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+/* Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
  *
  * This file is part of PANDORA2D
  *
@@ -21,8 +21,10 @@
 This module contains Margins struct and associated operators.
 */
 
-#ifndef MARGINS_HPP
-#define MARGINS_HPP
+#ifndef COMMON_MARGINS_HPP
+#define COMMON_MARGINS_HPP
+
+#include <iostream>
 
 /**
  * @brief Margins struct
