@@ -35,8 +35,6 @@ classifiers = [
 dependencies = [
     "json-checker",
     "matplotlib",
-    "numba>=0.47.0;python_version<'3.8'",
-    "numba>=0.55.2;python_version>'3.7'",
     "numpy",
     "pandas",
     "pandora>=1.6.2",
