@@ -30,6 +30,7 @@ This module contains functions associated to the Dichotomy refinement method.
 #include <Eigen/Dense>
 #include <map>
 
+#include "cost_volume.hpp"
 #include "eigen_type.hpp"
 #include "interpolation_filter.hpp"
 #include "operation.hpp"
@@ -68,65 +69,6 @@ struct Position2D {
 };
 
 /**
- * @brief Cost volume size
- *
- * Structure containing the 4D size of a cost volume
- */
-struct Cost_volume_size {
-  /**
-   * @brief Construct a new Cost_volume_size object
-   *
-   * @param _r : Number of rows on cost_volume element
-   * @param _c : Number of columns on cost_volume element
-   * @param _dr : Number of row disparities
-   * @param _dc : Number of col disparities
-   */
-  Cost_volume_size(unsigned int _r, unsigned int _c, unsigned int _dr, unsigned int _dc)
-      : nb_row(_r), nb_col(_c), nb_disp_row(_dr), nb_disp_col(_dc) {};
-
-  /**
-   * @brief Construct a new Cost_volume_size object
-   *
-   */
-  Cost_volume_size() : Cost_volume_size(0u, 0u, 0u, 0u) {};
-
-  /**
-   * @brief Construct a new Cost_volume_size object
-   *
-   * @param cv_size : Eigen vector with cost_volume size informations
-   */
-  Cost_volume_size(t_VectorD& cv_size)
-      : Cost_volume_size(cv_size[0], cv_size[1], cv_size[2], cv_size[3]) {};
-
-  /**
-   * @brief Construct a new Cost_volume_size object
-   *
-   * @param cv_size : std::vector with cost_volume size informations
-   */
-  Cost_volume_size(std::vector<size_t>& cv_size)
-      : Cost_volume_size(cv_size[0], cv_size[1], cv_size[2], cv_size[3]) {};
-
-  /**
-   * @brief Get the cost volume size : nb_row * nb_col * nb_disp_row * nb_disp_col
-   *
-   * @return unsigned int
-   */
-  unsigned int size() { return nb_row * nb_col * nb_disp_row * nb_disp_col; };
-
-  /**
-   * @brief Get the disparity number : nb_disp_row * nb_disp_col
-   *
-   * @return unsigned int
-   */
-  unsigned int nb_disps() { return nb_disp_row * nb_disp_col; };
-
-  unsigned int nb_row;       ///< Number of rows on cost_volume element
-  unsigned int nb_col;       ///< Number of columns on cost_volume element
-  unsigned int nb_disp_row;  ///< Number of row disparities
-  unsigned int nb_disp_col;  ///< Number of col disparities
-};
-
-/**
  * @brief Get the cost surfaces for one pixel
  *
  * @param cost_volume : 1D data
@@ -137,8 +79,8 @@ struct Cost_volume_size {
 template <typename T>
 P2d::MatrixD get_cost_surface(py::array_t<T>& cost_volume,
                            unsigned int index,
-                           Cost_volume_size& cv_size) {
-  auto index_to_position = [](unsigned int index, Cost_volume_size& cv_size) -> Position2D {
+                           CostVolumeSize& cv_size) {
+  auto index_to_position = [](unsigned int index, CostVolumeSize& cv_size) -> Position2D {
     int quot = index / (cv_size.nb_col * cv_size.nb_disps());
     int rem = index % (cv_size.nb_col * cv_size.nb_disps());
     return Position2D(quot, rem / cv_size.nb_disps());
@@ -213,8 +155,8 @@ void compute_dichotomy(py::array_t<T> cost_volume,
   auto pos_disp_row_it = disparity_map_row.begin();
   auto score_it = score_map.begin();
   auto crit_it = criteria_map.begin();
-  Cost_volume_size cv_size = Cost_volume_size(cost_volume.shape(0), cost_volume.shape(1),
-                                              cost_volume.shape(2), cost_volume.shape(3));
+  CostVolumeSize cv_size = CostVolumeSize(cost_volume.shape(0), cost_volume.shape(1),
+                                          cost_volume.shape(2), cost_volume.shape(3));
   auto nb_disps = cv_size.nb_disps();
 
   unsigned int index = -nb_disps;  //< Index on disparity_map less the first occurance

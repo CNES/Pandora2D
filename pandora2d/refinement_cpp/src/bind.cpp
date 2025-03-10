@@ -23,7 +23,6 @@ This module contains functions associated to the binding pybind of cpp dichotomy
 
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
-#include <vector>
 
 #include "dichotomy.hpp"
 #include "eigen_type.hpp"
@@ -81,17 +80,5 @@ PYBIND11_MODULE(refinement_bind, m) {
             :type filter: abstractfilter::AbstractFilter
             :param method_matching_cost: max or min
             :type method_matching_cost: str
-            )mydelimiter");
-
-  pybind11::class_<Cost_volume_size>(m, "Cost_volume_size")
-      .def(pybind11::init<>())
-      .def(pybind11::init<t_VectorD&>())
-      .def(pybind11::init<std::vector<size_t>&>())
-      .def(pybind11::init<unsigned int, unsigned int, unsigned int, unsigned int>())
-      .def_property_readonly("size", &Cost_volume_size::size, R"mydelimiter(
-            Returns the cost_volume size nb_row * nb_col * nb_disp_row * nb_disp_col.
-            )mydelimiter")
-      .def_property_readonly("nb_disps", &Cost_volume_size::nb_disps, R"mydelimiter(
-            Returns the disparity number : nb_disp_row * nb_disp_col.
             )mydelimiter");
 }

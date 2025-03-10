@@ -26,6 +26,7 @@ This module contains tests associated to mutual information computation.
 #include <iomanip>
 #include <iostream>
 #include "conftest.hpp"
+#include "cost_volume.hpp"
 #include "cost_volumes.hpp"
 
 constexpr double INIT_VALUE_CV = 0.0;  ///< initial value used to fill the cv
@@ -42,24 +43,14 @@ constexpr double INIT_VALUE_CV = 0.0;  ///< initial value used to fill the cv
  * @return t_VectorD
  */
 t_VectorD get_cost_surface(const t_VectorD& cost_values,
-                           const Eigen::Vector4i& cv_shape,
+                           CostVolumeSize& cv_size,
                            int row,
                            int col) {
-  int cost_surface_size = cv_shape[2] * cv_shape[3];
+  int cost_surface_size = cv_size.nb_disps();
 
-  int start_index = (row * cv_shape[1] + col) * cost_surface_size;
+  int start_index = (row * cv_size.nb_col + col) * cost_surface_size;
 
   return cost_values.segment(start_index, cost_surface_size);
-};
-
-/**
- * @brief get cv 1d shape from 4d shape
- *
- * @param cv_shape 4d
- * @return int shape 1d
- */
-int shape_1d(const Eigen::Vector4i& cv_shape) {
-  return cv_shape[0] * cv_shape[1] * cv_shape[2] * cv_shape[3];
 };
 
 TEST_CASE("Test get_window method") {
@@ -256,12 +247,11 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
   imgs_right.push_back(right_1);
 
-  // CV shape
-  Eigen::Vector4i cv_shape;
-  cv_shape << 5, 5, 3, 5;
+  // CV size
+  CostVolumeSize cv_size = CostVolumeSize(5, 5, 3, 5);
 
   // Initialized cv values
-  t_VectorD cv_values = t_VectorD::Zero(shape_1d(cv_shape));
+  t_VectorD cv_values = t_VectorD::Zero(cv_size.size());
 
   // Disparity ranges
   t_VectorD disp_range_row(3);
@@ -283,11 +273,11 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   double no_data = -9999;
 
   SUBCASE("Cost surface of top left point") {
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    t_VectorD cost_surface = get_cost_surface(cv_values, cv_shape, 0, 0);
+    t_VectorD cost_surface = get_cost_surface(cv_values, cv_size, 0, 0);
 
     t_VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
@@ -297,16 +287,16 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
+    CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<t_MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface of center point") {
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    t_VectorD cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+    t_VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
 
     t_VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
@@ -316,17 +306,16 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        INIT_VALUE_CV, 0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
+    CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<t_MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface of center point with not centered disparities") {
-    // CV shape
-    Eigen::Vector4i cv_shape;
-    cv_shape << 5, 5, 3, 3;
+    // CV size
+    CostVolumeSize cv_size = CostVolumeSize(5, 5, 3, 3);
 
     // Initialized cv values
-    t_VectorD cv_values = t_VectorD::Zero(shape_1d(cv_shape));
+    t_VectorD cv_values = t_VectorD::Zero(cv_size.size());
 
     // Disparity ranges
     t_VectorD disp_range_row(3);
@@ -334,11 +323,11 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     t_VectorD disp_range_col(3);
     disp_range_col << 0.0, 1.0, 2.0;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    t_VectorD cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+    t_VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
 
     t_VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
@@ -348,21 +337,21 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        0.10218717094933361, 0.37887883713522919, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
+    CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<t_MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface with step_row=2 and step_col=3") {
     // Smaller shape with step=[2,3]
-    cv_shape << 3, 2, 3, 5;
-    cv_values = t_VectorD::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(3, 2, 3, 5);
+    cv_values = t_VectorD::Zero(cv_size.size());
     step << 2, 3;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    t_VectorD cost_surface = get_cost_surface(cv_values, cv_shape, 1, 1);
+    t_VectorD cost_surface = get_cost_surface(cv_values, cv_size, 1, 1);
 
     t_VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
@@ -372,7 +361,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
+    CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<t_MatrixD>(cost_surface, cost_surface_gt);
   }
 
@@ -411,8 +400,8 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     imgs_right.push_back(right_4);
 
     // Biggest shape with subpix=2
-    cv_shape << 5, 5, 5, 9;
-    cv_values = t_VectorD::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(5, 5, 5, 9);
+    cv_values = t_VectorD::Zero(cv_size.size());
 
     // Largest disparity ranges with subpix=2
     t_VectorD disp_range_row(5);
@@ -420,11 +409,11 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     t_VectorD disp_range_col(9);
     disp_range_col << -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    t_VectorD cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+    t_VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
 
     t_VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
     // clang-format off
@@ -469,7 +458,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         0.0072146184745172093, 0.0072146184745174313, INIT_VALUE_CV;      // 1
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
+    CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<t_MatrixD>(cost_surface, cost_surface_gt);
   };
 
@@ -508,9 +497,8 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     imgs_right.push_back(right_4);
 
     // Biggest shape with subpix=2
-    Eigen::Vector4i cv_shape;
-    cv_shape << 5, 5, 5, 9;
-    t_VectorD cv_values = t_VectorD::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(5, 5, 5, 9);
+    t_VectorD cv_values = t_VectorD::Zero(cv_size.size());
 
     // Largest disparity ranges with subpix=2
     t_VectorD disp_range_row(5);
@@ -528,11 +516,11 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     Eigen::Vector2i step;
     step << 1, 1;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    t_VectorD cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+    t_VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
 
     t_VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
@@ -578,25 +566,25 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         0.0072146184745172093,       INIT_VALUE_CV,  INIT_VALUE_CV;       // 1
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
+    CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<t_MatrixD>(cost_surface, cost_surface_gt);
   };
 
   SUBCASE("Cost surface with ROI") {
     // Smallest shape with ROI
-    cv_shape << 3, 2, 3, 5;
-    cv_values = t_VectorD::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(3, 2, 3, 5);
+    cv_values = t_VectorD::Zero(cv_size.size());
 
     // When ROI is used, we can have an offset between image and cv first index
     // to be sure to compute the first point of ROI
     offset_cv_img_row = 2;
     offset_cv_img_col = 3;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    t_VectorD cost_surface = get_cost_surface(cv_values, cv_shape, 0, 0);
+    t_VectorD cost_surface = get_cost_surface(cv_values, cv_size, 0, 0);
 
     t_VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
@@ -606,14 +594,14 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
+    CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<t_MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface with ROI and step=[1,2]") {
     // Smallest shape with ROI
-    cv_shape << 5, 2, 3, 5;
-    cv_values = t_VectorD::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(5, 2, 3, 5);
+    cv_values = t_VectorD::Zero(cv_size.size());
 
     // When ROI is used, we can have an offset between image and cv first index
     // to be sure to compute the first point of ROI
@@ -622,11 +610,11 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     step << 1, 2;
     ;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    t_VectorD cost_surface = get_cost_surface(cv_values, cv_shape, 1, 0);
+    t_VectorD cost_surface = get_cost_surface(cv_values, cv_size, 1, 0);
 
     t_VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
@@ -636,7 +624,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        INIT_VALUE_CV, INIT_VALUE_CV,  0.22478750958935989,  0.10218717094933361,  0.37887883713522919;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
+    CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<t_MatrixD>(cost_surface, cost_surface_gt);
   }
 }

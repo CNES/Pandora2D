@@ -26,6 +26,7 @@ This module contains functions associated to the computation of cost volumes in 
 
 #include <Eigen/Dense>
 
+#include "cost_volume.hpp"
 #include "mutual_information.hpp"
 
 /**
@@ -66,7 +67,7 @@ bool contains_element(const t_MatrixD& matrix, double element);
  * @param left image
  * @param right list of right images
  * @param cv_values initialized cost values
- * @param cv_shape cost volumes 4D shape
+ * @param cv_size : cost volume size information
  * @param disp_range_row cost volumes row disparity range
  * @param disp_range_col cost volumes col disparity range
  * @param offset_cv_img_row row offset between first index of cv and image (ROI case)
@@ -80,7 +81,7 @@ bool contains_element(const t_MatrixD& matrix, double element);
 void compute_cost_volumes_cpp(const t_MatrixD& left,
                               const std::vector<t_MatrixD>& right,
                               Eigen::Ref<t_VectorD> cv_values,
-                              const Eigen::Vector4i& cv_shape,
+                              CostVolumeSize& cv_size,
                               const t_VectorD& disp_range_row,
                               const t_VectorD& disp_range_col,
                               int offset_cv_img_row,

@@ -75,7 +75,7 @@ py::array_t<float> py_cost_volume_4_4_2_3() {
   // define py_array
   std::vector<size_t> shape = {4, 4, 2, 3};
   py::array_t<float> cost_volume = py::array_t<float>(shape);
-  Cost_volume_size cv_size = Cost_volume_size(shape);
+  CostVolumeSize cv_size = CostVolumeSize(shape);
 
   // data access
   auto unchecked_cv = cost_volume.mutable_unchecked<4>();
@@ -140,32 +140,11 @@ TEST_CASE("Position2D") {
   }
 }
 
-TEST_CASE("Cost volume size") {
-  SUBCASE("First constructor") {
-    Cost_volume_size cv_size = Cost_volume_size(2, 3, 1, 1);
-    CHECK(cv_size.size() == 6);
-    CHECK(cv_size.nb_disps() == 1);
-  }
-
-  SUBCASE("Second constructor") {
-    Cost_volume_size cv_size = Cost_volume_size();
-    CHECK(cv_size.size() == 0);
-    CHECK(cv_size.nb_disps() == 0);
-  }
-
-  SUBCASE("Third constructor") {
-    t_VectorD vec_size{{4, 5, 2, 1}};
-    Cost_volume_size cv_size = Cost_volume_size(vec_size);
-    CHECK(cv_size.size() == 40);
-    CHECK(cv_size.nb_disps() == 2);
-  }
-}
-
 TEST_CASE("get_cost_surfaces") {
-  Cost_volume_size cv_size = Cost_volume_size(4, 4, 2, 3);
+  CostVolumeSize cv_size = CostVolumeSize(4, 4, 2, 3);
   auto cost_volume = py_cost_volume_4_4_2_3();
 
-  auto position2d_to_index = [](Position2D& pixel, Cost_volume_size& cv_size) -> unsigned int {
+  auto position2d_to_index = [](Position2D& pixel, CostVolumeSize& cv_size) -> unsigned int {
     return pixel.row * (cv_size.nb_col * cv_size.nb_disps()) + pixel.col * cv_size.nb_disps();
   };
 
