@@ -23,7 +23,6 @@ This module contains functions associated to the Abstract filter class for cpp.
 
 #include "interpolation_filter.hpp"
 #include <cmath>
-#include <limits>
 #include <utility>
 
 namespace abstractfilter {
