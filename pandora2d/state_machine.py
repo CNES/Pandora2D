@@ -112,7 +112,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.pipeline_cfg: Dict = {"pipeline": {}}
         self.completed_cfg: Dict = {}
         self.cost_volumes: xr.Dataset = xr.Dataset()
-        self.criteria_dataarray: xr.DataArray = xr.DataArray()
         self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
         # For communication between matching_cost and refinement steps
@@ -373,7 +372,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         map_col, map_row, correlation_score = disparity_run.compute_disp_maps(self.cost_volumes)
 
-        dataset_validity = criteria.get_validity_mask(self.cost_volumes["criteria"])
+        dataset_validity = criteria.get_validity_dataset(self.cost_volumes["criteria"])
 
         self.dataset_disp_maps = common.dataset_disp_maps(
             map_row,

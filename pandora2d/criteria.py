@@ -224,7 +224,7 @@ def mask_border(offset: int, criteria_dataarray: xr.DataArray) -> None:
 
     if offset > 0:
 
-        # Raise criteria 0 on border of criteria_disp_col according to offset value
+        # Raise criteria 0 on border of criteria_dataarray according to offset value
         criteria_dataarray.data[:offset, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
         criteria_dataarray.data[-offset:, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
         criteria_dataarray.data[:, :offset, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
@@ -430,29 +430,91 @@ def apply_peak_on_edge(
     )
 
 
-def get_validity_mask(criteria_dataarray: xr.DataArray) -> xr.Dataset:
+def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     """
-    Generate a temporary validity mask with an additional 'criteria' dimension.
+    Allocate the validity dataset which contains an additional 'criteria' dimension.
 
     :param criteria_dataarray: criteria_dataarray used to create validity mask
     :type criteria_dataarray: xr.DataArray
     """
+
+    # Get criteria names to stock them in the 'criteria' coordinate in the allocated xr.Dataset
+    # We use every Criteria except the first one which corresponds to valid points.
+    criteria_names = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
 
     # In a future issue, we will change the list of names of the 'criteria' coordinate
     # to get automatically the criteria names described in constants.py
     coords = {
         "row": criteria_dataarray.coords.get("row"),
         "col": criteria_dataarray.coords.get("col"),
-        "criteria": ["validity_mask", "criteria_1"],
+        "criteria": criteria_names,
     }
 
     dims = ("row", "col", "criteria")
+    shape = (len(coords["row"]), len(coords["col"]), len(coords["criteria"]))
 
-    data_validity_mask = np.full((criteria_dataarray.shape[0], criteria_dataarray.shape[1]), 0, dtype=np.uint8)
-    data_band_1 = np.full((criteria_dataarray.shape[0], criteria_dataarray.shape[1]), 1, dtype=np.uint8)
+    # Initalize validity dataset data with zeros
+    empty_data = np.full(shape, 0, dtype=np.uint8)
 
-    data_combined = np.stack([data_validity_mask, data_band_1], axis=-1)
-
-    dataset = xr.Dataset({"validity": xr.DataArray(data_combined, dims=dims, coords=coords)})
+    dataset = xr.Dataset({"validity": xr.DataArray(empty_data, dims=dims, coords=coords)})
 
     return dataset
+
+
+def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
+    """
+    Fill the validity dataset which contains an additional 'criteria' dimension.
+
+    :param criteria_dataarray: criteria_dataarray used to create validity mask
+    :type criteria_dataarray: xr.DataArray
+    :return: validity Dataset
+    :rtype: xr.Dataset
+    """
+
+    validity_dataset = allocate_validity_dataset(criteria_dataarray)
+
+    validity_dataset["validity"].data[:, :, 0] = get_validity_mask_band(criteria_dataarray)
+
+    # The PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria doesn't depend on disparities,
+    # so we can use criteria_datarray at the first couple of disparities
+    # to identify the points where the criteria is raised.
+    validity_dataset["validity"].data[:, :, 1] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER.is_in(
+        criteria_dataarray[:, :, 0, 0].data
+    )
+
+    return validity_dataset
+
+
+def get_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
+    """
+    This method fills the validity mask band according to the criteria dataarray given as a parameter.
+
+    This validity mask shows which points of the image are valid and which are not:
+        - If a point = 2 in the validity mask band --> The point is invalid, no disparity range can be calculated
+        - If a point = 1 in the validity mask band --> The point is partially valid, not all disparity range requested
+          by the user have been computed
+        - If a point = 0 in the validity mask band --> The point is valid, all the disparity range requested
+          by the user have been computed
+
+    :param criteria_dataarray: 4D DataArray containing the criteria
+    :type criteria_dataarray: xr.DataArray
+    :return: validity mask band
+    :rtype: xr.DataArray
+    """
+
+    disp_range_total = len(criteria_dataarray.disp_row) * len(criteria_dataarray.disp_col)
+    invalid_mask = np.full((criteria_dataarray.sizes["row"], criteria_dataarray.sizes["col"]), 0)
+
+    for disp_col in criteria_dataarray.disp_col:
+        for disp_row in criteria_dataarray.disp_row:
+
+            # For each point, +1 is added to invalid_mask for each invalid disparity range
+            invalid_mask += criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col).data != Criteria.VALID
+
+    validity_mask = np.zeros_like(invalid_mask, dtype=np.uint8)
+    # If all the disparity ranges are invalid, the point is set to 2 in the validity mask
+    validity_mask[invalid_mask == disp_range_total] = 2
+    # If at least one of the disparity range is invalid, the point is set to 1 in the validity mask
+    validity_mask[(invalid_mask > 0) & (invalid_mask < disp_range_total)] = 1
+
+    return validity_mask
