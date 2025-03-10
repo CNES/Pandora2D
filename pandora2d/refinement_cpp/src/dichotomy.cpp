@@ -27,58 +27,6 @@ This module contains functions associated to the Dichotomy refinement method.
 namespace py = pybind11;
 
 /**
- * @brief Function to find the index of the minimum element, ignoring NaNs
- *
- * @param vec : data in the eigen vector type
- * @return int : return index (first element if all elements are the same)
- */
-int nanargmin(const t_VectorD& vec) {
-  int min_index = -1;
-  double min_value = std::numeric_limits<double>::infinity();
-  for (int i = 0; i < vec.size(); ++i) {
-    if (!std::isnan(vec[i]) && vec[i] < min_value) {
-      min_value = vec[i];
-      min_index = i;
-    }
-  }
-  return min_index;
-}
-
-/**
- * @brief Function to find the index of the maximum element, ignoring NaNs
- *
- * @param vec : data in the eigen vector type
- * @return int : return index (first element if all elements are the same)
- */
-int nanargmax(const t_VectorD& vec) {
-  int max_index = -1;
-  double max_value = -std::numeric_limits<double>::infinity();
-  for (int i = 0; i < vec.size(); ++i) {
-    if (!std::isnan(vec[i]) && vec[i] > max_value) {
-      max_value = vec[i];
-      max_index = i;
-    }
-  }
-  return max_index;
-}
-
-/**
- * @brief Check if all the elements are the same
- *
- * @param data
- * @return true : all elements are the same
- * @return false : not all elements are the same
- */
-bool all_same(const t_VectorD& data) {
-  auto value_tested = *(data.begin());
-  for (auto d : data) {
-    if (d != value_tested)
-      return false;
-  }
-  return true;
-}
-
-/**
  * @brief Search for the new best position
  *
  * @param cost_surface : 1D data of size nb_disp_row * nb_disp_col

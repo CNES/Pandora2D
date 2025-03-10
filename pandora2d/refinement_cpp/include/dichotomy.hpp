@@ -32,24 +32,9 @@ This module contains functions associated to the Dichotomy refinement method.
 
 #include "eigen_type.hpp"
 #include "interpolation_filter.hpp"
+#include "operation.hpp"
 
 namespace py = pybind11;
-
-/**
- * @brief Function to find the index of the minimum element, ignoring NaNs
- *
- * @param vec : data in the eigen vector type
- * @return int : return index (first element if all elements are the same)
- */
-int nanargmin(const t_VectorD& vec);
-
-/**
- * @brief Function to find the index of the maximum element, ignoring NaNs
- *
- * @param vec : data in the eigen vector type
- * @return int : return index (first element if all elements are the same)
- */
-int nanargmax(const t_VectorD& vec);
 
 /**
  * @brief Mapping of cost selection methods
@@ -58,15 +43,6 @@ int nanargmax(const t_VectorD& vec);
 const std::map<std::string, int (*)(const P2d::VectorD&)> COST_SELECTION_METHOD_MAPPING = {
     {"min", nanargmin},
     {"max", nanargmax}};
-
-/**
- * @brief Check if all the elements are the same
- *
- * @param data
- * @return true : all elements are the same
- * @return false : not all elements are the same
- */
-bool all_same(const t_VectorD& data);
 
 /**
  * @brief Position2D

@@ -5,14 +5,13 @@ matching_cost_src = files(
     'src/histogram1D.cpp',
     'src/histogram2D.cpp',
     'src/mutual_information.cpp',
-    'src/operation.cpp',
 )
 
 bind_src = files('src/bind.cpp')
 
 py.extension_module(
     'matching_cost_bind',
-    [matching_cost_src, bind_src],
+    [matching_cost_src, bind_src, common_src],
     subdir: 'pandora2d/matching_cost_cpp',
     install: true,
     include_directories: [matching_cost_includes, common_includes],

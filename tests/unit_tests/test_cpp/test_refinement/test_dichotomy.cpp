@@ -161,67 +161,6 @@ TEST_CASE("Cost volume size") {
   }
 }
 
-TEST_CASE("nanargmin & nanargmax") {
-  SUBCASE("Positive value") {
-    // Exemple d'utilisation
-    t_VectorD data(5);
-    data << 1.0, 2.0, 2.2, 3.0, 4.0;
-
-    CHECK(nanargmin(data) == 0);
-    CHECK(nanargmax(data) == 4);
-  }
-
-  SUBCASE("Positive value & Nan") {
-    // Exemple d'utilisation
-    t_VectorD data(5);
-    data << 1.0, 2.0, std::numeric_limits<double>::quiet_NaN(), 3.0, 4.0;
-
-    CHECK(nanargmin(data) == 0);
-    CHECK(nanargmax(data) == 4);
-  }
-
-  SUBCASE("Negative value") {
-    // Exemple d'utilisation
-    t_VectorD data(5);
-    data << -1.0, 2.0, 2.2, 3.0, -4.0;
-
-    CHECK(nanargmin(data) == 4);
-    CHECK(nanargmax(data) == 3);
-  }
-
-  SUBCASE("Negative value & Nan") {
-    // Exemple d'utilisation
-    t_VectorD data(5);
-    data << -1.0, 2.0, std::numeric_limits<double>::quiet_NaN(), 3.0, -4.0;
-
-    CHECK(nanargmin(data) == 4);
-    CHECK(nanargmax(data) == 3);
-  }
-
-  SUBCASE("Same value") {
-    // Exemple d'utilisation
-    t_VectorD data(5);
-    data << -1.0, -1.0, -1.0, -1.0, -1.0;
-
-    CHECK(nanargmin(data) == 0);
-    CHECK(nanargmax(data) == 0);
-  }
-}
-
-TEST_CASE("all_same") {
-  t_VectorD data(5);
-  data << -1.0, -1.0, -1.0, -1.0, -1.0;
-
-  SUBCASE("True") {
-    CHECK(all_same(data) == true);
-  }
-
-  SUBCASE("False") {
-    data[0] = 2.0;
-    CHECK(all_same(data) == false);
-  }
-}
-
 TEST_CASE("get_cost_surfaces") {
   Cost_volume_size cv_size = Cost_volume_size(4, 4, 2, 3);
   auto cost_volume = py_cost_volume_4_4_2_3();

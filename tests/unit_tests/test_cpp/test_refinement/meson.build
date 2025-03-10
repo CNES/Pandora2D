@@ -9,6 +9,7 @@ test(
             bicubic_src,
             matching_cost_src,
             test_src,
+            common_src,
         ],
         include_directories: [
             refinement_includes,
