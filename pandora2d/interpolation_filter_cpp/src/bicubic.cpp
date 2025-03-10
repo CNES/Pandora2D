@@ -29,8 +29,8 @@ Bicubic::Bicubic() {
 }
 
 // Get coefficients
-t_Vector Bicubic::get_coeffs(const double fractional_shift) {
-  t_Vector tab_coeffs(m_size);
+P2d::VectorD Bicubic::get_coeffs(const double fractional_shift) {
+  P2d::VectorD tab_coeffs(m_size);
 
   for (int i = 0; i < m_size; ++i) {
     double dist = std::abs(-1.0 + i - fractional_shift);

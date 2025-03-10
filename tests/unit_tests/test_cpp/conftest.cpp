@@ -32,7 +32,7 @@ This file contains useful function declarations for tests.
 /**
  * @brief Create a normal matrix object
  */
-Eigen::MatrixXd create_normal_matrix(std::size_t size, float mean, float std) {
+t_MatrixD create_normal_matrix(std::size_t size, float mean, float std) {
   // random device class instance, source of 'true' randomness for initializing random seed
   std::random_device rd{};
   // Mersenne twister PRNG, initialized with seed from previous random device instance
@@ -46,7 +46,7 @@ Eigen::MatrixXd create_normal_matrix(std::size_t size, float mean, float std) {
   for (int i = 0; i < v_size; i++) {
     X[i] = dis(gen);
   }
-  Eigen::Map<Eigen::MatrixXd> img(X.data(), size, size);
+  Eigen::Map<t_MatrixD> img(X.data(), size, size);
 
   return img;
 }
@@ -54,7 +54,7 @@ Eigen::MatrixXd create_normal_matrix(std::size_t size, float mean, float std) {
 /**
  * Create image
  */
-Eigen::MatrixXd create_image(std::size_t size, float mean, float std, double nb_bins) {
+t_MatrixD create_image(std::size_t size, float mean, float std, double nb_bins) {
   auto matrix = create_normal_matrix(size, mean, std);
 
   auto check_nb_bins = [](auto& matrix) -> double {

@@ -23,15 +23,15 @@ This module contains functions associated to the binding pybind of cpp dichotomy
 
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
-#include <Eigen/Dense>
 #include <vector>
 
 #include "dichotomy.hpp"
+#include "eigen_type.hpp"
 
 using namespace pybind11::literals;
 
 PYBIND11_MODULE(refinement_bind, m) {
-  m.def("compute_dichotomy_float", &compute_dichotomy<float, Eigen::VectorXf>, "cost_volume"_a,
+  m.def("compute_dichotomy_float", &compute_dichotomy<float, P2d::Vectorf>, "cost_volume"_a,
         "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "subpixel"_a,
         "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
         R"mydelimiter(
@@ -57,7 +57,7 @@ PYBIND11_MODULE(refinement_bind, m) {
             :type method_matching_cost: str
             )mydelimiter");
 
-  m.def("compute_dichotomy_double", &compute_dichotomy<double, Eigen::VectorXd>, "cost_volume"_a,
+  m.def("compute_dichotomy_double", &compute_dichotomy<double, P2d::VectorD>, "cost_volume"_a,
         "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "subpixel"_a,
         "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
         R"mydelimiter(
@@ -85,7 +85,7 @@ PYBIND11_MODULE(refinement_bind, m) {
 
   pybind11::class_<Cost_volume_size>(m, "Cost_volume_size")
       .def(pybind11::init<>())
-      .def(pybind11::init<Eigen::VectorXd&>())
+      .def(pybind11::init<t_VectorD&>())
       .def(pybind11::init<std::vector<size_t>&>())
       .def(pybind11::init<unsigned int, unsigned int, unsigned int, unsigned int>())
       .def_property_readonly("size", &Cost_volume_size::size, R"mydelimiter(

@@ -24,13 +24,13 @@
 
 TEST_SUITE("find_or_throw") {
   TEST_CASE("find") {
-    t_Vector container{{0., 0.25, 0.5, 0.75}};
+    P2d::VectorD container{{0., 0.25, 0.5, 0.75}};
     Eigen::Index result = find_or_throw(0.25, container, "Not found.");
     CHECK(result == 1);
   }
 
   TEST_CASE("throw") {
-    t_Vector container{{0., 0.25, 0.5, 0.75}};
+    P2d::VectorD container{{0., 0.25, 0.5, 0.75}};
     std::string message("My message.");
     CHECK_THROWS_WITH_AS(find_or_throw(1, container, message), message.data(),
                          std::invalid_argument);
@@ -51,14 +51,14 @@ TEST_SUITE("Sinc") {
 
 TEST_SUITE("fractional range") {
   TEST_CASE("0.25") {
-    t_Vector expected{{0., 0.25, 0.5, 0.75}};
-    t_Vector result = fractional_range(0.25);
+    P2d::VectorD expected{{0., 0.25, 0.5, 0.75}};
+    P2d::VectorD result = fractional_range(0.25);
     CHECK(result.isApprox(expected));
   }
 
   TEST_CASE("0.3") {
-    t_Vector expected{{0., 0.3, 0.6, 0.9}};
-    t_Vector result = fractional_range(0.3);
+    P2d::VectorD expected{{0., 0.3, 0.6, 0.9}};
+    P2d::VectorD result = fractional_range(0.3);
     CHECK(result.isApprox(expected));
   }
 }
@@ -67,7 +67,7 @@ TEST_SUITE("compute_coefficient_table") {
   TEST_CASE("Check values") {
     Eigen::Vector4d fractional_shifts{0., 0.25, 0.5, 0.75};
 
-    t_Matrix expected{
+    P2d::MatrixD expected{
         {-7.27961266e-20, 4.96470926e-19, -2.38826216e-18, 8.10350309e-18, -1.93939483e-17,
          3.27387650e-17, 1.00000000e+00, 3.27387650e-17, -1.93939483e-17, 8.10350309e-18,
          -2.38826216e-18, 4.96470926e-19, -7.27961266e-20},
@@ -98,10 +98,10 @@ TEST_SUITE("compute_coefficient_table") {
 
 TEST_SUITE("CardinalSine") {
   TEST_CASE("Default constructor") {
-    t_Vector expected{{1.17346250e-05, -1.22064316e-04, 9.23526079e-04, -5.15703809e-03,
-                       2.18670589e-02, -7.53666320e-02, 2.72052430e-01, 8.90580552e-01,
-                       -1.37089810e-01, 4.13463585e-02, -1.09608352e-02, 2.26385148e-03,
-                       -3.49132307e-04}};
+    P2d::VectorD expected{{1.17346250e-05, -1.22064316e-04, 9.23526079e-04, -5.15703809e-03,
+                           2.18670589e-02, -7.53666320e-02, 2.72052430e-01, 8.90580552e-01,
+                           -1.37089810e-01, 4.13463585e-02, -1.09608352e-02, 2.26385148e-03,
+                           -3.49132307e-04}};
 
     auto filter = CardinalSine();
     auto result = filter.get_coeffs(0.75);

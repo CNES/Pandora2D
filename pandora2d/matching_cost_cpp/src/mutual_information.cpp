@@ -54,7 +54,7 @@ double get_entropy(const double nb_pixel, const T& hist) {
  * @param img
  * @return double entropy1D
  */
-double calculate_entropy1D(const Eigen::MatrixXd& img) {
+double calculate_entropy1D(const P2d::MatrixD& img) {
   auto nb_pixel = static_cast<double>(img.size());
   auto hist_1D = calculate_histogram1D(img);
 
@@ -71,7 +71,7 @@ double calculate_entropy1D(const Eigen::MatrixXd& img) {
  * @param img_r right image
  * @return double entropy 2D
  */
-double calculate_entropy2D(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& img_r) {
+double calculate_entropy2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r) {
   // same size for left and right images
   auto nb_pixel = static_cast<double>(img_l.size());
   auto hist_2D = calculate_histogram2D(img_l, img_r);
@@ -88,7 +88,7 @@ double calculate_entropy2D(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& 
  * @param img_r right image
  * @return double mutual information value
  */
-double calculate_mutual_information(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& img_r) {
+double calculate_mutual_information(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r) {
   double mutual_information =
       calculate_entropy1D(img_l) + calculate_entropy1D(img_r) - calculate_entropy2D(img_l, img_r);
 

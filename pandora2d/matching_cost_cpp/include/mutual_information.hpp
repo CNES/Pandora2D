@@ -24,6 +24,7 @@ This module contains functions associated to the mutual information in cpp.
 #ifndef MUTUAL_INFORMATION_HPP
 #define MUTUAL_INFORMATION_HPP
 
+#include "eigen_type.hpp"
 #include "histogram1D.hpp"
 #include "histogram2D.hpp"
 
@@ -47,7 +48,7 @@ double get_entropy(const double nb_pixel, const T& hist);
  * @param img
  * @return double entropy1D value
  */
-double calculate_entropy1D(const Eigen::MatrixXd& img);
+double calculate_entropy1D(const P2d::MatrixD& img);
 
 /**
  * @brief Compute entropy 2D of two images
@@ -59,7 +60,7 @@ double calculate_entropy1D(const Eigen::MatrixXd& img);
  * @param img_r right image
  * @return double entropy 2D value
  */
-double calculate_entropy2D(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& img_r);
+double calculate_entropy2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r);
 
 /**
  * @brief Compute mutual information between two images
@@ -70,6 +71,6 @@ double calculate_entropy2D(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& 
  * @param img_r right image
  * @return double mutual information value
  */
-double calculate_mutual_information(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& img_r);
+double calculate_mutual_information(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r);
 
 #endif

@@ -31,8 +31,8 @@ This module contains tests associated to histogram 2D.
 #include <iostream>
 
 TEST_CASE("Test constructor") {
-  Eigen::MatrixXd left(4, 4);
-  Eigen::MatrixXd right(4, 4);
+  P2d::MatrixD left(4, 4);
+  P2d::MatrixD right(4, 4);
 
   left << 1, 1, 2, 2, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1;
 
@@ -43,47 +43,47 @@ TEST_CASE("Test constructor") {
 
   SUBCASE("With two histogram1D") {
     Histogram2D hist = Histogram2D(left_hist, right_hist);
-    check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), Eigen::MatrixXd::Zero(2, 2));
+    check_inside_eigen_element<P2d::MatrixD>(hist.values(), P2d::MatrixD::Zero(2, 2));
   }
 
-  Eigen::MatrixXd values(2, 2);
+  P2d::MatrixD values(2, 2);
   values << 8, 4, 0, 4;
 
   SUBCASE("With values and two histogram1D") {
     Histogram2D hist = Histogram2D(values, left_hist, right_hist);
-    check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), values);
+    check_inside_eigen_element<P2d::MatrixD>(hist.values(), values);
   }
 }
 
 TEST_CASE("Test calculate_histogram2D function") {
   SUBCASE("With integer matrix") {
-    Eigen::MatrixXd left(4, 4);
-    Eigen::MatrixXd right(4, 4);
+    P2d::MatrixD left(4, 4);
+    P2d::MatrixD right(4, 4);
 
     left << 1, 1, 2, 2, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1;
 
     right << 1, 1, 2, 3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 3, 3, 3;
 
-    Eigen::MatrixXd expected_values(2, 2);
+    P2d::MatrixD expected_values(2, 2);
     expected_values << 8, 4, 0, 4;
 
     Histogram2D hist = calculate_histogram2D(left, right);
-    check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), expected_values);
+    check_inside_eigen_element<P2d::MatrixD>(hist.values(), expected_values);
   }
 
   SUBCASE("With float matrix") {
-    Eigen::MatrixXd left(4, 4);
-    Eigen::MatrixXd right(4, 4);
+    P2d::MatrixD left(4, 4);
+    P2d::MatrixD right(4, 4);
 
     left << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
     right << 1., 2., 3., 4., 2., 2., 2., 2., 4., 3., 2., 1., 1., 3., 3., 3.;
 
-    Eigen::MatrixXd expected_values(3, 3);
+    P2d::MatrixD expected_values(3, 3);
     expected_values << 1, 3, 1, 0, 5, 1, 2, 3, 0;
 
     Histogram2D hist = calculate_histogram2D(left, right);
-    check_inside_eigen_element<Eigen::MatrixXd>(hist.values(), expected_values);
+    check_inside_eigen_element<P2d::MatrixD>(hist.values(), expected_values);
   }
 
   SUBCASE("With 120 bins images") {

@@ -38,12 +38,12 @@ This module contains tests associated to the operation functions define on opera
  *
  * @param m : the Eigen matrix
  */
-double std_dev_medicis(const Eigen::MatrixXd& m) {
+double std_dev_medicis(const t_MatrixD& m) {
   return sqrt(variance(m));
 }
 
 TEST_CASE("standard deviation with null matrix") {
-  Eigen::MatrixXd image(2, 4);
+  t_MatrixD image(2, 4);
 
   image << 0, 0, 0, 0, 0, 0, 0, 0;
 
@@ -52,7 +52,7 @@ TEST_CASE("standard deviation with null matrix") {
 }
 
 TEST_CASE("standard deviation with VectorXd") {
-  Eigen::VectorXd image(2, 4);
+  t_VectorD image(2, 4);
 
   image << 1, 2, 3;
 
@@ -61,7 +61,7 @@ TEST_CASE("standard deviation with VectorXd") {
 }
 
 TEST_CASE("standard deviation with MatrixXd one line") {
-  Eigen::MatrixXd image(1, 4);
+  t_MatrixD image(1, 4);
 
   image << 1, 2, 3, 4;
 
@@ -70,7 +70,7 @@ TEST_CASE("standard deviation with MatrixXd one line") {
 }
 
 TEST_CASE("comparison of standard deviation with that of medicis") {
-  Eigen::MatrixXd image(1, 4);
+  t_MatrixD image(1, 4);
 
   image << 1, 2, 3, 4;
 

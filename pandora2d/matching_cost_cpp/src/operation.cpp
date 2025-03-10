@@ -24,7 +24,7 @@
  * @param m : the Eigen matrix
  *
  */
-double std_dev(const Eigen::MatrixXd& m) {
+double std_dev(const t_MatrixD& m) {
   return sqrt((m.array() - m.mean()).square().sum() / (m.size()));
 }
 
@@ -38,7 +38,7 @@ double std_dev(const Eigen::MatrixXd& m) {
  * @param m : the Eigen matrix
  *
  */
-double variance(const Eigen::MatrixXd& m) {
+double variance(const t_MatrixD& m) {
   double moment1 = (m.array().sum()) / (m.size());
   double moment2 = (m.array().square().sum()) / (m.size());
   return moment2 - (moment1 * moment1);

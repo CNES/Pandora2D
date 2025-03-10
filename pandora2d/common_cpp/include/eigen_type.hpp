@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+/* Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
  *
  * This file is part of PANDORA2D
  *
@@ -18,18 +18,45 @@
  */
 
 /*
-This module contains types and constants associated to the Abstract filter class for cpp.
+This module contains eigen types for cpp.
 */
 
-#ifndef INTERPOLATION_FILTER_ALIAS_HPP
-#define INTERPOLATION_FILTER_ALIAS_HPP
+#ifndef COMMON_EIGEN_TYPE_HPP
+#define COMMON_EIGEN_TYPE_HPP
 
-#include <math.h> /* pow */
+#include <Eigen/Dense>
 
-const double MAX_FRACTIONAL_VALUE = 1 - (1. / pow(2, 9));  ///< MAX_FRACTIONAL_VALUE=0.998046875
-///< corresponds to 1-1/2**9 where 9 is the maximal number of iterations for dichotomy
+namespace P2d {
 
-const double EPSILON = std::numeric_limits<float>::epsilon();  ///< Numeric limit of float type.
-///< We use the same numeric limit used by Medicis.
+/**
+ * @brief type used for double matrix
+ *
+ */
+using MatrixD = Eigen::MatrixXd;
+
+/**
+ * @brief type used for float matrix
+ *
+ */
+using Matrixf = Eigen::MatrixXf;
+
+/**
+ * @brief type used for double vectors
+ *
+ */
+using VectorD = Eigen::VectorXd;
+
+/**
+ * @brief type used for float vectors
+ *
+ */
+using Vectorf = Eigen::VectorXf;
+
+/**
+ * @brief type used for double arrays
+ *
+ */
+using ArrayD = Eigen::ArrayXd;
+}  // namespace P2d
 
 #endif

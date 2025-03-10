@@ -10,6 +10,6 @@ py.extension_module(
     [interpolation_filter_src, bicubic_src, cardinal_sine_src, bind_src],
     subdir: 'pandora2d/interpolation_filter_cpp',
     install: true,
-    include_directories: interpolation_filter_includes,
+    include_directories: [interpolation_filter_includes, common_includes],
     dependencies: [pybind11_dep, eigen_dep],
 )

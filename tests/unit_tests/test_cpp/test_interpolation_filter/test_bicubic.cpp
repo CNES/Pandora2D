@@ -37,7 +37,7 @@ TEST_CASE("Test constructor") {
 
 TEST_CASE("Test result of get_coeffs computation") {
   Bicubic b;
-  t_Vector expected_vec(4);
+  P2d::VectorD expected_vec(4);
 
   SUBCASE("fractional_shift = 0.0") {
     expected_vec << 0, 1, 0, 0;

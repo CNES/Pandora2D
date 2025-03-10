@@ -56,7 +56,7 @@ double get_entropy_medicis(const double nb_pixel, const T& hist) {
  * @param img
  * @return double entropy1D
  */
-double calculate_entropy1D_medicis(const Eigen::MatrixXd& img) {
+double calculate_entropy1D_medicis(const P2d::MatrixD& img) {
   auto nb_pixel = static_cast<double>(img.size());
   auto hist_1D = calculate_histogram1D(img);
 
@@ -69,7 +69,7 @@ double calculate_entropy1D_medicis(const Eigen::MatrixXd& img) {
  * @param img_r right image
  * @return double entropy 2D
  */
-double calculate_entropy2D_medicis(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& img_r) {
+double calculate_entropy2D_medicis(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r) {
   // same size for left and right images
   auto nb_pixel = static_cast<double>(img_l.size());
   auto hist_2D = calculate_histogram2D(img_l, img_r);
@@ -79,7 +79,7 @@ double calculate_entropy2D_medicis(const Eigen::MatrixXd& img_l, const Eigen::Ma
 
 TEST_CASE("Test Entropy1D") {
   SUBCASE("4x4 matrix") {
-    Eigen::MatrixXd img(4, 4);
+    P2d::MatrixD img(4, 4);
     img << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
     double entropy_gt = 1.579434;
@@ -91,7 +91,7 @@ TEST_CASE("Test Entropy1D") {
   }
 
   SUBCASE("Second 4x4 matrix") {
-    Eigen::MatrixXd img(4, 4);
+    P2d::MatrixD img(4, 4);
     img << 1., 2., 3., 4., 2., 2., 2., 2., 4., 3., 2., 1., 1., 3., 3., 3.;
 
     double entropy_gt = 1.19946029;
@@ -103,7 +103,7 @@ TEST_CASE("Test Entropy1D") {
   }
 
   SUBCASE("4x4 matrix with negative values") {
-    Eigen::MatrixXd img(4, 4);
+    P2d::MatrixD img(4, 4);
     img << -2.0, -3.0, 10.0, -9.0, -11.0, -1.0, -2.0, -12.0, -5.0, 3.0, -13.0, -6.0, 6.0, -11.0,
         -4.0, -8.0;
 
@@ -116,7 +116,7 @@ TEST_CASE("Test Entropy1D") {
   }
 
   SUBCASE("4x4 matrix with all identical values") {
-    Eigen::MatrixXd img(4, 4);
+    P2d::MatrixD img(4, 4);
     img << 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0;
 
     double entropy_gt = 0.;
@@ -128,7 +128,7 @@ TEST_CASE("Test Entropy1D") {
   }
 
   SUBCASE("Vector of size 5") {
-    Eigen::VectorXd img(5);
+    P2d::VectorD img(5);
     img << 1, 5, 12, 4, 0;
 
     double entropy_gt = 0.7219280;
@@ -142,10 +142,10 @@ TEST_CASE("Test Entropy1D") {
 
 TEST_CASE("Test Entropy2D") {
   SUBCASE("4x4 matrix") {
-    Eigen::MatrixXd img_l(4, 4);
+    P2d::MatrixD img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
-    Eigen::MatrixXd img_r(4, 4);
+    P2d::MatrixD img_r(4, 4);
     img_r << 1., 2., 3., 4., 2., 2., 2., 2., 4., 3., 2., 1., 1., 3., 3., 3.;
 
     double entropy_gt = 2.55503653;
@@ -157,10 +157,10 @@ TEST_CASE("Test Entropy2D") {
   }
 
   SUBCASE("4x4 matrix with negative values in right img") {
-    Eigen::MatrixXd img_l(4, 4);
+    P2d::MatrixD img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
-    Eigen::MatrixXd img_r(4, 4);
+    P2d::MatrixD img_r(4, 4);
     img_r << -2.0, -3.0, 10.0, -9.0, -11.0, -1.0, -2.0, -12.0, -5.0, 3.0, -13.0, -6.0, 6.0, -11.0,
         -4.0, -8.0;
 
@@ -173,10 +173,10 @@ TEST_CASE("Test Entropy2D") {
   }
 
   SUBCASE("4x4 matrix with identical values in right img") {
-    Eigen::MatrixXd img_l(4, 4);
+    P2d::MatrixD img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
-    Eigen::MatrixXd img_r(4, 4);
+    P2d::MatrixD img_r(4, 4);
     img_r << 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0;
 
     double entropy_gt = 1.579434;
@@ -188,10 +188,10 @@ TEST_CASE("Test Entropy2D") {
   }
 
   SUBCASE("Vectors of size 5") {
-    Eigen::VectorXd img_l(5);
+    P2d::VectorD img_l(5);
     img_l << 1, 5, 12, 4, 0;
 
-    Eigen::VectorXd img_r(5);
+    P2d::VectorD img_r(5);
     img_r << 2, 4, 18, 9, 25;
 
     double entropy_gt = 1.3709505;
@@ -205,10 +205,10 @@ TEST_CASE("Test Entropy2D") {
 
 TEST_CASE("Test MutualInformation") {
   SUBCASE("4x4 matrix") {
-    Eigen::MatrixXd img_l(4, 4);
+    P2d::MatrixD img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
-    Eigen::MatrixXd img_r(4, 4);
+    P2d::MatrixD img_r(4, 4);
     img_r << 1., 2., 3., 4., 2., 2., 2., 2., 4., 3., 2., 1., 1., 3., 3., 3.;
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)
@@ -218,10 +218,10 @@ TEST_CASE("Test MutualInformation") {
   }
 
   SUBCASE("Identical images") {
-    Eigen::MatrixXd img_l(4, 4);
+    P2d::MatrixD img_l(4, 4);
     img_l << 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0;
 
-    Eigen::MatrixXd img_r(4, 4);
+    P2d::MatrixD img_r(4, 4);
     img_r << 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0;
 
     double mutual_information_gt = 1.0;
@@ -230,10 +230,10 @@ TEST_CASE("Test MutualInformation") {
   }
 
   SUBCASE("Negative values in right image") {
-    Eigen::MatrixXd img_l(4, 4);
+    P2d::MatrixD img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
-    Eigen::MatrixXd img_r(4, 4);
+    P2d::MatrixD img_r(4, 4);
     img_r << -2.0, -3.0, 10.0, -9.0, -11.0, -1.0, -2.0, -12.0, -5.0, 3.0, -13.0, -6.0, 6.0, -11.0,
         -4.0, -8.0;
 
@@ -244,10 +244,10 @@ TEST_CASE("Test MutualInformation") {
   }
 
   SUBCASE("Identical values in right image") {
-    Eigen::MatrixXd img_l(4, 4);
+    P2d::MatrixD img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
-    Eigen::MatrixXd img_r(4, 4);
+    P2d::MatrixD img_r(4, 4);
     img_r << 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0;
 
     double mutual_information_gt = 0.;
@@ -256,10 +256,10 @@ TEST_CASE("Test MutualInformation") {
   }
 
   SUBCASE("Vector of size 5") {
-    Eigen::VectorXd img_l(5);
+    P2d::VectorD img_l(5);
     img_l << 1, 5, 12, 4, 0;
 
-    Eigen::VectorXd img_r(5);
+    P2d::VectorD img_r(5);
     img_r << 2, 4, 18, 9, 25;
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)

@@ -33,7 +33,7 @@ This module contains functions associated to histogram.
  * @param _low_bound: smaller value on histogram
  * @param _bins_width: size of one bin on histogram
  */
-Histogram1D::Histogram1D(Eigen::VectorXd& values,
+Histogram1D::Histogram1D(P2d::VectorD& values,
                          std::size_t nb_bins,
                          double low_bound,
                          double bins_width)
@@ -48,7 +48,7 @@ Histogram1D::Histogram1D(Eigen::VectorXd& values,
  */
 Histogram1D::Histogram1D(std::size_t nb_bins, double low_bound, double bins_width)
     : m_nb_bins(nb_bins), m_low_bound(low_bound), m_bins_width(bins_width) {
-  m_values = Eigen::VectorXd::Zero(m_nb_bins);
+  m_values = P2d::VectorD::Zero(m_nb_bins);
 }
 
 /**
@@ -56,9 +56,9 @@ Histogram1D::Histogram1D(std::size_t nb_bins, double low_bound, double bins_widt
  *
  * @param img
  */
-Histogram1D::Histogram1D(const Eigen::MatrixXd& img) {
+Histogram1D::Histogram1D(const P2d::MatrixD& img) {
   create(img);
-  m_values = Eigen::VectorXd::Zero(m_nb_bins);
+  m_values = P2d::VectorD::Zero(m_nb_bins);
 }
 
 /**
@@ -66,7 +66,7 @@ Histogram1D::Histogram1D(const Eigen::MatrixXd& img) {
  *
  * @param img
  */
-void Histogram1D::create(const Eigen::MatrixXd& img) {
+void Histogram1D::create(const P2d::MatrixD& img) {
   m_bins_width = get_bins_width(img);
   double dynamic_range = img.maxCoeff() - img.minCoeff();
   m_nb_bins = static_cast<int>(1. + (dynamic_range / m_bins_width));
@@ -90,9 +90,9 @@ void Histogram1D::create(const Eigen::MatrixXd& img) {
  * @param img
  * @return Histogram1D
  */
-Histogram1D calculate_histogram1D(const Eigen::MatrixXd& img) {
+Histogram1D calculate_histogram1D(const P2d::MatrixD& img) {
   auto hist = Histogram1D(img);
-  Eigen::VectorXd hist_values = Eigen::VectorXd::Zero(hist.nb_bins());
+  P2d::VectorD hist_values = P2d::VectorD::Zero(hist.nb_bins());
   auto low_bound = hist.low_bound();
   auto bin_width = hist.bins_width();
   auto nb_bins = static_cast<int>(hist.nb_bins());

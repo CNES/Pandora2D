@@ -24,14 +24,14 @@ This module contains functions, struct and other elements associated to the matc
 #ifndef OPERATION_HPP
 #define OPERATION_HPP
 
-#include <Eigen/Dense>
+#include "eigen_type.hpp"
 
 /**
  * @brief Standard deviation with Eigen matrix
  * @param m : the Eigen matrix
  *
  */
-double std_dev(const Eigen::MatrixXd& m);
+double std_dev(const t_MatrixD& m);
 
 /**
  * @brief Variance with Eigen matrix
@@ -43,6 +43,6 @@ double std_dev(const Eigen::MatrixXd& m);
  * @param m : the Eigen matrix
  *
  */
-double variance(const Eigen::MatrixXd& m);
+double variance(const t_MatrixD& m);
 
 #endif

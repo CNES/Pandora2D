@@ -24,7 +24,7 @@
  * @param img : the Eigen matrix
  *
  */
-double get_bins_width_scott(const Eigen::MatrixXd& img) {
+double get_bins_width_scott(const P2d::MatrixD& img) {
   auto standard_deviation = std_dev(img);
   if (standard_deviation == 0.)
     return 1.;
@@ -40,7 +40,7 @@ double get_bins_width_scott(const Eigen::MatrixXd& img) {
  *
  * @throws std::invalid_argument if provided method is not known
  */
-double get_bins_width(const Eigen::MatrixXd& img, bin_method method) {
+double get_bins_width(const P2d::MatrixD& img, bin_method method) {
   switch (method) {
     case bin_method::scott:
       return get_bins_width_scott(img);

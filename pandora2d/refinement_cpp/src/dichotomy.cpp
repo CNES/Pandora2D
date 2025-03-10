@@ -32,7 +32,7 @@ namespace py = pybind11;
  * @param vec : data in the eigen vector type
  * @return int : return index (first element if all elements are the same)
  */
-int nanargmin(const Eigen::VectorXd& vec) {
+int nanargmin(const t_VectorD& vec) {
   int min_index = -1;
   double min_value = std::numeric_limits<double>::infinity();
   for (int i = 0; i < vec.size(); ++i) {
@@ -50,7 +50,7 @@ int nanargmin(const Eigen::VectorXd& vec) {
  * @param vec : data in the eigen vector type
  * @return int : return index (first element if all elements are the same)
  */
-int nanargmax(const Eigen::VectorXd& vec) {
+int nanargmax(const t_VectorD& vec) {
   int max_index = -1;
   double max_value = -std::numeric_limits<double>::infinity();
   for (int i = 0; i < vec.size(); ++i) {
@@ -69,7 +69,7 @@ int nanargmax(const Eigen::VectorXd& vec) {
  * @return true : all elements are the same
  * @return false : not all elements are the same
  */
-bool all_same(const Eigen::VectorXd& data) {
+bool all_same(const t_VectorD& data) {
   auto value_tested = *(data.begin());
   for (auto d : data) {
     if (d != value_tested)
@@ -90,7 +90,7 @@ bool all_same(const Eigen::VectorXd& data) {
  * @param filter : interpolation filter
  * @param method_matching_cost : max or min
  */
-void search_new_best_point(const Eigen::MatrixXd& cost_surface,
+void search_new_best_point(const P2d::MatrixD& cost_surface,
                            const double precision,
                            const double subpixel,
                            double& pos_row_disp,
@@ -99,22 +99,22 @@ void search_new_best_point(const Eigen::MatrixXd& cost_surface,
                            abstractfilter::AbstractFilter& filter,
                            std::string method_matching_cost) {
   // Used to compute new positions and new disparities based on precision
-  Eigen::VectorXd disp_row_shifts(9);
-  Eigen::VectorXd disp_col_shifts(9);
+  P2d::VectorD disp_row_shifts(9);
+  P2d::VectorD disp_col_shifts(9);
 
   disp_row_shifts << -1, -1, -1, 0, 0, 0, 1, 1, 1;
   disp_col_shifts << -1, 0, 1, -1, 0, 1, -1, 0, 1;
 
   // Array with the 8 new positions to be tested around the best previous point.
-  Eigen::VectorXd new_row_pos(9);
+  P2d::VectorD new_row_pos(9);
   new_row_pos =
-      disp_row_shifts * precision * subpixel + Eigen::VectorXd::Constant(9, pos_row_disp).eval();
-  Eigen::VectorXd new_col_pos(9);
+      disp_row_shifts * precision * subpixel + P2d::VectorD::Constant(9, pos_row_disp).eval();
+  P2d::VectorD new_col_pos(9);
   new_col_pos =
-      disp_col_shifts * precision * subpixel + Eigen::VectorXd::Constant(9, pos_col_disp).eval();
+      disp_col_shifts * precision * subpixel + P2d::VectorD::Constant(9, pos_col_disp).eval();
 
   // Interpolate points at positions (new_row_pos[i], new_col_pos[i])
-  Eigen::VectorXd candidates(9);
+  P2d::VectorD candidates(9);
   candidates = filter.interpolate(cost_surface, new_col_pos, new_row_pos, MAX_FRACTIONAL_VALUE);
   // In case a NaN is present in the kernel, candidates will be all-NaNs. Let’s restore
   // initial_position value so that best candidate search will be able to find it.

@@ -31,33 +31,33 @@ This module contains tests associated to histogram 1D.
 #include <iostream>
 
 TEST_CASE("Test constructor") {
-  SUBCASE("With Eigen::VectorXd::Zero") {
-    Eigen::VectorXd m = Eigen::VectorXd::Zero(3);
+  SUBCASE("With P2d::VectorD::Zero") {
+    P2d::VectorD m = P2d::VectorD::Zero(3);
     Histogram1D hist = Histogram1D(m);
 
-    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Zero(1));
+    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Zero(1));
     CHECK(hist.nb_bins() == 1);
     CHECK(hist.low_bound() == -0.5);
     CHECK(hist.bins_width() == 1);
   }
 
-  SUBCASE("With Eigen::VectorXd {1,2,3,4}") {
-    Eigen::VectorXd m(4);
+  SUBCASE("With P2d::VectorD {1,2,3,4}") {
+    P2d::VectorD m(4);
     m << 1, 2, 3, 4;
 
     Histogram1D hist = Histogram1D(m);
 
-    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Zero(2));
+    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Zero(2));
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
   }
 
   SUBCASE("First constructor") {
-    Eigen::VectorXd m = Eigen::VectorXd::Ones(3);
+    P2d::VectorD m = P2d::VectorD::Ones(3);
     Histogram1D hist = Histogram1D(m, 3, 0.1, 1.3);
 
-    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), m);
+    check_inside_eigen_element<P2d::VectorD>(hist.values(), m);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == 0.1);
     CHECK(hist.bins_width() == 1.3);
@@ -66,7 +66,7 @@ TEST_CASE("Test constructor") {
   SUBCASE("Second constructor") {
     Histogram1D hist = Histogram1D(2, 0.1, 1.3);
 
-    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Zero(2));
+    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Zero(2));
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == 0.1);
     CHECK(hist.bins_width() == 1.3);
@@ -75,55 +75,55 @@ TEST_CASE("Test constructor") {
 
 TEST_CASE("Test calculate_histogram1D function") {
   SUBCASE("positive low_bound & matrix coefficients") {
-    Eigen::MatrixXd m(1, 4);
+    P2d::MatrixD m(1, 4);
     m << 1, 2, 3, 4;
 
     auto hist = calculate_histogram1D(m);
 
-    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Ones(2) * 2);
+    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Ones(2) * 2);
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
   }
 
   SUBCASE("negative low_bound & positive matrix coefficients") {
-    Eigen::MatrixXd m(4, 4);
+    P2d::MatrixD m(4, 4);
     m << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
-    Eigen::MatrixXd hist_expected(3, 1);
+    P2d::MatrixD hist_expected(3, 1);
     hist_expected << 5, 6, 5;
 
     auto hist = calculate_histogram1D(m);
 
-    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), hist_expected);
+    check_inside_eigen_element<P2d::VectorD>(hist.values(), hist_expected);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == doctest::Approx(-1.0795972).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(6.3863981).epsilon(1e-7));
   }
 
   SUBCASE("negative low_bound & matrix coefficients") {
-    Eigen::MatrixXd m(1, 4);
+    P2d::MatrixD m(1, 4);
     m << -11, -12, -13, -14;
 
     auto hist = calculate_histogram1D(m);
 
-    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), Eigen::VectorXd::Ones(2) * 2);
+    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Ones(2) * 2);
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(-14.9587716).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
   }
 
   SUBCASE("positive & negative matrix coefficients") {
-    Eigen::MatrixXd m(4, 4);
+    P2d::MatrixD m(4, 4);
     m << -0.1, -0.2, 0.30, 0.40, 0.1, 0.3, -0.45, -0.59, 0.99, -0.101, 0.11452, 0.1235, -0.36,
         -0.256, -0.56, -0.1598;
 
-    Eigen::MatrixXd hist_expected(3, 1);
+    P2d::MatrixD hist_expected(3, 1);
     hist_expected << 9, 6, 1;
 
     auto hist = calculate_histogram1D(m);
 
-    check_inside_eigen_element<Eigen::VectorXd>(hist.values(), hist_expected);
+    check_inside_eigen_element<P2d::VectorD>(hist.values(), hist_expected);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == doctest::Approx(-0.6199559).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(0.5466373).epsilon(1e-7));

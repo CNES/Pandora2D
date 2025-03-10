@@ -21,10 +21,12 @@
 This module contains functions associated to the computation of cost volumes in cpp.
 */
 
-#include "mutual_information.hpp"
-
 #ifndef COST_VOLUMES_HPP
 #define COST_VOLUMES_HPP
+
+#include <Eigen/Dense>
+
+#include "mutual_information.hpp"
 
 /**
  * @brief Get the matching cost window
@@ -33,12 +35,9 @@ This module contains functions associated to the computation of cost volumes in 
  * @param window_size size of the matching cost window
  * @param index_row row index of the center of the window
  * @param index_col col index of the center of the window
- * @return Eigen::MatrixXf
+ * @return t_MatrixD
  */
-Eigen::MatrixXd get_window(const Eigen::MatrixXd& img,
-                           int window_size,
-                           int index_row,
-                           int index_col);
+t_MatrixD get_window(const t_MatrixD& img, int window_size, int index_row, int index_col);
 
 /**
  * @brief Get the index corresponding to the correct interpolated right image
@@ -59,7 +58,7 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  * @return true
  * @return false
  */
-bool contains_element(const Eigen::MatrixXd& matrix, double element);
+bool contains_element(const t_MatrixD& matrix, double element);
 
 /**
  * @brief Compute the cost values
@@ -76,14 +75,14 @@ bool contains_element(const Eigen::MatrixXd& matrix, double element);
  * @param step [step_row, step_col]
  * @param no_data no data value in img
  *
- * @return Eigen::VectorXd computed cost values
+ * @return t_VectorD computed cost values
  */
-void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
-                              const std::vector<Eigen::MatrixXd>& right,
-                              Eigen::Ref<Eigen::VectorXd> cv_values,
+void compute_cost_volumes_cpp(const t_MatrixD& left,
+                              const std::vector<t_MatrixD>& right,
+                              Eigen::Ref<t_VectorD> cv_values,
                               const Eigen::Vector4i& cv_shape,
-                              const Eigen::VectorXd& disp_range_row,
-                              const Eigen::VectorXd& disp_range_col,
+                              const t_VectorD& disp_range_row,
+                              const t_VectorD& disp_range_col,
                               int offset_cv_img_row,
                               int offset_cv_img_col,
                               int window_size,

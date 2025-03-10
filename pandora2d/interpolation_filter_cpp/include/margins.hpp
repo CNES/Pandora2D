@@ -24,8 +24,6 @@ This module contains Margins struct and associated operators.
 #ifndef MARGINS_HPP
 #define MARGINS_HPP
 
-#include <Eigen/Dense>
-
 /**
  * @brief Margins struct
  *

@@ -21,8 +21,9 @@
 This module contains functions associated to the computation of cost volumes in cpp.
 */
 
-#include "cost_volumes.hpp"
 #include <algorithm>
+
+#include "cost_volumes.hpp"
 #include "mutual_information.hpp"
 
 /**
@@ -32,13 +33,10 @@ This module contains functions associated to the computation of cost volumes in 
  * @param window_size size of the matching cost window
  * @param index_row row index of the center of the window
  * @param index_col col index of the center of the window
- * @return Eigen::MatrixXf
+ * @return t_MatrixD
  */
 
-Eigen::MatrixXd get_window(const Eigen::MatrixXd& img,
-                           int window_size,
-                           int index_row,
-                           int index_col) {
+t_MatrixD get_window(const t_MatrixD& img, int window_size, int index_row, int index_col) {
   int offset = static_cast<int>(window_size / 2);
 
   // Get first row and column of the window
@@ -83,7 +81,7 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  * @return true
  * @return false
  */
-bool contains_element(const Eigen::MatrixXd& matrix, double element) {
+bool contains_element(const t_MatrixD& matrix, double element) {
   if (std::isnan(element)) {
     return (matrix.array().isNaN()).any();
   } else {
@@ -108,14 +106,14 @@ bool contains_element(const Eigen::MatrixXd& matrix, double element) {
  *
  * @throws std::invalid_argument if provided method is not known
  *
- * @return Eigen::VectorXd computed cost values
+ * @return t_VectorD computed cost values
  */
-void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
-                              const std::vector<Eigen::MatrixXd>& right,
-                              Eigen::Ref<Eigen::VectorXd> cv_values,
+void compute_cost_volumes_cpp(const t_MatrixD& left,
+                              const std::vector<t_MatrixD>& right,
+                              Eigen::Ref<t_VectorD> cv_values,
                               const Eigen::Vector4i& cv_shape,
-                              const Eigen::VectorXd& disp_range_row,
-                              const Eigen::VectorXd& disp_range_col,
+                              const t_VectorD& disp_range_row,
+                              const t_VectorD& disp_range_col,
                               int offset_cv_img_row,
                               int offset_cv_img_col,
                               int window_size,
@@ -126,8 +124,8 @@ void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
   int nb_d_rows_cv = cv_shape[2];
   int nb_d_cols_cv = cv_shape[3];
 
-  Eigen::MatrixXd window_left;
-  Eigen::MatrixXd window_right;
+  t_MatrixD window_left;
+  t_MatrixD window_right;
 
   int subpix = sqrt(right.size());
 
