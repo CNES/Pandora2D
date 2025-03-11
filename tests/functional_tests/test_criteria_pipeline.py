@@ -123,14 +123,15 @@ def test_validity_mask_saved(correct_input_cfg, correct_pipeline_without_refinem
 
     validity_mask_path = tmp_path / "disparity_map" / "validity.tif"
 
-    expected_band_names = ("validity_mask", "criteria_1")
+    # band names correspond to criteria names (except for the first, which corresponds to valid points)
+    # and to the global “validity_mask” band
+    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:])
 
     # Check that validity_mask.tif exists
     assert (validity_mask_path).exists()
 
-    # Check that validity_mask.tif contains two bands of type int8
+    # Check that validity_mask.tif contains nine bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 2
-        assert dataset.dtypes[0] == "uint8"
-        assert dataset.dtypes[1] == "uint8"
+        assert dataset.count == 9
+        assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names
