@@ -492,7 +492,7 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
     Instantiate a disparity dataset
     """
 
-    dataset_validity = criteria.get_validity_mask(dataset_cv["criteria"])
+    dataset_validity = criteria.get_validity_dataset(dataset_cv["criteria"])
 
     disparity_matcher = disparity.Disparity(cfg_disp)
     delta_x, delta_y, score = disparity_matcher.compute_disp_maps(dataset_cv)
@@ -698,7 +698,7 @@ class TestDisparityGrids:
             img_right=image,
         )
 
-        dataset_validity = criteria.get_validity_mask(cost_volumes["criteria"])
+        dataset_validity = criteria.get_validity_dataset(cost_volumes["criteria"])
 
         disparity_matcher = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": invalid_value})
 
