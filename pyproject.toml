@@ -95,4 +95,6 @@ exclude = "(.eggs|.git|.mypy_cache|.nox|.tox|_build|build|dist|venv)"
 [tool.cibuildwheel]
 archs = "auto64"
 skip = ["pp*", "cp36-*", "cp37-*", "cp38-*"]
-config-settings = {"setup-args" = "-Dbuild_cpp_tests=disabled"}
+config-settings = { "setup-args" = "-Dbuild_cpp_tests=disabled" }
+test-extras = ["test"]
+test-command = "pytest {package}/tests -m functional_tests"
