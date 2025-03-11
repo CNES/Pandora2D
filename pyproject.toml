@@ -98,3 +98,8 @@ skip = ["pp*", "cp36-*", "cp37-*", "cp38-*"]
 config-settings = { "setup-args" = "-Dbuild_cpp_tests=disabled" }
 test-extras = ["test"]
 test-command = "pytest {package}/tests -m functional_tests"
+
+# Use delvewheel on windows
+[tool.cibuildwheel.windows]
+before-build = "pip install delvewheel"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
