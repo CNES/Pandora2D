@@ -182,7 +182,7 @@ This xr.Dataset also contains the **validity maps** stored in uint8:
     Coordinates:
       * row      (row) int64 0 1 2 3 4 5 6 7 8 ... 367 368 369 370 371 372 373 374
       * col      (col) int64 0 1 2 3 4 5 6 7 8 ... 442 443 444 445 446 447 448 449
-      * criteria (criteria) <U13 'validity_mask' 'criteria_1'
+      * criteria (criteria) <U43 'validity_mask' ... 'PANDORA2D_M...
     Data variables:
         row_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         col_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
