@@ -50,19 +50,23 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pandora2d[test]",
     "black>=21.5b0",  # PEP8 format code
     "isort>=5.8.0",   # Check imports
     "mypy",           # static type checker
     "pandas-stubs",
     "pre-commit",
     "pylint>=2.8.2",  # General linter with more rules
+    "setuptools_scm", # version from git tag
+    "types-psutil",
+]
+
+test = [
     "pytest",
     "pytest-cov",
     "pytest-html",
     "pytest-mock",
     "pytest-monitor",
-    "setuptools_scm", # version from git tag
-    "types-psutil",
     "gcovr",
 ]
 
