@@ -37,7 +37,7 @@ test(
 )
 
 test(
-    'MutualInformation',
+    'Mutual Information',
     executable(
         'test_mutual_information',
         ['test_mutual_information.cpp', matching_cost_src, common_src],
@@ -47,10 +47,15 @@ test(
 )
 
 test(
-    'CostVolumes',
+    'Compute Cost Volumes',
     executable(
-        'test_cost_volumes',
-        ['test_cost_volumes.cpp', matching_cost_src, test_src, common_src],
+        'test_compute_cost_volumes',
+        [
+            'test_compute_cost_volumes.cpp',
+            matching_cost_src,
+            test_src,
+            common_src,
+        ],
         include_directories: [
             matching_cost_includes,
             test_includes,

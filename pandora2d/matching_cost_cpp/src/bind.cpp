@@ -25,7 +25,7 @@ This module contains functions associated to the binding pybind of cpp cost volu
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "cost_volumes.hpp"
+#include "compute_cost_volumes.hpp"
 
 using namespace pybind11::literals;
 

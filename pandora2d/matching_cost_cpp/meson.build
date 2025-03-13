@@ -1,7 +1,7 @@
 matching_cost_includes = include_directories('include')
 matching_cost_src = files(
     'src/bin.cpp',
-    'src/cost_volumes.cpp',
+    'src/compute_cost_volumes.cpp',
     'src/histogram1D.cpp',
     'src/histogram2D.cpp',
     'src/mutual_information.cpp',

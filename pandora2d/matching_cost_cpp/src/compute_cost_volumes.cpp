@@ -23,7 +23,7 @@ This module contains functions associated to the computation of cost volumes in 
 
 #include <algorithm>
 
-#include "cost_volumes.hpp"
+#include "compute_cost_volumes.hpp"
 #include "mutual_information.hpp"
 
 /**
@@ -33,10 +33,10 @@ This module contains functions associated to the computation of cost volumes in 
  * @param window_size size of the matching cost window
  * @param index_row row index of the center of the window
  * @param index_col col index of the center of the window
- * @return t_MatrixD
+ * @return P2d::MatrixD
  */
 
-t_MatrixD get_window(const t_MatrixD& img, int window_size, int index_row, int index_col) {
+P2d::MatrixD get_window(const P2d::MatrixD& img, int window_size, int index_row, int index_col) {
   int offset = static_cast<int>(window_size / 2);
 
   // Get first row and column of the window
@@ -81,7 +81,7 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  * @return true
  * @return false
  */
-bool contains_element(const t_MatrixD& matrix, double element) {
+bool contains_element(const P2d::MatrixD& matrix, double element) {
   if (std::isnan(element)) {
     return (matrix.array().isNaN()).any();
   } else {
@@ -106,21 +106,21 @@ bool contains_element(const t_MatrixD& matrix, double element) {
  *
  * @throws std::invalid_argument if provided method is not known
  *
- * @return t_VectorD computed cost values
+ * @return P2d::VectorD computed cost values
  */
-void compute_cost_volumes_cpp(const t_MatrixD& left,
-                              const std::vector<t_MatrixD>& right,
-                              Eigen::Ref<t_VectorD> cv_values,
+void compute_cost_volumes_cpp(const P2d::MatrixD& left,
+                              const std::vector<P2d::MatrixD>& right,
+                              Eigen::Ref<P2d::VectorD> cv_values,
                               CostVolumeSize& cv_size,
-                              const t_VectorD& disp_range_row,
-                              const t_VectorD& disp_range_col,
+                              const P2d::VectorD& disp_range_row,
+                              const P2d::VectorD& disp_range_col,
                               int offset_cv_img_row,
                               int offset_cv_img_col,
                               int window_size,
                               const Eigen::Vector2i& step,
                               const double no_data) {
-  t_MatrixD window_left;
-  t_MatrixD window_right;
+  P2d::MatrixD window_left;
+  P2d::MatrixD window_right;
 
   int subpix = sqrt(right.size());
 
