@@ -31,8 +31,8 @@ This module contains tests associated to dichotomy.
 #include <pybind11/pybind11.h>
 
 #include "bicubic.hpp"
-#include "conftest.hpp"
 #include "dichotomy.hpp"
+#include "global_conftest.hpp"
 
 namespace py = pybind11;
 

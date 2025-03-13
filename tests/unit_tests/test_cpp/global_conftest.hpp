@@ -50,16 +50,6 @@ void check_inside_eigen_element(const T& data, const T& expected) {
  * @param mean: image mean
  * @param std: image standard deviation
  */
-t_MatrixD create_normal_matrix(std::size_t size, float mean, float std);
-
-/**
- * @brief Create an image for tests
- *
- * @param size: image shape
- * @param mean: image mean
- * @param std: image standard deviation
- * @param nb_bins: bins number for image histogram
- */
-t_MatrixD create_image(std::size_t size, float mean, float std, double nb_bins = 120);
+P2d::MatrixD create_normal_matrix(std::size_t size, float mean, float std);
 
 #endif

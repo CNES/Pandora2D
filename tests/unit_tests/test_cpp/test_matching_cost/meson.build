@@ -1,12 +1,22 @@
+conftest_includes = include_directories('.')
+conftest_src = files('conftest.cpp')
+
 test(
     'Histogram1D',
     executable(
         'test_histogram1D',
-        ['test_histogram1D.cpp', matching_cost_src, test_src, common_src],
+        [
+            'test_histogram1D.cpp',
+            matching_cost_src,
+            test_src,
+            common_src,
+            conftest_src,
+        ],
         include_directories: [
             matching_cost_includes,
             test_includes,
             common_includes,
+            conftest_includes,
         ],
         dependencies: [eigen_dep, doctest_dep],
     ),
@@ -16,11 +26,18 @@ test(
     'Histogram2D',
     executable(
         'test_histogram2D',
-        ['test_histogram2D.cpp', matching_cost_src, test_src, common_src],
+        [
+            'test_histogram2D.cpp',
+            matching_cost_src,
+            test_src,
+            common_src,
+            conftest_src,
+        ],
         include_directories: [
             matching_cost_includes,
             test_includes,
             common_includes,
+            conftest_includes,
         ],
         dependencies: [eigen_dep, doctest_dep],
     ),

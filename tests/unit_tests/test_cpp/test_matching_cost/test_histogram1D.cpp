@@ -25,10 +25,8 @@ This module contains tests associated to histogram 1D.
 #include <doctest.h>
 #include "bin.hpp"
 #include "conftest.hpp"
+#include "global_conftest.hpp"
 #include "histogram1D.hpp"
-
-#include <Eigen/Dense>
-#include <iostream>
 
 TEST_CASE("Test constructor") {
   SUBCASE("With P2d::VectorD::Zero") {

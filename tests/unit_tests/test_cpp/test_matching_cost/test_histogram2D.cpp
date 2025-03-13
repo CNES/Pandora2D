@@ -24,11 +24,9 @@ This module contains tests associated to histogram 2D.
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 #include "conftest.hpp"
+#include "global_conftest.hpp"
 #include "histogram1D.hpp"
 #include "histogram2D.hpp"
-
-#include <Eigen/Dense>
-#include <iostream>
 
 TEST_CASE("Test constructor") {
   P2d::MatrixD left(4, 4);

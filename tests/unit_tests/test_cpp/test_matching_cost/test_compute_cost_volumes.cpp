@@ -23,11 +23,9 @@ This module contains tests associated to mutual information computation.
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
-#include <iomanip>
-#include <iostream>
 #include "compute_cost_volumes.hpp"
-#include "conftest.hpp"
 #include "cost_volume.hpp"
+#include "global_conftest.hpp"
 
 constexpr double INIT_VALUE_CV = 0.0;  ///< initial value used to fill the cv
 

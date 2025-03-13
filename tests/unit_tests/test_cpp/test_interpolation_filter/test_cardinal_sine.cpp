@@ -17,9 +17,12 @@
  * limitations under the License.
  */
 
+/*
+This module contains tests associated to the Cardinal Sine filter class for cpp.
+*/
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
-
 #include "cardinal_sine.hpp"
 
 TEST_SUITE("find_or_throw") {

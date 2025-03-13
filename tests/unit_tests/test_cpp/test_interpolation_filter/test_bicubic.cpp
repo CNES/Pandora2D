@@ -25,8 +25,6 @@ This module contains tests associated to the Bicubic filter class for cpp.
 #include "bicubic.hpp"
 #include "doctest.h"
 
-#include <iostream>
-
 TEST_CASE("Test constructor") {
   Bicubic b;
 
