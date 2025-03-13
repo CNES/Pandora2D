@@ -161,10 +161,6 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     # for points for which window is outside right image according to disparity value
     mask_disparity_outside_right_image(cv.attrs["offset_row_col"], criteria_dataarray)
 
-    # Raise criteria PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    # on the border according to offset value, for each disparity
-    mask_border(cv.attrs["offset_row_col"], criteria_dataarray)
-
     # Get disparity grids according to cost volumes coordinates
     d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(
         left_image, (cv.row.values, cv.col.values)
@@ -173,6 +169,10 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     # Put PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
     # on points for which corresponding disparity is not processed
     set_unprocessed_disp(criteria_dataarray, d_min_col_grid, d_max_col_grid, d_min_row_grid, d_max_row_grid)
+
+    # Raise criteria PANDORA2D_MSK_PIXEL_LEFT_BORDER
+    # on the border according to offset value, for each disparity
+    mask_border(cv.attrs["offset_row_col"], criteria_dataarray)
 
     return criteria_dataarray
 

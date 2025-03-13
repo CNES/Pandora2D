@@ -1581,22 +1581,8 @@ class TestGetCriteriaDataarray:
         [
             # pylint: disable=line-too-long
             pytest.param(
-                np.array(  # left msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
-                np.array(  # right msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
                 0,  # disp_col
                 0,  # disp_row
                 1,  # window_size
@@ -1613,22 +1599,8 @@ class TestGetCriteriaDataarray:
                 id="Everything is valid",
             ),
             pytest.param(
-                np.array(  # left msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
-                np.array(  # right msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
                 2,  # disp_col
                 -1,  # disp_row
                 1,  # window_size
@@ -1741,14 +1713,7 @@ class TestGetCriteriaDataarray:
                 id="Centered invalid and no data in msk with window_size=1",
             ),
             pytest.param(
-                np.array(  # left msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
+                np.full((4, 5), 0),  # left msk
                 np.array(  # right msk
                     [
                         [0, 0, 0, 0, 0],
@@ -1805,22 +1770,8 @@ class TestGetCriteriaDataarray:
                 id="Window_size=5, only Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER is raised",
             ),
             pytest.param(
-                np.array(  # left msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
-                np.array(  # right msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
                 -5,  # disp_col
                 0,  # disp_row
                 1,  # window_size
@@ -1835,6 +1786,24 @@ class TestGetCriteriaDataarray:
                     ]
                 ),
                 id="Column disparity out of the image or unprocessed for all points",
+            ),
+            pytest.param(
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
+                -5,  # disp_col
+                0,  # disp_row
+                3,  # window_size
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        # fmt: on
+                    ]
+                ),
+                id="Column disparity out of the image or unprocessed for all points and window_size=3",
             ),
             # pylint: enable=line-too-long
         ],
