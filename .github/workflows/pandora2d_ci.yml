@@ -25,6 +25,14 @@ jobs:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          directory: ./wheelhouse
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: CNES/Pandora2D
+
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest

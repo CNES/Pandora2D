@@ -9,6 +9,7 @@ for images pairs with a combination of vertical and horizontal stereo.</h4>
   <a><img src="https://github.com/CNES/Pandora2D/actions/workflows/pandora2d_ci.yml/badge.svg?branch=master"></a>
   <a href='https://pandora2d.readthedocs.io/?badge=latest'><img src='https://readthedocs.org/projects/pandora2d/badge/?version=latest' alt='Documentation Status' /></a>
   <a href="https://opensource.org/licenses/Apache-2.0/"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
+  <a href="https://codecov.io/gh/CNES/Pandora2D"><img src="https://codecov.io/gh/CNES/Pandora2D/branch/master/graph/badge.svg"></a>
 </p>
 
 <p align="center">
