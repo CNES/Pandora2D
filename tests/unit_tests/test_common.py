@@ -438,7 +438,7 @@ class TestDatasetDispMaps:
         # create a fake validity dataset
         data_variables_validity = {
             "validity_mask": ((coord), np.full((len(coord_value)), 0)),
-            "PANDORA2D_MSK_PIXEL_LEFT_BORDER": ((coord), np.full((len(coord_value)), 1)),
+            "P2D_LEFT_BORDER": ((coord), np.full((len(coord_value)), 1)),
         }
 
         coords = {coord: coord_value}
@@ -635,7 +635,7 @@ class TestSetOutOfDisparity:
             [0.0, 1],
             [0.0, -1],
             [0.0, np.inf],
-            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+            [Criteria.VALID, Criteria.P2D_DISPARITY_UNPROCESSED],
         ],
     )
     def test_homogeneous_row_grids(self, dataset, value):
@@ -655,7 +655,7 @@ class TestSetOutOfDisparity:
             [0.0, 10],
             [0.0, -10],
             [0.0, np.inf],
-            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+            [Criteria.VALID, Criteria.P2D_DISPARITY_UNPROCESSED],
         ],
     )
     @pytest.mark.parametrize("disp_coords", ["disp_col"])
@@ -676,7 +676,7 @@ class TestSetOutOfDisparity:
             [0.0, -1],
             [0.0, np.inf],
             [0.0, -np.inf],
-            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+            [Criteria.VALID, Criteria.P2D_DISPARITY_UNPROCESSED],
         ],
     )
     def test_variable_min_row(self, dataset, value, disp_coords, init_value):
@@ -702,7 +702,7 @@ class TestSetOutOfDisparity:
             [0.0, -1],
             [0.0, np.inf],
             [0.0, -np.inf],
-            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+            [Criteria.VALID, Criteria.P2D_DISPARITY_UNPROCESSED],
         ],
     )
     @pytest.mark.parametrize("disp_coords", ["disp_col"])
@@ -729,7 +729,7 @@ class TestSetOutOfDisparity:
             [0.0, -1],
             [0.0, np.inf],
             [0.0, -np.inf],
-            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+            [Criteria.VALID, Criteria.P2D_DISPARITY_UNPROCESSED],
         ],
     )
     def test_variable_max_row(self, dataset, value, disp_coords, init_value):
@@ -755,7 +755,7 @@ class TestSetOutOfDisparity:
             [0.0, -1],
             [0.0, np.inf],
             [0.0, -np.inf],
-            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+            [Criteria.VALID, Criteria.P2D_DISPARITY_UNPROCESSED],
         ],
     )
     @pytest.mark.parametrize("disp_coords", ["disp_col"])
@@ -782,7 +782,7 @@ class TestSetOutOfDisparity:
             [0.0, -1],
             [0.0, np.inf],
             [0.0, -np.inf],
-            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+            [Criteria.VALID, Criteria.P2D_DISPARITY_UNPROCESSED],
         ],
     )
     def test_variable_min_and_max_row(self, dataset, value, disp_coords, init_value):
@@ -812,7 +812,7 @@ class TestSetOutOfDisparity:
             [0.0, -1],
             [0.0, np.inf],
             [0.0, -np.inf],
-            [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+            [Criteria.VALID, Criteria.P2D_DISPARITY_UNPROCESSED],
         ],
     )
     @pytest.mark.parametrize("disp_coords", ["disp_col"])

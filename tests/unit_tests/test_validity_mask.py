@@ -667,7 +667,7 @@ class TestValidityMaskBand:
 
 class TestLeftBorderBand:
     """
-    Test that the left border (PANDORA2D_MSK_PIXEL_LEFT_BORDER) band obtained with the criteria dataarray is correct.
+    Test that the left border (P2D_LEFT_BORDER) band obtained with the criteria dataarray is correct.
     """
 
     @pytest.mark.parametrize(
@@ -789,9 +789,7 @@ class TestLeftBorderBand:
         )
 
         left_border_band = (
-            criteria.get_validity_dataset(criteria_dataarray)
-            .sel(criteria="PANDORA2D_MSK_PIXEL_LEFT_BORDER")["validity"]
-            .data
+            criteria.get_validity_dataset(criteria_dataarray).sel(criteria="P2D_LEFT_BORDER")["validity"].data
         )
 
         np.testing.assert_array_equal(left_border_band, expected)

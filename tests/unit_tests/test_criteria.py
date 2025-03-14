@@ -142,7 +142,7 @@ class TestCriteria:
 
     def test_can_be_stored_in_uint8_np_array(self):
         """Criteria can be stored in uint8 numpy array."""
-        result = np.array([Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER], dtype=np.uint8)
+        result = np.array([Criteria.VALID, Criteria.P2D_LEFT_BORDER], dtype=np.uint8)
         assert result.dtype == np.uint8
 
     def test_is_in(self):
@@ -150,14 +150,14 @@ class TestCriteria:
         data = np.array(
             [
                 Criteria.VALID,
-                Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER,
-                Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER | Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE,
+                Criteria.P2D_LEFT_BORDER,
+                Criteria.P2D_LEFT_BORDER | Criteria.P2D_PEAK_ON_EDGE,
             ],
             dtype=np.uint8,
         )
 
-        np.testing.assert_array_equal(Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER.is_in(data), [False, True, True])
-        np.testing.assert_array_equal(Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE.is_in(data), [False, False, True])
+        np.testing.assert_array_equal(Criteria.P2D_LEFT_BORDER.is_in(data), [False, True, True])
+        np.testing.assert_array_equal(Criteria.P2D_PEAK_ON_EDGE.is_in(data), [False, False, True])
 
 
 class TestFlagArray:
@@ -167,8 +167,8 @@ class TestFlagArray:
     def flag_array(self):
         return criteria.FlagArray(
             [
-                Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE,
-                Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA,
+                Criteria.P2D_PEAK_ON_EDGE,
+                Criteria.P2D_RIGHT_NODATA,
             ],
             Criteria,
         )
@@ -181,10 +181,10 @@ class TestFlagArray:
         prefix = "FlagArray<Criteria>"
         prefix_offset = " " * (len(prefix) + 1)
         expected = (
-            f"{prefix}([<PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE: "
-            f"{Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE.value}>,\n{prefix_offset}"
-            f"<PANDORA2D_MSK_PIXEL_RIGHT_NODATA: "
-            f"{Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA.value}>], "
+            f"{prefix}([<P2D_PEAK_ON_EDGE: "
+            f"{Criteria.P2D_PEAK_ON_EDGE.value}>,\n{prefix_offset}"
+            f"<P2D_RIGHT_NODATA: "
+            f"{Criteria.P2D_RIGHT_NODATA.value}>], "
             f"dtype=uint8)"
         )
         assert repr(flag_array) == expected
@@ -261,13 +261,9 @@ class TestSetUnprocessedDisparity:
 
         criteria.set_unprocessed_disp(criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row)
 
-        assert np.all(
-            criteria_dataarray.data[:, :nb_col_set, :, 0] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
-        )
+        assert np.all(criteria_dataarray.data[:, :nb_col_set, :, 0] == Criteria.P2D_DISPARITY_UNPROCESSED)
         assert np.all(criteria_dataarray.data[:, nb_col_set:, :, 0] == Criteria.VALID)
-        assert np.all(
-            criteria_dataarray.data[:, nb_col_set:, :, -1] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
-        )
+        assert np.all(criteria_dataarray.data[:, nb_col_set:, :, -1] == Criteria.P2D_DISPARITY_UNPROCESSED)
         assert np.all(criteria_dataarray.data[:, :nb_col_set, :, -1] == Criteria.VALID)
 
     def test_variable_row_disparity(
@@ -281,13 +277,9 @@ class TestSetUnprocessedDisparity:
 
         criteria.set_unprocessed_disp(criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row)
 
-        assert np.all(
-            criteria_dataarray.data[:nb_row_set, :, 0, :] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
-        )
+        assert np.all(criteria_dataarray.data[:nb_row_set, :, 0, :] == Criteria.P2D_DISPARITY_UNPROCESSED)
         assert np.all(criteria_dataarray.data[nb_row_set:, :, 0, :] == Criteria.VALID)
-        assert np.all(
-            criteria_dataarray.data[nb_row_set:, :, -1, :] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
-        )
+        assert np.all(criteria_dataarray.data[nb_row_set:, :, -1, :] == Criteria.P2D_DISPARITY_UNPROCESSED)
         assert np.all(criteria_dataarray.data[:nb_row_set, :, -1, :] == Criteria.VALID)
 
 
@@ -295,19 +287,19 @@ class TestMaskBorder:
     """Test mask_border method."""
 
     def test_null_offset(self, criteria_dataarray):
-        """offset = 0, no raise PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria"""
+        """offset = 0, no raise P2D_LEFT_BORDER criteria"""
         make_criteria_copy = criteria_dataarray.copy(deep=True)
         criteria.mask_border(0, criteria_dataarray)
 
         # Check criteria_dataarray has not changed
         xr.testing.assert_equal(criteria_dataarray, make_criteria_copy)
-        # Check the PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria does not raise
-        assert np.all(criteria_dataarray.data[:, :, :, :] != Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
+        # Check the P2D_LEFT_BORDER criteria does not raise
+        assert np.all(criteria_dataarray.data[:, :, :, :] != Criteria.P2D_LEFT_BORDER)
 
     @pytest.mark.parametrize("offset", [1, 2, 3])
     def test_variable_offset(self, criteria_dataarray, offset):
         """
-        With mask_border, the PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria is raised on the border.
+        With mask_border, the P2D_LEFT_BORDER criteria is raised on the border.
 
         Example :
         offset = 1
@@ -335,10 +327,10 @@ class TestMaskBorder:
         """
         criteria.mask_border(offset, criteria_dataarray)
 
-        assert np.all(criteria_dataarray.data[:offset, :, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[-offset:, :, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[:, :offset, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[:, -offset:, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
+        assert np.all(criteria_dataarray.data[:offset, :, :, :] == Criteria.P2D_LEFT_BORDER)
+        assert np.all(criteria_dataarray.data[-offset:, :, :, :] == Criteria.P2D_LEFT_BORDER)
+        assert np.all(criteria_dataarray.data[:, :offset, :, :] == Criteria.P2D_LEFT_BORDER)
+        assert np.all(criteria_dataarray.data[:, -offset:, :, :] == Criteria.P2D_LEFT_BORDER)
 
 
 class TestMaskDisparityOutsideRightImage:
@@ -349,10 +341,10 @@ class TestMaskDisparityOutsideRightImage:
         """Make ground_truth of criteria dataarray for null disparity"""
         data = np.full(img_size, Criteria.VALID)
         if offset > 0:
-            data[:offset, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-            data[-offset:, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-            data[:, :offset] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-            data[:, -offset:] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[:offset, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+            data[-offset:, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+            data[:, :offset] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+            data[:, -offset:] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         return data
 
     @pytest.fixture()
@@ -393,16 +385,16 @@ class TestMaskDisparityOutsideRightImage:
         first_row_disparity = -1
         delta_row_start = offset + abs(first_row_disparity)
         delta_row_end = offset + first_row_disparity
-        data[:delta_row_start, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        data[:delta_row_start, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         if delta_row_end > 0:
-            data[-delta_row_end:, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[-delta_row_end:, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         # Udpate col
         first_col_disparity = -5
         delta_col_start = offset + abs(first_col_disparity)
         delta_col_end = offset + first_col_disparity
-        data[:, :delta_col_start] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        data[:, :delta_col_start] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         if delta_col_end > 0:
-            data[:, -delta_col_end:] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[:, -delta_col_end:] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         return data
 
     @pytest.mark.parametrize(
@@ -448,7 +440,7 @@ class TestMaskLeftNoData:
         image["msk"][no_data_row_position, no_data_col_position] = image.attrs["no_data_mask"]
 
         expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
-        expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
+        expected_criteria_data[row_slice, col_slice, ...] = Criteria.P2D_LEFT_NODATA
 
         criteria.mask_left_no_data(image, window_size, criteria_dataarray)
 
@@ -472,14 +464,12 @@ class TestMaskLeftNoData:
 
         image["msk"][no_data_row_position, no_data_col_position] = image.attrs["no_data_mask"]
 
-        criteria_dataarray.data[no_data_row_position, no_data_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-        )
+        criteria_dataarray.data[no_data_row_position, no_data_col_position, ...] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
         expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
-        expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
+        expected_criteria_data[row_slice, col_slice, ...] = Criteria.P2D_LEFT_NODATA
         expected_criteria_data[no_data_row_position, no_data_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         )
 
         criteria.mask_left_no_data(image, window_size, criteria_dataarray)
@@ -564,7 +554,7 @@ class TestMaskRightNoData:
                     [
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                     ]
                     # fmt: on
@@ -588,7 +578,7 @@ class TestMaskRightNoData:
                     # fmt: off
                     [
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                     ]
@@ -613,7 +603,7 @@ class TestMaskRightNoData:
                     # fmt: off
                     [
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                     ]
@@ -637,7 +627,7 @@ class TestMaskRightNoData:
                 np.array(
                     # fmt: off
                     [
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
@@ -664,7 +654,7 @@ class TestMaskRightNoData:
                     [
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                     ]
                     # fmt: on
@@ -687,7 +677,7 @@ class TestMaskRightNoData:
                 np.array(
                     # fmt: off
                     [
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
@@ -712,7 +702,7 @@ class TestMaskRightNoData:
                 np.array(
                     # fmt: off
                     [
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
@@ -757,8 +747,8 @@ class TestMaskRightNoData:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA],
                         # fmt: on
                     ]
                 ),
@@ -782,8 +772,8 @@ class TestMaskRightNoData:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
@@ -805,9 +795,9 @@ class TestMaskRightNoData:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -830,9 +820,9 @@ class TestMaskRightNoData:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -855,8 +845,8 @@ class TestMaskRightNoData:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
@@ -880,8 +870,8 @@ class TestMaskRightNoData:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
@@ -905,8 +895,8 @@ class TestMaskRightNoData:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
@@ -930,8 +920,8 @@ class TestMaskRightNoData:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
@@ -956,8 +946,8 @@ class TestMaskRightNoData:
                     [
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -988,13 +978,13 @@ class TestMaskRightNoData:
             ]
         )
 
-        criteria_dataarray.data[2, 3, ...] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        criteria_dataarray.data[2, 3, ...] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
         criteria.mask_right_no_data(image, 1, criteria_dataarray)
 
         assert (
             criteria_dataarray.sel(row=2, col=3, disp_row=1, disp_col=1).data
-            == Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+            == Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_RIGHT_NODATA
         )
 
 
@@ -1013,7 +1003,7 @@ class TestMaskLeftInvalid:
     )
     def test_mask_left_invalid(self, img_size, image, criteria_dataarray, invalid_position):
         """
-        Test that mask_invalid_left method raises criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
+        Test that mask_invalid_left method raises criteria P2D_INVALID_MASK_LEFT
         for points whose value is neither valid_pixels or no_data_mask.
         """
         invalid_row_position, invalid_col_position = invalid_position
@@ -1022,9 +1012,7 @@ class TestMaskLeftInvalid:
         image["msk"][invalid_row_position, invalid_col_position] = 2
 
         expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
-        expected_criteria_data[invalid_row_position, invalid_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
-        )
+        expected_criteria_data[invalid_row_position, invalid_col_position, ...] = Criteria.P2D_INVALID_MASK_LEFT
 
         criteria.mask_left_invalid(image, criteria_dataarray)
 
@@ -1047,13 +1035,11 @@ class TestMaskLeftInvalid:
         # We put 2 in img_left msk because it is different from valid_pixels=0 and no_data_mask=1
         image["msk"][invalid_row_position, invalid_col_position] = 2
 
-        criteria_dataarray.data[invalid_row_position, invalid_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-        )
+        criteria_dataarray.data[invalid_row_position, invalid_col_position, ...] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
         expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
         expected_criteria_data[invalid_row_position, invalid_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            Criteria.P2D_INVALID_MASK_LEFT | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         )
 
         criteria.mask_left_invalid(image, criteria_dataarray)
@@ -1087,7 +1073,7 @@ class TestMaskRightInvalid:
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT],
                         # fmt: on
                     ]
                 ),
@@ -1111,7 +1097,7 @@ class TestMaskRightInvalid:
                     [
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
@@ -1164,7 +1150,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -1191,7 +1177,7 @@ class TestMaskRightInvalid:
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
@@ -1216,7 +1202,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -1242,7 +1228,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -1268,7 +1254,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -1294,7 +1280,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -1318,7 +1304,7 @@ class TestMaskRightInvalid:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
@@ -1372,7 +1358,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -1399,7 +1385,7 @@ class TestMaskRightInvalid:
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
@@ -1422,7 +1408,7 @@ class TestMaskRightInvalid:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
@@ -1449,7 +1435,7 @@ class TestMaskRightInvalid:
                     [
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
@@ -1465,7 +1451,7 @@ class TestMaskRightInvalid:
     )
     def test_mask_invalid_right(self, image, criteria_dataarray, expected_criteria, disp_col, disp_row):
         """
-        Test that mask_invalid_right method raises criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+        Test that mask_invalid_right method raises criteria P2D_INVALID_MASK_RIGHT
         for points whose value is neither valid_pixels or no_data_mask when we shift it by its disparity.
         """
 
@@ -1510,17 +1496,17 @@ class TestMaskRightInvalid:
     )
     def test_combination(self, image, criteria_dataarray, disp_col, disp_row):
         """
-        Test that we combine Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+        Test that we combine Criteria.P2D_INVALID_MASK_RIGHT
         with existing criteria and do not override them.
         """
 
-        criteria_dataarray.data[2, 3, ...] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        criteria_dataarray.data[2, 3, ...] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
         criteria.mask_right_invalid(image, criteria_dataarray)
 
         assert (
             criteria_dataarray.sel(row=2, col=3, disp_row=disp_row, disp_col=disp_col).data
-            == Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+            == Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_INVALID_MASK_RIGHT
         )
 
 
@@ -1607,14 +1593,14 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
-                        [Criteria.VALID , Criteria.VALID , Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
-                        [Criteria.VALID , Criteria.VALID , Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED],
+                        [Criteria.VALID , Criteria.VALID , Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED],
+                        [Criteria.VALID , Criteria.VALID , Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED],
                         # fmt: on
                     ]
                 ),
-                id="Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED overcome other criteria",
+                id="Criteria.P2D_DISPARITY_UNPROCESSED overcome other criteria",
             ),
             pytest.param(
                 np.array(  # left msk
@@ -1639,10 +1625,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT, Criteria.VALID],
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE ],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_LEFT_NODATA, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_LEFT, Criteria.VALID],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_RIGHT_DISPARITY_OUTSIDE ],
                         # fmt: on
                     ]
                 ),
@@ -1671,10 +1657,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_NODATA | Criteria.P2D_INVALID_MASK_RIGHT, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_INVALID_MASK_LEFT, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER],
                         # fmt: on
                     ]
                 ),
@@ -1703,10 +1689,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA  | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT, Criteria.VALID, Criteria.VALID],
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_LEFT_NODATA  | Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_LEFT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
                         # fmt: on
                     ]
                 ),
@@ -1728,10 +1714,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
                         # fmt: on
                     ]
                 ),
@@ -1760,14 +1746,14 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
                         # fmt: on
                     ]
                 ),
-                id="Window_size=5, only Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER is raised",
+                id="Window_size=5, only Criteria.P2D_LEFT_BORDER is raised",
             ),
             pytest.param(
                 np.full((4, 5), 0),  # left msk
@@ -1778,10 +1764,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
                         # fmt: on
                     ]
                 ),
@@ -1796,10 +1782,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
                         # fmt: on
                     ]
                 ),
@@ -1830,7 +1816,7 @@ class TestGetCriteriaDataarray:
 
 class TestPeakOnEdge:
     """
-    Test the methods linked to PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE criteria
+    Test the methods linked to P2D_PEAK_ON_EDGE criteria
     """
 
     @pytest.fixture()
@@ -1898,9 +1884,9 @@ class TestPeakOnEdge:
 
         criteria.apply_peak_on_edge(criteria_dataarray, image, cost_volumes_coords, row_map, col_map)
 
-        assert (criteria_dataarray.data[0, 0, :, :] == Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
-        assert (criteria_dataarray.data[4, 5, :, :] == Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
-        assert (criteria_dataarray.data[3, 3, :, :] == Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data[0, 0, :, :] == Criteria.P2D_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data[4, 5, :, :] == Criteria.P2D_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data[3, 3, :, :] == Criteria.P2D_PEAK_ON_EDGE).all()
 
     @pytest.mark.parametrize(
         ["drow_map", "dcol_map"],
@@ -1927,7 +1913,7 @@ class TestPeakOnEdge:
             request.getfixturevalue(dcol_map),
         )
 
-        assert (criteria_dataarray.data == Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data == Criteria.P2D_PEAK_ON_EDGE).all()
 
     def test_apply_peak_on_edge_without_peak(self, criteria_dataarray, image, cost_volumes, map_without_peak):
         """
@@ -1938,4 +1924,4 @@ class TestPeakOnEdge:
 
         criteria.apply_peak_on_edge(criteria_dataarray, image, cost_volumes_coords, map_without_peak, map_without_peak)
 
-        assert (criteria_dataarray.data != Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data != Criteria.P2D_PEAK_ON_EDGE).all()

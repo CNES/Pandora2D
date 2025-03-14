@@ -141,23 +141,23 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
 
     if "msk" in left_image.data_vars:
 
-        # Raise criteria PANDORA2D_MSK_PIXEL_LEFT_NODATA
+        # Raise criteria P2D_LEFT_NODATA
         # for points having no data in left mask, for each disparity
         mask_left_no_data(left_image, cv.attrs["window_size"], criteria_dataarray)
-        # Raise criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
+        # Raise criteria P2D_INVALID_MASK_LEFT
         # for points having invalid in left mask, for each disparity
         mask_left_invalid(left_image, criteria_dataarray)
 
     if "msk" in right_image.data_vars:
 
-        # Raise criteria PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+        # Raise criteria P2D_RIGHT_NODATA
         # for points having no data in right mask according to disparity value
         mask_right_no_data(right_image, cv.attrs["window_size"], criteria_dataarray)
-        # Raise criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+        # Raise criteria P2D_INVALID_MASK_RIGHT
         # for points having invalid in right mask according to disparity value
         mask_right_invalid(right_image, criteria_dataarray)
 
-    # Raise criteria PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    # Raise criteria P2D_RIGHT_DISPARITY_OUTSIDE
     # for points for which window is outside right image according to disparity value
     mask_disparity_outside_right_image(cv.attrs["offset_row_col"], criteria_dataarray)
 
@@ -166,11 +166,11 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
         left_image, (cv.row.values, cv.col.values)
     )
 
-    # Put PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
+    # Put P2D_DISPARITY_UNPROCESSED
     # on points for which corresponding disparity is not processed
     set_unprocessed_disp(criteria_dataarray, d_min_col_grid, d_max_col_grid, d_min_row_grid, d_max_row_grid)
 
-    # Raise criteria PANDORA2D_MSK_PIXEL_LEFT_BORDER
+    # Raise criteria P2D_LEFT_BORDER
     # on the border according to offset value, for each disparity
     mask_border(cv.attrs["offset_row_col"], criteria_dataarray)
 
@@ -185,7 +185,7 @@ def set_unprocessed_disp(
     max_grid_row: NDArray[np.floating],
 ):
     """
-    This method sets PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED to points for disparities that will not be processed,
+    This method sets P2D_DISPARITY_UNPROCESSED to points for disparities that will not be processed,
     based on the disparity grids provided.
 
     :param criteria_dataarray: 4D DataArray containing the criteria
@@ -201,20 +201,20 @@ def set_unprocessed_disp(
     """
     # Check col disparity
     set_out_of_col_disparity_range_to_other_value(
-        criteria_dataarray, min_grid_col, max_grid_col, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
+        criteria_dataarray, min_grid_col, max_grid_col, Criteria.P2D_DISPARITY_UNPROCESSED
     )
     # Check row disparity
     set_out_of_row_disparity_range_to_other_value(
-        criteria_dataarray, min_grid_row, max_grid_row, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
+        criteria_dataarray, min_grid_row, max_grid_row, Criteria.P2D_DISPARITY_UNPROCESSED
     )
 
 
 def mask_border(offset: int, criteria_dataarray: xr.DataArray) -> None:
     """
-    This method raises PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria on the edges of the criteria_dataarray
+    This method raises P2D_LEFT_BORDER criteria on the edges of the criteria_dataarray
     for each of the disparities.
 
-    PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria is non-cumulative, so this method will be called last.
+    P2D_LEFT_BORDER criteria is non-cumulative, so this method will be called last.
 
     :param offset: offset
     :type offset: int
@@ -225,15 +225,15 @@ def mask_border(offset: int, criteria_dataarray: xr.DataArray) -> None:
     if offset > 0:
 
         # Raise criteria 0 on border of criteria_dataarray according to offset value
-        criteria_dataarray.data[:offset, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataarray.data[-offset:, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataarray.data[:, :offset, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-        criteria_dataarray.data[:, -offset:, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+        criteria_dataarray.data[:offset, :, :, :] = Criteria.P2D_LEFT_BORDER
+        criteria_dataarray.data[-offset:, :, :, :] = Criteria.P2D_LEFT_BORDER
+        criteria_dataarray.data[:, :offset, :, :] = Criteria.P2D_LEFT_BORDER
+        criteria_dataarray.data[:, -offset:, :, :] = Criteria.P2D_LEFT_BORDER
 
 
 def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataArray) -> None:
     """
-    This method raises PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE criteria for points with disparity dimension outside
+    This method raises P2D_RIGHT_DISPARITY_OUTSIDE criteria for points with disparity dimension outside
     the right image
 
     :param offset: offset
@@ -257,12 +257,12 @@ def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataA
 
     # Update criteria dataarray
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    criteria_dataarray.data[condition_swap] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE)
+    criteria_dataarray.data[condition_swap] |= np.uint8(Criteria.P2D_RIGHT_DISPARITY_OUTSIDE)
 
 
 def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataaray: xr.DataArray) -> None:
     """
-    Set Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA on pixels where a no_data is present in the window around its
+    Set Criteria.P2D_LEFT_NODATA on pixels where a no_data is present in the window around its
     position in the mask.
 
     :param left_image: left image with `msk` data var.
@@ -274,12 +274,12 @@ def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataara
     """
     dilated_mask = binary_dilation_msk(left_image, window_size)
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    criteria_dataaray.data[dilated_mask, ...] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA)
+    criteria_dataaray.data[dilated_mask, ...] |= np.uint8(Criteria.P2D_LEFT_NODATA)
 
 
 def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarray: xr.DataArray) -> None:
     """
-    Set Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA on pixels where a no_data is present in the window around its
+    Set Criteria.P2D_RIGHT_NODATA on pixels where a no_data is present in the window around its
     position in the mask shift by its disparity.
 
     :param img_right: right image with `msk` data var.
@@ -292,14 +292,14 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
     right_criteria_mask = np.full_like(img_right["msk"], Criteria.VALID, dtype=np.uint8)
     right_binary_mask = binary_dilation_msk(img_right, window_size)
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    right_criteria_mask[right_binary_mask] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA)
+    right_criteria_mask[right_binary_mask] |= np.uint8(Criteria.P2D_RIGHT_NODATA)
 
     apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
 
 
 def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
     """
-    This method raises PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT criteria for points having
+    This method raises P2D_INVALID_MASK_LEFT criteria for points having
     an invalid point in the left image mask.
     A point is considered invalid if its value in the msk of the left image
     is different from the values of the valid_pixels and no_data_mask attributes.
@@ -312,12 +312,12 @@ def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) 
     invalid_left_mask = get_invalid_mask(left_image)
 
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    criteria_dataarray.data[invalid_left_mask, ...] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT)
+    criteria_dataarray.data[invalid_left_mask, ...] |= np.uint8(Criteria.P2D_INVALID_MASK_LEFT)
 
 
 def mask_right_invalid(right_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
     """
-    This method raises PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT criteria for points having
+    This method raises P2D_INVALID_MASK_RIGHT criteria for points having
     an invalid point in the right image mask shift by its disparity.
     A point is considered invalid if when we shift it by its disparity, the obtained value
     is different from the values of the valid_pixels and no_data_mask attributes.
@@ -332,7 +332,7 @@ def mask_right_invalid(right_image: xr.Dataset, criteria_dataarray: xr.DataArray
     invalid_right_mask = get_invalid_mask(right_image)
 
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    right_criteria_mask[invalid_right_mask] |= np.uint8(Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT)
+    right_criteria_mask[invalid_right_mask] |= np.uint8(Criteria.P2D_INVALID_MASK_RIGHT)
 
     apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
 
@@ -369,8 +369,8 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_m
         row_disp, col_disp = row_disp.data, col_disp.data
 
         # If the subpix is different from 1 in the matching cost step, we have float disparities.
-        # For the moment, to decide whether to apply the PANDORA2D_MSK_PIXEL_RIGHT_NODATA
-        # and PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT criteria to subpixel disparities,
+        # For the moment, to decide whether to apply the P2D_RIGHT_NODATA
+        # and P2D_INVALID_MASK_RIGHT criteria to subpixel disparities,
         # we use the nearest neighbor method, i.e. we apply the same criteria as to the nearest integer disparity.
 
         # In a future issue, we will change this method to raise these criteria if one of the points used
@@ -402,7 +402,7 @@ def apply_peak_on_edge(
     col_map: NDArray,
 ):
     """
-    This method raises PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE criteria for points (row, col)
+    This method raises P2D_PEAK_ON_EDGE criteria for points (row, col)
     for which the best matching cost is found for the edge of the disparity range.
     This criteria is applied on point (row, col), for each disparity value.
 
@@ -421,12 +421,12 @@ def apply_peak_on_edge(
     # Get disparity grids according to cost volumes coordinates
     d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(left_image, cv_coords)
 
-    # Apply PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE criteria
+    # Apply P2D_PEAK_ON_EDGE criteria
     criteria_dataarray.data[(row_map == d_min_row_grid) | (row_map == d_max_row_grid)] |= np.uint8(
-        Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
+        Criteria.P2D_PEAK_ON_EDGE
     )
     criteria_dataarray.data[(col_map == d_min_col_grid) | (col_map == d_max_col_grid)] |= np.uint8(
-        Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
+        Criteria.P2D_PEAK_ON_EDGE
     )
 
 
@@ -475,12 +475,10 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
 
     validity_dataset["validity"].data[:, :, 0] = get_validity_mask_band(criteria_dataarray)
 
-    # The PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria doesn't depend on disparities,
+    # The P2D_LEFT_BORDER criteria doesn't depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities
     # to identify the points where the criteria is raised.
-    validity_dataset["validity"].data[:, :, 1] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER.is_in(
-        criteria_dataarray[:, :, 0, 0].data
-    )
+    validity_dataset["validity"].data[:, :, 1] = Criteria.P2D_LEFT_BORDER.is_in(criteria_dataarray[:, :, 0, 0].data)
 
     return validity_dataset
 

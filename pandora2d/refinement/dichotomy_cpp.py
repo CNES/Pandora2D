@@ -285,7 +285,7 @@ def create_criteria_map(
     # Row's min, max disparities
     disp_min_row = img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
     disp_max_row = img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
-    # Create a fake criteria_map with PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE & INVALID_DISPARITY
+    # Create a fake criteria_map with P2D_PEAK_ON_EDGE & INVALID_DISPARITY
     criteria_map = np.full(row_map.shape, 0.0, dtype=cost_volumes["cost_volumes"].data.dtype)
     criteria_map[row_map == disp_min_row] = 1.0
     criteria_map[row_map == disp_max_row] = 1.0
