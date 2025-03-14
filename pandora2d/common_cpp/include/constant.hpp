@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+/* Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
  *
  * This file is part of PANDORA2D
  *
@@ -18,30 +18,15 @@
  */
 
 /*
-This module contains types and constants associated to the Abstract filter class for cpp.
+This module contains constant for cpp.
 */
 
-#ifndef INTERPOLATION_FILTER_ALIAS_HPP
-#define INTERPOLATION_FILTER_ALIAS_HPP
+#ifndef COMMON_CONSTANT_HPP
+#define COMMON_CONSTANT_HPP
 
-#include <Eigen/Dense>
-
-/**
- * @brief type used for matrix
- *
- */
-using t_Matrix = Eigen::MatrixXd;
-/**
- * @brief type used for vectors
- *
- */
-using t_Vector = Eigen::VectorXd;
-
-/**
- * @brief type used for arrays
- *
- */
-using t_Array = Eigen::ArrayXd;
+#define _USE_MATH_DEFINES  // to use math and get M_PI
+#include <math.h>          /* pow */
+#include <limits>          /* numeric_limits */
 
 const double MAX_FRACTIONAL_VALUE = 1 - (1. / pow(2, 9));  ///< MAX_FRACTIONAL_VALUE=0.998046875
 ///< corresponds to 1-1/2**9 where 9 is the maximal number of iterations for dichotomy

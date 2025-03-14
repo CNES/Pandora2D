@@ -21,6 +21,7 @@ install_subdir(
     strip_directory: true,
 )
 
+subdir('pandora2d/common_cpp')
 subdir('pandora2d/interpolation_filter_cpp')
 subdir('pandora2d/matching_cost_cpp')
 subdir('pandora2d/refinement_cpp')

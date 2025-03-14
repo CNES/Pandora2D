@@ -30,42 +30,20 @@ This module contains functions associated to the Dichotomy refinement method.
 #include <Eigen/Dense>
 #include <map>
 
+#include "cost_volume.hpp"
 #include "interpolation_filter.hpp"
+#include "operation.hpp"
+#include "pandora2d_type.hpp"
 
 namespace py = pybind11;
-
-/**
- * @brief Function to find the index of the minimum element, ignoring NaNs
- *
- * @param vec : data in the eigen vector type
- * @return int : return index (first element if all elements are the same)
- */
-int nanargmin(const Eigen::VectorXd& vec);
-
-/**
- * @brief Function to find the index of the maximum element, ignoring NaNs
- *
- * @param vec : data in the eigen vector type
- * @return int : return index (first element if all elements are the same)
- */
-int nanargmax(const Eigen::VectorXd& vec);
 
 /**
  * @brief Mapping of cost selection methods
  *
  */
-const std::map<std::string, int (*)(const Eigen::VectorXd&)> COST_SELECTION_METHOD_MAPPING = {
+const std::map<std::string, int (*)(const P2d::VectorD&)> COST_SELECTION_METHOD_MAPPING = {
     {"min", nanargmin},
     {"max", nanargmax}};
-
-/**
- * @brief Check if all the elements are the same
- *
- * @param data
- * @return true : all elements are the same
- * @return false : not all elements are the same
- */
-bool all_same(const Eigen::VectorXd& data);
 
 /**
  * @brief Position2D
@@ -91,77 +69,18 @@ struct Position2D {
 };
 
 /**
- * @brief Cost volume size
- *
- * Structure containing the 4D size of a cost volume
- */
-struct Cost_volume_size {
-  /**
-   * @brief Construct a new Cost_volume_size object
-   *
-   * @param _r : Number of rows on cost_volume element
-   * @param _c : Number of columns on cost_volume element
-   * @param _dr : Number of row disparities
-   * @param _dc : Number of col disparities
-   */
-  Cost_volume_size(unsigned int _r, unsigned int _c, unsigned int _dr, unsigned int _dc)
-      : nb_row(_r), nb_col(_c), nb_disp_row(_dr), nb_disp_col(_dc) {};
-
-  /**
-   * @brief Construct a new Cost_volume_size object
-   *
-   */
-  Cost_volume_size() : Cost_volume_size(0u, 0u, 0u, 0u) {};
-
-  /**
-   * @brief Construct a new Cost_volume_size object
-   *
-   * @param cv_size : Eigen vector with cost_volume size informations
-   */
-  Cost_volume_size(Eigen::VectorXd& cv_size)
-      : Cost_volume_size(cv_size[0], cv_size[1], cv_size[2], cv_size[3]) {};
-
-  /**
-   * @brief Construct a new Cost_volume_size object
-   *
-   * @param cv_size : std::vector with cost_volume size informations
-   */
-  Cost_volume_size(std::vector<size_t>& cv_size)
-      : Cost_volume_size(cv_size[0], cv_size[1], cv_size[2], cv_size[3]) {};
-
-  /**
-   * @brief Get the cost volume size : nb_row * nb_col * nb_disp_row * nb_disp_col
-   *
-   * @return unsigned int
-   */
-  unsigned int size() { return nb_row * nb_col * nb_disp_row * nb_disp_col; };
-
-  /**
-   * @brief Get the disparity number : nb_disp_row * nb_disp_col
-   *
-   * @return unsigned int
-   */
-  unsigned int nb_disps() { return nb_disp_row * nb_disp_col; };
-
-  unsigned int nb_row;       ///< Number of rows on cost_volume element
-  unsigned int nb_col;       ///< Number of columns on cost_volume element
-  unsigned int nb_disp_row;  ///< Number of row disparities
-  unsigned int nb_disp_col;  ///< Number of col disparities
-};
-
-/**
  * @brief Get the cost surfaces for one pixel
  *
  * @param cost_volume : 1D data
  * @param index : pixel index to find its cost surface
  * @param cv_size : the structure containing the dimensions of the cost volume
- * @return Eigen::MatrixXd of size nb_disp_row * nb_disp_col
+ * @return P2d::MatrixD of size nb_disp_row * nb_disp_col
  */
 template <typename T>
-Eigen::MatrixXd get_cost_surface(py::array_t<T>& cost_volume,
-                                 unsigned int index,
-                                 Cost_volume_size& cv_size) {
-  auto index_to_position = [](unsigned int index, Cost_volume_size& cv_size) -> Position2D {
+P2d::MatrixD get_cost_surface(py::array_t<T>& cost_volume,
+                              unsigned int index,
+                              CostVolumeSize& cv_size) {
+  auto index_to_position = [](unsigned int index, CostVolumeSize& cv_size) -> Position2D {
     int quot = index / (cv_size.nb_col * cv_size.nb_disps());
     int rem = index % (cv_size.nb_col * cv_size.nb_disps());
     return Position2D(quot, rem / cv_size.nb_disps());
@@ -174,7 +93,7 @@ Eigen::MatrixXd get_cost_surface(py::array_t<T>& cost_volume,
   auto r_cost_volume = cost_volume.template unchecked<4>();
 
   // Matrix creation
-  Eigen::MatrixXd cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
+  P2d::MatrixD cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
 
   // Data copy
   for (std::size_t k_disp_row = 0; k_disp_row < cv_size.nb_disp_row; ++k_disp_row) {
@@ -198,7 +117,7 @@ Eigen::MatrixXd get_cost_surface(py::array_t<T>& cost_volume,
  * @param filter : interpolation filter
  * @param method_matching_cost : max or min
  */
-void search_new_best_point(const Eigen::MatrixXd& cost_surface,
+void search_new_best_point(const P2d::MatrixD& cost_surface,
                            const double precision,
                            const double subpixel,
                            double& pos_row_disp,
@@ -236,12 +155,12 @@ void compute_dichotomy(py::array_t<T> cost_volume,
   auto pos_disp_row_it = disparity_map_row.begin();
   auto score_it = score_map.begin();
   auto crit_it = criteria_map.begin();
-  Cost_volume_size cv_size = Cost_volume_size(cost_volume.shape(0), cost_volume.shape(1),
-                                              cost_volume.shape(2), cost_volume.shape(3));
+  CostVolumeSize cv_size = CostVolumeSize(cost_volume.shape(0), cost_volume.shape(1),
+                                          cost_volume.shape(2), cost_volume.shape(3));
   auto nb_disps = cv_size.nb_disps();
 
   unsigned int index = -nb_disps;  //< Index on disparity_map less the first occurance
-  Eigen::MatrixXd cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
+  P2d::MatrixD cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
   double precision = 0.;
 
   // Loop on each image point calculated

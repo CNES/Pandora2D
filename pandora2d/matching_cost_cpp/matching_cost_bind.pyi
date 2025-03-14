@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -22,12 +22,13 @@
 from typing import List, Tuple
 import numpy as np
 from numpy.typing import NDArray
+from ..common_cpp.common_bind import CostVolumeSize
 
 def compute_cost_volumes_cpp(
     left: NDArray[np.float64],
     right: List[NDArray[np.float64]],
     cv_values: NDArray[np.float64],
-    cv_shape: Tuple[int, ...],
+    cv_size: CostVolumeSize,
     disp_range_row: NDArray[np.float64],
     disp_range_col: NDArray[np.float64],
     offset_cv_img_row: int,
@@ -45,8 +46,8 @@ def compute_cost_volumes_cpp(
     :type right: List[NDArray[np.float64]]
     :param cv_values:  cost volumes initialized values
     :type cv_values: NDArray[np.float64]
-    :param cv_shape:  cost volumes 4D shape
-    :type cv_shape: Tuple[int, ...]
+    :param cv_size: cost_volume size [nb_row, nb_col, nb_disp_row, nb_disp_col]
+    :type cv_size: CostVolumeSize
     :param disp_range_row:  cost volumes row disparity range
     :type disp_range_row: NDArray[np.float64]
     :param disp_range_col:  cost volumes col disparity range

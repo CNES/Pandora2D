@@ -20,25 +20,7 @@
 # pylint: skip-file
 import numpy as np
 from numpy.typing import NDArray
-from typing import overload
 from ..interpolation_filter_cpp.interpolation_filter_bind import AbstractFilter
-
-class Cost_volume_size:
-    @overload
-    def __init__(self) -> None: ...
-    @overload
-    def __init__(self, cv_size: NDArray[np.floating]) -> None: ...
-    @overload
-    def __init__(self, _r: int, _c: int, _dr: int, _dc: int) -> None: ...
-    def size(self) -> int:
-        """
-        Returns the cost_volume size nb_row * nb_col * nb_disp_row * nb_disp_col.
-        """
-
-    def nb_disps(self) -> int:
-        """
-        Returns the disparity number : nb_disp_row * nb_disp_col.
-        """
 
 def compute_dichotomy_float(
     cost_volume: NDArray[np.floating],

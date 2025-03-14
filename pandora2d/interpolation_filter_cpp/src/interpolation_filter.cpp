@@ -23,7 +23,6 @@ This module contains functions associated to the Abstract filter class for cpp.
 
 #include "interpolation_filter.hpp"
 #include <cmath>
-#include <limits>
 #include <utility>
 
 namespace abstractfilter {
@@ -32,25 +31,25 @@ namespace abstractfilter {
 AbstractFilter::AbstractFilter(int size = 4, Margins margins = {0, 0, 0, 0})
     : m_size(size), m_margins(margins) {}
 
-t_Vector AbstractFilter::get_coeffs(const double fractional_shift) {
-  return t_Vector();
+P2d::VectorD AbstractFilter::get_coeffs(const double fractional_shift) {
+  return P2d::VectorD();
 }
 
 // Apply
-double AbstractFilter::apply(const t_Matrix& resampling_area,
-                             const t_Vector& row_coeff,
-                             const t_Vector& col_coeff) const {
-  t_Vector intermediate_result = resampling_area * col_coeff;
+double AbstractFilter::apply(const P2d::MatrixD& resampling_area,
+                             const P2d::VectorD& row_coeff,
+                             const P2d::VectorD& col_coeff) const {
+  P2d::VectorD intermediate_result = resampling_area * col_coeff;
   return row_coeff.dot(intermediate_result);
 }
 
 // Interpolate
-t_Vector AbstractFilter::interpolate(const t_Matrix& image,
-                                     const t_Vector& col_positions,
-                                     const t_Vector& row_positions,
-                                     const double max_fractional_value) {
+P2d::VectorD AbstractFilter::interpolate(const P2d::MatrixD& image,
+                                         const P2d::VectorD& col_positions,
+                                         const P2d::VectorD& row_positions,
+                                         const double max_fractional_value) {
   // Initialisation of the result list
-  t_Vector interpolated_positions = t_Vector::Zero(col_positions.size());
+  P2d::VectorD interpolated_positions = P2d::VectorD::Zero(col_positions.size());
 
   // AbstractFilter
   const Margins& my_margins = AbstractFilter::m_margins;
@@ -75,8 +74,8 @@ t_Vector AbstractFilter::interpolate(const t_Matrix& image,
     }
 
     // Get interpolation coefficients for fractional_row and fractional_col shifts
-    t_Vector coeffs_row = this->get_coeffs(fractional_row);
-    t_Vector coeffs_col = this->get_coeffs(fractional_col);
+    P2d::VectorD coeffs_row = this->get_coeffs(fractional_row);
+    P2d::VectorD coeffs_col = this->get_coeffs(fractional_col);
 
     /*
     Computation of the top left point of the resampling area
@@ -88,7 +87,7 @@ t_Vector AbstractFilter::interpolate(const t_Matrix& image,
     int top_left_area_col = *col_it - my_margins.up;
 
     // Resampling area to which we will apply the interpolator coefficients
-    t_Matrix resampling_area =
+    P2d::MatrixD resampling_area =
         image.block(top_left_area_row, top_left_area_col, filter_size, filter_size);
 
     // Application of the interpolator coefficients on resampling area

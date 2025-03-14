@@ -21,8 +21,9 @@
 This module contains functions associated to the computation of cost volumes in cpp.
 */
 
-#include "cost_volumes.hpp"
 #include <algorithm>
+
+#include "compute_cost_volumes.hpp"
 #include "mutual_information.hpp"
 
 /**
@@ -32,13 +33,10 @@ This module contains functions associated to the computation of cost volumes in 
  * @param window_size size of the matching cost window
  * @param index_row row index of the center of the window
  * @param index_col col index of the center of the window
- * @return Eigen::MatrixXf
+ * @return P2d::MatrixD
  */
 
-Eigen::MatrixXd get_window(const Eigen::MatrixXd& img,
-                           int window_size,
-                           int index_row,
-                           int index_col) {
+P2d::MatrixD get_window(const P2d::MatrixD& img, int window_size, int index_row, int index_col) {
   int offset = static_cast<int>(window_size / 2);
 
   // Get first row and column of the window
@@ -83,7 +81,7 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  * @return true
  * @return false
  */
-bool contains_element(const Eigen::MatrixXd& matrix, double element) {
+bool contains_element(const P2d::MatrixD& matrix, double element) {
   if (std::isnan(element)) {
     return (matrix.array().isNaN()).any();
   } else {
@@ -97,7 +95,7 @@ bool contains_element(const Eigen::MatrixXd& matrix, double element) {
  * @param left image
  * @param right list of right images
  * @param cv_values initialized cost values
- * @param cv_shape cost volumes 4D shape
+ * @param cv_size : cost volume size information
  * @param disp_range_row cost volumes row disparity range
  * @param disp_range_col cost volumes col disparity range
  * @param offset_cv_img_row row offset between first index of cv and image (ROI case)
@@ -108,36 +106,31 @@ bool contains_element(const Eigen::MatrixXd& matrix, double element) {
  *
  * @throws std::invalid_argument if provided method is not known
  *
- * @return Eigen::VectorXd computed cost values
+ * @return P2d::VectorD computed cost values
  */
-void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
-                              const std::vector<Eigen::MatrixXd>& right,
-                              Eigen::Ref<Eigen::VectorXd> cv_values,
-                              const Eigen::Vector4i& cv_shape,
-                              const Eigen::VectorXd& disp_range_row,
-                              const Eigen::VectorXd& disp_range_col,
+void compute_cost_volumes_cpp(const P2d::MatrixD& left,
+                              const std::vector<P2d::MatrixD>& right,
+                              Eigen::Ref<P2d::VectorD> cv_values,
+                              CostVolumeSize& cv_size,
+                              const P2d::VectorD& disp_range_row,
+                              const P2d::VectorD& disp_range_col,
                               int offset_cv_img_row,
                               int offset_cv_img_col,
                               int window_size,
                               const Eigen::Vector2i& step,
                               const double no_data) {
-  int nb_rows_cv = cv_shape[0];
-  int nb_cols_cv = cv_shape[1];
-  int nb_d_rows_cv = cv_shape[2];
-  int nb_d_cols_cv = cv_shape[3];
-
-  Eigen::MatrixXd window_left;
-  Eigen::MatrixXd window_right;
+  P2d::MatrixD window_left;
+  P2d::MatrixD window_right;
 
   int subpix = sqrt(right.size());
 
   // ind_cv corresponds to:
-  // row * nb_d_cols_cv * nb_d_rows_cv * nb_cols_cv + col * nb_d_cols_cv * nb_d_rows_cv
+  // row * cv_size.nb_disps() * nb_col + col * cv_size.nb_disps()
   // Computation to be changed when criteria will be used in mutual information
   int ind_cv = 0;
 
-  for (int row = 0; row < nb_rows_cv; ++row) {
-    for (int col = 0; col < nb_cols_cv; ++col)
+  for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
+    for (std::size_t col = 0; col < cv_size.nb_col; ++col)
 
     {
       // Window computation for left image for point (row,col)
@@ -146,8 +139,8 @@ void compute_cost_volumes_cpp(const Eigen::MatrixXd& left,
 
       auto left_has_no_data = contains_element(window_left, no_data);
 
-      for (int d_row = 0; d_row < nb_d_rows_cv; ++d_row) {
-        for (int d_col = 0; d_col < nb_d_cols_cv; ++d_col, ind_cv++) {
+      for (std::size_t d_row = 0; d_row < cv_size.nb_disp_row; ++d_row) {
+        for (std::size_t d_col = 0; d_col < cv_size.nb_disp_col; ++d_col, ind_cv++) {
           int index_right =
               interpolated_right_image_index(subpix, disp_range_row[d_row], disp_range_col[d_col]);
 

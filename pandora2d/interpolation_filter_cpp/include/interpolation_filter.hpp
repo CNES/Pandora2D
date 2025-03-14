@@ -24,9 +24,9 @@ This module contains functions associated to the Abstract filter class for cpp.
 #ifndef INTERPOLATIONFILTER_HPP
 #define INTERPOLATIONFILTER_HPP
 
-#include <Eigen/Dense>
-#include "alias.hpp"
+#include "constant.hpp"
 #include "margins.hpp"
+#include "pandora2d_type.hpp"
 
 namespace abstractfilter {
 
@@ -61,10 +61,10 @@ class AbstractFilter {
    *
    * @param fractional_shift positive fractional shift of the subpixel
    * position to be interpolated
-   * @return t_Vector, an array of interpolator coefficients
+   * @return P2d::VectorD, an array of interpolator coefficients
    * whose size depends on the filter margins
    */
-  virtual t_Vector get_coeffs(const double fractional_shift) = 0;
+  virtual P2d::VectorD get_coeffs(const double fractional_shift) = 0;
 
   /**
    * @brief  Returns the value of the interpolated position
@@ -74,9 +74,9 @@ class AbstractFilter {
    * @param col_coeff interpolator coefficients in rows
    * @return double
    */
-  double apply(const t_Matrix& resampling_area,
-               const t_Vector& row_coeff,
-               const t_Vector& col_coeff) const;
+  double apply(const P2d::MatrixD& resampling_area,
+               const P2d::VectorD& row_coeff,
+               const P2d::VectorD& col_coeff) const;
 
   /**
    * @brief
@@ -85,13 +85,13 @@ class AbstractFilter {
    * @param col_positions subpix columns positions to be interpolated
    * @param row_positions subpix rows positions to be interpolated
    * @param max_fractional_value maximum fractional value used to get coefficients
-   * @return t_Vector, the interpolated value of the position
+   * @return P2d::VectorD, the interpolated value of the position
    * corresponding to col_coeff and row_coeff
    */
-  t_Vector interpolate(const t_Matrix& image,
-                       const t_Vector& col_positions,
-                       const t_Vector& row_positions,
-                       const double max_fractional_value = MAX_FRACTIONAL_VALUE);
+  P2d::VectorD interpolate(const P2d::MatrixD& image,
+                           const P2d::VectorD& col_positions,
+                           const P2d::VectorD& row_positions,
+                           const double max_fractional_value = MAX_FRACTIONAL_VALUE);
 
   /**
    * @brief Get the size attribute

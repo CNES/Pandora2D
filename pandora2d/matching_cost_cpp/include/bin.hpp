@@ -24,8 +24,8 @@ This module contains functions associated to bin (width, number).
 #ifndef BIN_HPP
 #define BIN_HPP
 
-#include <Eigen/Dense>
 #include "operation.hpp"
+#include "pandora2d_type.hpp"
 
 constexpr uint NB_BINS_MAX = 100;       ///< Limit of number bins for histogram
 constexpr double SCOTT_FACTOR = 3.491;  ///< factor for scott formula
@@ -43,7 +43,7 @@ typedef enum bin_method {
  * @param img : the Eigen matrix
  *
  */
-double get_bins_width_scott(const Eigen::MatrixXd& img);
+double get_bins_width_scott(const P2d::MatrixD& img);
 
 /**
  * @brief Get bin width depending on bin_method
@@ -52,6 +52,6 @@ double get_bins_width_scott(const Eigen::MatrixXd& img);
  *
  * @throws std::invalid_argument if provided method is not known
  */
-double get_bins_width(const Eigen::MatrixXd& img, bin_method method = bin_method::scott);
+double get_bins_width(const P2d::MatrixD& img, bin_method method = bin_method::scott);
 
 #endif

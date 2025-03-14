@@ -25,8 +25,6 @@ This module contains tests associated to the Bicubic filter class for cpp.
 #include "bicubic.hpp"
 #include "doctest.h"
 
-#include <iostream>
-
 TEST_CASE("Test constructor") {
   Bicubic b;
 
@@ -37,7 +35,7 @@ TEST_CASE("Test constructor") {
 
 TEST_CASE("Test result of get_coeffs computation") {
   Bicubic b;
-  t_Vector expected_vec(4);
+  P2d::VectorD expected_vec(4);
 
   SUBCASE("fractional_shift = 0.0") {
     expected_vec << 0, 1, 0, 0;

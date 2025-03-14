@@ -25,10 +25,8 @@ This module contains tests associated to bin for histogram.
 #include <doctest.h>
 #include "bin.hpp"
 
-#include <Eigen/Dense>
-
 TEST_CASE("get_bins_width_scott method") {
-  Eigen::MatrixXd image(2, 4);
+  P2d::MatrixD image(2, 4);
 
   SUBCASE("same cols") {
     image << 0, 1, 2, 3, 0, 1, 2, 3;

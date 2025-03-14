@@ -30,7 +30,7 @@ This module contains functions associated to histogram.
  * @param row_hist: Histogram1D
  * @param col_hist: Histogram1D
  */
-Histogram2D::Histogram2D(Eigen::MatrixXd& values, Histogram1D row_hist, Histogram1D col_hist)
+Histogram2D::Histogram2D(P2d::MatrixD& values, Histogram1D row_hist, Histogram1D col_hist)
     : m_values(values), m_row_hist(row_hist), m_col_hist(col_hist) {}
 
 /**
@@ -51,10 +51,10 @@ Histogram2D::Histogram2D(Histogram1D row_hist, Histogram1D col_hist)
  * @param img_r: right image
  * @return Histogram2D
  */
-Histogram2D calculate_histogram2D(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& img_r) {
+Histogram2D calculate_histogram2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r) {
   auto hist_l = Histogram1D(img_l);
   auto hist_r = Histogram1D(img_r);
-  Eigen::MatrixXd values = Eigen::MatrixXd::Zero(hist_l.nb_bins(), hist_r.nb_bins());
+  P2d::MatrixD values = P2d::MatrixD::Zero(hist_l.nb_bins(), hist_r.nb_bins());
   auto pixel_l = img_l.data();
   auto pixel_r = img_r.data();
   auto nb_bins_l = static_cast<int>(hist_l.nb_bins());

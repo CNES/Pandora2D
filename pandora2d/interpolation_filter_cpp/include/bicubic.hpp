@@ -49,10 +49,10 @@ struct Bicubic : public abstractfilter::AbstractFilter {
    *
    * @param fractional_shift positive fractional shift of the subpixel
    * position to be interpolated
-   * @return t_Vector, an array of interpolator coefficients
+   * @return P2d::VectorD, an array of interpolator coefficients
    * whose size depends on the filter margins
    */
-  t_Vector get_coeffs(const double fractional_shift) override;
+  P2d::VectorD get_coeffs(const double fractional_shift) override;
 
   /**
    * @brief Get the alpha attribute

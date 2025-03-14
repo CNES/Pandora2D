@@ -39,7 +39,7 @@ cpp.
  * @return Eigen::Index
  */
 Eigen::Index find_or_throw(const double value,
-                           const t_Vector& container,
+                           const P2d::VectorD& container,
                            const std::string& message);
 
 /**
@@ -54,9 +54,9 @@ double sinc(double x);
  * @brief Contruct a vector of fractional shifts in interval [0,1[ with a step of fractional shift.
  *
  * @param fractional_shift
- * @return t_Vector
+ * @return P2d::VectorD
  */
-t_Vector fractional_range(double fractional_shift);
+P2d::VectorD fractional_range(double fractional_shift);
 
 /**
  * @brief Compute normalized cardinal sine coefficients windowed by a Gaussian.
@@ -71,9 +71,9 @@ t_Vector fractional_range(double fractional_shift);
  *   The Gaussian window width correspond to the size of the filter.
  * @param filter_size size of the filter.
  * @param fractional_shifts fractional shifts where to compute coefficients.
- * @return t_Matrix (2*filter_size + 1) coeffcients for each fractional shift.
+ * @return P2d::MatrixD (2*filter_size + 1) coefficients for each fractional shift.
  */
-t_Matrix compute_coefficient_table(int filter_size, const t_Vector& fractional_shifts);
+P2d::MatrixD compute_coefficient_table(int filter_size, const P2d::VectorD& fractional_shifts);
 
 /**
  * @brief Cardinal sine filter
@@ -110,14 +110,14 @@ struct CardinalSine : public abstractfilter::AbstractFilter {
    * @throws std::invalid_argument if provided fractional_shift is not found
    * precomputed table.
    *
-   * @return t_Vector, an array of interpolator coefficients
+   * @return P2d::VectorD, an array of interpolator coefficients
    * whose size depends on the filter margins
    */
-  t_Vector get_coeffs(const double fractional_shift) override;
+  P2d::VectorD get_coeffs(const double fractional_shift) override;
 
  private:
-  int m_half_size;               ///< Half filter size
-  t_Vector m_fractional_shifts;  ///< Fractional shifts used to compute coefficients
-  t_Matrix m_coeffs;             ///< Pre-computed coefficients
+  int m_half_size;                   ///< Half filter size
+  P2d::VectorD m_fractional_shifts;  ///< Fractional shifts used to compute coefficients
+  P2d::MatrixD m_coeffs;             ///< Pre-computed coefficients
 };
 #endif

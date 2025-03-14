@@ -24,7 +24,7 @@ This module contains functions associated to the histogram for cpp.
 #ifndef HISTOGRAM1D_HPP
 #define HISTOGRAM1D_HPP
 
-#include <Eigen/Dense>
+#include "pandora2d_type.hpp"
 
 /**
  * @brief Instanciation of Histogram on 1D (one dimension)
@@ -39,7 +39,7 @@ class Histogram1D {
    * @param low_bound: smaller value on histogram
    * @param bins_width: size of one bin on histogram
    */
-  Histogram1D(Eigen::VectorXd& values, std::size_t nb_bins, double low_bound, double bins_width);
+  Histogram1D(P2d::VectorD& values, std::size_t nb_bins, double low_bound, double bins_width);
 
   /**
    * @brief Construct a new Histogram1D object
@@ -55,7 +55,7 @@ class Histogram1D {
    * @param img : image
    *
    */
-  Histogram1D(const Eigen::MatrixXd& img);
+  Histogram1D(const P2d::MatrixD& img);
 
   /**
    * @brief Destroy the Histogram1D object
@@ -66,9 +66,9 @@ class Histogram1D {
   /**
    * @brief Get the Values object
    *
-   * @return const Eigen::VectorXd&
+   * @return const P2d::VectorD&
    */
-  const Eigen::VectorXd& values() const { return m_values; };
+  const P2d::VectorD& values() const { return m_values; };
 
   /**
    * @brief Get the Nb Bins object
@@ -96,15 +96,15 @@ class Histogram1D {
    *
    * @param values
    */
-  void set_values(const Eigen::VectorXd& values) { m_values = values; };
+  void set_values(const P2d::VectorD& values) { m_values = values; };
 
  private:
-  void create(const Eigen::MatrixXd& img);
+  void create(const P2d::MatrixD& img);
 
-  Eigen::VectorXd m_values;  ///< values on histogram
-  std::size_t m_nb_bins;     ///< number of bins
-  double m_low_bound;        ///< smaller value on histogram
-  double m_bins_width;       ///< size of one bin
+  P2d::VectorD m_values;  ///< values on histogram
+  std::size_t m_nb_bins;  ///< number of bins
+  double m_low_bound;     ///< smaller value on histogram
+  double m_bins_width;    ///< size of one bin
 };
 
 /**
@@ -113,6 +113,6 @@ class Histogram1D {
  * @param img
  * @return Histogram1D
  */
-Histogram1D calculate_histogram1D(const Eigen::MatrixXd& img);
+Histogram1D calculate_histogram1D(const P2d::MatrixD& img);
 
 #endif

@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+/* Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
  *
  * This file is part of PANDORA2D
  *
@@ -18,43 +18,17 @@
  */
 
 /*
-This file contains useful function declarations for tests.
+This file contains useful function definitions for matching_cost tests.
 */
 
 #include "conftest.hpp"
 #include "bin.hpp"
-#include "operation.hpp"
-
-#include <doctest.h>
-#include <iostream>
-#include <random>
-
-/**
- * @brief Create a normal matrix object
- */
-Eigen::MatrixXd create_normal_matrix(std::size_t size, float mean, float std) {
-  // random device class instance, source of 'true' randomness for initializing random seed
-  std::random_device rd{};
-  // Mersenne twister PRNG, initialized with seed from previous random device instance
-  std::mt19937 gen{rd()};
-  // instance of class std::normal_distribution with specific mean and stddev
-  std::normal_distribution<float> dis{mean, std};
-
-  // Create matrix
-  std::vector<double> X(size * size);
-  auto v_size = static_cast<int>(X.size());
-  for (int i = 0; i < v_size; i++) {
-    X[i] = dis(gen);
-  }
-  Eigen::Map<Eigen::MatrixXd> img(X.data(), size, size);
-
-  return img;
-}
+#include "global_conftest.hpp"
 
 /**
  * Create image
  */
-Eigen::MatrixXd create_image(std::size_t size, float mean, float std, double nb_bins) {
+P2d::MatrixD create_image(std::size_t size, float mean, float std, double nb_bins) {
   auto matrix = create_normal_matrix(size, mean, std);
 
   auto check_nb_bins = [](auto& matrix) -> double {

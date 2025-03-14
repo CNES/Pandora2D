@@ -1,3 +1,26 @@
+/* Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+ *
+ * This file is part of PANDORA2D
+ *
+ *     https://github.com/CNES/Pandora2D
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+This module contains tests associated to the filter class for cpp.
+*/
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 #include "bicubic.hpp"
@@ -7,9 +30,9 @@ namespace abstractfilter {
 TEST_SUITE("AbstractFilter apply") {
   Bicubic filter;
 
-  t_Matrix resampling_area(4, 4);
-  t_Vector row_coeff(4);
-  t_Vector col_coeff(4);
+  P2d::MatrixD resampling_area(4, 4);
+  P2d::VectorD row_coeff(4);
+  P2d::VectorD col_coeff(4);
 
   TEST_CASE("With identical rows in resampling area") {
     resampling_area << 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3;
@@ -104,11 +127,11 @@ TEST_SUITE("AbstractFilter apply") {
 
 TEST_CASE("AbstractFilter interpolate") {
   Bicubic filter;
-  t_Matrix image(5, 5);
-  t_Vector col_positions(9);
-  t_Vector row_positions(9);
-  t_Vector expected_positions(9);
-  t_Vector interpolated_positions;
+  P2d::MatrixD image(5, 5);
+  P2d::VectorD col_positions(9);
+  P2d::VectorD row_positions(9);
+  P2d::VectorD expected_positions(9);
+  P2d::VectorD interpolated_positions;
 
   SUBCASE("Interpolation around the center and precision=0.5") {
     image << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;

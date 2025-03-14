@@ -24,8 +24,8 @@ This module contains functions associated to the histogram for cpp.
 #ifndef HISTOGRAM2D_HPP
 #define HISTOGRAM2D_HPP
 
-#include <Eigen/Dense>
 #include "histogram1D.hpp"
+#include "pandora2d_type.hpp"
 
 /**
  * @brief Instanciation of Histogram on 2D (two dimension)
@@ -39,7 +39,7 @@ class Histogram2D {
    * @param row_hist: Histogram1D
    * @param col_hist: Histogram1D
    */
-  Histogram2D(Eigen::MatrixXd& values, Histogram1D row_hist, Histogram1D col_hist);
+  Histogram2D(P2d::MatrixD& values, Histogram1D row_hist, Histogram1D col_hist);
 
   /**
    * @brief Construct a new Histogram2D object
@@ -58,21 +58,21 @@ class Histogram2D {
   /**
    * @brief Get the Values object
    *
-   * @return const Eigen::MatrixXd&
+   * @return const P2d::MatrixD&
    */
-  const Eigen::MatrixXd& values() const { return m_values; };
+  const P2d::MatrixD& values() const { return m_values; };
 
   /**
    * @brief Set the Values object
    *
    * @param values
    */
-  void set_values(const Eigen::MatrixXd& values) { m_values = values; };
+  void set_values(const P2d::MatrixD& values) { m_values = values; };
 
  private:
-  Eigen::MatrixXd m_values;  ///< values on histogram
-  Histogram1D m_row_hist;    ///< row dimension (number of bins, size of bin, low bound)
-  Histogram1D m_col_hist;    ///< col dimension (number of bins, size of bin, low bound)
+  P2d::MatrixD m_values;   ///< values on histogram
+  Histogram1D m_row_hist;  ///< row dimension (number of bins, size of bin, low bound)
+  Histogram1D m_col_hist;  ///< col dimension (number of bins, size of bin, low bound)
 };
 
 /**
@@ -82,6 +82,6 @@ class Histogram2D {
  * @param img_r : right image
  * @return Histogram2D
  */
-Histogram2D calculate_histogram2D(const Eigen::MatrixXd& img_l, const Eigen::MatrixXd& img_r);
+Histogram2D calculate_histogram2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r);
 
 #endif

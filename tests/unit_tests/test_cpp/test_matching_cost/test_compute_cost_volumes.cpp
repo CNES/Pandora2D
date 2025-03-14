@@ -23,10 +23,9 @@ This module contains tests associated to mutual information computation.
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
-#include <iomanip>
-#include <iostream>
-#include "conftest.hpp"
-#include "cost_volumes.hpp"
+#include "compute_cost_volumes.hpp"
+#include "cost_volume.hpp"
+#include "global_conftest.hpp"
 
 constexpr double INIT_VALUE_CV = 0.0;  ///< initial value used to fill the cv
 
@@ -39,31 +38,21 @@ constexpr double INIT_VALUE_CV = 0.0;  ///< initial value used to fill the cv
  * @param cv_shape 4d cv shape
  * @param row cv index
  * @param col cv index
- * @return Eigen::VectorXd
+ * @return P2d::VectorD
  */
-Eigen::VectorXd get_cost_surface(const Eigen::VectorXd& cost_values,
-                                 const Eigen::Vector4i& cv_shape,
-                                 int row,
-                                 int col) {
-  int cost_surface_size = cv_shape[2] * cv_shape[3];
+P2d::VectorD get_cost_surface(const P2d::VectorD& cost_values,
+                              CostVolumeSize& cv_size,
+                              int row,
+                              int col) {
+  int cost_surface_size = cv_size.nb_disps();
 
-  int start_index = (row * cv_shape[1] + col) * cost_surface_size;
+  int start_index = (row * cv_size.nb_col + col) * cost_surface_size;
 
   return cost_values.segment(start_index, cost_surface_size);
 };
 
-/**
- * @brief get cv 1d shape from 4d shape
- *
- * @param cv_shape 4d
- * @return int shape 1d
- */
-int shape_1d(const Eigen::Vector4i& cv_shape) {
-  return cv_shape[0] * cv_shape[1] * cv_shape[2] * cv_shape[3];
-};
-
 TEST_CASE("Test get_window method") {
-  Eigen::MatrixXd img(5, 5);
+  P2d::MatrixD img(5, 5);
   // clang-format off
   img << 1.0, 2.0, 3.0, 4.0, 5.0, 
          6.0, 7.0, 8.0, 9.0, 10.0, 
@@ -73,56 +62,56 @@ TEST_CASE("Test get_window method") {
   // clang-format on
 
   SUBCASE("1x1 window") {
-    Eigen::MatrixXd window_gt(1, 1);
+    P2d::MatrixD window_gt(1, 1);
     window_gt << 8.0;
-    Eigen::MatrixXd window = get_window(img, 1, 1, 2);
-    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
+    P2d::MatrixD window = get_window(img, 1, 1, 2);
+    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
   }
 
   SUBCASE("3x3 window") {
-    Eigen::MatrixXd window_gt(3, 3);
+    P2d::MatrixD window_gt(3, 3);
     window_gt << 7.0, 8.0, 9.0, 12.0, 13.0, 14.0, 17.0, 18.0, 19.0;
-    Eigen::MatrixXd window = get_window(img, 3, 2, 2);
-    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
+    P2d::MatrixD window = get_window(img, 3, 2, 2);
+    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
   }
 
   SUBCASE("3x3 window on the border") {
-    Eigen::MatrixXd window_gt(2, 2);
+    P2d::MatrixD window_gt(2, 2);
     window_gt << 1.0, 2.0, 6.0, 7.0;
 
-    Eigen::MatrixXd window = get_window(img, 3, 0, 0);
-    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
+    P2d::MatrixD window = get_window(img, 3, 0, 0);
+    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
   }
 
   SUBCASE("3x3 window on the border with negative index") {
-    Eigen::MatrixXd window_gt(2, 1);
+    P2d::MatrixD window_gt(2, 1);
     window_gt << 1.0, 6.0;
-    Eigen::MatrixXd window = get_window(img, 3, 0, -1);
-    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
+    P2d::MatrixD window = get_window(img, 3, 0, -1);
+    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
     ;
   }
 
   SUBCASE("3x3 window out of the image") {
-    Eigen::MatrixXd window_gt(0, 0);
-    Eigen::MatrixXd window = get_window(img, 3, -2, -2);
-    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
+    P2d::MatrixD window_gt(0, 0);
+    P2d::MatrixD window = get_window(img, 3, -2, -2);
+    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
     ;
   }
 
   SUBCASE("5x5 window") {
-    Eigen::MatrixXd window = get_window(img, 5, 2, 2);
-    check_inside_eigen_element<Eigen::MatrixXd>(window, img);
+    P2d::MatrixD window = get_window(img, 5, 2, 2);
+    check_inside_eigen_element<P2d::MatrixD>(window, img);
   }
 
   SUBCASE("5x5 window on the border") {
-    Eigen::MatrixXd window_gt(3, 5);
+    P2d::MatrixD window_gt(3, 5);
     // clang-format off
     window_gt << 11.0, 12.0, 13.0, 14.0, 15.0, 
                  16.0, 17.0, 18.0, 19.0, 20.0, 
                  21.0, 22.0, 23.0, 24.0, 25.0;
     // clang-format on
-    Eigen::MatrixXd window = get_window(img, 5, 4, 2);
-    check_inside_eigen_element<Eigen::MatrixXd>(window, window_gt);
+    P2d::MatrixD window = get_window(img, 5, 4, 2);
+    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
   }
 }
 
@@ -214,7 +203,7 @@ TEST_CASE("Test get_index_right method") {
 }
 
 TEST_CASE("Test contains_element method") {
-  Eigen::MatrixXd mat(3, 3);
+  P2d::MatrixD mat(3, 3);
   mat << 1.0, 2.0, 3.0, 4.0, 3.0, 6.0, 2.0, 1.0, 0.0;
 
   SUBCASE("Test if a double is in a matrix") {
@@ -223,7 +212,7 @@ TEST_CASE("Test contains_element method") {
   }
 
   SUBCASE("Test if a nan is in a matrix") {
-    Eigen::MatrixXd mat_nan(3, 3);
+    P2d::MatrixD mat_nan(3, 3);
     mat_nan << 1.0, 2.0, nan("1"), 4.0, 3.0, 6.0, 2.0, 1.0, 0.0;
 
     CHECK(contains_element(mat, nan("1")) == false);
@@ -233,7 +222,7 @@ TEST_CASE("Test contains_element method") {
 
 TEST_CASE("Test compute_cost_volumes_cpp method") {
   // Left image
-  Eigen::MatrixXd img_left(5, 5);
+  P2d::MatrixD img_left(5, 5);
   // clang-format off
   img_left << 1.0, 2.0, 3.0, 4.0, 5.0, 
               6.0, 7.0, 8.0, 9.0, 10.0, 
@@ -243,9 +232,9 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   // clang-format on
 
   // Right image
-  std::vector<Eigen::MatrixXd> imgs_right;
+  std::vector<P2d::MatrixD> imgs_right;
 
-  Eigen::MatrixXd right_1(5, 5);
+  P2d::MatrixD right_1(5, 5);
   // clang-format off
   right_1 << 1., 2., 3., 4., 2., 
              2., 2., 2., 2., 2., 
@@ -256,17 +245,16 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
   imgs_right.push_back(right_1);
 
-  // CV shape
-  Eigen::Vector4i cv_shape;
-  cv_shape << 5, 5, 3, 5;
+  // CV size
+  CostVolumeSize cv_size = CostVolumeSize(5, 5, 3, 5);
 
   // Initialized cv values
-  Eigen::VectorXd cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+  P2d::VectorD cv_values = P2d::VectorD::Zero(cv_size.size());
 
   // Disparity ranges
-  Eigen::VectorXd disp_range_row(3);
+  P2d::VectorD disp_range_row(3);
   disp_range_row << -1.0, 0.0, 1.0;
-  Eigen::VectorXd disp_range_col(5);
+  P2d::VectorD disp_range_col(5);
   disp_range_col << -2.0, -1.0, 0.0, 1.0, 2.0;
 
   // Offset between cv and image first points
@@ -283,13 +271,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   double no_data = -9999;
 
   SUBCASE("Cost surface of top left point") {
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 0, 0);
+    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 0, 0);
 
-    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV,
@@ -297,18 +285,18 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface of center point") {
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
 
-    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, 0.22478750958935989, 0.22478750958935989, 0.072780225783732888, INIT_VALUE_CV,
@@ -316,31 +304,30 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        INIT_VALUE_CV, 0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface of center point with not centered disparities") {
-    // CV shape
-    Eigen::Vector4i cv_shape;
-    cv_shape << 5, 5, 3, 3;
+    // CV size
+    CostVolumeSize cv_size = CostVolumeSize(5, 5, 3, 3);
 
     // Initialized cv values
-    Eigen::VectorXd cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+    P2d::VectorD cv_values = P2d::VectorD::Zero(cv_size.size());
 
     // Disparity ranges
-    Eigen::VectorXd disp_range_row(3);
+    P2d::VectorD disp_range_row(3);
     disp_range_row << -2.0, -1.0, 0.0;
-    Eigen::VectorXd disp_range_col(3);
+    P2d::VectorD disp_range_col(3);
     disp_range_col << 0.0, 1.0, 2.0;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
 
-    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV,
@@ -348,23 +335,23 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        0.10218717094933361, 0.37887883713522919, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface with step_row=2 and step_col=3") {
     // Smaller shape with step=[2,3]
-    cv_shape << 3, 2, 3, 5;
-    cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(3, 2, 3, 5);
+    cv_values = P2d::VectorD::Zero(cv_size.size());
     step << 2, 3;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 1, 1);
+    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 1, 1);
 
-    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << 0.22478750958935989, 0.22478750958935989, 0.072780225783732888, INIT_VALUE_CV, INIT_VALUE_CV, 
@@ -372,13 +359,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface with subpix=2") {
     // When subpix=2, we have 4 right images
-    Eigen::MatrixXd right_2(5, 5);
+    P2d::MatrixD right_2(5, 5);
 
     // clang-format off
     right_2 << 1.5, 2.5, 3.5, 3., 1., 
@@ -388,7 +375,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                2., 2.5, 3., 4., 1.;
     // clang-format on
 
-    Eigen::MatrixXd right_3(5, 5);
+    P2d::MatrixD right_3(5, 5);
     // clang-format off
     right_3 << 1.5, 2., 2.5, 3., 2., 
                3., 2.5, 2., 1.5, 3., 
@@ -397,7 +384,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                1., 3., 2., 4., 4.;
     // clang-format on
 
-    Eigen::MatrixXd right_4(5, 5);
+    P2d::MatrixD right_4(5, 5);
     // clang-format off
     right_4 << 1.75, 2.25, 2.75, 2.5, 2., 
                2., 2.25, 1.75, 2.25, 2., 
@@ -411,22 +398,22 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     imgs_right.push_back(right_4);
 
     // Biggest shape with subpix=2
-    cv_shape << 5, 5, 5, 9;
-    cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(5, 5, 5, 9);
+    cv_values = P2d::VectorD::Zero(cv_size.size());
 
     // Largest disparity ranges with subpix=2
-    Eigen::VectorXd disp_range_row(5);
+    P2d::VectorD disp_range_row(5);
     disp_range_row << -1.0, -0.5, 0.0, 0.5, 1.0;
-    Eigen::VectorXd disp_range_col(9);
+    P2d::VectorD disp_range_col(9);
     disp_range_col << -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
 
-    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
     // clang-format off
     cost_surface_gt <<
     // d_col    -2          -1.5         -1                               d_row
@@ -469,14 +456,14 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         0.0072146184745172093, 0.0072146184745174313, INIT_VALUE_CV;      // 1
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   };
 
   SUBCASE("Cost surface with subpix=2 and no data values") {
     // When subpix=2, we have 4 right images
 
-    Eigen::MatrixXd right_2(5, 5);
+    P2d::MatrixD right_2(5, 5);
     // clang-format off
     right_2 << 1.5, 2.5, 3.5, 3., -9999., 
                2., 2., 2., 2., -9999., 
@@ -485,7 +472,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                2., 2.5, 3., 4., -9999.;
     // clang-format on
 
-    Eigen::MatrixXd right_3(5, 5);
+    P2d::MatrixD right_3(5, 5);
     // clang-format off
     right_3 << 1.5, 2., 2.5, 3., 2., 
                3., 2.5, 2., 1.5, 3., 
@@ -494,7 +481,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                -9999., -9999., -9999., -9999., -9999.;
     // clang-format on
 
-    Eigen::MatrixXd right_4(5, 5);
+    P2d::MatrixD right_4(5, 5);
     // clang-format off
     right_4 << 1.75, 2.25, 2.75, 2.5, -9999., 
                2.75, 2.25, 1.75, 2.25, -9999., 
@@ -508,14 +495,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     imgs_right.push_back(right_4);
 
     // Biggest shape with subpix=2
-    Eigen::Vector4i cv_shape;
-    cv_shape << 5, 5, 5, 9;
-    Eigen::VectorXd cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(5, 5, 5, 9);
+    P2d::VectorD cv_values = P2d::VectorD::Zero(cv_size.size());
 
     // Largest disparity ranges with subpix=2
-    Eigen::VectorXd disp_range_row(5);
+    P2d::VectorD disp_range_row(5);
     disp_range_row << -1.0, -0.5, 0.0, 0.5, 1.0;
-    Eigen::VectorXd disp_range_col(9);
+    P2d::VectorD disp_range_col(9);
     disp_range_col << -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0;
 
     // Offset between cv and image first points
@@ -528,13 +514,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     Eigen::Vector2i step;
     step << 1, 1;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 2, 2);
+    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
 
-    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
     // clang-format off
     cost_surface_gt <<
@@ -578,27 +564,27 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         0.0072146184745172093,       INIT_VALUE_CV,  INIT_VALUE_CV;       // 1
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   };
 
   SUBCASE("Cost surface with ROI") {
     // Smallest shape with ROI
-    cv_shape << 3, 2, 3, 5;
-    cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(3, 2, 3, 5);
+    cv_values = P2d::VectorD::Zero(cv_size.size());
 
     // When ROI is used, we can have an offset between image and cv first index
     // to be sure to compute the first point of ROI
     offset_cv_img_row = 2;
     offset_cv_img_col = 3;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 0, 0);
+    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 0, 0);
 
-    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << 0.22478750958935989, 0.22478750958935989, 0.072780225783732888, INIT_VALUE_CV, INIT_VALUE_CV, 
@@ -606,14 +592,14 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV, INIT_VALUE_CV;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("Cost surface with ROI and step=[1,2]") {
     // Smallest shape with ROI
-    cv_shape << 5, 2, 3, 5;
-    cv_values = Eigen::VectorXd::Zero(shape_1d(cv_shape));
+    CostVolumeSize cv_size = CostVolumeSize(5, 2, 3, 5);
+    cv_values = P2d::VectorD::Zero(cv_size.size());
 
     // When ROI is used, we can have an offset between image and cv first index
     // to be sure to compute the first point of ROI
@@ -622,13 +608,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     step << 1, 2;
     ;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_shape, disp_range_row,
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
                              step, no_data);
 
-    Eigen::VectorXd cost_surface = get_cost_surface(cv_values, cv_shape, 1, 0);
+    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 1, 0);
 
-    Eigen::VectorXd cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV,
@@ -636,7 +622,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                        INIT_VALUE_CV, INIT_VALUE_CV,  0.22478750958935989,  0.10218717094933361,  0.37887883713522919;
     // clang-format on
 
-    CHECK(cv_values.size() == shape_1d(cv_shape));
-    check_inside_eigen_element<Eigen::MatrixXd>(cost_surface, cost_surface_gt);
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   }
 }

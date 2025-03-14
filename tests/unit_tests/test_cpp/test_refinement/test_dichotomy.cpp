@@ -31,19 +31,19 @@ This module contains tests associated to dichotomy.
 #include <pybind11/pybind11.h>
 
 #include "bicubic.hpp"
-#include "conftest.hpp"
 #include "dichotomy.hpp"
+#include "global_conftest.hpp"
 
 namespace py = pybind11;
 
 /**
  * Create cost volume with Eigen
  */
-Eigen::MatrixXf cost_volume_4_4_2_3() {
+P2d::Matrixf cost_volume_4_4_2_3() {
   // Cost volume for (4,4) image and row disp [4, 5] and col disp [-2, -1, 0]
   // pixel-by-pixel filling
   unsigned int cv_size = 4 * 4 * 2 * 3;
-  Eigen::VectorXf cost_volume(cv_size);
+  P2d::Vectorf cost_volume(cv_size);
   // clang-format off
   cost_volume << 0.680375, 0.211234, 0.566198, 0.59688, 0.823295, 0.604897,
                  0.329554, 0.536459, 0.444451, 0.10794, 0.045205, 0.257742,
@@ -75,7 +75,7 @@ py::array_t<float> py_cost_volume_4_4_2_3() {
   // define py_array
   std::vector<size_t> shape = {4, 4, 2, 3};
   py::array_t<float> cost_volume = py::array_t<float>(shape);
-  Cost_volume_size cv_size = Cost_volume_size(shape);
+  CostVolumeSize cv_size = CostVolumeSize(shape);
 
   // data access
   auto unchecked_cv = cost_volume.mutable_unchecked<4>();
@@ -140,119 +140,37 @@ TEST_CASE("Position2D") {
   }
 }
 
-TEST_CASE("Cost volume size") {
-  SUBCASE("First constructor") {
-    Cost_volume_size cv_size = Cost_volume_size(2, 3, 1, 1);
-    CHECK(cv_size.size() == 6);
-    CHECK(cv_size.nb_disps() == 1);
-  }
-
-  SUBCASE("Second constructor") {
-    Cost_volume_size cv_size = Cost_volume_size();
-    CHECK(cv_size.size() == 0);
-    CHECK(cv_size.nb_disps() == 0);
-  }
-
-  SUBCASE("Third constructor") {
-    Eigen::VectorXd vec_size{{4, 5, 2, 1}};
-    Cost_volume_size cv_size = Cost_volume_size(vec_size);
-    CHECK(cv_size.size() == 40);
-    CHECK(cv_size.nb_disps() == 2);
-  }
-}
-
-TEST_CASE("nanargmin & nanargmax") {
-  SUBCASE("Positive value") {
-    // Exemple d'utilisation
-    Eigen::VectorXd data(5);
-    data << 1.0, 2.0, 2.2, 3.0, 4.0;
-
-    CHECK(nanargmin(data) == 0);
-    CHECK(nanargmax(data) == 4);
-  }
-
-  SUBCASE("Positive value & Nan") {
-    // Exemple d'utilisation
-    Eigen::VectorXd data(5);
-    data << 1.0, 2.0, std::numeric_limits<double>::quiet_NaN(), 3.0, 4.0;
-
-    CHECK(nanargmin(data) == 0);
-    CHECK(nanargmax(data) == 4);
-  }
-
-  SUBCASE("Negative value") {
-    // Exemple d'utilisation
-    Eigen::VectorXd data(5);
-    data << -1.0, 2.0, 2.2, 3.0, -4.0;
-
-    CHECK(nanargmin(data) == 4);
-    CHECK(nanargmax(data) == 3);
-  }
-
-  SUBCASE("Negative value & Nan") {
-    // Exemple d'utilisation
-    Eigen::VectorXd data(5);
-    data << -1.0, 2.0, std::numeric_limits<double>::quiet_NaN(), 3.0, -4.0;
-
-    CHECK(nanargmin(data) == 4);
-    CHECK(nanargmax(data) == 3);
-  }
-
-  SUBCASE("Same value") {
-    // Exemple d'utilisation
-    Eigen::VectorXd data(5);
-    data << -1.0, -1.0, -1.0, -1.0, -1.0;
-
-    CHECK(nanargmin(data) == 0);
-    CHECK(nanargmax(data) == 0);
-  }
-}
-
-TEST_CASE("all_same") {
-  Eigen::VectorXd data(5);
-  data << -1.0, -1.0, -1.0, -1.0, -1.0;
-
-  SUBCASE("True") {
-    CHECK(all_same(data) == true);
-  }
-
-  SUBCASE("False") {
-    data[0] = 2.0;
-    CHECK(all_same(data) == false);
-  }
-}
-
 TEST_CASE("get_cost_surfaces") {
-  Cost_volume_size cv_size = Cost_volume_size(4, 4, 2, 3);
+  CostVolumeSize cv_size = CostVolumeSize(4, 4, 2, 3);
   auto cost_volume = py_cost_volume_4_4_2_3();
 
-  auto position2d_to_index = [](Position2D& pixel, Cost_volume_size& cv_size) -> unsigned int {
+  auto position2d_to_index = [](Position2D& pixel, CostVolumeSize& cv_size) -> unsigned int {
     return pixel.row * (cv_size.nb_col * cv_size.nb_disps()) + pixel.col * cv_size.nb_disps();
   };
 
   // Check First pixel
   Position2D pixel = Position2D();
-  Eigen::MatrixXd expected(cv_size.nb_disp_row, cv_size.nb_disp_col);
+  P2d::MatrixD expected(cv_size.nb_disp_row, cv_size.nb_disp_col);
   expected << 0.680375, 0.211234, 0.566198, 0.59688, 0.823295, 0.604897;
-  check_inside_eigen_element<Eigen::MatrixXd>(
+  check_inside_eigen_element<P2d::MatrixD>(
       get_cost_surface(cost_volume, position2d_to_index(pixel, cv_size), cv_size), expected);
 
   // Check pixel at (1, 2)
   pixel = Position2D(1, 2);
   expected << 0.012834, 0.94555, 0.414966, 0.54271, 0.05349, 0.539828;
-  check_inside_eigen_element<Eigen::MatrixXd>(
+  check_inside_eigen_element<P2d::MatrixD>(
       get_cost_surface(cost_volume, position2d_to_index(pixel, cv_size), cv_size), expected);
 
   // Check pixel at (2, 3)
   pixel = Position2D(2, 3);
   expected << 0.249586, 0.520497, 0.025070, 0.33544, 0.063212, 0.921439;
-  check_inside_eigen_element<Eigen::MatrixXd>(
+  check_inside_eigen_element<P2d::MatrixD>(
       get_cost_surface(cost_volume, position2d_to_index(pixel, cv_size), cv_size), expected);
 
   // Check Last pixel
   pixel = Position2D(3, 3);
   expected << 0.912937, 0.17728, 0.314608, 0.71735, 0.12088, 0.84794;
-  check_inside_eigen_element<Eigen::MatrixXd>(
+  check_inside_eigen_element<P2d::MatrixD>(
       get_cost_surface(cost_volume, position2d_to_index(pixel, cv_size), cv_size), expected);
 }
 
@@ -265,7 +183,7 @@ TEST_CASE("search_new_best_point") {
   Bicubic b;
 
   SUBCASE("Initial is best") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
@@ -281,7 +199,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("Bottom left is best") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
@@ -297,7 +215,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("Bottom left is best at 0.25 precision") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
@@ -316,7 +234,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("NaN in kernel gives initial position") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., std::numeric_limits<double>::quiet_NaN(), 0., 0., 0.,
@@ -335,7 +253,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("Bottom right is best") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
@@ -354,7 +272,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("NaN outside of kernel has no effect") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << std::numeric_limits<double>::quiet_NaN(), 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
@@ -373,7 +291,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("Bottom left is best and subpix=2") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
@@ -393,7 +311,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("Bottom right is best and subpix=2") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
@@ -413,7 +331,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("Bottom left is best and subpix=4") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
@@ -433,7 +351,7 @@ TEST_CASE("search_new_best_point") {
   }
 
   SUBCASE("Bottom right is best and subpix=4") {
-    Eigen::MatrixXd cost_surface_data(5, 5);
+    P2d::MatrixD cost_surface_data(5, 5);
     // clang-format off
     cost_surface_data << 0., 0., 0., 0., 0.,
                          0., 0., 0., 0., 0.,
