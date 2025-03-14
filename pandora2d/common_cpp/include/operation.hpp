@@ -24,7 +24,7 @@ This module contains functions, struct and other elements associated to the matc
 #ifndef COMMON_OPERATION_HPP
 #define COMMON_OPERATION_HPP
 
-#include "eigen_type.hpp"
+#include "pandora2d_type.hpp"
 
 /**
  * @brief Standard deviation with Eigen matrix

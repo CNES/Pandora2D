@@ -24,7 +24,7 @@ This module contains cost volume struct.
 #ifndef COMMON_COST_VOLUME_HPP
 #define COMMON_COST_VOLUME_HPP
 
-#include "eigen_type.hpp"
+#include "pandora2d_type.hpp"
 
 /**
  * @brief Cost volume size

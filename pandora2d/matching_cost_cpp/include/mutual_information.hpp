@@ -24,9 +24,9 @@ This module contains functions associated to the mutual information in cpp.
 #ifndef MUTUAL_INFORMATION_HPP
 #define MUTUAL_INFORMATION_HPP
 
-#include "eigen_type.hpp"
 #include "histogram1D.hpp"
 #include "histogram2D.hpp"
+#include "pandora2d_type.hpp"
 
 /**
  * @brief Compute entropy

@@ -25,7 +25,7 @@ This module contains functions associated to the binding pybind of cpp dichotomy
 #include <pybind11/pybind11.h>
 
 #include "dichotomy.hpp"
-#include "eigen_type.hpp"
+#include "pandora2d_type.hpp"
 
 using namespace pybind11::literals;
 

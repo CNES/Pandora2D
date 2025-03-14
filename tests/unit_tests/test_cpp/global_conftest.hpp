@@ -25,7 +25,7 @@ This file contains useful function definitions for tests.
 #define CONFTEST_HPP
 
 #include <doctest.h>
-#include "eigen_type.hpp"
+#include "pandora2d_type.hpp"
 
 /**
  * @brief Check size and element on vector with a groundtruth

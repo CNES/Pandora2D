@@ -25,8 +25,8 @@ This module contains functions associated to the Abstract filter class for cpp.
 #define INTERPOLATIONFILTER_HPP
 
 #include "constant.hpp"
-#include "eigen_type.hpp"
 #include "margins.hpp"
+#include "pandora2d_type.hpp"
 
 namespace abstractfilter {
 

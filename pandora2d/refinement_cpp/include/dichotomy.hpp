@@ -31,9 +31,9 @@ This module contains functions associated to the Dichotomy refinement method.
 #include <map>
 
 #include "cost_volume.hpp"
-#include "eigen_type.hpp"
 #include "interpolation_filter.hpp"
 #include "operation.hpp"
+#include "pandora2d_type.hpp"
 
 namespace py = pybind11;
 
@@ -78,8 +78,8 @@ struct Position2D {
  */
 template <typename T>
 P2d::MatrixD get_cost_surface(py::array_t<T>& cost_volume,
-                           unsigned int index,
-                           CostVolumeSize& cv_size) {
+                              unsigned int index,
+                              CostVolumeSize& cv_size) {
   auto index_to_position = [](unsigned int index, CostVolumeSize& cv_size) -> Position2D {
     int quot = index / (cv_size.nb_col * cv_size.nb_disps());
     int rem = index % (cv_size.nb_col * cv_size.nb_disps());

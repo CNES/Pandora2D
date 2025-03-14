@@ -26,7 +26,7 @@ This module contains functions associated to the binding pybind of cpp common to
 #include <vector>
 
 #include "cost_volume.hpp"
-#include "eigen_type.hpp"
+#include "pandora2d_type.hpp"
 
 using namespace pybind11::literals;
 

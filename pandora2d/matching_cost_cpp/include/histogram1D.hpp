@@ -24,7 +24,7 @@ This module contains functions associated to the histogram for cpp.
 #ifndef HISTOGRAM1D_HPP
 #define HISTOGRAM1D_HPP
 
-#include "eigen_type.hpp"
+#include "pandora2d_type.hpp"
 
 /**
  * @brief Instanciation of Histogram on 1D (one dimension)

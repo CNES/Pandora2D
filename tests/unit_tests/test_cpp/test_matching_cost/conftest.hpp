@@ -24,7 +24,7 @@ This file contains useful function definitions for matching_cost tests.
 #ifndef MATCHING_COST_CONFTEST_HPP
 #define MATCHING_COST_CONFTEST_HPP
 
-#include "eigen_type.hpp"
+#include "pandora2d_type.hpp"
 
 /**
  * @brief Create an image for tests
