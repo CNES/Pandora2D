@@ -61,7 +61,17 @@ def subpix():
 
 
 @pytest.fixture()
-def image(img_size, disparity_cfg, valid_pixels, no_data_mask):
+def step():
+    return [1, 1]
+
+
+@pytest.fixture()
+def start_point():
+    return [0, 0]
+
+
+@pytest.fixture()
+def image(img_size, disparity_cfg, valid_pixels, no_data_mask, start_point):
     """Make image"""
     row, col = img_size
     row_disparity, col_disparity = disparity_cfg
@@ -72,7 +82,7 @@ def image(img_size, disparity_cfg, valid_pixels, no_data_mask):
             "im": (["row", "col"], data),
             "msk": (["row", "col"], np.zeros_like(data)),
         },
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        coords={"row": np.arange(start_point[0], data.shape[0]), "col": np.arange(start_point[1], data.shape[1])},
         attrs={
             "no_data_img": -9999,
             "valid_pixels": valid_pixels,
@@ -94,8 +104,8 @@ def window_size():
 
 
 @pytest.fixture()
-def matching_cost_cfg(window_size, subpix):
-    return {"matching_cost_method": "ssd", "window_size": window_size, "subpix": subpix}
+def matching_cost_cfg(window_size, subpix, step):
+    return {"matching_cost_method": "ssd", "window_size": window_size, "subpix": subpix, "step": step}
 
 
 @pytest.fixture()
@@ -108,30 +118,20 @@ def cost_volumes(matching_cost_cfg, image):
 
 
 @pytest.fixture()
-def criteria_dataarray(img_size, subpix):
-    shape = (*img_size, len(np.arange(-1, 3.25, 1 / subpix)), len(np.arange(-5, 3.25, 1 / subpix)))
+def criteria_dataarray(img_size, subpix, step, start_point):
+    """
+    Create a criteria dataarray
+    """
+    row = np.arange(start_point[0], img_size[0], step[0])
+    col = np.arange(start_point[1], img_size[1], step[1])
+    shape = (len(row), len(col), len(np.arange(-1, 3.25, 1 / subpix)), len(np.arange(-5, 3.25, 1 / subpix)))
     return xr.DataArray(
         np.full(shape, Criteria.VALID),
         coords={
-            "row": np.arange(shape[0]),
-            "col": np.arange(shape[1]),
+            "row": row,
+            "col": col,
             "disp_row": np.arange(-1, 3.25, 1 / subpix),
             "disp_col": np.arange(-5, 3.25, 1 / subpix),
-        },
-        dims=["row", "col", "disp_row", "disp_col"],
-    )
-
-
-@pytest.fixture()
-def criteria_dataarray_subpix(img_size):
-    shape = (*img_size, 9, 17)
-    return xr.DataArray(
-        np.full(shape, Criteria.VALID),
-        coords={
-            "row": np.arange(shape[0]),
-            "col": np.arange(shape[1]),
-            "disp_row": np.arange(-1, 3.5, 0.5),
-            "disp_col": np.arange(-5, 3.5, 0.5),
         },
         dims=["row", "col", "disp_row", "disp_col"],
     )
@@ -286,18 +286,102 @@ class TestSetUnprocessedDisparity:
 class TestMaskBorder:
     """Test mask_border method."""
 
-    def test_null_offset(self, criteria_dataarray):
+    def test_null_offset(self, image, criteria_dataarray):
         """offset = 0, no raise P2D_LEFT_BORDER criteria"""
         make_criteria_copy = criteria_dataarray.copy(deep=True)
-        criteria.mask_border(0, criteria_dataarray)
+        criteria.mask_border(image, 0, criteria_dataarray)
 
         # Check criteria_dataarray has not changed
         xr.testing.assert_equal(criteria_dataarray, make_criteria_copy)
         # Check the P2D_LEFT_BORDER criteria does not raise
         assert np.all(criteria_dataarray.data[:, :, :, :] != Criteria.P2D_LEFT_BORDER)
 
-    @pytest.mark.parametrize("offset", [1, 2, 3])
-    def test_variable_offset(self, criteria_dataarray, offset):
+    @pytest.mark.parametrize("img_size", [(5, 6)])
+    @pytest.mark.parametrize(
+        ["offset", "step", "expected"],
+        [
+            pytest.param(
+                1,
+                [1, 1],
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 0, 0, 0, 0, 1],
+                        [1, 0, 0, 0, 0, 1],
+                        [1, 0, 0, 0, 0, 1],
+                        [1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="offset=1 and no step",
+            ),
+            pytest.param(
+                2,
+                [1, 1],
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 0, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="offset=2 and no step",
+            ),
+            pytest.param(
+                3,
+                [1, 1],
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="offset=3 and no step",
+            ),
+            pytest.param(
+                1,
+                [1, 2],
+                np.array(
+                    [
+                        [1, 1, 1],
+                        [1, 0, 0],
+                        [1, 0, 0],
+                        [1, 0, 0],
+                        [1, 1, 1],
+                    ]
+                ),
+                id="offset=1 and step=[1,2]",
+            ),
+            pytest.param(
+                1,
+                [3, 1],
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 0, 0, 0, 0, 1],
+                    ]
+                ),
+                id="offset=1 and step=[3,1]",
+            ),
+            pytest.param(
+                2,
+                [2, 3],
+                np.array(
+                    [
+                        [1, 1],
+                        [1, 0],
+                        [1, 1],
+                    ]
+                ),
+                id="offset=2 and step=[2,3]",
+            ),
+        ],
+    )
+    def test_variable_offset(self, image, criteria_dataarray, offset, expected):
         """
         With mask_border, the P2D_LEFT_BORDER criteria is raised on the border.
 
@@ -325,12 +409,12 @@ class TestMaskBorder:
                                   1 0 0 0 0 0 0 1
                                   1 1 1 1 1 1 1 1
         """
-        criteria.mask_border(offset, criteria_dataarray)
+        criteria.mask_border(image, offset, criteria_dataarray)
 
-        assert np.all(criteria_dataarray.data[:offset, :, :, :] == Criteria.P2D_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[-offset:, :, :, :] == Criteria.P2D_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[:, :offset, :, :] == Criteria.P2D_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[:, -offset:, :, :] == Criteria.P2D_LEFT_BORDER)
+        # P2D_LEFT_BORDER is raised independently of disparity values
+        for i in range(criteria_dataarray.data.shape[2]):
+            for j in range(criteria_dataarray.data.shape[3]):
+                assert np.all(criteria_dataarray.data[:, :, i, j] == expected)
 
 
 class TestMaskDisparityOutsideRightImage:
