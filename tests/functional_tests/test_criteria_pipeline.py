@@ -47,27 +47,27 @@ def ground_truth_criteria_dataarray(left_img_shape):
     ground_truth = np.full((left_img_shape[0], left_img_shape[1], 5, 5), Criteria.VALID)
 
     # Here, window_size=5
-    # For disp=-1, 3 first column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:3, :, 0, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, :3, :, 0] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    # For disp=-1, 3 first column/row are equal to Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:3, :, 0, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:, :3, :, 0] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
-    # For disp=1, 3 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-3:, :, 2, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -3:, :, 2] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    # For disp=1, 3 last column/row are equal to Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[-3:, :, 2, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:, -3:, :, 2] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
-    # For disp=2, 4 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-4:, :, 3, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -4:, :, 3] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    # For disp=2, 4 last column/row are equal to Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[-4:, :, 3, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:, -4:, :, 3] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
-    # For disp=3, 5 last column/row are equal to Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[-5:, :, 4, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-    ground_truth[:, -5:, :, 4] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+    # For disp=3, 5 last column/row are equal to Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[-5:, :, 4, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    ground_truth[:, -5:, :, 4] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
-    # Window_size=5, so the two first and last rows and columns are equal to Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    ground_truth[:2, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    ground_truth[:, :2, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    ground_truth[-2:, :, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
-    ground_truth[:, -2:, :, :] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER
+    # Window_size=5, so the two first and last rows and columns are equal to Criteria.P2D_LEFT_BORDER
+    ground_truth[:2, :, :, :] = Criteria.P2D_LEFT_BORDER
+    ground_truth[:, :2, :, :] = Criteria.P2D_LEFT_BORDER
+    ground_truth[-2:, :, :, :] = Criteria.P2D_LEFT_BORDER
+    ground_truth[:, -2:, :, :] = Criteria.P2D_LEFT_BORDER
 
     return ground_truth
 
@@ -89,7 +89,7 @@ def test_criteria_datarray_created_in_cost_volumes(
 
     dataset_disp_maps, _ = run(pandora2d_machine, img_left, img_right, checked_cfg)
 
-    # Get peak on the edges to add Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE in ground_truth_criteria_dataarray
+    # Get peak on the edges to add Criteria.P2D_PEAK_ON_EDGE in ground_truth_criteria_dataarray
     row_peak_mask = (
         dataset_disp_maps["row_map"].data
         == correct_input_cfg["input"]["row_disparity"]["init"] - correct_input_cfg["input"]["row_disparity"]["range"]
@@ -106,7 +106,7 @@ def test_criteria_datarray_created_in_cost_volumes(
         == correct_input_cfg["input"]["col_disparity"]["init"] + correct_input_cfg["input"]["col_disparity"]["range"]
     )
 
-    ground_truth_criteria_dataarray[row_peak_mask | col_peak_mask] |= Criteria.PANDORA2D_MSK_PIXEL_PEAK_ON_EDGE
+    ground_truth_criteria_dataarray[row_peak_mask | col_peak_mask] |= Criteria.P2D_PEAK_ON_EDGE
 
     # Check that criteria dataarray contains correct criteria
     np.testing.assert_array_equal(pandora2d_machine.cost_volumes["criteria"].data, ground_truth_criteria_dataarray)
@@ -123,14 +123,15 @@ def test_validity_mask_saved(correct_input_cfg, correct_pipeline_without_refinem
 
     validity_mask_path = tmp_path / "disparity_map" / "validity.tif"
 
-    expected_band_names = ("validity_mask", "criteria_1")
+    # band names correspond to criteria names (except for the first, which corresponds to valid points)
+    # and to the global “validity_mask” band
+    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:])
 
     # Check that validity_mask.tif exists
     assert (validity_mask_path).exists()
 
-    # Check that validity_mask.tif contains two bands of type int8
+    # Check that validity_mask.tif contains nine bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 2
-        assert dataset.dtypes[0] == "uint8"
-        assert dataset.dtypes[1] == "uint8"
+        assert dataset.count == 9
+        assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names

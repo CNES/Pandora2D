@@ -115,7 +115,7 @@ def test_refinement_method_subpixel(cv_dataset):
 
     coords = {"row": np.arange(3), "col": np.arange(3)}
 
-    dataset_validity = criteria.get_validity_mask(cost_volumes_test["criteria"])
+    dataset_validity = criteria.get_validity_dataset(cost_volumes_test["criteria"])
 
     dataset = xr.Dataset(data_variables, coords)
 
@@ -160,7 +160,7 @@ def test_refinement_method_pixel(cv_dataset):
 
     coords = {"row": np.arange(3), "col": np.arange(3)}
 
-    dataset_validity = criteria.get_validity_mask(cost_volumes_test["criteria"])
+    dataset_validity = criteria.get_validity_dataset(cost_volumes_test["criteria"])
 
     dataset = xr.Dataset(data_variables, coords)
 
@@ -192,7 +192,7 @@ def test_refinement_correlation_score(cv_dataset):
 
     coords = {"row": np.arange(3), "col": np.arange(3)}
 
-    dataset_validity = criteria.get_validity_mask(cost_volumes_test["criteria"])
+    dataset_validity = criteria.get_validity_dataset(cost_volumes_test["criteria"])
 
     dataset = xr.Dataset(data_variables, coords)
 
