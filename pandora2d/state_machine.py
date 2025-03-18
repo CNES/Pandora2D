@@ -314,6 +314,9 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         )
         self.matching_cost_ = MatchingCost(cfg["pipeline"][input_step])
 
+        # To be removed once the use of a step with an input mask has been corrected.
+        self.matching_cost_.check_step_with_input_mask(cfg)
+
         self.matching_cost_.allocate(self.left_img, self.right_img, cfg, self.margins_disp.get("refinement"))
 
     @mem_time_profile(name="Estimation step")
