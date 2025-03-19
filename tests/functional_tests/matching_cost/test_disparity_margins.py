@@ -75,9 +75,9 @@ class TestDisparityMargins:
         return left, right
 
     @pytest.fixture()
-    def config(self, subpix, refinement_config, matching_cost_method):
+    def config(self, correct_input_for_functional_tests, subpix, refinement_config, matching_cost_method):
         return {
-            # "input": input_config,
+            **correct_input_for_functional_tests,
             "pipeline": {
                 "matching_cost": {
                     "matching_cost_method": matching_cost_method,
@@ -87,7 +87,7 @@ class TestDisparityMargins:
                 },
                 "disparity": {"disparity_method": "wta", "invalid_disparity": -6},
                 "refinement": refinement_config,
-            }
+            },
         }
 
     @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc", "mutual_information"])

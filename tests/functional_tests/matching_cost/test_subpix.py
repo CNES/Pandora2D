@@ -73,15 +73,16 @@ class TestSubpix:
         return left, right
 
     @pytest.fixture()
-    def config(self, subpix):
+    def config(self, correct_input_for_functional_tests, subpix):
         """
         Creates configuration to test subpix efficiency
         """
         return {
+            **correct_input_for_functional_tests,
             "pipeline": {
                 "matching_cost": {"matching_cost_method": "ssd", "window_size": 1, "step": [1, 1], "subpix": subpix},
                 "disparity": {"disparity_method": "wta", "invalid_disparity": -5},
-            }
+            },
         }
 
     @pytest.mark.parametrize(
