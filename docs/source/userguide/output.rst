@@ -19,7 +19,7 @@ file.
     * - *path*
       - path where to save outputs
       - string
-      -
+      - None
       -
       - Yes
     * - *format*

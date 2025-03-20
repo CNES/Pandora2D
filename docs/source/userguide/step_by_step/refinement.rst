@@ -172,12 +172,12 @@ Configuration and parameters
             * - *refinement_method*
               - Refinement method
               - string
-              -
+              - None
               - "optical_flow"
               - Yes
             * - *iterations*
               - Number of iterations
-              - integer
+              - int
               - 4
               - >0
               - No
@@ -227,13 +227,13 @@ Configuration and parameters
                     * - *refinement_method*
                       - Refinement method
                       - string
-                      -
+                      - None
                       - "dichotomy", "dichotomy_python"
                       - Yes
                     * - *iterations*
                       - Number of iterations
-                      - integer
-                      - 
+                      - int
+                      - None
                       - | 1 to 9
                         | *if above, will be bound to 9*
                       - Yes
@@ -242,7 +242,7 @@ Configuration and parameters
                         | used for interpolation
                       - | dict with key:
                         | - "method"
-                      - 
+                      - None
                       - {"method": "bicubic"}
                       - Yes
 
@@ -310,13 +310,13 @@ Configuration and parameters
                     * - *refinement_method*
                       - Refinement method
                       - string
-                      -
+                      - None
                       - "dichotomy", "dichotomy_python"
                       - Yes
                     * - *iterations*
                       - Number of iterations
-                      - integer
-                      - 
+                      - int
+                      - None
                       - | 1 to 9
                         | *if above, will be bound to 9*
                       - Yes
@@ -326,7 +326,7 @@ Configuration and parameters
                       - | dict with keys: 
                         | - "method"
                         | - "size"
-                      -
+                      - None
                       - | {
                         |  "method": "sinc", 
                         |  "size" : 6 to 21, 
