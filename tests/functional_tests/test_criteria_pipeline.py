@@ -135,3 +135,41 @@ def test_validity_mask_saved(correct_input_cfg, correct_pipeline_without_refinem
         assert dataset.count == 9
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names
+
+
+@pytest.mark.parametrize(
+    ["input_cfg", "step"],
+    [
+        pytest.param(
+            "correct_input_with_left_mask",
+            [2, 1],
+            id="Left mask and step=[2,1]",
+        ),
+        pytest.param(
+            "correct_input_with_right_mask",
+            [1, 3],
+            id="Right mask and step=[1,3]",
+        ),
+        pytest.param(
+            "correct_input_with_left_right_mask",
+            [4, 5],
+            id="Left and right masks and step=[4,5]",
+        ),
+    ],
+)
+def test_error_mask_with_step(request, input_cfg, step, correct_pipeline_without_refinement, run_pipeline, tmp_path):
+    """
+    Temporary test: we check that an error is raised when using a step other than [1,1] with an input mask.
+    """
+
+    input_cfg = request.getfixturevalue(input_cfg)
+    correct_pipeline_without_refinement["pipeline"]["matching_cost"]["step"] = step
+
+    configuration = {**input_cfg, **correct_pipeline_without_refinement, **{"output": {"path": str(tmp_path)}}}
+
+    with pytest.raises(ValueError) as exc_info:
+        run_pipeline(configuration)
+    assert (
+        str(exc_info.value)
+        == "The use of an input mask with a step other than [1,1] will be supported in a future version."
+    )

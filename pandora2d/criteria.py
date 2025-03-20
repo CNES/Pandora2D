@@ -172,7 +172,7 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
 
     # Raise criteria P2D_LEFT_BORDER
     # on the border according to offset value, for each disparity
-    mask_border(cv.attrs["offset_row_col"], criteria_dataarray)
+    mask_border(left_image, cv.attrs["offset_row_col"], criteria_dataarray)
 
     return criteria_dataarray
 
@@ -209,26 +209,34 @@ def set_unprocessed_disp(
     )
 
 
-def mask_border(offset: int, criteria_dataarray: xr.DataArray) -> None:
+def mask_border(left_image: xr.Dataset, offset: int, criteria_dataarray: xr.DataArray) -> None:
     """
-    This method raises P2D_LEFT_BORDER criteria on the edges of the criteria_dataarray
+    This method raises P2D_LEFT_BORDER criteria on the edges of the left image
     for each of the disparities.
 
     P2D_LEFT_BORDER criteria is non-cumulative, so this method will be called last.
 
+    :param left_image: left image
+    :type left_image: xr.Dataset
     :param offset: offset
     :type offset: int
     :param criteria_dataarray: 4D xarray.DataArray with all criteria
     :type criteria_dataarray: 4D xarray.DataArray
     """
 
+    left_image_border = xr.full_like(left_image["im"], 0, dtype=np.uint8)
+
     if offset > 0:
 
-        # Raise criteria 0 on border of criteria_dataarray according to offset value
-        criteria_dataarray.data[:offset, :, :, :] = Criteria.P2D_LEFT_BORDER
-        criteria_dataarray.data[-offset:, :, :, :] = Criteria.P2D_LEFT_BORDER
-        criteria_dataarray.data[:, :offset, :, :] = Criteria.P2D_LEFT_BORDER
-        criteria_dataarray.data[:, -offset:, :, :] = Criteria.P2D_LEFT_BORDER
+        left_image_border.data[:offset, :] = 1
+        left_image_border.data[-offset:, :] = 1
+        left_image_border.data[:, :offset] = 1
+        left_image_border.data[:, -offset:] = 1
+
+    mask = left_image_border.sel(row=criteria_dataarray.row, col=criteria_dataarray.col) == 1
+
+    # Raise criteria 0 on border of left_image_border in criteria_dataarray according to offset value
+    criteria_dataarray.data[mask] = Criteria.P2D_LEFT_BORDER
 
 
 def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataArray) -> None:

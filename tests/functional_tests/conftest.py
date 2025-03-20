@@ -61,17 +61,21 @@ def correct_pipeline_with_dichotomy_cpp():
 
 
 @pytest.fixture()
+def row_disparity():
+    return {"init": 0, "range": 2}
+
+
+@pytest.fixture()
+def col_disparity():
+    return {"init": 2, "range": 1}
+
+
+@pytest.fixture()
 def correct_input_for_functional_tests(left_img_path, right_img_path, col_disparity, row_disparity):
     return {
         "input": {
-            "left": {
-                "img": str(left_img_path),
-                "nodata": "NaN",
-            },
-            "right": {
-                "img": str(right_img_path),
-                "nodata": "NaN",
-            },
+            "left": {"img": str(left_img_path), "nodata": "NaN", "mask": None},
+            "right": {"img": str(right_img_path), "nodata": "NaN", "mask": None},
             "col_disparity": col_disparity,
             "row_disparity": row_disparity,
         }
