@@ -79,8 +79,8 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             "prepare": "matching_cost_prepare",
             "before": "matching_cost_run",
         },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "before": "disp_maps_run"},
-        {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "before": "refinement_run"},
+        {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_run"},
+        {"trigger": "refinement", "source": "disparity_map", "dest": "disparity_map", "before": "refinement_run"},
     ]
 
     _transitions_check = [
@@ -92,8 +92,13 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             "dest": "cost_volumes",
             "before": "matching_cost_check_conf",
         },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disp_maps", "before": "disparity_check_conf"},
-        {"trigger": "refinement", "source": "disp_maps", "dest": "disp_maps", "before": "refinement_check_conf"},
+        {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_check_conf"},
+        {
+            "trigger": "refinement",
+            "source": "disparity_map",
+            "dest": "disparity_map",
+            "before": "refinement_check_conf",
+        },
     ]
 
     def __init__(
@@ -121,7 +126,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.margins_disp = GlobalMargins()
 
         # Define available states
-        states_ = ["begin", "assumption", "cost_volumes", "disp_maps"]
+        states_ = ["begin", "assumption", "cost_volumes", "disparity_map"]
 
         # Instance matching_cost
         self.matching_cost_: Union[BaseMatchingCost, None] = None
@@ -359,7 +364,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         )
 
     @mem_time_profile(name="Disparity step")
-    def disp_maps_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def disparity_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Disparity computation and validity mask
 
@@ -371,9 +376,9 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         """
 
         logging.info("Disparity computation...")
-        disparity_run = disparity.Disparity(cfg["pipeline"][input_step])
+        disparity_ = disparity.Disparity(cfg["pipeline"][input_step])
 
-        map_col, map_row, correlation_score = disparity_run.compute_disp_maps(self.cost_volumes)
+        map_col, map_row, correlation_score = disparity_.compute_disp_maps(self.cost_volumes)
 
         dataset_validity = criteria.get_validity_dataset(self.cost_volumes["criteria"])
 
