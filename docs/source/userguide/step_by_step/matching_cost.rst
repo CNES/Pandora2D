@@ -24,8 +24,8 @@ Configuration and parameters
      - Required
    * - matching_cost_method
      - Similarity measure
-     - str
-     -
+     - string
+     - None
      - * "ssd"
        * "sad"
        * "zncc"

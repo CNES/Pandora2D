@@ -23,13 +23,28 @@ the 3D cost_volume and we obtain two disparity maps for row and col.
 Configuration and parameters
 ----------------------------
 
-+---------------------+--------------------------+-----------------+---------------+---------------------+----------+
-| Name                | Description              | Type            | Default value | Available value     | Required |
-+=====================+==========================+=================+===============+=====================+==========+
-| *disparity _method* | Disparity method         | string          |               | "wta"               | Yes      |
-+---------------------+--------------------------+-----------------+---------------+---------------------+----------+
-| *invalid_disparity* | Invalid disparity value  | str, int, float |     NaN       | "NaN", "inf", int   | No       |
-+---------------------+--------------------------+-----------------+---------------+---------------------+----------+
+.. list-table:: Parameters
+    :header-rows: 1
+
+
+    * - Name
+      - Description
+      - Type
+      - Default value
+      - Available value
+      - Required
+    * - *disparity _method*
+      - Disparity method
+      - string
+      - None
+      - "wta"
+      - Yes
+    * - *invalid_disparity*
+      - Invalid disparity value
+      - string, int, float
+      - "NaN"
+      - "NaN", "inf", int
+      - No
 
 **Example**
 

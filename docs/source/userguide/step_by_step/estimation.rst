@@ -42,7 +42,7 @@ Configuration and parameters
     * - *estimation_method*
       - estimation measure
       - string
-      -
+      - None
       - "phase_cross_correlation"
       - Yes
     * - *range_col*
