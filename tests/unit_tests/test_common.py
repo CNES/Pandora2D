@@ -535,9 +535,11 @@ class TestDatasetDispMaps:
             delta_row, delta_col, cvs.coords, correlation_score, dataset_validity, {"invalid_disp": -9999}
         )
 
-        interpolation = refinement.AbstractRefinement({"refinement_method": "interpolation"})  # type: ignore[abstract]
+        dichotomy = refinement.AbstractRefinement(
+            {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2}
+        )  # type: ignore[abstract]
         # compute refined disparity maps
-        delta_x, delta_y, correlation_score = interpolation.refinement_method(cvs, disparity_maps, img_left, img_right)
+        delta_x, delta_y, correlation_score = dichotomy.refinement_method(cvs, disparity_maps, img_left, img_right)
 
         # create dataset with dataset_disp_maps function
         disparity_maps["row_map"].data = delta_y
