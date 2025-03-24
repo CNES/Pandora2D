@@ -36,7 +36,7 @@ It is possible to add a step parameter in the configuration file. This parameter
                 "invalid_disparity": -9999,
             },
             "refinement": {
-                "refinement_method": "interpolation",
+                "refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations" : 2},
             },
         },
         "output": {
