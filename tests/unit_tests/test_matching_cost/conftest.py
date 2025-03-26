@@ -1,5 +1,5 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #

@@ -1,7 +1,7 @@
 # pylint: skip-file
 #
 # coding: utf8
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.abspath("."))
 # -- Project information -----------------------------------------------------
 
 project = "Pandora2D"
-copyright = "2024, CNES"
+copyright = "2025, CNES"
 author = "CNES"
 version = "0.3.0"
 # The full version, including alpha/beta/rc tags
