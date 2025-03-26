@@ -61,7 +61,7 @@ class CardinalSine(AbstractFilter):
         return self.cpp_instance.size
 
     @property
-    def margins(self) -> Margins:
+    def margins(self):
         """Return filter's Margins."""
         cpp_margins = self.cpp_instance.get_margins()
 

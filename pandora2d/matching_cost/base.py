@@ -255,7 +255,7 @@ class BaseMatchingCost(ABC):
 
     @property
     @abstractmethod
-    def margins(self) -> Margins: ...
+    def margins(self): ...
 
     @abstractmethod
     def allocate(

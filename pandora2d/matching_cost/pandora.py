@@ -55,7 +55,9 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         """
         super().__init__(cfg)
         # Check the matching_cost parameters specific to pandora
-        self.pandora_matching_cost_ = matching_cost.AbstractMatchingCost(**self.get_config_for_pandora(cfg))
+        self.pandora_matching_cost_ = matching_cost.AbstractMatchingCost(  # type: ignore[abstract]
+            **self.get_config_for_pandora(cfg)
+        )
         self.grid: Union[xr.Dataset, None] = None
 
     @property
