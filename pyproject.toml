@@ -43,7 +43,7 @@ dependencies = [
     "psutil",
     "rasterio",
     "scikit-image",
-    "scipy<1.14",
+    "scipy",
     "transitions",
     "typing_extensions",
     "xarray",

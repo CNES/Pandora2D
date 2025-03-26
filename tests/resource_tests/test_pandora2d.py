@@ -107,15 +107,6 @@ class TestRefinement:
     """Test pipelines which include a refinement step."""
 
     @pytest.fixture()
-    def interpolation_pipeline(self, matching_cost_method, subpix):
-        """Pipeline for an interpolation refinement."""
-        return {
-            "matching_cost": {"matching_cost_method": matching_cost_method, "subpix": subpix},
-            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-            "refinement": {"refinement_method": "interpolation"},
-        }
-
-    @pytest.fixture()
     def dichotomy_pipeline(self, matching_cost_method, subpix, iterations, dicho_method, filter_method):
         """Pipeline for a dichotomy refinement."""
         return {
@@ -139,27 +130,6 @@ class TestRefinement:
                 "iterations": iterations,
             },
         }
-
-    def test_interpolation(self, run_pipeline, correct_input_cfg, interpolation_pipeline, tmp_path):
-        """Test interpolation."""
-        configuration = {
-            **correct_input_cfg,
-            "pipeline": {**interpolation_pipeline},
-            "output": {"path": str(tmp_path)},
-        }
-        run_pipeline(configuration)
-
-    def test_interpolation_with_estimation(self, run_pipeline, correct_input_cfg, interpolation_pipeline, tmp_path):
-        """Test interpolation with estimation."""
-        configuration = {
-            **correct_input_cfg,
-            "pipeline": {
-                "estimation": {"estimation_method": "phase_cross_correlation"},
-                **interpolation_pipeline,
-            },
-            "output": {"path": str(tmp_path)},
-        }
-        run_pipeline(configuration)
 
     @pytest.mark.parametrize("iterations", iteration_list)
     @pytest.mark.parametrize(

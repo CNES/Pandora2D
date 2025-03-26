@@ -114,7 +114,7 @@ def correct_pipeline_fixture():
         "pipeline": {
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-            "refinement": {"refinement_method": "interpolation"},
+            "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
     }
 
@@ -124,7 +124,7 @@ def false_pipeline_mc():
     return {
         "pipeline": {
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-            "refinement": {"refinement_method": "interpolation"},
+            "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
     }
 
@@ -134,7 +134,7 @@ def false_pipeline_disp():
     return {
         "pipeline": {
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
-            "refinement": {"refinement_method": "interpolation"},
+            "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
     }
 

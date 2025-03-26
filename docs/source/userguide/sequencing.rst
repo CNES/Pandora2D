@@ -35,7 +35,7 @@ SSD measurement with refinement step disparity maps
 ###################################################
 
 Configuration to produce a disparity map, computed by the SSD method, and refined by the
-interpolation method.
+optical flow method.
 
 .. code:: json
     :name: Sequencing example

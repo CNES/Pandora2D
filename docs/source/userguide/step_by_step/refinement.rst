@@ -4,18 +4,6 @@ Refinement of the disparity maps
 ================================
 The purpose of this step is to refine the disparity identified in the previous step.
 
-Interpolation method
---------------------
-
-It consists on 3 different steps:
-
-    * First, the cost_volumes is reshaped to obtain the 2D (disp_row, disp_col) costs map for each pixel, so we will obtain (row * col) 2D cost maps.
-    * The cost map of each pixel is interpolated using scipy to obtain a continuous function.
-    * Then, the interpolated functions are minimized using scipy to obtain the refined disparities.
-
-.. warning::
-    When using the interpolation method, row and column disparity ranges must have a size greater than or equal to 5. 
-
 Optical_flow method
 -------------------
 .. warning::
@@ -113,48 +101,6 @@ Configuration and parameters
 ----------------------------
 
 .. tabs::
-
-    .. tab:: Interpolation
-
-        Parameters : 
-
-        .. list-table:: 
-            :header-rows: 1
-
-            * - Name
-              - Description
-              - Type
-              - Available value
-              - Required
-            * - *refinement_method*
-              - Refinement method
-              - string
-              - "interpolation"
-              - Yes
-
-        Configuration example with interpolation : 
-
-        .. code:: json
-
-            {
-                "input" :
-                {
-                    // input content
-                },
-                "pipeline" :
-                {
-                    // ...
-                    "refinement":
-                    {
-                      "refinement_method": "interpolation"
-                    },
-                    // ...
-                },
-               "output":
-               {
-                  // ...
-               }
-            }
 
     .. tab:: Optical-flow
 

@@ -113,16 +113,6 @@ class TestDisparityMargins:
             pytest.param(
                 1,
                 {
-                    "refinement_method": "interpolation",
-                },
-                (10, 10, 11, 9),
-                [-2, -1, 0, 1, 2, 3, 4, 5, 6],
-                [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-                id="Subpix=1 and refinement_method=interpolation",
-            ),
-            pytest.param(
-                1,
-                {
                     "refinement_method": "optical_flow",
                 },
                 (10, 10, 7, 5),
@@ -149,16 +139,6 @@ class TestDisparityMargins:
             pytest.param(
                 2,
                 {
-                    "refinement_method": "interpolation",
-                },
-                (10, 10, 21, 17),
-                [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6],
-                [-5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
-                id="Subpix=2 and refinement_method=interpolation",
-            ),
-            pytest.param(
-                2,
-                {
                     "refinement_method": "optical_flow",
                 },
                 (10, 10, 13, 9),
@@ -181,16 +161,6 @@ class TestDisparityMargins:
                 np.arange(0, 5.25, 0.25),
                 np.arange(-3, 4.25, 0.25),
                 id="Subpix=4 and refinement_method=dichotomy_cpp",
-            ),
-            pytest.param(
-                4,
-                {
-                    "refinement_method": "interpolation",
-                },
-                (10, 10, 41, 33),
-                np.arange(-2, 6.25, 0.25),
-                np.arange(-5, 5.25, 0.25),
-                id="Subpix=4 and refinement_method=interpolation",
             ),
             pytest.param(
                 4,

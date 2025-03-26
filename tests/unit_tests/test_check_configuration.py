@@ -244,7 +244,7 @@ class TestCheckPipelineSection:
             "estimation": {"estimated_shifts": [-0.5, 1.3], "error": [1.0], "phase_diff": [1.0]},
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-            "refinement": {"refinement_method": "interpolation"},
+            "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
         configuration = {"pipeline": {step: steps[step] for step in step_order}}
         with pytest.raises(transitions.core.MachineError):
@@ -278,23 +278,6 @@ class TestCheckPipelineSection:
         }
 
         check_configuration.check_conf(cfg, pandora2d_machine)
-
-
-class TestCheckConf:  # pylint: disable=too-few-public-methods
-    """Test check_conf method."""
-
-    def test_passes_with_good_disparity_range_and_interpolation_step(
-        self, correct_input_cfg, correct_pipeline, pandora2d_machine
-    ):
-        """
-        Description : Test col_disparity & row_disparity range (=5) with interpolation step in user configuration
-        Data :
-        - Left image : cones/monoband/left.png
-        - Right image : cones/monoband/right.png
-        Requirement : EX_ROI_05
-        """
-        user_cfg = {**correct_input_cfg, **correct_pipeline, "output": {"path": "there"}}
-        check_configuration.check_conf(user_cfg, pandora2d_machine)
 
 
 class TestCheckOutputSection:

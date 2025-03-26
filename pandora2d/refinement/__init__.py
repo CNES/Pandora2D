@@ -22,5 +22,5 @@
 Init file for refinement module
 """
 
-from . import interpolation, optical_flow, dichotomy, dichotomy_cpp
+from . import optical_flow, dichotomy, dichotomy_cpp
 from .refinement import AbstractRefinement
