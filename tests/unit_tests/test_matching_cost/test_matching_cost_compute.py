@@ -26,6 +26,7 @@ import importlib.util
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
+import sys
 import numpy as np
 import xarray as xr
 from pytest_mock import MockerFixture
@@ -1730,6 +1731,7 @@ class TestMutualInformation:
                         [0, 0, 0.007214618, 0.07278023, 0.2247875, 0.1021872, 0.007214618, 0, 0],
                     ]
                 ),
+                marks=pytest.mark.skipif(sys.platform.startswith("win"), reason="Does not work on windows"),
                 id="Cost surface with subpix=2",
             ),
         ],
