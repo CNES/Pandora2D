@@ -30,6 +30,7 @@ Test common
 import json
 from pathlib import Path
 
+import os
 import numpy as np
 import pytest
 import xarray as xr
@@ -157,7 +158,7 @@ def test_string_to_path(relative_to, path_string, expected):
     """Check string_to_path behavior."""
     result = common.string_to_path(path_string, relative_to)
 
-    assert result == expected
+    assert os.path.abspath(result) == os.path.abspath(expected)
 
 
 @pytest.mark.parametrize(
@@ -887,23 +888,31 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
     expected = {
         "input": {
             "left": {
-                "img": "/home/dir/data/left.tif",
+                "img": os.path.abspath("/home/dir/data/left.tif"),
             },
             "right": {
-                "img": "/home/dir/right.tif",
+                "img": os.path.abspath("/home/dir/right.tif"),
             },
             "col_disparity": {
-                "init": expected_col_disparity,
+                "init": (
+                    os.path.abspath(expected_col_disparity)
+                    if isinstance(expected_col_disparity, str)
+                    else expected_col_disparity
+                ),
                 "range": 3,
             },
             "row_disparity": {
-                "init": expected_row_disparity,
+                "init": (
+                    os.path.abspath(expected_row_disparity)
+                    if isinstance(expected_row_disparity, str)
+                    else expected_row_disparity
+                ),
                 "range": 4,
             },
         },
         "pipeline": {},
         "output": {
-            "path": "/home/out/example",
+            "path": os.path.abspath("/home/out/example"),
         },
     }
 
