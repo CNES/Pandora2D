@@ -52,6 +52,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
       - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
