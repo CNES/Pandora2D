@@ -30,7 +30,6 @@ Test common
 import json
 from pathlib import Path
 
-import os
 import numpy as np
 import pytest
 import xarray as xr
@@ -158,7 +157,7 @@ def test_string_to_path(relative_to, path_string, expected):
     """Check string_to_path behavior."""
     result = common.string_to_path(path_string, relative_to)
 
-    assert os.path.abspath(result) == os.path.abspath(expected)
+    assert Path(result).resolve() == Path(expected).resolve()
 
 
 @pytest.mark.parametrize(
@@ -888,14 +887,14 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
     expected = {
         "input": {
             "left": {
-                "img": os.path.abspath("/home/dir/data/left.tif"),
+                "img": str(Path("/home/dir/data/left.tif").resolve()),
             },
             "right": {
-                "img": os.path.abspath("/home/dir/right.tif"),
+                "img": str(Path("/home/dir/right.tif").resolve()),
             },
             "col_disparity": {
                 "init": (
-                    os.path.abspath(expected_col_disparity)
+                    str(Path(expected_col_disparity).resolve())
                     if isinstance(expected_col_disparity, str)
                     else expected_col_disparity
                 ),
@@ -903,7 +902,7 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
             },
             "row_disparity": {
                 "init": (
-                    os.path.abspath(expected_row_disparity)
+                    str(Path(expected_row_disparity).resolve())
                     if isinstance(expected_row_disparity, str)
                     else expected_row_disparity
                 ),
@@ -912,7 +911,7 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
         },
         "pipeline": {},
         "output": {
-            "path": os.path.abspath("/home/out/example"),
+            "path": str(Path("/home/out/example").resolve()),
         },
     }
 
