@@ -27,8 +27,8 @@ This module contains functions associated to bin (width, number).
 #include "operation.hpp"
 #include "pandora2d_type.hpp"
 
-constexpr uint NB_BINS_MAX = 100;       ///< Limit of number bins for histogram
-constexpr double SCOTT_FACTOR = 3.491;  ///< factor for scott formula
+constexpr unsigned int NB_BINS_MAX = 100;  ///< Limit of number bins for histogram
+constexpr double SCOTT_FACTOR = 3.491;     ///< factor for scott formula
 
 /**
  * @brief All methods to compute the bin width

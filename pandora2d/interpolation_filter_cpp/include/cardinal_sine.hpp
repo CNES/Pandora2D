@@ -25,6 +25,9 @@ cpp.
 #ifndef CARDINALSINEFILTER_HPP
 #define CARDINALSINEFILTER_HPP
 
+#define _USE_MATH_DEFINES  // to use cmath and get M_PI
+#include <cmath>
+
 #include "interpolation_filter.hpp"
 
 /**

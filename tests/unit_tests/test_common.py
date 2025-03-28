@@ -157,7 +157,7 @@ def test_string_to_path(relative_to, path_string, expected):
     """Check string_to_path behavior."""
     result = common.string_to_path(path_string, relative_to)
 
-    assert result == expected
+    assert Path(result).resolve() == Path(expected).resolve()
 
 
 @pytest.mark.parametrize(
@@ -887,23 +887,31 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
     expected = {
         "input": {
             "left": {
-                "img": "/home/dir/data/left.tif",
+                "img": str(Path("/home/dir/data/left.tif").resolve()),
             },
             "right": {
-                "img": "/home/dir/right.tif",
+                "img": str(Path("/home/dir/right.tif").resolve()),
             },
             "col_disparity": {
-                "init": expected_col_disparity,
+                "init": (
+                    str(Path(expected_col_disparity).resolve())
+                    if isinstance(expected_col_disparity, str)
+                    else expected_col_disparity
+                ),
                 "range": 3,
             },
             "row_disparity": {
-                "init": expected_row_disparity,
+                "init": (
+                    str(Path(expected_row_disparity).resolve())
+                    if isinstance(expected_row_disparity, str)
+                    else expected_row_disparity
+                ),
                 "range": 4,
             },
         },
         "pipeline": {},
         "output": {
-            "path": "/home/out/example",
+            "path": str(Path("/home/out/example").resolve()),
         },
     }
 
