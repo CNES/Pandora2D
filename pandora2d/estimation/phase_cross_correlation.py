@@ -28,7 +28,7 @@ from typing import Dict, Tuple
 import numpy as np
 import xarray as xr
 from json_checker import And, Checker
-from skimage.registration import phase_cross_correlation
+from skimage.registration import phase_cross_correlation  # pylint: disable=no-name-in-module
 
 from . import estimation
 

@@ -59,7 +59,7 @@ dev = [
     "mypy",           # static type checker
     "pandas-stubs",
     "pre-commit",
-    "pylint>=2.8.2",  # General linter with more rules
+    "pylint>=3.3.6",  # General linter with more rules
     "setuptools_scm", # version from git tag
     "types-psutil",
 ]
