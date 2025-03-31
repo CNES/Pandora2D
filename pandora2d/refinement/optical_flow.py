@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #

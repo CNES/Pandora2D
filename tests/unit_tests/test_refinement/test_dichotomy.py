@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -19,6 +19,11 @@
 Test the refinement.dichotomy module.
 """
 
+# Make pylint happy with fixtures:
+# pylint: disable=redefined-outer-name
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-arguments
+
 import logging
 import copy
 
@@ -31,207 +36,22 @@ import xarray as xr
 from pandora.margins import Margins
 from pytest_mock import MockerFixture
 
-from pandora2d.matching_cost import MatchingCost
 from pandora2d import refinement
-from pandora2d.interpolation_filter.bicubic import Bicubic
+from pandora2d.interpolation_filter.bicubic import BicubicPython
+from pandora2d.interpolation_filter.bicubic_cpp import Bicubic
 
 
-# Make pylint happy with fixtures:
-# pylint: disable=redefined-outer-name
-# pylint: disable=too-many-lines
-
-
-@pytest.fixture()
-def rows():
-    return np.arange(2)
-
-
-@pytest.fixture()
-def cols():
-    return np.arange(3)
-
-
-@pytest.fixture()
-def min_disparity_row():
-    return 2
-
-
-@pytest.fixture()
-def max_disparity_row():
-    return 7
-
-
-@pytest.fixture()
-def min_disparity_col():
-    return -2
-
-
-@pytest.fixture()
-def max_disparity_col():
-    return 3
-
-
-@pytest.fixture()
-def type_measure():
-    return "max"
-
-
-@pytest.fixture()
-def subpixel():
-    return 1
-
-
-# Once the criteria for identifying extremas at the edge of disparity ranges has been implemented,
-# this fixture could possibly be removed.
-@pytest.fixture()
-def left_img(rows, cols, min_disparity_row, max_disparity_row, min_disparity_col, max_disparity_col):
+def test_factory(dichotomy_python_instance, dichotomy_cpp_instance):
     """
-    Creates a left image dataset
-    """
-
-    img = xr.Dataset(
-        {"im": (["row", "col"], np.full((rows.size, cols.size), 0))},
-        coords={"row": rows, "col": cols},
-    )
-
-    d_min_col = np.full((rows.size, cols.size), min_disparity_col)
-    d_max_col = np.full((rows.size, cols.size), max_disparity_col)
-    d_min_row = np.full((rows.size, cols.size), min_disparity_row)
-    d_max_row = np.full((rows.size, cols.size), max_disparity_row)
-
-    # Once the variable disparity grids have been introduced into pandora2d,
-    # it will be possible to call a method such as add_disparity_grid
-    # to complete img with uniform or non-uniform disparity grids.
-
-    # Here, it is completed by hand because the disparity range is even.
-    img["col_disparity"] = xr.DataArray(
-        np.array([d_min_col, d_max_col]),
-        dims=["band_disp", "row", "col"],
-        coords={"band_disp": ["min", "max"]},
-    )
-
-    img["row_disparity"] = xr.DataArray(
-        np.array([d_min_row, d_max_row]),
-        dims=["band_disp", "row", "col"],
-        coords={"band_disp": ["min", "max"]},
-    )
-
-    img.attrs.update(
-        {
-            "no_data_img": -9999,
-            "valid_pixels": 0,
-            "no_data_mask": 1,
-            "crs": None,
-            "row_disparity_source": [np.min(d_min_row), np.max(d_max_row)],
-            "col_disparity_source": [np.min(d_min_col), np.max(d_max_col)],
-        }
-    )
-
-    return img
-
-
-@pytest.fixture()
-def zeros_cost_volumes(
-    rows,
-    cols,
-    min_disparity_row,
-    max_disparity_row,
-    min_disparity_col,
-    max_disparity_col,
-    type_measure,
-    subpixel,
-):
-    """Create a cost_volumes full of zeros."""
-    number_of_disparity_col = int((max_disparity_col - min_disparity_col) * subpixel + 1)
-    number_of_disparity_row = int((max_disparity_row - min_disparity_row) * subpixel + 1)
-
-    data = np.zeros((rows.size, cols.size, number_of_disparity_col, number_of_disparity_row))
-    attrs = {
-        "col_disparity_source": [min_disparity_col, max_disparity_col],
-        "row_disparity_source": [min_disparity_row, max_disparity_row],
-        "col_to_compute": 1,
-        "sampling_interval": 1,
-        "type_measure": type_measure,
-        "step": [1, 1],
-        "subpixel": subpixel,
-    }
-
-    return MatchingCost.allocate_cost_volumes(
-        attrs,
-        rows,
-        cols,
-        np.linspace(min_disparity_col, max_disparity_col, number_of_disparity_col),
-        np.linspace(min_disparity_row, max_disparity_row, number_of_disparity_row),
-        data,
-    )
-
-
-@pytest.fixture()
-def cost_volumes(zeros_cost_volumes):
-    """Pandora2d cost volumes fake data."""
-    zeros_cost_volumes["cost_volumes"].data[:] = np.arange(zeros_cost_volumes["cost_volumes"].data.size).reshape(
-        zeros_cost_volumes["cost_volumes"].data.shape
-    )
-    return zeros_cost_volumes
-
-
-@pytest.fixture()
-def invalid_disparity():
-    return np.nan
-
-
-@pytest.fixture()
-def disp_map(invalid_disparity, rows, cols):
-    """Fake disparity maps with alternating values."""
-    row = np.full(rows.size * cols.size, 4.0)
-    row[::2] = 5
-    col = np.full(rows.size * cols.size, 0.0)
-    col[::2] = 1
-    return xr.Dataset(
-        {
-            "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
-            "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
-        },
-        coords={
-            "row": rows,
-            "col": cols,
-        },
-        attrs={"invalid_disp": invalid_disparity},
-    )
-
-
-@pytest.fixture()
-def iterations():
-    return 2
-
-
-@pytest.fixture()
-def filter_name():
-    return "bicubic"
-
-
-@pytest.fixture()
-def config(iterations, filter_name):
-    return {
-        "refinement_method": "dichotomy",
-        "iterations": iterations,
-        "filter": {"method": filter_name},
-    }
-
-
-@pytest.fixture()
-def dichotomy_instance(config):
-    return refinement.dichotomy.Dichotomy(config)
-
-
-def test_factory(dichotomy_instance):
-    """
-    Description : With `refinement_method` equals to `dichotomy`, we should get a Dichotomy object.
+    Description : With `refinement_method` equals to `dichotomy`, we should get a DichotomyPython object.
     Data :
     Requirement : EX_REF_DICH_00
     """
-    assert isinstance(dichotomy_instance, refinement.dichotomy.Dichotomy)
-    assert isinstance(dichotomy_instance, refinement.AbstractRefinement)
+    assert isinstance(dichotomy_python_instance, refinement.dichotomy.DichotomyPython)
+    assert isinstance(dichotomy_python_instance, refinement.AbstractRefinement)
+
+    assert isinstance(dichotomy_cpp_instance, refinement.dichotomy_cpp.Dichotomy)
+    assert isinstance(dichotomy_cpp_instance, refinement.AbstractRefinement)
 
 
 class TestCheckConf:
@@ -240,29 +60,54 @@ class TestCheckConf:
     Requirement : EX_CONF_08, EX_REF_01, EX_REF_DICH_01
     """
 
-    def test_method_field(self, config):
+    @pytest.mark.parametrize(
+        ["wrong_refinement_method_name", "dichotomy_class"],
+        [
+            pytest.param("invalid_name", refinement.dichotomy.DichotomyPython),
+            pytest.param("invalid_name", refinement.dichotomy_cpp.Dichotomy),
+        ],
+    )
+    def test_method_field(self, config_dichotomy, wrong_refinement_method_name, dichotomy_class):
         """An exception should be raised if `refinement_method` is not `dichotomy`."""
-        config["refinement_method"] = "invalid_method"
+
+        config_dichotomy["refinement_method"] = wrong_refinement_method_name
 
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            refinement.dichotomy.Dichotomy(config)
-        assert "invalid_method" in err.value.args[0]
+            dichotomy_class(config_dichotomy)
+        assert "invalid_name" in err.value.args[0]
 
     @pytest.mark.parametrize("iterations", [0])
-    def test_iterations_below_minimum(self, config):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
+    def test_iterations_below_minimum(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
         """An exception should be raised."""
+        config_dichotomy["refinement_method"] = dichotomy_class_str
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            refinement.dichotomy.Dichotomy(config)
+            dichotomy_class(config_dichotomy)
         assert "Not valid data" in err.value.args[0]
         assert "iterations" in err.value.args[0]
 
     @pytest.mark.parametrize("iterations", [10])
-    def test_iterations_above_maximum(self, config, caplog):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
+    def test_iterations_above_maximum(self, config_dichotomy, caplog, dichotomy_class, dichotomy_class_str):
         """Test that when user set an iteration value above defined maximum,
         we replace it by this maximum and log a warning.
         """
-        # caplog does not capture logs from fixture, so we can not use dichotomy_instance fixture
-        dichotomy_instance = refinement.dichotomy.Dichotomy(config)
+
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        # caplog does not capture logs from fixture, so we can not use dichotomy_python fixture
+        dichotomy_instance = dichotomy_class(config_dichotomy)
 
         assert dichotomy_instance.cfg["iterations"] == 9
         assert (
@@ -271,32 +116,25 @@ class TestCheckConf:
         )
 
     @pytest.mark.parametrize("iterations", [1, 9])
-    def test_iterations_in_allowed_range(self, iterations, dichotomy_instance):
+    @pytest.mark.parametrize(
+        "dichotomy_instance_name",
+        ["dichotomy_python_instance", "dichotomy_cpp_instance"],
+    )
+    def test_iterations_in_allowed_range(self, request, iterations, dichotomy_instance_name):
         """It should not fail."""
+        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
         assert dichotomy_instance.cfg["iterations"] == iterations
 
     @pytest.mark.parametrize(
-        ["config"],
+        ["dichotomy_instance_name", "filter_name"],
         [
-            pytest.param(
-                {
-                    "refinement_method": "dichotomy",
-                    "iterations": 1,
-                    "filter": {"method": "bicubic"},
-                },
-                id="bicubic",
-            ),
-            pytest.param(
-                {
-                    "refinement_method": "dichotomy",
-                    "iterations": 1,
-                    "filter": {"method": "sinc"},
-                },
-                id="sinc",
-            ),
+            ("dichotomy_python_instance", "bicubic"),
+            ("dichotomy_python_instance", "sinc_python"),
+            ("dichotomy_cpp_instance", "bicubic"),
+            ("dichotomy_cpp_instance", "sinc"),
         ],
     )
-    def test_valid_filter_names(self, config, dichotomy_instance):
+    def test_valid_filter_names(self, request, config_dichotomy, dichotomy_instance_name):
         """
         Description : Test accepted filter names.
         Data :
@@ -304,53 +142,88 @@ class TestCheckConf:
                * EX_REF_BCO_00
                * EX_REF_SINC_00
         """
-
-        assert dichotomy_instance.cfg["filter"] == config["filter"]
+        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+        assert dichotomy_instance.cfg["filter"] == config_dichotomy["filter"]
 
     @pytest.mark.parametrize(
-        ["config"],
+        ["config_dict", "dichotomy_class"],
         [
+            pytest.param(
+                {
+                    "refinement_method": "dichotomy_python",
+                    "iterations": 1,
+                    "filter": {"method": "sinc_python", "size": 42},
+                },
+                refinement.dichotomy.DichotomyPython,
+                id="sinc_python",
+            ),
             pytest.param(
                 {
                     "refinement_method": "dichotomy",
                     "iterations": 1,
                     "filter": {"method": "sinc", "size": 42},
                 },
+                refinement.dichotomy_cpp.Dichotomy,
                 id="sinc",
             ),
         ],
     )
-    def test_fails_with_bad_filter_configuration(self, config):
+    def test_fails_with_bad_filter_configuration(self, config_dict, dichotomy_class):
         """Test accepted filter names."""
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            refinement.dichotomy.Dichotomy(config)
+            dichotomy_class(config_dict)
         assert "size" in err.value.args[0]
 
     @pytest.mark.parametrize("filter_name", ["invalid_name"])
-    def test_faild_with_invalid_filter_name(self, config):
+    @pytest.mark.parametrize(
+        ["dichotomy_class", "dichotomy_class_str"],
+        [
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
+    def test_faild_with_invalid_filter_name(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
+        """Should raise an error when filter has invalid name."""
+        config_dichotomy["refinement_method"] = dichotomy_class_str
         with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
-            refinement.dichotomy.Dichotomy(config)
+            dichotomy_class(config_dichotomy)
         assert "filter" in err.value.args[0]
 
     @pytest.mark.parametrize("missing", ["refinement_method", "iterations", "filter"])
-    def test_fails_on_missing_keys(self, config, missing):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
+    def test_fails_on_missing_keys(self, config_dichotomy, missing, dichotomy_class, dichotomy_class_str):
         """
         Description : Should raise an error when a mandatory key is missing.
         Data :
         Requirement : EX_CONF_08
         """
-        del config[missing]
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        del config_dichotomy[missing]
 
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError) as err:
-            refinement.dichotomy.Dichotomy(config)
+            dichotomy_class(config_dichotomy)
         assert f"Missing keys in current response: {missing}" in err.value.args[0]
 
-    def test_fails_on_unexpected_key(self, config):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
+    def test_fails_on_unexpected_key(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
         """Should raise an error when an unexpected key is given."""
-        config["unexpected_key"] = "unexpected_value"
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        config_dichotomy["unexpected_key"] = "unexpected_value"
 
         with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError) as err:
-            refinement.dichotomy.Dichotomy(config)
+            dichotomy_class(config_dichotomy)
         assert "Missing keys in expected schema: unexpected_key" in err.value.args[0]
 
 
@@ -393,14 +266,33 @@ class TestRefinementMethod:
 
     @pytest.mark.parametrize("subpixel", [1, 2])
     @pytest.mark.parametrize(["iterations", "precision"], [[1, 0.5], [2, 0.25], [3, 0.125]])
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
     def test_precision_is_logged(
-        self, cost_volumes, disp_map, dichotomy_instance, precision, left_img, mocker: MockerFixture, caplog
+        self,
+        cost_volumes,
+        disp_map,
+        dichotomy_class,
+        dichotomy_class_str,
+        config_dichotomy,
+        precision,
+        left_img,
+        mocker: MockerFixture,
+        caplog,
     ):
         """
         Description : Precision should be logged.
         Data :
         Requirement : EX_REF_DICH_01
         """
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        # caplog does not capture logs from fixture, so we can not use dichotomy_python fixture
+        dichotomy_instance = dichotomy_class(config_dichotomy)
         with caplog.at_level(logging.INFO):
             dichotomy_instance.refinement_method(cost_volumes, disp_map, left_img, img_right=mocker.ANY)
         assert ("root", logging.INFO, f"Dichotomy precision reached: {precision}") in caplog.record_tuples
@@ -413,7 +305,7 @@ class TestRefinementMethod:
         ],
     )
     def test_which_cost_selection_method_is_used(
-        self, dichotomy_instance, cost_volumes, disp_map, left_img, type_measure, expected, mocker: MockerFixture
+        self, dichotomy_python_instance, cost_volumes, disp_map, left_img, type_measure, expected, mocker: MockerFixture
     ):
         """Test cost_volume's type_measure attrs determines which cost_selection_method is used."""
         cost_volumes.attrs["type_measure"] = type_measure
@@ -423,7 +315,7 @@ class TestRefinementMethod:
             return_value=(refinement.dichotomy.Point(0, 0), 0, 0, 0),
         )
 
-        dichotomy_instance.refinement_method(cost_volumes, disp_map, left_img, img_right=mocker.ANY)
+        dichotomy_python_instance.refinement_method(cost_volumes, disp_map, left_img, img_right=mocker.ANY)
 
         mocked_search_new_best_point.assert_called_with(
             cost_surface=mocker.ANY,
@@ -435,9 +327,27 @@ class TestRefinementMethod:
             cost_selection_method=expected,
         )
 
-    def test_result_of_one_iteration(self, dichotomy_instance, cost_volumes, disp_map, left_img, mocker: MockerFixture):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
+    def test_result_of_one_iteration(
+        self,
+        dichotomy_class,
+        dichotomy_class_str,
+        config_dichotomy,
+        cost_volumes,
+        disp_map,
+        left_img,
+        mocker: MockerFixture,
+    ):
         """Test result of refinement method is as expected."""
 
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        dichotomy_instance = dichotomy_class(config_dichotomy)
         copy_disp_map = copy.deepcopy(disp_map)
 
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
@@ -449,12 +359,28 @@ class TestRefinementMethod:
         assert result_disp_row[1, 0] == disp_map["row_map"][1, 0]
         assert result_disp_col[1, 0] == disp_map["col_map"][1, 0] - 0.5
 
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
     @pytest.mark.parametrize("iterations", [2])
     def test_result_of_two_iterations(
-        self, dichotomy_instance, cost_volumes, left_img, disp_map, mocker: MockerFixture
+        self,
+        dichotomy_class,
+        dichotomy_class_str,
+        config_dichotomy,
+        cost_volumes,
+        left_img,
+        disp_map,
+        mocker: MockerFixture,
     ):
         """Test result of refinement method is as expected."""
 
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        dichotomy_instance = dichotomy_class(config_dichotomy)
         copy_disp_map = copy.deepcopy(disp_map)
 
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
@@ -467,10 +393,28 @@ class TestRefinementMethod:
         assert result_disp_row[1, 0] == disp_map["row_map"][1, 0]
         assert result_disp_col[1, 0] == disp_map["col_map"][1, 0] - 0.25
 
-    def test_with_nans_in_disp_map(self, dichotomy_instance, cost_volumes, disp_map, left_img, mocker: MockerFixture):
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
+    def test_with_nans_in_disp_map(
+        self,
+        dichotomy_class,
+        dichotomy_class_str,
+        config_dichotomy,
+        cost_volumes,
+        disp_map,
+        left_img,
+        mocker: MockerFixture,
+    ):
         """Test that even with NaNs in disparity maps we can extract values from cost_volumes."""
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        dichotomy_instance = dichotomy_class(config_dichotomy)
         # Convert disp_map to float so that it can store NaNs:
-        disp_map = disp_map.astype(np.float32)
+        disp_map = disp_map.astype(cost_volumes["cost_volumes"].data.dtype)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map[{"row": 1, "col": 0}] = np.nan
 
@@ -486,10 +430,27 @@ class TestRefinementMethod:
         assert np.isnan(result_disp_col[1, 0])
 
     @pytest.mark.parametrize("invalid_disparity", [-9999])
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
     def test_with_invalid_values_in_disp_map(
-        self, dichotomy_instance, cost_volumes, disp_map, left_img, invalid_disparity, mocker: MockerFixture
+        self,
+        dichotomy_class,
+        dichotomy_class_str,
+        config_dichotomy,
+        cost_volumes,
+        disp_map,
+        left_img,
+        invalid_disparity,
+        mocker: MockerFixture,
     ):
         """Test that even with invalid values in disparity maps we can extract other values from cost_volumes."""
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        dichotomy_instance = dichotomy_class(config_dichotomy)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 1, "col": 0}] = invalid_disparity
         disp_map["col_map"][{"row": 0, "col": 1}] = invalid_disparity
@@ -510,9 +471,18 @@ class TestRefinementMethod:
         assert result_disp_row[0, 1] != invalid_disparity
         assert result_disp_col[1, 0] != invalid_disparity
 
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
+            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+        ],
+    )
     def test_disparity_map_is_within_range(  # pylint: disable=too-many-arguments
         self,
-        dichotomy_instance,
+        dichotomy_class,
+        dichotomy_class_str,
+        config_dichotomy,
         cost_volumes,
         disp_map,
         left_img,
@@ -523,6 +493,8 @@ class TestRefinementMethod:
         mocker: MockerFixture,
     ):
         """Resulting disparity should not be outside of initial disparity range."""
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        dichotomy_instance = dichotomy_class(config_dichotomy)
         # Setting points to extreme disparity values will let dichotomy find values outside of range
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 0, "col": 0}] = min_disparity_row
@@ -552,7 +524,7 @@ class TestRefinementMethod:
     )
     def test_skip_iterations_with_subpixel(  # pylint: disable=too-many-arguments
         self,
-        dichotomy_instance,
+        dichotomy_python_instance,
         cost_volumes,
         disp_map,
         left_img,
@@ -564,7 +536,7 @@ class TestRefinementMethod:
         """First iterations must be skipped since precision is already reached by subpixel."""
         result_disp_map = copy.deepcopy(disp_map)
         with caplog.at_level(logging.INFO):
-            result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
+            result_disp_col, result_disp_row, _ = dichotomy_python_instance.refinement_method(
                 cost_volumes,
                 result_disp_map,
                 img_left=left_img,
@@ -582,43 +554,44 @@ class TestRefinementMethod:
 @pytest.mark.parametrize(
     ["filter_name", "iterations", "expected"],
     [
-        pytest.param("sinc", 1, [0, 0.5], id="sinc - 1 iteration"),
-        pytest.param("sinc", 2, [0, 0.25, 0.5, 0.75], id="sinc - 2 iteration"),
+        pytest.param("sinc_python", 1, [0, 0.5], id="sinc_python - 1 iteration"),
+        pytest.param("sinc_python", 2, [0, 0.25, 0.5, 0.75], id="sinc_python - 2 iteration"),
     ],
 )
-def test_pre_computed_filter_fractional_shifts(dichotomy_instance, expected):
+def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expected):
     """Test filter.fractional_shifts is consistent with dichotomy iteration number."""
-    np.testing.assert_array_equal(dichotomy_instance.filter.fractional_shifts, expected)
+    np.testing.assert_array_equal(dichotomy_python_instance.filter.fractional_shifts, expected)
 
 
 @pytest.mark.parametrize(
-    ["config", "expected"],
+    ["refinement_method", "dichotomy_class"],
     [
+        pytest.param("dichotomy_python", refinement.dichotomy.DichotomyPython),
+        pytest.param("dichotomy", refinement.dichotomy_cpp.Dichotomy),
+    ],
+)
+@pytest.mark.parametrize(
+    ["iterations", "filter_cfg", "expected"],
+    [
+        pytest.param(1, {"method": "bicubic"}, Margins(1, 1, 2, 2)),
         pytest.param(
-            {
-                "refinement_method": "dichotomy",
-                "iterations": 1,
-                "filter": {"method": "bicubic"},
-            },
-            Margins(1, 1, 2, 2),
-            id="bicubic",
-        ),
-        pytest.param(
-            {
-                "refinement_method": "dichotomy",
-                "iterations": 1,
-                "filter": {"method": "sinc", "size": 7},
-            },
+            1,
+            {"method": "sinc_python", "size": 7},
             Margins(7, 7, 7, 7),
-            id="sinc",
         ),
     ],
 )
-def test_margins(dichotomy_instance, expected):
+def test_margins(refinement_method, dichotomy_class, iterations, filter_cfg, expected):
     """
-    Test margins of Dichotomy.
+    Test margins of DichotomyPython.
     """
-    assert dichotomy_instance.margins == expected
+    config_dict = {
+        "refinement_method": refinement_method,
+        "iterations": iterations,
+        "filter": filter_cfg,
+    }
+
+    assert dichotomy_class(config_dict).margins == expected
 
 
 class TestCostSurfaces:
@@ -642,10 +615,10 @@ class TestCostSurfaces:
                     coords={
                         "row": 0,
                         "col": 0,
-                        "disp_col": [-2, -1, 0, 1, 2, 3],
                         "disp_row": [2, 3, 4, 5, 6, 7],
+                        "disp_col": [-2, -1, 0, 1, 2, 3],
                     },
-                    dims=["disp_col", "disp_row"],
+                    dims=["disp_row", "disp_col"],
                 ),
                 id="First value",
             ),
@@ -664,10 +637,10 @@ class TestCostSurfaces:
                     coords={
                         "row": 1,
                         "col": 2,
-                        "disp_col": [-2, -1, 0, 1, 2, 3],
                         "disp_row": [2, 3, 4, 5, 6, 7],
+                        "disp_col": [-2, -1, 0, 1, 2, 3],
                     },
-                    dims=["disp_col", "disp_row"],
+                    dims=["disp_row", "disp_col"],
                 ),
                 id="Another value",
             ),
@@ -682,7 +655,7 @@ class TestCostSurfaces:
         assert result.equals(expected)
 
     def test_cost_volumes_dimensions_order(self, cost_volumes):
-        """This test is here to show that disp_row is along columns numpy array and disp_col along numpy array rows."""
+        """This test is here to show that disp_row is along rows numpy array and disp_col along numpy array columns ."""
 
         cost_surfaces = refinement.dichotomy.CostSurfaces(cost_volumes)
         result = cost_surfaces[0, 0]
@@ -706,9 +679,9 @@ class TestCostSurfaces:
         #     dims=["disp_col", "disp_row"],
         # )
 
-        # disp_row is along columns numpy array and disp_cal along numpy array rows:
-        np.testing.assert_array_equal(result.sel(disp_row=3).data, [1, 7, 13, 19, 25, 31])
-        np.testing.assert_array_equal(result.sel(disp_col=0).data, [12, 13, 14, 15, 16, 17])
+        # disp_row is along rows numpy array and disp_cal along numpy array columns:
+        np.testing.assert_array_equal(result.sel(disp_row=3).data, [6, 7, 8, 9, 10, 11])
+        np.testing.assert_array_equal(result.sel(disp_col=0).data, [2, 8, 14, 20, 26, 32])
 
     def test_iteration(self, cost_volumes, disp_map):
         """Test we can iterate over cost surfaces."""
@@ -731,10 +704,10 @@ class TestCostSurfaces:
                 coords={
                     "row": 0,
                     "col": 0,
-                    "disp_col": [-2, -1, 0, 1, 2, 3],
                     "disp_row": [2, 3, 4, 5, 6, 7],
+                    "disp_col": [-2, -1, 0, 1, 2, 3],
                 },
-                dims=["disp_col", "disp_row"],
+                dims=["disp_row", "disp_col"],
             ),
         )
         assert result[-2].equals(
@@ -750,10 +723,10 @@ class TestCostSurfaces:
                 coords={
                     "row": 1,
                     "col": 1,
-                    "disp_col": [-2, -1, 0, 1, 2, 3],
                     "disp_row": [2, 3, 4, 5, 6, 7],
+                    "disp_col": [-2, -1, 0, 1, 2, 3],
                 },
-                dims=["disp_col", "disp_row"],
+                dims=["disp_row", "disp_col"],
             )
         )
 
@@ -771,6 +744,21 @@ def make_cost_surface(cost_surface_data, subpix):
     return cost_surface
 
 
+@pytest.mark.parametrize(
+    [
+        "filter_dicho",
+    ],
+    [
+        pytest.param(
+            BicubicPython({"method": "bicubic_python"}),
+            id="Bicubic python",
+        ),
+        pytest.param(
+            Bicubic({"method": "bicubic"}),
+            id="Bicubic cpp",
+        ),
+    ],
+)
 @pytest.mark.parametrize(
     [
         "cost_surface_data",
@@ -816,7 +804,7 @@ def make_cost_surface(cost_surface_data, subpix):
             (2, 2),
             (2, 2),
             1.0,
-            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.5), np.float32(2.5), np.float32(6.64453125)),
+            (refinement.dichotomy.Point(2.5, 1.5), np.float32(2.5), np.float32(1.5), np.float32(6.64453125)),
             id="Bottom left is best",
         ),
         pytest.param(
@@ -831,10 +819,10 @@ def make_cost_surface(cost_surface_data, subpix):
             ),
             1,
             0.25,
-            (1.5, 2.5),
-            (1.5, 2.5),
+            (2.5, 1.5),
+            (2.5, 1.5),
             7.638916,
-            (refinement.dichotomy.Point(1.25, 2.75), np.float32(1.25), np.float32(2.75), np.float32(15.09161376953125)),
+            (refinement.dichotomy.Point(2.75, 1.25), np.float32(2.75), np.float32(1.25), np.float32(15.09161376953125)),
             id="Bottom left is best at 0.25 precision",
         ),
         pytest.param(
@@ -906,7 +894,7 @@ def make_cost_surface(cost_surface_data, subpix):
             (2, 2),
             (2, 2),
             1.0,
-            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.75), np.float32(2.25), np.float32(6.64453125)),
+            (refinement.dichotomy.Point(2.5, 1.5), np.float32(2.25), np.float32(1.75), np.float32(6.64453125)),
             id="Bottom left is best and subpix=2",
         ),
         pytest.param(
@@ -947,7 +935,7 @@ def make_cost_surface(cost_surface_data, subpix):
             (2, 2),
             (2, 2),
             1.0,
-            (refinement.dichotomy.Point(1.5, 2.5), np.float32(1.875), np.float32(2.125), np.float32(6.64453125)),
+            (refinement.dichotomy.Point(2.5, 1.5), np.float32(2.125), np.float32(1.875), np.float32(6.64453125)),
             id="Bottom left is best and subpix=4",
         ),
         pytest.param(
@@ -976,11 +964,9 @@ def make_cost_surface(cost_surface_data, subpix):
     ],
 )
 def test_search_new_best_point(
-    make_cost_surface, precision, initial_disparity, initial_position, initial_value, expected
+    make_cost_surface, filter_dicho, precision, initial_disparity, initial_position, initial_value, expected
 ):
     """Test we get new coordinates as expected."""
-
-    filter_dicho = Bicubic({"method": "bicubic"})
 
     cost_selection_method = np.nanargmax
 
@@ -997,6 +983,10 @@ def test_search_new_best_point(
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "dichotomy_instance_name",
+    ["dichotomy_python_instance", "dichotomy_cpp_instance"],
+)
 class TestExtremaOnEdges:
     """
     Test that points for which best cost value is on the edge of disparity range
@@ -1121,7 +1111,7 @@ class TestExtremaOnEdges:
         )
 
     def test_uniform_disparity_grid(
-        self, cost_volumes, dataset_disp_maps, left_img, dichotomy_instance, mocker: MockerFixture
+        self, request, cost_volumes, dataset_disp_maps, left_img, dichotomy_instance_name, mocker: MockerFixture
     ):
         """
         Test that points for which best cost value is on the edge of disparity range
@@ -1130,6 +1120,7 @@ class TestExtremaOnEdges:
 
         copy_disp_map = copy.deepcopy(dataset_disp_maps)
 
+        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
             cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
         )
@@ -1152,12 +1143,13 @@ class TestExtremaOnEdges:
         # Extrema not on the edge for point [1,0] --> changed col map value after dichotomy loop
         assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
 
-    def test_non_uniform_disparity_grid(
+    def test_non_uniform_disparity_grid(  # pylint: disable=too-many-arguments
         self,
+        request,
         cost_volumes,
         dataset_disp_maps,
         left_img_non_uniform_grid,
-        dichotomy_instance,
+        dichotomy_instance_name,
         max_disparity_row,
         min_disparity_col,
         mocker: MockerFixture,
@@ -1169,6 +1161,7 @@ class TestExtremaOnEdges:
 
         copy_disp_map = copy.deepcopy(dataset_disp_maps)
 
+        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
             cost_volumes, copy_disp_map, left_img_non_uniform_grid, img_right=mocker.ANY
         )
@@ -1198,3 +1191,98 @@ class TestExtremaOnEdges:
         # For point [1,0] col disparity range is not [min_disparity_col, max_disparity_col] but [min_disparity_col, 0],
         # we check that resulting disparity row is in this range.
         assert result_disp_col[1, 0] in range(min_disparity_col, 0 + 1)
+
+
+class TestChangeDisparityToIndex:
+
+    @pytest.mark.parametrize(
+        ["map", "shift", "subpixel", "expected"],
+        [
+            pytest.param(
+                xr.DataArray(
+                    data=[[1, 2, 3], [2, 2, 3]],
+                    dims=("row", "col"),
+                    coords={"row": np.arange(2), "col": np.arange(3)},
+                ),
+                1,  # disparity range starts at 1
+                1,
+                np.array([[0, 1, 2], [1, 1, 2]]),
+                id="positive disparity",
+            ),
+            pytest.param(
+                xr.DataArray(
+                    data=[[-1, -2, -3], [-2, -2, -3]],
+                    dims=("row", "col"),
+                    coords={"row": np.arange(2), "col": np.arange(3)},
+                ),
+                -4,  # disparity range starts at -4
+                1,
+                np.array([[3, 2, 1], [2, 2, 1]]),
+                id="negative disparity",
+            ),
+            pytest.param(
+                xr.DataArray(
+                    data=[[-1, -2.5, -3], [-2, -2.5, -3]],
+                    dims=("row", "col"),
+                    coords={"row": np.arange(2), "col": np.arange(3)},
+                ),
+                -4,  # disparity range starts at -4
+                2,
+                np.array([[6, 3, 2], [4, 3, 2]]),
+                id="negative disparity and subpixel=0.5",
+            ),
+            pytest.param(
+                xr.DataArray(
+                    data=[[-1, -2.5, -3], [-2, -2.5, -3]],
+                    dims=("row", "col"),
+                    coords={"row": np.arange(2), "col": np.arange(3)},
+                ),
+                -4,  # disparity range starts at -4
+                4,
+                np.array([[12.0, 6, 4.0], [8, 6, 4]]),
+                id="negative disparity and subpixel=0.25",
+            ),
+        ],
+    )
+    def test_disparity_to_index(self, map, shift, subpixel, expected):
+        """Test disparity_to_index method"""
+        result = refinement.dichotomy_cpp.disparity_to_index(map, shift, subpixel)
+        np.testing.assert_array_equal(result, expected)
+
+    @pytest.mark.parametrize(
+        ["map", "shift", "subpixel", "expected"],
+        [
+            pytest.param(
+                np.array([[0, 1, 2], [1, 1, 2]]),
+                1,  # disparity range starts at 1
+                1,
+                np.array([[1, 2, 3], [2, 2, 3]]),
+                id="positive disparity",
+            ),
+            pytest.param(
+                np.array([[3, 2, 1], [2, 2, 1]]),
+                -4,  # disparity range starts at -4
+                1,
+                np.array([[-1, -2, -3], [-2, -2, -3]]),
+                id="negative disparity",
+            ),
+            pytest.param(
+                np.array([[3.0625, 2, 1.0625], [2, 2, 1]]),
+                -4,  # disparity range starts at -4 and precision = 0.0625
+                2,
+                np.array([[-2.46875, -3.0, -3.46875], [-3.0, -3.0, -3.5]]),
+                id="negative disparity and subpixel=0.5",
+            ),
+            pytest.param(
+                np.array([[3.0625, 2, 1.0625], [2, 2, 1]]),
+                -4,  # disparity range starts at -4 and precision = 0.0625
+                4,
+                np.array([[-3.234375, -3.5, -3.734375], [-3.5, -3.5, -3.75]]),
+                id="negative disparity and subpixel=0.5",
+            ),
+        ],
+    )
+    def test_index_to_disparity(self, map, shift, subpixel, expected):
+        """Test index_to_disparity_method"""
+        result = refinement.dichotomy_cpp.index_to_disparity(map, shift, subpixel)
+        np.testing.assert_array_equal(result, expected)

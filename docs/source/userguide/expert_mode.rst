@@ -35,8 +35,6 @@ Parameters and configuration :
 
 Expert mode profiling section is composed of the following keys:
 
-    OptionalKey("folder_name"): str
-
 .. list-table:: Expert mode section
     :header-rows: 1
 
@@ -46,9 +44,9 @@ Expert mode profiling section is composed of the following keys:
       - Default value
       - Required
     * - *folder_name*
-      -
-      - str
-      -
+      - path where to save profiling informations
+      - string
+      - None
       - Yes
 
 **Example**
@@ -70,6 +68,9 @@ Expert mode profiling section is composed of the following keys:
         {
             "profiling":
             {
-                "folder_name": "expert_mode_outputs"
+                "folder_name": "profiling_output"
         }
+        "output": {
+            "path": "expert_mode_output"
+        },
     }

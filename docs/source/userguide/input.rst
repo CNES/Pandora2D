@@ -22,22 +22,22 @@ Input section is composed of the following keys:
     * - *left*
       - Left image properties (see description below)
       - dict
-      -
+      - None
       - Yes
     * - *right*
       - Right image properties (see description below)
       - dict
-      -
+      - None
       - Yes
     * - *col_disparity*
       - The disparities for columns (see description below)
       - dict
-      -
+      - None
       - If the estimation step is not present
     * - *row_disparity*
       - The disparities for rows (see description below)
       - dict
-      -
+      - None
       - If the estimation step is not present
 
 
@@ -45,52 +45,57 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
 
 .. tabs::
 
-   .. tab:: Image properties
+    .. tab:: Image properties
 
-    .. list-table::
-        :header-rows: 1
+        Parameters : 
 
-        * - Name
-          - Description
-          - Type
-          - Default value
-          - Required
-        * - *img*
-          - Path to the image
-          - string
-          -
-          - Yes
-        * - *nodata*
-          - Nodata value of the image
-          - int, "NaN" or "inf"
-          - -9999
-          - No
-        * - *mask*
-          - Path to the mask
-          - string
-          - none
-          - No
+        .. list-table::
+            :header-rows: 1
 
-  .. tab:: Disparity properties
+            * - Name
+              - Description
+              - Type
+              - Default value
+              - Required
+            * - *img*
+              - Path to the image
+              - string
+              - None
+              - Yes
+            * - *nodata*
+              - Nodata value of the image
+              - int, "NaN" or "inf"
+              - -9999
+              - No
+            * - *mask*
+              - Path to the mask
+              - string
+              - None
+              - No
 
-    .. list-table::
-        :header-rows: 1
+    .. tab:: Disparity properties
 
-        * - Name
-          - Description
-          - Type
-          - Default value
-          - Required
-        * - *init*
-          - Initial point or path to initial grid
-          - int or str
-          -
-          - Yes
-        * - *range*
-          - The search radius (see :ref:`initial_disparity`)
-          - int >= 0
-          -
-          - Yes
+        Parameters : 
+
+
+        .. list-table::
+            :header-rows: 1
+
+            * - Name
+              - Description
+              - Type
+              - Default value
+              - Required
+            * - *init*
+              - Initial point or path to initial grid
+              - int or string
+              - None
+              - Yes
+            * - *range*
+              - The search radius (see :ref:`initial_disparity`)
+              - int >= 0
+              - None
+              - Yes
 
 .. note::
     The initial disparity can be either:  
@@ -105,6 +110,10 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
     Only one-band masks are accepted by pandora2d. Mask must comply with the following convention :
      - Value equal to 0 for valid pixel
      - Value not equal to 0 for invalid pixel
+
+.. warning::
+    Currently, the use of an input mask with a step other than [1,1] in the matching cost is not supported. 
+    This will be corrected in a future version. 
 
 
 Examples
@@ -131,9 +140,13 @@ Examples
             "row_disparity": {"init": 0, "range": 3}
         }
         ,
-        "pipeline" :
+        "pipeline":
         {
             // pipeline content
+        },
+        "output":
+        {
+            // output content
         }
     }
 
@@ -161,5 +174,9 @@ Examples
         "pipeline" :
         {
             // pipeline content
+        },
+        "output":
+        {
+            // output content
         }
     }

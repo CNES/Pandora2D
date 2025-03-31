@@ -39,6 +39,7 @@ The min and max disparity would then be equal to (example for columns):
     
     
 .. figure:: ../Images/range_schema.png
+    :align: center
 
 
 Setting a range
@@ -50,3 +51,4 @@ The user should leave the 'disparity_col' and 'disparity_row' parameters empty. 
 The following diagram illustrates how the disparity intervals are initialized using the estimation step:
 
 .. figure:: ../Images/estimation_schema.png
+    :align: center

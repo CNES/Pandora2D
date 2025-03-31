@@ -1,7 +1,7 @@
 # pylint:disable=line-too-long
 #!/usr/bin/env python
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -117,6 +117,30 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            assert out.returncode == 0
+
+    def test_margins(self):
+        """
+        Test that the test_margins notebook runs without errors
+
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run(
+                [
+                    f"jupyter nbconvert --to script notebooks/advanced_examples/test_margins.ipynb --output-dir {directory}"
+                ],
+                shell=True,
+                check=False,
+            )
+            out = subprocess.run(
+                [f"ipython {directory}/test_margins.py"],
+                shell=True,
+                check=False,
+                cwd="notebooks/advanced_examples",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )

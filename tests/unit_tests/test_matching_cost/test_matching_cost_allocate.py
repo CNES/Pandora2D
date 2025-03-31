@@ -1,5 +1,5 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -36,7 +36,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     """
 
     # generated data for the test
-    np_data = np.empty((3, 3, 3, 3))
+    np_data = np.empty((3, 3, 3, 5))
     np_data.fill(np.nan)
 
     c_row = [0, 1, 2]
@@ -46,16 +46,12 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     row = np.arange(c_row[0], c_row[-1] + 1)
     col = np.arange(c_col[0], c_col[-1] + 1)
 
-    disparity_range_col = np.arange(0, 2 + 1)
+    disparity_range_col = np.arange(0, 4 + 1)
     disparity_range_row = np.arange(-2, 0 + 1)
 
-    # Create the cost volume
-    if np_data is None:
-        np_data = np.zeros((len(row), len(col), len(disparity_range_col), len(disparity_range_row)), dtype=np.float32)
-
     cost_volumes_test = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], np_data)},
-        coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np_data)},
+        coords={"row": row, "col": col, "disp_row": disparity_range_row, "disp_col": disparity_range_col},
     )
 
     cost_volumes_test.attrs["measure"] = "zncc"
@@ -67,7 +63,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     cost_volumes_test.attrs["crs"] = None
     cost_volumes_test.attrs["transform"] = Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
     cost_volumes_test.attrs["band_correl"] = None
-    cost_volumes_test.attrs["col_disparity_source"] = [0, 2]
+    cost_volumes_test.attrs["col_disparity_source"] = [-1, 3]
     cost_volumes_test.attrs["row_disparity_source"] = [-2, 0]
     cost_volumes_test.attrs["no_data_img"] = -9999
     cost_volumes_test.attrs["no_data_mask"] = 1
@@ -77,11 +73,9 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
 
     # data by function compute_cost_volume
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3}}}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg
-    )
+    matching_cost_matcher.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
     cost_volumes_fun = matching_cost_matcher.compute_cost_volumes(
         img_left=left_stereo_object, img_right=right_stereo_object
     )

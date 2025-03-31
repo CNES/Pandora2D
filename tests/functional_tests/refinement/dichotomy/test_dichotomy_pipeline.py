@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -18,6 +18,7 @@
 """
 Test the refinement.dichotomy pipeline.
 """
+
 import copy
 import pytest
 
@@ -35,49 +36,55 @@ from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 
 @pytest.fixture()
 def make_cfg_for_dichotomy(
-    left_img_path, right_img_path, method, subpix, iterations, roi, col_disparity, row_disparity
+    correct_input_for_functional_tests,
+    dicho_method,
+    filter_method,
+    subpix,
+    step,
+    iterations,
+    roi,
 ):
     """
     Creates user configuration to test dichotomy loop
     """
 
     user_cfg = {
-        "input": {
-            "left": {
-                "img": str(left_img_path),
-                "nodata": "NaN",
-            },
-            "right": {
-                "img": str(right_img_path),
-                "nodata": "NaN",
-            },
-            "col_disparity": col_disparity,
-            "row_disparity": row_disparity,
-        },
+        **correct_input_for_functional_tests,
         "ROI": roi,
         "pipeline": {
             "matching_cost": {
                 "matching_cost_method": "zncc",
                 "window_size": 7,
                 "subpix": subpix,
+                "step": step,
             },
             "disparity": {
                 "disparity_method": "wta",
                 "invalid_disparity": -9999,
             },
             "refinement": {
-                "refinement_method": "dichotomy",
+                "refinement_method": dicho_method,
                 "iterations": iterations,
-                "filter": {"method": method},
+                "filter": {"method": filter_method},
             },
         },
+        "output": {"path": "home"},
     }
 
     return user_cfg
 
 
-@pytest.mark.parametrize("method", ["bicubic", "sinc"])
+@pytest.mark.parametrize(
+    ("dicho_method", "filter_method"),
+    [
+        ("dichotomy_python", "bicubic_python"),
+        ("dichotomy_python", "sinc_python"),
+        ("dichotomy", "bicubic"),
+        # ("dichotomy", "sinc"),
+    ],
+)
 @pytest.mark.parametrize("subpix", [1, 2, 4])
+@pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
 @pytest.mark.parametrize("iterations", [1, 2])
 @pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
 @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
@@ -96,7 +103,7 @@ def test_dichotomy_execution(make_cfg_for_dichotomy):
 
     cfg = check_conf(make_cfg_for_dichotomy, pandora2d_machine)
 
-    cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
+    cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
     roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
 
     image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
@@ -109,8 +116,17 @@ def test_dichotomy_execution(make_cfg_for_dichotomy):
         assert np.all(np.isnan(dataset_disp_maps.col_map.data))
 
 
-@pytest.mark.parametrize("method", ["bicubic"])
+@pytest.mark.parametrize(
+    ("dicho_method", "filter_method"),
+    [
+        ("dichotomy_python", "bicubic_python"),
+        ("dichotomy_python", "sinc_python"),
+        ("dichotomy", "bicubic"),
+        # ("dichotomy", "sinc"),
+    ],
+)
 @pytest.mark.parametrize("subpix", [1])
+@pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
 @pytest.mark.parametrize("iterations", [1, 2])
 # This ROI has been chosen because its corresponding disparity maps
 # contain extrema disparity range values and subpixel values after refinement.
@@ -132,7 +148,7 @@ def test_extrema_disparities_not_processed(make_cfg_for_dichotomy):
 
     cfg = check_conf(make_cfg_for_dichotomy, pandora2d_machine)
 
-    cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
+    cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
     roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
 
     image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
@@ -148,13 +164,25 @@ def test_extrema_disparities_not_processed(make_cfg_for_dichotomy):
     # Run refinement step
     pandora2d_machine.run("refinement", cfg)
 
+    # Select correct rows and columns in case of a step different from 1.
+    row_cv = pandora2d_machine.cost_volumes.row.values
+    col_cv = pandora2d_machine.cost_volumes.col.values
+
     # Get points for which best cost value is at the edge of the row disparity range
-    mask_min_row = np.nonzero(copy_disp_maps["row_map"].data == image_datasets.left.row_disparity[0, :, :])
-    mask_max_row = np.nonzero(copy_disp_maps["row_map"].data == image_datasets.left.row_disparity[1, :, :])
+    mask_min_row = np.nonzero(
+        copy_disp_maps["row_map"].data == image_datasets.left.sel(row=row_cv, col=col_cv).row_disparity[0, :, :]
+    )
+    mask_max_row = np.nonzero(
+        copy_disp_maps["row_map"].data == image_datasets.left.sel(row=row_cv, col=col_cv).row_disparity[1, :, :]
+    )
 
     # Get points for which best cost value is at the edge of the column disparity range
-    mask_min_col = np.nonzero(copy_disp_maps["col_map"].data == image_datasets.left.col_disparity[0, :, :])
-    mask_max_col = np.nonzero(copy_disp_maps["col_map"].data == image_datasets.left.col_disparity[1, :, :])
+    mask_min_col = np.nonzero(
+        copy_disp_maps["col_map"].data == image_datasets.left.sel(row=row_cv, col=col_cv).col_disparity[0, :, :]
+    )
+    mask_max_col = np.nonzero(
+        copy_disp_maps["col_map"].data == image_datasets.left.sel(row=row_cv, col=col_cv).col_disparity[1, :, :]
+    )
 
     # Checking that best row disparity is unchanged for points having best cost value at the edge of row disparity range
     assert np.all(

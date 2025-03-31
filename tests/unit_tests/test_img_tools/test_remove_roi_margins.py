@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -34,15 +34,22 @@ def create_dataset(row, col):
     """
 
     data = np.full((len(row), len(col)), 1)
-    data_variables = {
-        "row_map": (("row", "col"), data),
-        "col_map": (("row", "col"), data),
-        "correlation_score": (("row", "col"), data),
-    }
+    data_validity = np.full((len(row), len(col), 2), 0)
 
+    criteria_values = ["validity_mask", "criteria_1"]
     coords = {"row": row, "col": col}
+    dims = ("row", "col")
 
-    dataset = xr.Dataset(data_variables, coords)
+    dataset = xr.Dataset(
+        {
+            "row_map": xr.DataArray(data, dims=dims, coords=coords),
+            "col_map": xr.DataArray(data, dims=dims, coords=coords),
+            "correlation_score": xr.DataArray(data, dims=dims, coords=coords),
+            "validity": xr.DataArray(
+                data_validity, dims=("row", "col", "criteria"), coords={**coords, "criteria": criteria_values}
+            ),
+        },
+    )
 
     return dataset
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -19,13 +19,10 @@
 """
 Run pandora2d configurations from end to end.
 """
-import glob
 
 # pylint: disable=redefined-outer-name
 
 import json
-import os
-import re
 from copy import deepcopy
 from typing import Dict
 
@@ -119,7 +116,9 @@ class TestRemoveExtrakeys:
         ),
     ],
 )
-def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, roi):
+def test_monoband_with_nodata_not_nan(
+    run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, roi, tmp_path
+):
     """
     Description : Test a configuration with monoband images.
     Data :
@@ -127,12 +126,17 @@ def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_p
     - Right image : cones/monoband/right.png
     Requirement : EX_CONF_00, EX_CONF_06
     """
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **roi}
+    configuration = {
+        **correct_input_cfg,
+        **correct_pipeline_without_refinement,
+        **roi,
+        **{"output": {"path": "relative"}},
+    }
     configuration["input"]["left"]["nodata"] = -9999
 
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+    with open(tmp_path / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     result = remove_extra_keys(output_config, configuration)
@@ -141,14 +145,14 @@ def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_p
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
     # Test for report
-    with open(run_dir / "output" / "report.json", encoding="utf8") as report_file:
+    with open(tmp_path / "relative" / "disparity_map" / "report.json", encoding="utf8") as report_file:
         report = json.load(report_file)
 
     assert report["statistics"]["disparity"].keys() == {"row", "col"}
 
 
 @pytest.mark.xfail(reason="saved nan in nodata is not valid json and is not comparable to nan")
-def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement):
+def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, tmp_path):
     """
     Description : Test a configuration with monoband images and left nodata set to NaN.
     Data :
@@ -156,11 +160,11 @@ def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipel
     - Right image : cones/monoband/right.png
     Requirement : EX_CONF_00, EX_CONF_06
     """
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement}
+    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **{"output": {"path": str(tmp_path)}}}
 
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+    with open(tmp_path / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     result = remove_extra_keys(output_config, configuration)
@@ -170,7 +174,7 @@ def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipel
 
 
 @pytest.mark.xfail(reason="Multiband is not managed")
-def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_without_refinement):
+def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_without_refinement, tmp_path):
     """
     Description : Test a configuration with multiband images.
     Data :
@@ -178,11 +182,15 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
     - Right image : cones/multibands/right.tif
     Requirement : EX_CONF_00, EX_CONF_06, EX_CONF_12
     """
-    configuration: Dict[str, Dict] = {**correct_multiband_input_cfg, **correct_pipeline_without_refinement}
+    configuration: Dict[str, Dict] = {
+        **correct_multiband_input_cfg,
+        **correct_pipeline_without_refinement,
+        **{"output": {"path": str(tmp_path)}},
+    }
 
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+    with open(tmp_path / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     result = remove_extra_keys(output_config, configuration)
@@ -191,7 +199,7 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
 
-def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pipeline_with_optical_flow):
+def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pipeline_with_optical_flow, tmp_path):
     """
     Description : Test optical_flow configuration has a window_size and a step identical to matching_cost step.
     Data :
@@ -199,12 +207,16 @@ def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pip
     - Right image : cones/monoband/right.png
     Requirement : EX_CONF_00, EX_CONF_06
     """
-    configuration: Dict[str, Dict] = {**correct_input_cfg, **correct_pipeline_with_optical_flow}
+    configuration: Dict[str, Dict] = {
+        **correct_input_cfg,
+        **correct_pipeline_with_optical_flow,
+        **{"output": {"path": str(tmp_path)}},
+    }
     configuration["pipeline"]["refinement"]["iterations"] = 1
 
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+    with open(tmp_path / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     matching_cost_cfg = output_config["pipeline"]["matching_cost"]
@@ -216,17 +228,17 @@ def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pip
 
 
 @pytest.mark.parametrize("input_cfg", ["correct_input_with_left_mask", "correct_input_with_right_mask"])
-def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_without_refinement, request):
+def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_without_refinement, request, tmp_path):
     """
     Description : Test mask configuration
     """
     input_cfg = request.getfixturevalue(input_cfg)
 
-    configuration = {**input_cfg, **correct_pipeline_without_refinement}
+    configuration = {**input_cfg, **correct_pipeline_without_refinement, **{"output": {"path": str(tmp_path)}}}
 
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    with open(run_dir / "output" / "cfg" / "config.json", encoding="utf8") as output_file:
+    with open(tmp_path / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     result = remove_extra_keys(output_config, configuration)
@@ -235,7 +247,7 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
     # Test for report
-    with open(run_dir / "output" / "report.json", encoding="utf8") as report_file:
+    with open(tmp_path / "disparity_map" / "report.json", encoding="utf8") as report_file:
         report = json.load(report_file)
 
     assert report["statistics"]["disparity"].keys() == {"row", "col"}
@@ -251,13 +263,18 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
         ),
         pytest.param(
             {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
-            "correct_pipeline_with_dichotomy",
-            id="Pipeline with disparity grids and dichotomy",
+            "correct_pipeline_with_dichotomy_python",
+            id="Pipeline with disparity grids and dichotomy python",
+        ),
+        pytest.param(
+            {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
+            "correct_pipeline_with_dichotomy_cpp",
+            id="Pipeline with disparity grids and dichotomy cpp",
         ),
     ],
     indirect=["make_input_cfg"],
 )
-def test_disparity_grids(run_pipeline, make_input_cfg, pipeline, request):
+def test_disparity_grids(run_pipeline, make_input_cfg, pipeline, request, tmp_path):
     """
     Description: Test pipeline with disparity grids
     """
@@ -266,14 +283,15 @@ def test_disparity_grids(run_pipeline, make_input_cfg, pipeline, request):
         "input": make_input_cfg,
         "ROI": {"col": {"first": 210, "last": 240}, "row": {"first": 210, "last": 240}},
         **request.getfixturevalue(pipeline),
+        **{"output": {"path": str(tmp_path)}},
     }
     configuration["pipeline"]["disparity"]["invalid_disparity"] = np.nan
 
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    with rasterio.open(run_dir / "output" / "row_disparity.tif") as src:
+    with rasterio.open(tmp_path / "disparity_map" / "row_map.tif") as src:
         row_map = src.read(1)
-    with rasterio.open(run_dir / "output" / "columns_disparity.tif") as src:
+    with rasterio.open(tmp_path / "disparity_map" / "col_map.tif") as src:
         col_map = src.read(1)
 
     non_nan_row_map = ~np.isnan(row_map)
@@ -326,6 +344,7 @@ def test_expert_mode(
     file_exists,
     correct_input_cfg,
     correct_pipeline_without_refinement,
+    tmp_path,
 ):
     """
     Description : Test default expert mode outputs
@@ -334,14 +353,145 @@ def test_expert_mode(
     - Right image : cones/monoband/right.png
     """
 
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **configuration_expert}
+    configuration = {
+        **correct_input_cfg,
+        **correct_pipeline_without_refinement,
+        **configuration_expert,
+        **{"output": {"path": str(tmp_path)}},
+    }
 
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    output_expert_dir = run_dir / "output" / "expert_mode"
+    output_expert_dir = tmp_path / "expert_mode"
 
     assert output_expert_dir.exists() == file_exists
 
     if output_expert_dir.exists():
         file_extensions = [f.suffix for f in output_expert_dir.iterdir() if f.is_file()]
         assert set(file_extensions) == set(ground_truth)
+
+
+class TestAttributes:
+    """
+    Test that attributes are correctly saved in output directory
+    """
+
+    @pytest.mark.parametrize(
+        ["step"],
+        [
+            pytest.param(
+                [1, 1],
+                id="without ROI and step=[1,1]",
+            ),
+            pytest.param(
+                [3, 2],
+                id="without ROI and step=[3,2]",
+            ),
+        ],
+    )
+    def test_attributes(self, run_pipeline, configuration, step, tmp_path):
+        """
+        Description : Test saved attributes without ROI.
+        """
+
+        run_pipeline(configuration)
+
+        with rasterio.open(configuration["input"]["left"]["img"]) as src:
+            left_crs = src.crs
+            left_transform = src.transform
+
+        # Test for attributes
+        with open(tmp_path / "disparity_map" / "attributes.json", encoding="utf8") as attrs_file:
+            attrs = json.load(attrs_file)
+            attrs["transform"] = rasterio.Affine(*attrs["transform"])
+
+        assert attrs["offset"]["row"] == 0
+        assert attrs["offset"]["col"] == 0
+        assert attrs["step"]["row"] == step[0]
+        assert attrs["step"]["col"] == step[1]
+        assert attrs["crs"] == left_crs
+        # Apply the same transformation as the one done in common.adjust_georeferencement because we have a step
+        assert attrs["transform"] == left_transform * rasterio.Affine.scale(step[1], step[0])
+        assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]
+
+    @pytest.mark.parametrize(
+        ["roi", "step"],
+        [
+            pytest.param(
+                {
+                    "col": {"first": 3, "last": 7},
+                    "row": {"first": 5, "last": 8},
+                },
+                [1, 1],
+                id="with ROI and step=[1,1]",
+            ),
+            pytest.param(
+                {
+                    "col": {"first": 3, "last": 7},
+                    "row": {"first": 5, "last": 8},
+                },
+                [3, 2],
+                id="with ROI and step=[3,2]",
+            ),
+        ],
+    )
+    def test_attributes_with_roi(self, run_pipeline, configuration, roi, step, tmp_path):
+        """
+        Description : Test saved attributes with ROI.
+        """
+
+        configuration["ROI"] = roi
+
+        run_pipeline(configuration)
+
+        with rasterio.open(configuration["input"]["left"]["img"]) as src:
+            left_crs = src.crs
+            left_transform = src.transform
+
+        # Test for attributes
+        with open(tmp_path / "disparity_map" / "attributes.json", encoding="utf8") as attrs_file:
+            attrs = json.load(attrs_file)
+            attrs["transform"] = rasterio.Affine(*attrs["transform"])
+
+        assert attrs["offset"]["row"] == roi["row"]["first"]
+        assert attrs["offset"]["col"] == roi["col"]["first"]
+        assert attrs["step"]["row"] == step[0]
+        assert attrs["step"]["col"] == step[1]
+        assert attrs["crs"] == left_crs
+        # Apply the same transformation as the one done in common.adjust_georeferencement because we have a ROI and step
+        assert attrs["transform"] == left_transform * rasterio.Affine.translation(
+            roi["col"]["first"], roi["row"]["first"]
+        ) * rasterio.Affine.scale(step[1], step[0])
+        assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]
+
+    def test_attributes_without_step(
+        self, run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, tmp_path
+    ):
+        """
+        Description : Test saved attributes when step is not given in user cfg.
+        Data :
+        - Left image : cones/monoband/left.png
+        - Right image : cones/monoband/right.png
+        """
+
+        # The configuration used in this test is different from the one used in the other tests of the class,
+        # because here we want to test a configuration where the step value is not specified.
+        configuration = {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            **{"output": {"path": str(tmp_path)}},
+        }
+
+        run_pipeline(configuration)
+
+        # Test for attributes
+        with open(tmp_path / "disparity_map" / "attributes.json", encoding="utf8") as attrs_file:
+            attrs = json.load(attrs_file)
+
+        assert attrs["offset"]["row"] == 0
+        assert attrs["offset"]["col"] == 0
+        assert attrs["step"]["row"] == 1
+        assert attrs["step"]["col"] == 1
+        assert attrs["crs"] is None
+        assert attrs["transform"] is None
+        assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]

@@ -22,7 +22,8 @@ by specific name. It corresponds to the name of Pandora2D steps you can write in
 
 The following diagram highlights all states and possible transitions.
 
-    .. figure:: ../Images/Pandora2D_pipeline.png
+    .. figure:: ../Images/Pandora2D_pipeline.drawio.svg
+        :align: center
 
 If you want to understand in more details how Pandora2D machine works, please consult our `Pandora machine state tutorial notebook <https://github.com/CNES/Pandora2D/tree/master/notebooks/...>`_.
 
@@ -34,7 +35,7 @@ SSD measurement with refinement step disparity maps
 ###################################################
 
 Configuration to produce a disparity map, computed by the SSD method, and refined by the
-interpolation method.
+optical flow method.
 
 .. code:: json
     :name: Sequencing example
@@ -67,5 +68,9 @@ interpolation method.
             {
                 "refinement_method": "optical_flow"
             }
+        },
+        "output":
+        {
+            "output": "sequencing_example_output"
         }
     }

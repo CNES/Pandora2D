@@ -1,3 +1,5 @@
+.. _as_an_api:
+
 As an API
 =========
 
@@ -15,9 +17,6 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     from pandora2d.state_machine import Pandora2DMachine
     from pandora2d import check_configuration, common
     from pandora2d.img_tools import create_datasets_from_inputs
-
-    # path to save disparity maps
-    path_output = "./res"
 
     # Paths to left and right images
     img_left_path = "data/left.tif"
@@ -50,7 +49,10 @@ Pandora2D provides a full python API which can be used to compute disparity maps
             "refinement" : {
                 "refinement_method" : "optical_flow"
             }
-        }
+        },
+        "output": {
+            "path": "as_an_api_output"
+        },
     }
 
     # read images
@@ -78,7 +80,7 @@ Pandora2D provides a full python API which can be used to compute disparity maps
         )
 
     # save dataset
-    common.save_dataset(dataset, completed_cfg, path_output)
+    common.save_disparity_maps(dataset, completed_cfg)
 
 
 Pandora2D's data
@@ -137,47 +139,64 @@ xarray.DataArray named cost_volumes. When matching is impossible, the matching c
 
 ::
 
-    <xarray.Dataset>
-    Dimensions:       (col: 3, disp_col: 2, disp_row: 2, row: 3)
+    <xarray.Dataset> Size: 224B
+    Dimensions:       (row: 3, col: 3, disp_row: 2, disp_col: 2)
     Coordinates:
-
-    row (row) int64 0 1 2
-    col (col) int64 0 1 2
-    disp_col (disp_col) int64 -1 0
-    disp_row (disp_row) int64 -1 0
+      * col           (col) int64 24B 0 1 2
+      * row           (row) int64 24B 0 1 2
+      * disp_row      (disp_row) int64 16B -1 0
+      * disp_col      (disp_col) int64 16B -1 0
     Data variables:
-        cost_volumes  (row, col, disp_col, disp_row) float32 nan nan ... 4.0
-    Attributes:
-        measure:         sad
-        subpixel:        1
-        offset_row_col:  0
-        window_size:     1
-        type_measure:    min
-        cmax:            10004
-        crs:             None
-        transform:       | 1.00, 0.00, 0.00|| 0.00, 1.00, 0.00|| 0.00, 0.00, ...
+        cost_volumes  (row, col, disp_row, disp_col) float32 144B nan nan ... 4.0
+    Attributes: (12/16)
+        no_data_img:           -9999
+        valid_pixels:          0
+        no_data_mask:          1
+        crs:                   None
+        transform:             | 1.00, 0.00, 0.00|\n| 0.00, 1.00, 0.00|\n| 0.00, ...
+        col_disparity_source:  [-1, 3]
+        ...                    ...
+        offset_row_col:        0
+        measure:               sad
+        type_measure:          min
+        cmax:                  10004
+        disparity_margins:     None
+        step:                  [1, 1]
 
 Disparity map
 #############
 
 The *Disparity computation* step generates two disparity maps in cost volume geometry. One named **row_map** for the
 vertical disparity and one named **col_map** for the horizontal disparity. These maps are float32 type 2D xarray.DataArray,
-stored in a xarray.Dataset.
+stored in a xarray.Dataset. 
 
+This xr.Dataset also contains the **validity maps** stored in uint8: 
+
+    * A global validity map 'validity_mask' indicating whether each point is valid (value 0), partially valid (value 1) or invalid (value 2).
+    * A map for each criteria, indicating for each point whether the corresponding criteria has been raised at that point (value 0) or not (value 1).
 
 ::
 
     <xarray.Dataset>
-    Dimensions:  (col: 450, row: 375)
+    Dimensions:  (col: 450, row: 375, criteria: 2)
     Coordinates:
       * row      (row) int64 0 1 2 3 4 5 6 7 8 ... 367 368 369 370 371 372 373 374
       * col      (col) int64 0 1 2 3 4 5 6 7 8 ... 442 443 444 445 446 447 448 449
+      * criteria (criteria) <U43 'validity_mask' ... 'PANDORA2D_M...
     Data variables:
         row_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         col_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         correlation_score  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
+        validity  (row, col, criteria) uint8 0 1 0 0 2 0 ... 0 1 0 0 0
     Attributes:
-        invalid_disp: nan
+        offset:       {'row': 0, 'col': 0}
+        step:         {'row': 1, 'col': 1}
+        invalid_disp: -9999
+        crs:          None
+        transform:    | 1.00, 0.00, 0.00|| 0.00, 1.00, 0.00|| 0.00, 0.00, 1.00|
+
+.. warning::
+    The validity maps are not yet operational as development is still in progress.
 
 Border management
 #################

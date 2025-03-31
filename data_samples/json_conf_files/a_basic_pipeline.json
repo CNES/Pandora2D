@@ -1,11 +1,11 @@
 {
   "input": {
     "left": {
-      "img": "./maricopa/left.tif",
+      "img": "../images/maricopa/left.tif",
       "nodata": -9999
     },
     "right": {
-      "img": "./maricopa/right.tif",
+      "img": "../images/maricopa/right.tif",
       "nodata": -9999
     },
     "col_disparity": {"init": 0, "range": 2},
@@ -19,9 +19,9 @@
     "disparity": {
       "disparity_method": "wta",
       "invalid_disparity": "NaN"
-    },
-    "refinement": {
-      "refinement_method": "optical_flow"
     }
+  },
+  "output": {
+    "path": "a_basic_pipeline_output"
   }
 }

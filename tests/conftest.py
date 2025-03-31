@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -98,29 +98,34 @@ def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
     report.requirement = re.findall(pattern, str(item.function.__doc__))
 
 
-@pytest.fixture()
-def classic_config():
-    return "./tests/data/json_conf_files/classic_cfg.json"
+@pytest.fixture(scope="session")
+def classic_config(root_dir):
+    return str(root_dir / "tests/data/json_conf_files/classic_cfg.json")
 
 
-@pytest.fixture()
-def left_img_path():
-    return "./tests/data/images/cones/monoband/left.png"
+@pytest.fixture(scope="session")
+def root_dir(request):
+    return request.session.path
 
 
-@pytest.fixture()
-def right_img_path():
-    return "./tests/data/images/cones/monoband/right.png"
+@pytest.fixture(scope="session")
+def left_img_path(root_dir):
+    return str(root_dir / "tests/data/images/cones/monoband/left.png")
 
 
-@pytest.fixture()
-def left_rgb_path():
-    return "./tests/data/images/cones/multibands/left.tif"
+@pytest.fixture(scope="session")
+def right_img_path(root_dir):
+    return str(root_dir / "tests/data/images/cones/monoband/right.png")
 
 
-@pytest.fixture()
-def right_rgb_path():
-    return "./tests/data/images/cones/multibands/right.tif"
+@pytest.fixture(scope="session")
+def left_rgb_path(root_dir):
+    return str(root_dir / "tests/data/images/cones/multibands/left.tif")
+
+
+@pytest.fixture(scope="session")
+def right_rgb_path(root_dir):
+    return str(root_dir / "tests/data/images/cones/multibands/right.tif")
 
 
 @pytest.fixture
@@ -207,6 +212,18 @@ def correct_input_with_right_mask(left_img_path, right_img_path, mask_path):
     }
 
 
+@pytest.fixture
+def correct_input_with_left_right_mask(left_img_path, right_img_path, mask_path):
+    return {
+        "input": {
+            "left": {"img": left_img_path, "nodata": -9999, "mask": str(mask_path)},
+            "right": {"img": right_img_path, "mask": str(mask_path)},
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
+        }
+    }
+
+
 @pytest.fixture()
 def random_seed():
     """
@@ -227,12 +244,12 @@ def random_generator(random_seed):
 def run_pipeline(tmp_path):
     """Fixture that returns a function to run a pipeline and which returns the output directory path."""
 
-    def run(configuration, output_dir="output"):
+    def run(configuration):
         config_path = tmp_path / "config.json"
         with config_path.open("w", encoding="utf-8") as file_:
             json.dump(configuration, file_, indent=2)
 
-        pandora2d.main(str(config_path), str(tmp_path / output_dir), verbose=False)
+        pandora2d.main(config_path, verbose=False)
         return tmp_path
 
     return run
@@ -330,6 +347,40 @@ def second_correct_grid(left_img_shape, create_disparity_grid_fixture):
     init_band = np.tile([[5, -21, -1]], (height, width // 3 + 1))[:, :width]
 
     return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
+
+
+@pytest.fixture
+def correct_grid_for_roi(left_img_shape, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width)
+    init_band = np.arange(height * width).reshape((height, width))
+
+    return create_disparity_grid_fixture(init_band, 5, "disparity.tif")
+
+
+@pytest.fixture
+def second_correct_grid_for_roi(left_img_shape, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+
+    height, width = left_img_shape
+
+    # Array of size (height, width)
+    init_band = np.arange(height * width, 0, -1).reshape((height, width))
+
+    return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
+
+
+@pytest.fixture()
+def correct_pipeline_without_refinement():
+    return {
+        "pipeline": {
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+        }
+    }
 
 
 @pytest.fixture()

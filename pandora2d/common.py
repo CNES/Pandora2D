@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -22,6 +22,24 @@
 """
 This module contains functions allowing to save the results and the configuration of Pandora pipeline.
 """
+
+import json
+from copy import deepcopy
+from pathlib import Path
+from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
+from os import PathLike
+
+import numpy as np
+import xarray as xr
+from numpy.typing import NDArray
+from pandora.common import write_data_array
+from rasterio import Affine
+from rasterio.crs import CRS
+
+from pandora2d import reporting
+from pandora2d.constants import Criteria
+from pandora2d.img_tools import remove_roi_margins
+
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable=useless-import-alias
 
@@ -33,22 +51,75 @@ try:
 except ImportError:
     from xarray import Coordinate as Coordinates
 
-import os
-from typing import Dict, Union, Tuple, List
-import xarray as xr
-import numpy as np
-from numpy.typing import NDArray
-
-from rasterio import Affine
-
-from pandora.common import mkdir_p, write_data_array
-from pandora2d.img_tools import remove_roi_margins
-from pandora2d.constants import Criteria
+T = TypeVar("T")
 
 
-def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
+class Registry(Generic[T]):
+    """Registry of classes.
+
+    A class to decorate classes in order to register them with a string name.
     """
-    Save results in the output directory
+
+    def __init__(self, default: Union[Type[T], None] = None) -> None:
+        """
+        Initialize the registry with an optional default class.
+
+        :param default: Default class to return if name is not registered. If None, will raise a KeyError.
+        :type default: Union[Type[T], None]
+        """
+        self.registered: Dict[str, Type[T]] = {}
+        self.default = default
+
+    def add(self, name: str) -> Callable[[Type[T]], Type[T]]:
+        """
+        Register a class with `name`.
+
+        :param name: Name to register the decorated class with.
+        :type name: str
+        :return: The decorated class.
+        :rtype: Type[T]
+        """
+
+        def decorator(cls: Type[T]) -> Type[T]:
+            """Returned decorator used for register class."""
+            # No verification is made about already registered name: we need to decide on desired behavior
+            self.registered[name] = cls
+            return cls
+
+        return decorator
+
+    def get(self, name: str) -> Type[T]:
+        """
+        Get the class registered as `name`.
+
+        :param name: The name of the registered class to retrieve.
+        :type name: str
+        :return: The class registered under `name` or the default class if not found.
+        :rtype: Type[T]
+        :raises KeyError: If no class is registered under `name` and no default is set.
+        """
+        if self.default is None and name not in self.registered:
+            raise KeyError(f"No class registered with name `{name}`.")
+        return self.registered.get(name, self.default)
+
+
+class AllPrimitiveEncoder(json.JSONEncoder):
+    """JSON Encoder to serialize all elements"""
+
+    def default(self, o):
+        if isinstance(o, CRS):
+            return o.to_wkt()
+        if isinstance(o, np.floating):
+            return float(o)
+        if isinstance(o, np.integer):
+            return int(o)
+        return super().default(o)
+
+
+def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
+    """
+    Save disparity maps into directory defined by cfg's `output/path` key,
+    create it with its parents if necessary.
 
     :param dataset: Dataset which contains:
 
@@ -57,8 +128,6 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     :type dataset: xr.Dataset
     :param cfg: user configuration
     :type cfg: Dict
-    :param output: output directory
-    :type output: string
     :return: None
     """
 
@@ -68,31 +137,66 @@ def save_dataset(dataset: xr.Dataset, cfg: Dict, output: str) -> None:
     if dataset.attrs["transform"] is not None:
         adjust_georeferencement(dataset, cfg)
     # create output dir
-    mkdir_p(output)
+    output = Path(cfg["output"]["path"]) / "disparity_map"
+    _save_dataset(dataset, output)
+    _save_disparity_maps_report(dataset, output)
 
-    # save disp map for row
-    write_data_array(
-        dataset["row_map"],
-        os.path.join(output, "row_disparity.tif"),
-        crs=dataset.attrs["crs"],
-        transform=dataset.attrs["transform"],
-    )
 
-    # save disp map for columns
-    write_data_array(
-        dataset["col_map"],
-        os.path.join(output, "columns_disparity.tif"),
-        crs=dataset.attrs["crs"],
-        transform=dataset.attrs["transform"],
-    )
+def _save_disparity_maps_report(dataset: xr.Dataset, output: Path) -> None:
+    """
+    Generate a report about disparities statistics and save it to json file.
+    :param dataset: disparity maps
+    :type dataset: xr.Dataset
+    :param output: path where to save report
+    :type output: Path
+    """
+    report = {"statistics": {"disparity": reporting.report_disparities(dataset)}}
+    with open(output / "report.json", "w", encoding="utf8") as fd:
+        json.dump(report, fd, indent=2, cls=AllPrimitiveEncoder)
 
-    # save correlation score
-    write_data_array(
-        dataset["correlation_score"],
-        os.path.join(output, "correlation_score.tif"),
-        crs=dataset.attrs["crs"],
-        transform=dataset.attrs["transform"],
-    )
+
+def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
+    """
+    Save data_vars in the output directory.
+
+    :param dataset: Dataset
+    :type dataset: xr.Dataset
+    :param output: output directory
+    :type output: Path
+    :return: None
+    """
+    output.mkdir(parents=True, exist_ok=True)
+
+    # dataset["validity"] is the only item to have several bands,
+    # so the band_names list will only be used for it.
+    for name, data in dataset.items():
+        write_data_array(
+            data,
+            str((output / str(name)).with_suffix(".tif")),
+            dtype=data.dtype,
+            band_names=list(dataset.criteria.values) if name == "validity" else None,
+            crs=dataset.attrs["crs"],
+            transform=dataset.attrs["transform"],
+        )
+
+    save_attributes(dataset, output)
+
+
+def save_attributes(dataset: xr.Dataset, output: Union[str, PathLike]) -> None:
+    """
+    Save dataset attributes in a json file
+
+    :param dataset: Dataset which contains:
+
+        - row_map : the disparity map for the lines 2D DataArray (row, col)
+        - col_map : the disparity map for the columns 2D DataArray (row, col)
+    :type dataset: xr.Dataset
+    :param output: output directory
+    :type output: Union[str, PathLike]
+    :return: None
+    """
+    with open(output / Path("attributes.json"), "w", encoding="utf8") as fd:
+        json.dump(dataset.attrs, fd, indent=2, cls=AllPrimitiveEncoder)
 
 
 def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:
@@ -146,6 +250,7 @@ def dataset_disp_maps(
     delta_col: np.ndarray,
     coords: Coordinates,
     correlation_score: np.ndarray,
+    dataset_validity: xr.Dataset,
     attributes: dict = None,
 ) -> xr.Dataset:
     """
@@ -159,6 +264,8 @@ def dataset_disp_maps(
     :type coords: xr.Coordinates
     :param correlation_score: score map
     :type correlation_score: np.ndarray
+    :param dataset_validity: xr.Dataset containing validity informations
+    :type dataset_validity: xr.Dataset
     :param attributes: disparity map for col
     :type attributes: dict
     :return: dataset: Dataset with the disparity maps and score with the data variables :
@@ -187,7 +294,15 @@ def dataset_disp_maps(
     dataarray_col = xr.DataArray(delta_col, dims=dims, coords=coords)
     dataarray_score = xr.DataArray(correlation_score, dims=dims, coords=coords)
 
-    dataset = xr.Dataset({"row_map": dataarray_row, "col_map": dataarray_col, "correlation_score": dataarray_score})
+    dataset = xr.Dataset(
+        {
+            "row_map": dataarray_row,
+            "col_map": dataarray_col,
+            "correlation_score": dataarray_score,
+        }
+    )
+
+    dataset = xr.merge([dataset, dataset_validity])
 
     if attributes is not None:
         dataset.attrs = attributes
@@ -218,8 +333,7 @@ def set_out_of_row_disparity_range_to_other_value(
     :param global_disparity_range:
     :type global_disparity_range:
     """
-    # WARNING: if one day we switch disp_row with disp_col index should be -2
-    ndisp_row = data.shape[-1]
+    ndisp_row = data.shape[-2]
 
     # We want to put special value on points that are not in the global disparity range (row_disparity_source)
     for disp_row in range(ndisp_row):
@@ -239,7 +353,7 @@ def set_out_of_row_disparity_range_to_other_value(
                     data.coords["disp_row"].data[disp_row] > max_disp_grid,
                 )
             )
-        data.data[masking[0], masking[1], :, disp_row] = value
+        data.data[masking[0], masking[1], disp_row, :] = value
 
 
 def set_out_of_col_disparity_range_to_other_value(
@@ -266,8 +380,7 @@ def set_out_of_col_disparity_range_to_other_value(
     :param global_disparity_range:
     :type global_disparity_range:
     """
-    # WARNING: if one day we switch disp_row with disp_col index should be -1
-    ndisp_col = data.shape[-2]
+    ndisp_col = data.shape[-1]
 
     # We want to put special value on points that are not in the global disparity range (col_disparity_source)
     for disp_col in range(ndisp_col):
@@ -287,4 +400,70 @@ def set_out_of_col_disparity_range_to_other_value(
                     data.coords["disp_col"].data[disp_col] > max_disp_grid,
                 )
             )
-        data.data[masking[0], masking[1], disp_col, :] = value
+        data.data[masking[0], masking[1], :, disp_col] = value
+
+
+def save_config(config: Dict) -> None:
+    """
+    Save config to json file in directory given by the key `output/path`.
+
+    Create file tree if it does not exist,
+    :param config: configuration to save
+    :type config: Dict
+    """
+    path_output = Path(config["output"]["path"])
+    path_output.mkdir(parents=True, exist_ok=True)
+    with open(path_output / "config.json", "w", encoding="utf8") as fd:
+        json.dump(config, fd, indent=2, cls=AllPrimitiveEncoder)
+
+
+def string_to_path(path: str, relative_to: Union[Path, str]) -> Path:
+    """
+    Get the absolute path of a given path string. If the path is not absolute,
+    it resolves it relative to the provided ``relative_to`` path.
+
+    :param path: The path string to convert to an absolute path.
+    :type path: str
+    :param relative_to: The base path to resolve the relative path.
+    :type relative_to: PathLike | str
+    :return: The absolute path of the given path string.
+    :rtype: Path
+
+    :Example:
+        >>> string_to_path('/absolute/path', Path('/home/user'))
+        PosixPath('/absolute/path')
+
+        >>> string_to_path('relative/path', Path('/home/user'))
+        PosixPath('/home/user/relative/path')
+
+        >>> string_to_path('~/mydir', Path('/home/user'))
+        PosixPath('/home/user/mydir')
+    """
+    path = Path(path).expanduser()
+    return path if path.is_absolute() else (relative_to / path).resolve()
+
+
+def resolve_path_in_config(config: Dict, config_path: Path) -> Dict:
+    """
+    Create a copy of config with all path strings replaced by an absolute path string relative to
+    config_path.
+
+    :param config: config to modify
+    :type config: Dict
+    :param config_path: path to the config file.
+    :type config_path: Path
+    :return: The configuration with changed paths.
+    :rtype: Dict
+    """
+    result = deepcopy(config)
+    relative_to = config_path.parent
+    result["input"]["left"]["img"] = str(string_to_path(config["input"]["left"]["img"], relative_to))
+    result["input"]["right"]["img"] = str(string_to_path(config["input"]["right"]["img"], relative_to))
+    col_disparity_init = config["input"]["col_disparity"]["init"]
+    if isinstance(col_disparity_init, str):
+        result["input"]["col_disparity"]["init"] = str(string_to_path(col_disparity_init, relative_to))
+    row_disparity_init = config["input"]["row_disparity"]["init"]
+    if isinstance(row_disparity_init, str):
+        result["input"]["row_disparity"]["init"] = str(string_to_path(row_disparity_init, relative_to))
+    result["output"]["path"] = str(string_to_path(config["output"]["path"], relative_to))
+    return result

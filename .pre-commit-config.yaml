@@ -6,28 +6,44 @@ repos:
       entry: black --line-length=120
       language: system
       files: \.py$
-      stages: [commit]
+      stages: [pre-commit]
       types: [python]
     - id: pylint
       name: PyLint
-      entry: python -m pylint --rcfile=.pylintrc
+      entry: pylint
       language: system
-      files: \.py$
-      stages: [commit]
+      types: [python]
+      require_serial: true
+      args: [
+        "--rcfile=.pylintrc"
+      ]
+      stages: [pre-commit]
     - id: mypy
       name: mypy
       entry: mypy
       language: system
       files: \.py$
-      stages: [ commit ]
+      stages: [ pre-commit ]
     - id: sphinx-checking
       name: Checking Sphinx building
       entry: python setup.py build_sphinx
       language: system
       files: ^(doc/.*|pandora2d/.*)$
       pass_filenames: False
-      stages: [ push ]
+      stages: [ pre-push ]
+    - id: meson
+      name: meson
+      language: python
+      entry: meson format -e -i
+      files: ^(.*/)?(meson\.build|meson\.format|meson\.options)$
+      additional_dependencies: ['meson==1.6.1']
   - repo: https://github.com/kynan/nbstripout
     rev: 0.6.1
     hooks:
       - id: nbstripout
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.4
+    hooks:
+    - id: clang-format
+      types_or: [c++, c, cuda]

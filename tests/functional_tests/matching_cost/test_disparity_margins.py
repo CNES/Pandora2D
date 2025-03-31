@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -75,9 +75,9 @@ class TestDisparityMargins:
         return left, right
 
     @pytest.fixture()
-    def config(self, subpix, refinement_config, matching_cost_method):
+    def config(self, correct_input_for_functional_tests, subpix, refinement_config, matching_cost_method):
         return {
-            # "input": input_config,
+            **correct_input_for_functional_tests,
             "pipeline": {
                 "matching_cost": {
                     "matching_cost_method": matching_cost_method,
@@ -87,93 +87,87 @@ class TestDisparityMargins:
                 },
                 "disparity": {"disparity_method": "wta", "invalid_disparity": -6},
                 "refinement": refinement_config,
-            }
+            },
         }
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc", "mutual_information"])
     @pytest.mark.parametrize(
         ["subpix", "refinement_config", "cv_shape_expected", "disp_col_expected", "disp_row_expected"],
         [
             pytest.param(
                 1,
-                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
-                (10, 10, 6, 8),
+                {"refinement_method": "dichotomy_python", "iterations": 1, "filter": {"method": "bicubic"}},
+                (10, 10, 8, 6),
                 [0, 1, 2, 3, 4, 5],
                 [-3, -2, -1, 0, 1, 2, 3, 4],
-                id="Subpix=1 and refinement_method=dichotomy",
+                id="Subpix=1 and refinement_method=dichotomy_python",
             ),
             pytest.param(
                 1,
-                {
-                    "refinement_method": "interpolation",
-                },
-                (10, 10, 9, 11),
-                [-2, -1, 0, 1, 2, 3, 4, 5, 6],
-                [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-                id="Subpix=1 and refinement_method=interpolation",
+                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
+                (10, 10, 8, 6),
+                [0, 1, 2, 3, 4, 5],
+                [-3, -2, -1, 0, 1, 2, 3, 4],
+                id="Subpix=1 and refinement_method=dichotomy_cpp",
             ),
             pytest.param(
                 1,
                 {
                     "refinement_method": "optical_flow",
                 },
-                (10, 10, 5, 7),
+                (10, 10, 7, 5),
                 [0, 1, 2, 3, 4],
                 [-3, -2, -1, 0, 1, 2, 3],
                 id="Subpix=1 and refinement_method=optical_flow",
             ),
             pytest.param(
                 2,
-                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
-                (10, 10, 11, 15),
+                {"refinement_method": "dichotomy_python", "iterations": 1, "filter": {"method": "bicubic"}},
+                (10, 10, 15, 11),
                 [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
                 [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
-                id="Subpix=2 and refinement_method=dichotomy",
+                id="Subpix=2 and refinement_method=dichotomy_python",
             ),
             pytest.param(
                 2,
-                {
-                    "refinement_method": "interpolation",
-                },
-                (10, 10, 17, 21),
-                [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6],
-                [-5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
-                id="Subpix=2 and refinement_method=interpolation",
+                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
+                (10, 10, 15, 11),
+                [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
+                [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+                id="Subpix=2 and refinement_method=dichotomy_cpp",
             ),
             pytest.param(
                 2,
                 {
                     "refinement_method": "optical_flow",
                 },
-                (10, 10, 9, 13),
+                (10, 10, 13, 9),
                 [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
                 [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
                 id="Subpix=2 and refinement_method=optical_flow",
             ),
             pytest.param(
                 4,
-                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
-                (10, 10, 21, 29),
+                {"refinement_method": "dichotomy_python", "iterations": 1, "filter": {"method": "bicubic"}},
+                (10, 10, 29, 21),
                 np.arange(0, 5.25, 0.25),
                 np.arange(-3, 4.25, 0.25),
-                id="Subpix=4 and refinement_method=dichotomy",
+                id="Subpix=4 and refinement_method=dichotomy_python",
             ),
             pytest.param(
                 4,
-                {
-                    "refinement_method": "interpolation",
-                },
-                (10, 10, 33, 41),
-                np.arange(-2, 6.25, 0.25),
-                np.arange(-5, 5.25, 0.25),
-                id="Subpix=4 and refinement_method=interpolation",
+                {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
+                (10, 10, 29, 21),
+                np.arange(0, 5.25, 0.25),
+                np.arange(-3, 4.25, 0.25),
+                id="Subpix=4 and refinement_method=dichotomy_cpp",
             ),
             pytest.param(
                 4,
                 {
                     "refinement_method": "optical_flow",
                 },
-                (10, 10, 17, 25),
+                (10, 10, 25, 17),
                 [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4],
                 np.arange(-3, 3.25, 0.25),
                 id="Subpix=4 and refinement_method=optical_flow",

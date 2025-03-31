@@ -1,5 +1,5 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -26,10 +26,12 @@ import importlib.util
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
+import sys
 import numpy as np
 import xarray as xr
 from pytest_mock import MockerFixture
 from rasterio import Affine
+from skimage.io import imsave
 
 import pytest
 from pandora.margins import Margins
@@ -69,8 +71,8 @@ def test_steps(request, data_fixture_name, col_step, row_step):
         "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": [row_step, col_step]}}
     }
     # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=data.left, img_right=data.right, cfg=cfg)
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher.allocate(img_left=data.left, img_right=data.right, cfg=cfg)
     # compute cost volumes
     zncc = matching_cost_matcher.compute_cost_volumes(img_left=data.left, img_right=data.right)
 
@@ -96,7 +98,7 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     )
 
     # disp_x = -1, disp_y = 0
-    ad_ground_truth[:, :, 0, 1] = np.array(
+    ad_ground_truth[:, :, 1, 0] = np.array(
         [[np.nan, np.nan, np.nan], [np.nan, (1 - 3) ** 2, (1 - 4) ** 2], [np.nan, (4 - 1) ** 2, (5 - 1) ** 2]]
     )
 
@@ -110,13 +112,11 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     )
 
     # disp_x = 0, disp_y = -1
-    ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
+    ad_ground_truth[:, :, 0, 1] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
     # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg
-    )
+    matching_cost_matcher.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
 
     # compute cost volumes
     ssd = matching_cost_matcher.compute_cost_volumes(img_left=left_stereo_object, img_right=right_stereo_object)
@@ -151,9 +151,9 @@ def test_compute_cv_mc_cnn():
     }
     img.pipe(add_disparity_grid, {"init": 0, "range": 1}, {"init": 0, "range": 1})
 
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img, img_right=img, cfg=cfg)
+    matching_cost_matcher.allocate(img_left=img, img_right=img, cfg=cfg)
 
     # compute cost volumes
     mccnn = matching_cost_matcher.compute_cost_volumes(img_left=img, img_right=img)
@@ -184,7 +184,7 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     )
 
     # disp_x = -1, disp_y = 0
-    ad_ground_truth[:, :, 0, 1] = np.array(
+    ad_ground_truth[:, :, 1, 0] = np.array(
         [[np.nan, np.nan, np.nan], [np.nan, np.abs(1 - 3), np.abs(1 - 4)], [np.nan, np.abs(4 - 1), np.abs(5 - 1)]]
     )
 
@@ -198,13 +198,11 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     )
 
     # disp_x = 0, disp_y = -1
-    ad_ground_truth[:, :, 1, 0] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
+    ad_ground_truth[:, :, 0, 1] = np.array([[np.nan, np.nan, np.nan], [0, 0, 0], [0, 0, 0]])
 
     # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
-    matching_cost_matcher.allocate_cost_volume_pandora(
-        img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg
-    )
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
     # compute cost volumes
     sad = matching_cost_matcher.compute_cost_volumes(img_left=left_stereo_object, img_right=right_stereo_object)
     # check that the generated cost_volumes is equal to ground truth
@@ -275,7 +273,7 @@ def test_compute_cv_zncc():
         np.mean(left[0:3, 0:3] * right[0:3, 0:3]) - (np.mean(left[0:3, 0:3]) * np.mean(right[0:3, 0:3]))
     ) / (np.std(left[0:3, 0:3]) * np.std(right[0:3, 0:3]))
     # row = 1, col = 1, disp_x = 0, disp_y = -1, , ground truth equal NaN
-    ad_ground_truth_1_1_0_1 = (
+    ad_ground_truth_1_1_1_0 = (
         np.mean(left[0:3, 0:3] * right_shift[0:3, 0:3]) - (np.mean(left[0:3, 0:3]) * np.mean(right_shift[0:3, 0:3]))
     ) / (np.std(left[0:3, 0:3]) * np.std(right_shift[0:3, 0:3]))
     # row = 2, col = 2, disp_x = 0, disp_y = 0, , ground truth equal -0,47
@@ -283,23 +281,24 @@ def test_compute_cv_zncc():
         np.mean(left[1:4, 1:4] * right[1:4, 1:4]) - (np.mean(left[1:4, 1:4]) * np.mean(right[1:4, 1:4]))
     ) / (np.std(left[1:4, 1:4]) * np.std(right[1:4, 1:4]))
     # row = 2, col = 2, disp_x = 0, disp_y = -1, ground truth equal 1
-    ad_ground_truth_2_2_0_1 = (
+    ad_ground_truth_2_2_1_0 = (
         np.mean(left[1:4, 1:4] * right_shift[1:4, 1:4]) - (np.mean(left[1:4, 1:4]) * np.mean(right_shift[1:4, 1:4]))
     ) / (np.std(left[1:4, 1:4]) * np.std(right_shift[1:4, 1:4]))
 
     # initialise matching cost
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=left_zncc, img_right=right_zncc, cfg=cfg)
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher.allocate(img_left=left_zncc, img_right=right_zncc, cfg=cfg)
     # compute cost volumes
     zncc = matching_cost_matcher.compute_cost_volumes(img_left=left_zncc, img_right=right_zncc)
 
     # check that the generated cost_volumes is equal to ground truth
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 2], ad_ground_truth_1_1_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 0, 1], ad_ground_truth_1_1_0_1, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 2], ad_ground_truth_2_2_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 0, 1], ad_ground_truth_2_2_0_1, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 2, 0], ad_ground_truth_1_1_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 1, 0], ad_ground_truth_1_1_1_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 2, 0], ad_ground_truth_2_2_0_0, rtol=1e-06)
+    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 1, 0], ad_ground_truth_2_2_1_0, rtol=1e-06)
 
 
+@pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
 @pytest.mark.parametrize(
     ["roi", "step", "col_expected", "row_expected"],
     [
@@ -410,7 +409,9 @@ def test_compute_cv_zncc():
         ),
     ],
 )
-def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_config, col_expected, row_expected):
+def test_cost_volume_coordinates_with_roi(
+    roi, input_config, matching_cost_config, matching_cost_object, col_expected, row_expected
+):
     """
     Description : Test that we have the correct cost_volumes coordinates with a ROI
     Data :
@@ -423,11 +424,12 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
 
     img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost_object(matching_cost_config)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
+    matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
-    np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
+    if matching_cost_config["matching_cost_method"] == "zncc":
+        np.testing.assert_array_equal(matching_cost_matcher.grid.attrs["col_to_compute"], col_expected)
 
     # compute cost volumes with roi
     cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
@@ -436,6 +438,7 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
+@pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
 @pytest.mark.parametrize(
     ["step", "col_expected", "row_expected"],
     [
@@ -483,7 +486,9 @@ def test_cost_volume_coordinates_with_roi(roi, input_config, matching_cost_confi
         ),
     ],
 )
-def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config, col_expected, row_expected):
+def test_cost_volume_coordinates_without_roi(
+    input_config, matching_cost_config, matching_cost_object, col_expected, row_expected
+):
     """
     Description : Test that we have the correct cost_volumes coordinates without a ROI
     Data :
@@ -499,11 +504,12 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
 
     img_left, img_right = create_datasets_from_inputs(input_config)
 
-    matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost_object(matching_cost_config)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
+    matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
-    np.testing.assert_array_equal(matching_cost_matcher.grid_.attrs["col_to_compute"], col_expected)
+    if matching_cost_config["matching_cost_method"] == "zncc":
+        np.testing.assert_array_equal(matching_cost_matcher.grid.attrs["col_to_compute"], col_expected)
 
     # compute cost volumes without roi
     cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
@@ -524,8 +530,8 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
     [
         pytest.param(
             [1, 1],
-            (5, 5, 3, 5),
-            (5, 4, 3, 5),
+            (5, 5, 5, 3),
+            (5, 4, 5, 3),
             np.s_[2:4, 2:4, :, :],
             np.s_[2:4, 1:3, :, :],
             (5, 5),
@@ -533,8 +539,8 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
         ),
         pytest.param(
             [1, 2],
-            (5, 3, 3, 5),
-            (5, 2, 3, 5),
+            (5, 3, 5, 3),
+            (5, 2, 5, 3),
             np.s_[2:4, 2:4:2, :, :],
             np.s_[2:4, 1:3:2, :, :],
             (5, 5),
@@ -542,8 +548,8 @@ def test_cost_volume_coordinates_without_roi(input_config, matching_cost_config,
         ),
         pytest.param(
             [2, 1],
-            (3, 5, 3, 5),
-            (3, 4, 3, 5),
+            (3, 5, 5, 3),
+            (3, 4, 5, 3),
             np.s_[2:4, 2:4, :, :],
             np.s_[2:4, 1:3, :, :],
             (5, 5),
@@ -569,7 +575,7 @@ def test_roi_inside_and_margins_inside(  # pylint: disable=too-many-arguments
     # crop image with roi
     img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=configuration_roi)
+    matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=configuration_roi)
     # compute cost volumes with roi
     cost_volumes_with_roi = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
@@ -610,7 +616,7 @@ def make_image_fixture():
 
 
 @pytest.fixture()
-def make_cost_volumes(make_image_fixture, request):
+def make_cost_volumes(make_image_fixture, method, request):
     """
     Instantiate a matching_cost and compute cost_volumes
     """
@@ -618,7 +624,7 @@ def make_cost_volumes(make_image_fixture, request):
     cfg = {
         "pipeline": {
             "matching_cost": {
-                "matching_cost_method": "ssd",
+                "matching_cost_method": method,
                 "window_size": 1,
                 "step": request.param["step"],
                 "subpix": request.param["subpix"],
@@ -632,9 +638,12 @@ def make_cost_volumes(make_image_fixture, request):
     img_left = make_image_fixture(disp_row, disp_col, request.param["data_left"])
     img_right = make_image_fixture(disp_row, disp_col, request.param["data_right"])
 
-    matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_object = matching_cost.MatchingCostRegistry.get(
+        cfg["pipeline"]["matching_cost"]["matching_cost_method"]
+    )
+    matching_cost_ = matching_cost_object(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=cfg)
+    matching_cost_.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
     cost_volumes = matching_cost_.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
@@ -661,16 +670,18 @@ class TestDisparityGrid:
         return 7
 
     @pytest.fixture()
-    def cost_volumes(self, nb_rows, nb_cols, nb_disp_rows, nb_disp_cols):
+    def cost_volumes(self, nb_rows, nb_cols, nb_disp_rows, nb_disp_cols, correct_pipeline):
         """cost_volumes full of zeros."""
         # only need because allocate_cost_volumes delete it
         fake_pandora_attrs = {"col_to_compute": 1, "sampling_interval": 1}
-        return matching_cost.MatchingCost.allocate_cost_volumes(
-            fake_pandora_attrs,
+
+        matching_cost_object = matching_cost.PandoraMatchingCostMethods(correct_pipeline["pipeline"]["matching_cost"])
+        return matching_cost_object.allocate_cost_volumes(
+            cost_volume_attr=fake_pandora_attrs,
             row=np.arange(nb_rows),
             col=np.arange(nb_cols),
-            disp_range_col=np.arange(2, 2 + nb_disp_cols),
             disp_range_row=np.arange(-5, -5 + nb_disp_rows),
+            disp_range_col=np.arange(2, 2 + nb_disp_cols),
         )
 
     @pytest.fixture()
@@ -712,7 +723,7 @@ class TestDisparityGrid:
         """
         if mock_type == "not used":
             return mocker.patch(
-                "pandora2d.matching_cost.matching_cost.set_out_of_row_disparity_range_to_other_value",
+                "pandora2d.matching_cost.pandora.set_out_of_row_disparity_range_to_other_value",
                 side_effect=lambda x, y, z, k, l: x,
             )
         if mock_type != "used":
@@ -755,9 +766,9 @@ class TestDisparityGrid:
                 }
             }
         }
-        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+        matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-        matching_cost_.allocate_cost_volume_pandora(img_left=image, img_right=image, cfg=cfg)
+        matching_cost_.allocate(img_left=image, img_right=image, cfg=cfg)
 
         cost_volumes = matching_cost_.compute_cost_volumes(img_left=image, img_right=image)
 
@@ -797,9 +808,15 @@ class TestDisparityGrid:
         assert mock_set_out_of_disparity_range_to_nan.called
 
 
+@pytest.fixture()
+def method():
+    return "ssd"
+
+
 class TestSubpix:
     """Test subpix parameter"""
 
+    @pytest.mark.parametrize("method", ["ssd", "mutual_information"])
     @pytest.mark.parametrize(
         ["make_cost_volumes", "shape_expected", "row_disparity", "col_disparity"],
         [
@@ -812,7 +829,7 @@ class TestSubpix:
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 5, 3),  # (row, col, disp_col, disp_row)
+                (10, 10, 3, 5),  # (row, col, disp_row, disp_col)
                 np.arange(3),  # [0, 1, 2]
                 np.arange(-2, 3),  # [-2, -1, 0, 1, 2]
                 id="subpix=1, step_row=1 and step_col=1",
@@ -826,7 +843,7 @@ class TestSubpix:
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 9, 5),  # (row, col, disp_col, disp_row)
+                (10, 10, 5, 9),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2]
                 np.arange(-2, 2.5, 0.5),  # [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
                 id="subpix=2, step_row=1 and step_col=1",
@@ -840,7 +857,7 @@ class TestSubpix:
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (5, 4, 9, 5),  # (row, col, disp_col, disp_row)
+                (5, 4, 5, 9),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2] # step has no influence on subpix disparity range
                 np.arange(-2, 2.5, 0.5),  # [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
                 id="subpix=2, step_row=2 and step_col=3",
@@ -854,7 +871,7 @@ class TestSubpix:
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (10, 10, 17, 9),  # (row, col, disp_col, disp_row)
+                (10, 10, 9, 17),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.25, 0.25),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
                 np.arange(
                     -2, 2.25, 0.25
@@ -870,7 +887,7 @@ class TestSubpix:
                     "data_left": np.full((10, 10), 1),
                     "data_right": np.full((10, 10), 1),
                 },
-                (4, 5, 17, 9),  # (row, col, disp_col, disp_row)
+                (4, 5, 9, 17),  # (row, col, disp_row, disp_col)
                 np.arange(
                     0,
                     2.25,
@@ -993,8 +1010,8 @@ class TestSubpix:
             for row in range(cost_volumes["cost_volumes"].shape[0] - 1):
                 # index_min = all minimum value indexes
                 index_min = np.where(
-                    cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :]
-                    == cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :].min()
+                    cost_volumes["cost_volumes"][row, col, :, index_disp_col_zero]
+                    == cost_volumes["cost_volumes"][row, col, :, index_disp_col_zero].min()
                 )
                 np.testing.assert_array_equal(index_min, index_best_disp_row)
 
@@ -1093,8 +1110,8 @@ class TestSubpix:
             for row in range(1, cost_volumes["cost_volumes"].shape[0]):
                 # index_min = all minimum value indexes
                 index_min = np.where(
-                    cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :]
-                    == cost_volumes["cost_volumes"][row, col, index_disp_col_zero, :].min()
+                    cost_volumes["cost_volumes"][row, col, :, index_disp_col_zero]
+                    == cost_volumes["cost_volumes"][row, col, :, index_disp_col_zero].min()
                 )
                 np.testing.assert_array_equal(index_min, index_best_disp_row)
 
@@ -1193,8 +1210,8 @@ class TestSubpix:
             for row in range(cost_volumes["cost_volumes"].shape[0]):
                 # index_min = all minimum value indexes
                 index_min = np.where(
-                    cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero]
-                    == cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero].min()
+                    cost_volumes["cost_volumes"][row, col, index_disp_row_zero, :]
+                    == cost_volumes["cost_volumes"][row, col, index_disp_row_zero, :].min()
                 )
                 np.testing.assert_array_equal(index_min, index_best_disp_col)
 
@@ -1293,8 +1310,8 @@ class TestSubpix:
             for row in range(cost_volumes["cost_volumes"].shape[0]):
                 # index_min = all minimum value indexes
                 index_min = np.where(
-                    cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero]
-                    == cost_volumes["cost_volumes"][row, col, :, index_disp_row_zero].min()
+                    cost_volumes["cost_volumes"][row, col, index_disp_row_zero, :]
+                    == cost_volumes["cost_volumes"][row, col, index_disp_row_zero, :].min()
                 )
                 np.testing.assert_array_equal(index_min, index_best_disp_col)
 
@@ -1339,16 +1356,10 @@ class TestSubpix:
         # Test that we have several minimum
         # Constant shift in rows
 
-        with pytest.raises(AssertionError):
-            np.testing.assert_array_equal(
-                len(
-                    np.where(
-                        cost_volumes["cost_volumes"][row, col, disp_col, :]
-                        == cost_volumes["cost_volumes"][row, col, disp_col, :].min()
-                    )[0]
-                ),
-                1,
-            )
+        assert (
+            cost_volumes["cost_volumes"][row, col, :, disp_col]
+            == cost_volumes["cost_volumes"][row, col, :, disp_col].min()
+        ).sum() > 1
 
     @pytest.mark.parametrize(
         ["make_cost_volumes", "row", "col", "disp_row"],
@@ -1391,16 +1402,10 @@ class TestSubpix:
         # Test that we have several minimum
         # Constant shift in columns
 
-        with pytest.raises(AssertionError):
-            np.testing.assert_array_equal(
-                len(
-                    np.where(
-                        cost_volumes["cost_volumes"][row, col, :, disp_row]
-                        == cost_volumes["cost_volumes"][row, col, :, disp_row].min()
-                    )[0]
-                ),
-                1,
-            )
+        assert (
+            cost_volumes["cost_volumes"][row, col, disp_row, :]
+            == cost_volumes["cost_volumes"][row, col, disp_row, :].min()
+        ).sum() > 1
 
 
 class TestDisparityMargins:
@@ -1448,7 +1453,7 @@ class TestDisparityMargins:
 
         return left, right
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc", "mutual_information"])
     @pytest.mark.parametrize(
         ["margins", "subpix", "gt_cv_shape", "gt_disp_col", "gt_disp_row"],
         [
@@ -1481,7 +1486,7 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 1, 2, 3),
                 1,
-                (5, 5, 5, 7),
+                (5, 5, 7, 5),
                 np.arange(0, 4.25, 1),
                 np.arange(-3, 3.25, 1),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2 on disp_max_col,
@@ -1491,7 +1496,7 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(4, 2, 4, 2),
                 1,
-                (5, 5, 11, 7),
+                (5, 5, 7, 11),
                 np.arange(-4, 6.25, 1),
                 np.arange(-4, 2.25, 1),
                 # margins=(4,2,4,2) -> we add a margin of 4 on disp_min_col and on disp_max_col
@@ -1501,7 +1506,7 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(2, 6, 2, 6),
                 1,
-                (5, 5, 7, 15),
+                (5, 5, 15, 7),
                 np.arange(-2, 4.25, 1),
                 np.arange(-8, 6.25, 1),
                 # margins=(2,6,2,6) -> we add a margin of 2 on disp_min_col and on disp_max_col
@@ -1511,7 +1516,7 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(6, 2, 6, 2),
                 1,
-                (5, 5, 15, 7),
+                (5, 5, 7, 15),
                 np.arange(-6, 8.25, 1),
                 np.arange(-4, 2.25, 1),
                 # margins=(6,2,6,2) -> we add a margin of 6 on disp_min_col and on disp_max_col
@@ -1531,7 +1536,7 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 1, 2, 3),
                 2,
-                (5, 5, 9, 13),
+                (5, 5, 13, 9),
                 np.arange(0, 4.25, 0.5),
                 np.arange(-3, 3.25, 0.5),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x2 on disp_max_col,
@@ -1541,7 +1546,7 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(6, 4, 2, 3),
                 2,
-                (5, 5, 21, 19),
+                (5, 5, 19, 21),
                 np.arange(-6, 4.25, 0.5),
                 np.arange(-6, 3.25, 0.5),
                 # margins=(6,4,2,3) -> we add a margin of 6x2 on disp_min_col, 2x2 on disp_max_col,
@@ -1559,7 +1564,7 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 1, 2, 3),
                 4,
-                (5, 5, 17, 25),
+                (5, 5, 25, 17),
                 np.arange(0, 4.25, 0.25),
                 np.arange(-3, 3.25, 0.25),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x4 on disp_max_col,
@@ -1595,10 +1600,13 @@ class TestDisparityMargins:
         left, right = create_datasets
 
         # Initialize matching_cost
-        matching_cost_matcher = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+        matching_cost_object = matching_cost.MatchingCostRegistry.get(
+            cfg["pipeline"]["matching_cost"]["matching_cost_method"]
+        )
+        matching_cost_matcher = matching_cost_object(cfg["pipeline"]["matching_cost"])
 
         # Allocate cost volume
-        matching_cost_matcher.allocate_cost_volume_pandora(
+        matching_cost_matcher.allocate(
             img_left=left,
             img_right=right,
             cfg=cfg,
@@ -1615,3 +1623,188 @@ class TestDisparityMargins:
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].shape, gt_cv_shape)
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].disp_col, gt_disp_col)
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].disp_row, gt_disp_row)
+
+
+# we want to ignore warnings indicating that our images are “low contrast images”.
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@pytest.mark.parametrize("matching_cost_method", ["mutual_information"])
+class TestMutualInformation:
+    """
+    Test the cost volumes computation with mutual information method
+    """
+
+    @pytest.fixture()
+    def left_image(self, tmp_path):
+        """
+        Create a fake left image (identical to the one used in cpp tests)
+        """
+        image_path = tmp_path / "left_img_mi.png"
+        data = np.array(
+            [
+                [1.0, 2.0, 3.0, 4.0, 5.0],
+                [6.0, 7.0, 8.0, 9.0, 10.0],
+                [11.0, 12.0, 13.0, 14.0, 15.0],
+                [16.0, 17.0, 18.0, 19.0, 20.0],
+                [21.0, 22.0, 23.0, 24.0, 25.0],
+            ],
+            dtype=np.uint8,
+        )
+        imsave(image_path, data)
+
+        return image_path
+
+    @pytest.fixture()
+    def right_image(self, tmp_path):
+        """
+        Create a fake right image (identical to the one used in cpp tests)
+        """
+        image_path = tmp_path / "right_img_mi.png"
+        data = np.array(
+            [
+                [1.0, 2.0, 3.0, 4.0, 2.0],
+                [2.0, 2.0, 2.0, 2.0, 2.0],
+                [4.0, 3.0, 2.0, 1.0, 4.0],
+                [1.0, 3.0, 3.0, 3.0, 1.0],
+                [1.0, 3.0, 2.0, 4.0, 4.0],
+            ],
+            dtype=np.uint8,
+        )
+
+        imsave(image_path, data)
+
+        return image_path
+
+    @pytest.fixture()
+    def row_disparity(self):
+        return {"init": 0, "range": 1}
+
+    @pytest.fixture()
+    def col_disparity(self):
+        return {"init": 0, "range": 2}
+
+    @pytest.mark.parametrize(
+        ["step", "subpix", "point", "expected"],
+        [
+            pytest.param(
+                [1, 1],
+                1,
+                [0, 0],  # [row, col]
+                np.array([[0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.3112781, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0]]),
+                id="Cost surface of top left point",
+            ),
+            pytest.param(
+                [1, 1],
+                1,
+                [2, 2],  # [row, col]
+                np.array(
+                    [
+                        [0.0, 0.2247875, 0.2247875, 0.07278022, 0.0],
+                        [0.0, 0.2247875, 0.1021872, 0.3788788, 0.0],
+                        [0.0, 0.00721462, 0.2247875, 0.00721462, 0.0],
+                    ]
+                ),
+                id="Cost surface of center point",
+            ),
+            pytest.param(
+                [2, 3],
+                1,
+                [1, 1],  # [row, col]
+                np.array(
+                    [
+                        [0.2247875, 0.2247875, 0.07278023, 0.0, 0.0],
+                        [0.2247875, 0.1021872, 0.3788788, 0.0, 0.0],
+                        [0.007214618, 0.2247875, 0.007214618, 0.0, 0.0],
+                    ]
+                ),
+                id="Cost surface with step=[2,3]",
+            ),
+            pytest.param(
+                [1, 1],
+                2,
+                [2, 2],  # [row, col]
+                np.array(
+                    [
+                        [0, 0, 0.2247875, 0.007214618, 0.2247875, 0.3244094, 0.07278023, 0, 0],
+                        [0, 0, 0.07278023, 0.002565287, 0.09109101, 0.1455605, 0.007214618, 0, 0],
+                        [0, 0, 0.2247875, 0.09109101, 0.1021872, 0.09109101, 0.3788788, 0, 0],
+                        [0, 0, 0.1021872, 0.007214618, 0.07278023, 0.09109101, 0.1021872, 0, 0],
+                        [0, 0, 0.007214618, 0.07278023, 0.2247875, 0.1021872, 0.007214618, 0, 0],
+                    ]
+                ),
+                marks=pytest.mark.skipif(sys.platform.startswith("win"), reason="Does not work on windows"),
+                id="Cost surface with subpix=2",
+            ),
+        ],
+    )
+    def test_mutual_information_values(self, input_config, matching_cost_config, matching_cost_object, point, expected):
+        """
+        Test that the cost volumes values are correct
+        """
+
+        cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}}
+
+        img_left, img_right = create_datasets_from_inputs(input_config)
+
+        matching_cost_matcher = matching_cost_object(matching_cost_config)
+
+        matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
+
+        cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
+
+        np.testing.assert_array_almost_equal(
+            cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=7
+        )
+
+    @pytest.mark.parametrize(
+        ["step", "subpix", "point", "roi", "expected"],
+        [
+            pytest.param(
+                [1, 1],
+                1,
+                [2, 2],  # [row, col]
+                {"col": {"first": 2, "last": 2}, "row": {"first": 2, "last": 2}, "margins": [2, 2, 2, 2]},
+                np.array(
+                    [
+                        [0.0, 0.2247875, 0.2247875, 0.07278022, 0.0],
+                        [0.0, 0.2247875, 0.1021872, 0.3788788, 0.0],
+                        [0.0, 0.00721462, 0.2247875, 0.00721462, 0.0],
+                    ]
+                ),
+                id="ROI without step",
+            ),
+            pytest.param(
+                [1, 2],
+                1,
+                [1, 0],  # [row, col]
+                {"col": {"first": 1, "last": 3}, "row": {"first": 1, "last": 3}, "margins": [1, 1, 1, 1]},
+                np.array(
+                    [
+                        [0.0, 0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.22478751, 0.22478751, 0.0727802258],
+                        [0.0, 0.0, 0.22478751, 0.102187171, 0.378878837],
+                    ]
+                ),
+                id="ROI with step = [1,2]",
+            ),
+        ],
+    )
+    def test_mutual_information_values_roi(
+        self, input_config, matching_cost_config, matching_cost_object, point, roi, expected
+    ):
+        """
+        Test that the cost volumes values are correct
+        """
+
+        cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}, "ROI": roi}
+
+        img_left, img_right = create_datasets_from_inputs(input_config, roi=roi)
+
+        matching_cost_matcher = matching_cost_object(matching_cost_config)
+
+        matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
+
+        cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
+
+        np.testing.assert_array_almost_equal(
+            cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=7
+        )

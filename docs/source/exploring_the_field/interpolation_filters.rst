@@ -30,10 +30,12 @@ and
 In the following image, two lines of an image are sketched with on each a point to interpolate at indices `3.5` and `5.5`:
 
 .. image:: /Images/bicubic_filter_shift.drawio.svg
+    :align: center
 
 For both points to interpolate, the `fractional_shift` is `0.5`. Thus, the coefficients to apply to pixels’ values are the same for both points.
 
 .. image:: /Images/bicubic_filter_get_coeff.drawio.svg
+    :align: center
 
 :math:`x` values for which kernel is not null are available for :math:`a` ranging from :math:`-1` to :math:`2`.
 

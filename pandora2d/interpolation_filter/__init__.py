@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -22,4 +22,4 @@ Init file for interpolation filter module
 """
 
 from .interpolation_filter import AbstractFilter
-from . import bicubic, cardinal_sine
+from . import bicubic, cardinal_sine, cardinal_sine_cpp, bicubic_cpp

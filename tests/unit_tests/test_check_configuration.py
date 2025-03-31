@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf8
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -244,7 +244,7 @@ class TestCheckPipelineSection:
             "estimation": {"estimated_shifts": [-0.5, 1.3], "error": [1.0], "phase_diff": [1.0]},
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-            "refinement": {"refinement_method": "interpolation"},
+            "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
         configuration = {"pipeline": {step: steps[step] for step in step_order}}
         with pytest.raises(transitions.core.MachineError):
@@ -274,26 +274,44 @@ class TestCheckPipelineSection:
                 "matching_cost": {"matching_cost_method": "zncc", "window_size": 5, "subpix": 2},
                 "disparity": {"disparity_method": "wta"},
             },
+            "output": {"path": "here"},
         }
 
         check_configuration.check_conf(cfg, pandora2d_machine)
 
 
-class TestCheckConf:  # pylint: disable=too-few-public-methods
-    """Test check_conf method."""
+class TestCheckOutputSection:
+    """Test check_output_section"""
 
-    def test_passes_with_good_disparity_range_and_interpolation_step(
-        self, correct_input_cfg, correct_pipeline, pandora2d_machine
-    ):
-        """
-        Description : Test col_disparity & row_disparity range (=5) with interpolation step in user configuration
-        Data :
-        - Left image : cones/monoband/left.png
-        - Right image : cones/monoband/right.png
-        Requirement : EX_ROI_05
-        """
-        user_cfg = {**correct_input_cfg, **correct_pipeline}
-        check_configuration.check_conf(user_cfg, pandora2d_machine)
+    def test_path_is_mandatory(self):
+        with pytest.raises(MissKeyCheckerError, match="path"):
+            check_configuration.check_output_section({})
+
+    @pytest.mark.parametrize("format_", ["tiff"])
+    def test_accept_optional_format(self, format_):
+        check_configuration.check_output_section({"path": "/home/me/out", "format": format_})
+
+    @pytest.mark.parametrize("format_", ["unknown"])
+    def test_fails_with_bad_format(self, format_):
+        with pytest.raises(DictCheckerError, match="format"):
+            check_configuration.check_output_section({"path": "/home/me/out", "format": format_})
+
+
+class TestGetOutputConfig:
+    """Test get_output_config."""
+
+    def test_raise_error_on_missing_output_key(self):
+        with pytest.raises(MissKeyCheckerError, match="output"):
+            check_configuration.get_output_config({})
+
+    def test_default_values(self):
+        result = check_configuration.get_output_config({"output": {"path": "somewhere"}})
+        assert result["format"] == "tiff"
+
+    @pytest.mark.parametrize(["key", "value"], [("format", "something")])
+    def test_default_override(self, key, value):
+        result = check_configuration.get_output_config({"output": {"path": "somewhere", key: value}})
+        assert result[key] == value
 
 
 class TestCheckRoiSection:
@@ -458,6 +476,7 @@ class TestCheckConfMatchingCostNodataCondition:
             "pipeline": {
                 "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 1},
             },
+            "output": {"path": "there"},
         }
 
     @pytest.mark.parametrize("right_nodata", ["NaN", 0.1, "inf", None])
@@ -534,6 +553,7 @@ class TestDisparityRangeAgainstImageSize:
             "pipeline": {
                 "matching_cost": {"matching_cost_method": "zncc", "window_size": 1},
             },
+            "output": {"path": "path"},
         }
 
     @pytest.mark.parametrize(
@@ -684,7 +704,7 @@ def test_extra_section_is_allowed(correct_input_cfg, correct_pipeline, pandora2d
     - Right image : cones/monoband/right.png
     Requirement : EX_CONF_05
     """
-    configuration = {**correct_input_cfg, **correct_pipeline, extra_section_name: {}}
+    configuration = {**correct_input_cfg, **correct_pipeline, "output": {"path": "here"}, extra_section_name: {}}
 
     check_configuration.check_conf(configuration, pandora2d_machine)
 

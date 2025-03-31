@@ -1,5 +1,5 @@
-# Copyright (c) 2021 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -21,23 +21,20 @@
 This module contains functions to run Pandora pipeline.
 """
 
-import json
+from os import PathLike
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
 
 import xarray as xr
 
 from pandora import read_config_file, setup_logging, import_plugin
-from pandora.common import save_config
 
 from pandora2d import common
 from pandora2d.check_configuration import check_conf, check_datasets
+from pandora2d.common import string_to_path, resolve_path_in_config
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 from pandora2d.state_machine import Pandora2DMachine
-from pandora2d import reporting
-from pandora2d.reporting import NumpyPrimitiveEncoder
-from pandora2d.profiling import generate_summary
-from pandora2d import profiling
+from pandora2d.profiling import generate_summary, expert_mode_config
 
 
 def run(
@@ -77,14 +74,12 @@ def run(
     return pandora2d_machine.dataset_disp_maps, pandora2d_machine.completed_cfg
 
 
-def main(cfg_path: str, path_output: str, verbose: bool) -> None:
+def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     """
     Check config file and run pandora 2D framework accordingly
 
     :param cfg_path: path to the json configuration file
-    :type cfg_path: string
-    :param path_output: output directory
-    :type path_output: str
+    :type cfg_path: PathLike|str
     :param verbose: verbose mode
     :type verbose: bool
     :return: None
@@ -93,13 +88,16 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     # Import pandora plugins
     import_plugin()
 
+    cfg_path = Path(cfg_path)
+
     # read the user input's configuration
     user_cfg = read_config_file(cfg_path)
+    user_cfg = resolve_path_in_config(user_cfg, cfg_path)
 
     pandora2d_machine = Pandora2DMachine()
 
     cfg = check_conf(user_cfg, pandora2d_machine)
-    profiling.expert_mode_config.enable = "expert_mode" in cfg
+    expert_mode_config.enable = "expert_mode" in cfg
 
     setup_logging(verbose)
 
@@ -110,7 +108,7 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
     # check roi in user configuration
     roi = None
     if "ROI" in cfg:
-        cfg["ROI"]["margins"] = pandora2d_machine.margins.global_margins.astuple()
+        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], col_disparity, row_disparity)
 
     # read images
@@ -126,15 +124,14 @@ def main(cfg_path: str, path_output: str, verbose: bool) -> None:
 
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):
-        common.save_dataset(dataset_disp_maps, completed_cfg, path_output)
-        report = {"statistics": {"disparity": reporting.report_disparities(dataset_disp_maps)}}
-        with open(Path(path_output) / "report.json", "w", encoding="utf8") as fd:
-            json.dump(report, fd, indent=2, cls=NumpyPrimitiveEncoder)
+        common.save_disparity_maps(dataset_disp_maps, completed_cfg)
     # Update output configuration with detailed margins
-    completed_cfg["margins"] = pandora2d_machine.margins.to_dict()
+    completed_cfg["margins_disp"] = pandora2d_machine.margins_disp.to_dict()
+    completed_cfg["margins"] = pandora2d_machine.margins_img.to_dict()
     # save config
-    save_config(path_output, completed_cfg)
+    common.save_config(completed_cfg)
 
     # Profiling results
     if "expert_mode" in completed_cfg:
+        path_output = Path(user_cfg["output"]["path"])
         generate_summary(path_output, completed_cfg["expert_mode"]["profiling"])

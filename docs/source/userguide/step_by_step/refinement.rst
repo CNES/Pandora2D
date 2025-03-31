@@ -4,18 +4,6 @@ Refinement of the disparity maps
 ================================
 The purpose of this step is to refine the disparity identified in the previous step.
 
-Interpolation method
---------------------
-
-It consists on 3 different steps:
-
-    * First, the cost_volumes is reshaped to obtain the 2D (disp_row, disp_col) costs map for each pixel, so we will obtain (row * col) 2D cost maps.
-    * The cost map of each pixel is interpolated using scipy to obtain a continuous function.
-    * Then, the interpolated functions are minimized using scipy to obtain the refined disparities.
-
-.. warning::
-    When using the interpolation method, row and column disparity ranges must have a size greater than or equal to 5. 
-
 Optical_flow method
 -------------------
 .. warning::
@@ -91,6 +79,7 @@ the refinement of the disparity map with optical flow.
 .. figure:: ../../Images/optical_flow_schema.png
    :width: 1000px
    :height: 200px
+   :align: center
 
 Dichotomy method
 ----------------
@@ -102,49 +91,16 @@ It’s an iterative process that will, at each iteration:
 
 Available filters are described in :ref:`interpolation_filters`.
 
+.. note::
+    Two dichotomy implementations are available in Pandora2d: one in C++ and one in Python. 
+    By default, the C++ dichotomy is used when using the “dichotomy” refinement method. 
+    To use the Python version, enter “dichotomy_python” as the refinement method in the configuration file. 
+ 
 
 Configuration and parameters
 ----------------------------
 
 .. tabs::
-
-    .. tab:: Interpolation
-
-        Parameters : 
-
-        .. list-table:: 
-            :header-rows: 1
-
-            * - Name
-              - Description
-              - Type
-              - Available value
-              - Required
-            * - *refinement_method*
-              - Refinement method
-              - string
-              - "interpolation"
-              - Yes
-
-        Configuration example with interpolation : 
-
-        .. code:: json
-
-            {
-                "input" :
-                {
-                    // input content
-                },
-                "pipeline" :
-                {
-                    // ...
-                    "refinement":
-                    {
-                      "refinement_method": "interpolation"
-                    },
-                    // ...
-                }
-            }
 
     .. tab:: Optical-flow
 
@@ -162,12 +118,12 @@ Configuration and parameters
             * - *refinement_method*
               - Refinement method
               - string
-              -
+              - None
               - "optical_flow"
               - Yes
             * - *iterations*
               - Number of iterations
-              - integer
+              - int
               - 4
               - >0
               - No
@@ -190,7 +146,11 @@ Configuration and parameters
                       "iterations" : 7
                     },
                     // ...
-                }
+                },
+                "output":
+                  {
+                     // ...
+                  }
             }
 
     .. tab:: Dichotomy
@@ -213,13 +173,13 @@ Configuration and parameters
                     * - *refinement_method*
                       - Refinement method
                       - string
-                      -
-                      - "dichotomy"
+                      - None
+                      - "dichotomy", "dichotomy_python"
                       - Yes
                     * - *iterations*
                       - Number of iterations
-                      - integer
-                      - 
+                      - int
+                      - None
                       - | 1 to 9
                         | *if above, will be bound to 9*
                       - Yes
@@ -228,11 +188,11 @@ Configuration and parameters
                         | used for interpolation
                       - | dict with key:
                         | - "method"
-                      - 
+                      - None
                       - {"method": "bicubic"}
                       - Yes
 
-                Configuration example with dichotomy : 
+                Configuration example with dichotomy c++ : 
 
                 .. code:: json
 
@@ -248,6 +208,32 @@ Configuration and parameters
                             {
                               "refinement_method": "dichotomy",
                               "filter": {"method": "bicubic"},
+                              "iterations" : 7
+                            },
+                            // ...
+                        },
+                        "output":
+                        {
+                           // ...
+                        }
+                    }
+                
+                Configuration example with dichotomy python : 
+
+                .. code:: json
+
+                    {
+                        "input" :
+                        {
+                            // input content
+                        },
+                        "pipeline" :
+                        {
+                            // ...
+                            "refinement":
+                            {
+                              "refinement_method": "dichotomy_python",
+                              "filter": {"method": "bicubic_python"},
                               "iterations" : 7
                             },
                             // ...
@@ -270,13 +256,13 @@ Configuration and parameters
                     * - *refinement_method*
                       - Refinement method
                       - string
-                      -
-                      - "dichotomy"
+                      - None
+                      - "dichotomy", "dichotomy_python"
                       - Yes
                     * - *iterations*
                       - Number of iterations
-                      - integer
-                      - 
+                      - int
+                      - None
                       - | 1 to 9
                         | *if above, will be bound to 9*
                       - Yes
@@ -286,14 +272,14 @@ Configuration and parameters
                       - | dict with keys: 
                         | - "method"
                         | - "size"
-                      -
+                      - None
                       - | {
                         |  "method": "sinc", 
                         |  "size" : 6 to 21, 
                         | }
                       - Yes
 
-                Configuration example with dichotomy : 
+                Configuration example with dichotomy c++ : 
 
                 .. code:: json
 
@@ -310,6 +296,35 @@ Configuration and parameters
                               "refinement_method": "dichotomy",
                               "filter": {
                                 "method": "sinc",
+                                "size": 9
+                              },
+                              "iterations" : 7
+                            },
+                            // ...
+                        },
+                        "output":
+                        {
+                           // ...
+                        }
+                    }
+
+                Configuration example with dichotomy python : 
+
+                .. code:: json
+
+                    {
+                        "input" :
+                        {
+                            // input content
+                        },
+                        "pipeline" :
+                        {
+                            // ...
+                            "refinement":
+                            {
+                              "refinement_method": "dichotomy_python",
+                              "filter": {
+                                "method": "sinc_python",
                                 "size": 9
                               },
                               "iterations" : 7

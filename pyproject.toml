@@ -1,11 +1,108 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["meson-python", "pybind11", "setuptools-scm>=8", "meson >= 1.1.0",]
+build-backend = "mesonpy"
+
+[tool.meson-python.args]
+setup = ["-Dbuild_cpp_tests=disabled"]
+compile = ['-j0']
+install = ['--skip-subprojects=eigen']
+
+[tool.setuptools_scm]
+
+[project]
+name = "pandora2d"
+dynamic = ["version"]
+authors = [{ name = "CNES" }]
+description = "A coregistration tool."
+readme = "README.md"
+requires-python = ">=3.9"
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
-build-backend = "setuptools.build_meta"
+dependencies = [
+    "json-checker",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "pandora>=1.6.2",
+    "psutil",
+    "rasterio",
+    "scikit-image",
+    "scipy",
+    "transitions",
+    "typing_extensions",
+    "xarray",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pandora2d[test]",
+    "black>=21.5b0",  # PEP8 format code
+    "isort>=5.8.0",   # Check imports
+    "mypy",           # static type checker
+    "pandas-stubs",
+    "pre-commit",
+    "pylint>=3.3.6",  # General linter with more rules
+    "setuptools_scm", # version from git tag
+    "types-psutil",
+]
+
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-html",
+    "pytest-mock",
+    "pytest-monitor",
+    "gcovr",
+]
+
+# If updated, align with docs/requirements.txt for Readthedocs CI
+docs = ["sphinx", "sphinx_autoapi", "sphinx_rtd_theme", "sphinx_tabs"]
+
+notebook = ["graphviz", "notebook"]
+
+mccnn = ["pandora[mccnn]"]
+
+[project.urls]
+Homepage = "https://pandora2d.readthedocs.io"
+Documentation = "https://pandora2d.readthedocs.io/en/latest/"
+Repository = "https://github.com/CNES/Pandora2D"
+Issues = "https://github.com/CNES/Pandora2D/issues"
+Changelog = "https://github.com/CNES/Pandora2D/blob/master/CHANGELOG.md"
+
+[project.scripts]
+pandora2d = "pandora2d.Pandora2d:main"
 
 [tool.black]
 # https://github.com/psf/black
 line-length = 120
 exclude = "(.eggs|.git|.mypy_cache|.nox|.tox|_build|build|dist|venv)"
+
+[tool.cibuildwheel]
+archs = "auto64"
+skip = ["pp*", "cp36-*", "cp37-*", "cp38-*", "*-musllinux*"]
+config-settings = { "setup-args" = "-Dbuild_cpp_tests=disabled" }
+test-extras = ["test"]
+test-command = "pytest {package}/tests -m \"functional_tests or unit_tests and not notebook_tests and not plugin_tests\" --cov-config={project}/.coveragerc --cov-report xml:/output/coverage.xml --cov"
+
+# Use delvewheel on windows
+[tool.cibuildwheel.windows]
+before-build = "pip install delvewheel"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"

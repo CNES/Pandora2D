@@ -1,4 +1,4 @@
-#  Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+#  Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #  This file is part of PANDORA2D
 #
 #      https://github.com/CNES/Pandora2D
@@ -29,11 +29,11 @@ from pandora.margins import Margins
 from .interpolation_filter import AbstractFilter
 
 
-@AbstractFilter.register_subclass("sinc")
-class CardinalSine(AbstractFilter):
+@AbstractFilter.register_subclass("sinc_python")
+class CardinalSinePython(AbstractFilter):
     """Implementation of the Normalized Cardinal Sine filter."""
 
-    schema = {"method": "sinc", OptionalKey("size"): And(int, lambda a: 6 <= a <= 21)}
+    schema = {"method": "sinc_python", OptionalKey("size"): And(int, lambda a: 6 <= a <= 21)}
 
     def __init__(self, cfg: Dict, fractional_shift: float = 0.5):
         """
@@ -57,7 +57,7 @@ class CardinalSine(AbstractFilter):
             raise ValueError(f"fractional_shift greater than 0 and lower than 1 expected, got {fractional_shift}")
 
     @property
-    def margins(self) -> Margins:
+    def margins(self):
         """Return filter's Margins."""
         return Margins(self._HALF_SIZE, self._HALF_SIZE, self._HALF_SIZE, self._HALF_SIZE)
 

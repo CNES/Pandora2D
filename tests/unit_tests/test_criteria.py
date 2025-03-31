@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -21,6 +21,7 @@ Test methods from criteria.py file
 """
 # pylint: disable=too-many-lines
 # pylint: disable=redefined-outer-name
+
 import copy
 import pytest
 import numpy as np
@@ -40,6 +41,7 @@ def img_size():
 
 @pytest.fixture()
 def disparity_cfg():
+    """Return (disp_row, disp_col)"""
     return {"init": 1, "range": 2}, {"init": -1, "range": 4}
 
 
@@ -54,7 +56,22 @@ def valid_pixels():
 
 
 @pytest.fixture()
-def image(img_size, disparity_cfg, valid_pixels, no_data_mask):
+def subpix():
+    return 1
+
+
+@pytest.fixture()
+def step():
+    return [1, 1]
+
+
+@pytest.fixture()
+def start_point():
+    return [0, 0]
+
+
+@pytest.fixture()
+def image(img_size, disparity_cfg, valid_pixels, no_data_mask, start_point):
     """Make image"""
     row, col = img_size
     row_disparity, col_disparity = disparity_cfg
@@ -65,7 +82,7 @@ def image(img_size, disparity_cfg, valid_pixels, no_data_mask):
             "im": (["row", "col"], data),
             "msk": (["row", "col"], np.zeros_like(data)),
         },
-        coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+        coords={"row": np.arange(start_point[0], data.shape[0]), "col": np.arange(start_point[1], data.shape[1])},
         attrs={
             "no_data_img": -9999,
             "valid_pixels": valid_pixels,
@@ -87,37 +104,90 @@ def window_size():
 
 
 @pytest.fixture()
-def subpix():
-    return 1
-
-
-@pytest.fixture()
-def matching_cost_cfg(window_size, subpix):
-    return {"matching_cost_method": "ssd", "window_size": window_size, "subpix": subpix}
+def matching_cost_cfg(window_size, subpix, step):
+    return {"matching_cost_method": "ssd", "window_size": window_size, "subpix": subpix, "step": step}
 
 
 @pytest.fixture()
 def cost_volumes(matching_cost_cfg, image):
     """Compute a cost_volumes"""
-    matching_cost_ = matching_cost.MatchingCost(matching_cost_cfg)
+    matching_cost_ = matching_cost.PandoraMatchingCostMethods(matching_cost_cfg)
 
-    matching_cost_.allocate_cost_volume_pandora(img_left=image, img_right=image, cfg=matching_cost_cfg)
+    matching_cost_.allocate(img_left=image, img_right=image, cfg=matching_cost_cfg)
     return matching_cost_.compute_cost_volumes(img_left=image, img_right=image)
 
 
 @pytest.fixture()
-def criteria_dataarray(img_size):
-    shape = (*img_size, 9, 5)
+def criteria_dataarray(img_size, subpix, step, start_point):
+    """
+    Create a criteria dataarray
+    """
+    row = np.arange(start_point[0], img_size[0], step[0])
+    col = np.arange(start_point[1], img_size[1], step[1])
+    shape = (len(row), len(col), len(np.arange(-1, 3.25, 1 / subpix)), len(np.arange(-5, 3.25, 1 / subpix)))
     return xr.DataArray(
         np.full(shape, Criteria.VALID),
         coords={
-            "row": np.arange(shape[0]),
-            "col": np.arange(shape[1]),
-            "disp_col": np.arange(-5, 4),
-            "disp_row": np.arange(-1, 4),
+            "row": row,
+            "col": col,
+            "disp_row": np.arange(-1, 3.25, 1 / subpix),
+            "disp_col": np.arange(-5, 3.25, 1 / subpix),
         },
-        dims=["row", "col", "disp_col", "disp_row"],
+        dims=["row", "col", "disp_row", "disp_col"],
     )
+
+
+class TestCriteria:
+    """Test the Criteria Enum."""
+
+    def test_can_be_stored_in_uint8_np_array(self):
+        """Criteria can be stored in uint8 numpy array."""
+        result = np.array([Criteria.VALID, Criteria.P2D_LEFT_BORDER], dtype=np.uint8)
+        assert result.dtype == np.uint8
+
+    def test_is_in(self):
+        """Test method to see if a Criteria is part of an array."""
+        data = np.array(
+            [
+                Criteria.VALID,
+                Criteria.P2D_LEFT_BORDER,
+                Criteria.P2D_LEFT_BORDER | Criteria.P2D_PEAK_ON_EDGE,
+            ],
+            dtype=np.uint8,
+        )
+
+        np.testing.assert_array_equal(Criteria.P2D_LEFT_BORDER.is_in(data), [False, True, True])
+        np.testing.assert_array_equal(Criteria.P2D_PEAK_ON_EDGE.is_in(data), [False, False, True])
+
+
+class TestFlagArray:
+    """Test flag array."""
+
+    @pytest.fixture(scope="class")
+    def flag_array(self):
+        return criteria.FlagArray(
+            [
+                Criteria.P2D_PEAK_ON_EDGE,
+                Criteria.P2D_RIGHT_NODATA,
+            ],
+            Criteria,
+        )
+
+    def test_default_dtype(self, flag_array):
+        assert flag_array.dtype == np.uint8
+
+    def test_repr(self, flag_array):
+        """Test repr."""
+        prefix = "FlagArray<Criteria>"
+        prefix_offset = " " * (len(prefix) + 1)
+        expected = (
+            f"{prefix}([<P2D_PEAK_ON_EDGE: "
+            f"{Criteria.P2D_PEAK_ON_EDGE.value}>,\n{prefix_offset}"
+            f"<P2D_RIGHT_NODATA: "
+            f"{Criteria.P2D_RIGHT_NODATA.value}>], "
+            f"dtype=uint8)"
+        )
+        assert repr(flag_array) == expected
 
 
 class TestAllocateCriteriaDataset:
@@ -151,7 +221,7 @@ class TestAllocateCriteriaDataset:
         nb_row_disp = 2 * row_disparity["range"] * subpix + 1
 
         assert criteria_dataarray.shape == cost_volumes.cost_volumes.shape
-        assert criteria_dataarray.shape == (row, col, nb_col_disp, nb_row_disp)
+        assert criteria_dataarray.shape == (row, col, nb_row_disp, nb_col_disp)
 
 
 class TestSetUnprocessedDisparity:
@@ -191,14 +261,10 @@ class TestSetUnprocessedDisparity:
 
         criteria.set_unprocessed_disp(criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row)
 
-        assert np.all(
-            criteria_dataarray.data[:, :nb_col_set, 0, :] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
-        )
-        assert np.all(criteria_dataarray.data[:, nb_col_set:, 0, :] == Criteria.VALID)
-        assert np.all(
-            criteria_dataarray.data[:, nb_col_set:, -1, :] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
-        )
-        assert np.all(criteria_dataarray.data[:, :nb_col_set, -1, :] == Criteria.VALID)
+        assert np.all(criteria_dataarray.data[:, :nb_col_set, :, 0] == Criteria.P2D_DISPARITY_UNPROCESSED)
+        assert np.all(criteria_dataarray.data[:, nb_col_set:, :, 0] == Criteria.VALID)
+        assert np.all(criteria_dataarray.data[:, nb_col_set:, :, -1] == Criteria.P2D_DISPARITY_UNPROCESSED)
+        assert np.all(criteria_dataarray.data[:, :nb_col_set, :, -1] == Criteria.VALID)
 
     def test_variable_row_disparity(
         self, criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row, img_size
@@ -211,33 +277,113 @@ class TestSetUnprocessedDisparity:
 
         criteria.set_unprocessed_disp(criteria_dataarray, grid_min_col, grid_max_col, grid_min_row, grid_max_row)
 
-        assert np.all(
-            criteria_dataarray.data[:nb_row_set, :, :, 0] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
-        )
-        assert np.all(criteria_dataarray.data[nb_row_set:, :, :, 0] == Criteria.VALID)
-        assert np.all(
-            criteria_dataarray.data[nb_row_set:, :, :, -1] == Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED
-        )
-        assert np.all(criteria_dataarray.data[:nb_row_set, :, :, -1] == Criteria.VALID)
+        assert np.all(criteria_dataarray.data[:nb_row_set, :, 0, :] == Criteria.P2D_DISPARITY_UNPROCESSED)
+        assert np.all(criteria_dataarray.data[nb_row_set:, :, 0, :] == Criteria.VALID)
+        assert np.all(criteria_dataarray.data[nb_row_set:, :, -1, :] == Criteria.P2D_DISPARITY_UNPROCESSED)
+        assert np.all(criteria_dataarray.data[:nb_row_set, :, -1, :] == Criteria.VALID)
 
 
 class TestMaskBorder:
     """Test mask_border method."""
 
-    def test_null_offset(self, criteria_dataarray):
-        """offset = 0, no raise PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria"""
+    def test_null_offset(self, image, criteria_dataarray):
+        """offset = 0, no raise P2D_LEFT_BORDER criteria"""
         make_criteria_copy = criteria_dataarray.copy(deep=True)
-        criteria.mask_border(0, criteria_dataarray)
+        criteria.mask_border(image, 0, criteria_dataarray)
 
         # Check criteria_dataarray has not changed
         xr.testing.assert_equal(criteria_dataarray, make_criteria_copy)
-        # Check the PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria does not raise
-        assert np.all(criteria_dataarray.data[:, :, :, :] != Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
+        # Check the P2D_LEFT_BORDER criteria does not raise
+        assert np.all(criteria_dataarray.data[:, :, :, :] != Criteria.P2D_LEFT_BORDER)
 
-    @pytest.mark.parametrize("offset", [1, 2, 3])
-    def test_variable_offset(self, criteria_dataarray, offset):
+    @pytest.mark.parametrize("img_size", [(5, 6)])
+    @pytest.mark.parametrize(
+        ["offset", "step", "expected"],
+        [
+            pytest.param(
+                1,
+                [1, 1],
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 0, 0, 0, 0, 1],
+                        [1, 0, 0, 0, 0, 1],
+                        [1, 0, 0, 0, 0, 1],
+                        [1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="offset=1 and no step",
+            ),
+            pytest.param(
+                2,
+                [1, 1],
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 0, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="offset=2 and no step",
+            ),
+            pytest.param(
+                3,
+                [1, 1],
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="offset=3 and no step",
+            ),
+            pytest.param(
+                1,
+                [1, 2],
+                np.array(
+                    [
+                        [1, 1, 1],
+                        [1, 0, 0],
+                        [1, 0, 0],
+                        [1, 0, 0],
+                        [1, 1, 1],
+                    ]
+                ),
+                id="offset=1 and step=[1,2]",
+            ),
+            pytest.param(
+                1,
+                [3, 1],
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 0, 0, 0, 0, 1],
+                    ]
+                ),
+                id="offset=1 and step=[3,1]",
+            ),
+            pytest.param(
+                2,
+                [2, 3],
+                np.array(
+                    [
+                        [1, 1],
+                        [1, 0],
+                        [1, 1],
+                    ]
+                ),
+                id="offset=2 and step=[2,3]",
+            ),
+        ],
+    )
+    def test_variable_offset(self, image, criteria_dataarray, offset, expected):
         """
-        With mask_border, the PANDORA2D_MSK_PIXEL_LEFT_BORDER criteria is raised on the border.
+        With mask_border, the P2D_LEFT_BORDER criteria is raised on the border.
 
         Example :
         offset = 1
@@ -263,12 +409,12 @@ class TestMaskBorder:
                                   1 0 0 0 0 0 0 1
                                   1 1 1 1 1 1 1 1
         """
-        criteria.mask_border(offset, criteria_dataarray)
+        criteria.mask_border(image, offset, criteria_dataarray)
 
-        assert np.all(criteria_dataarray.data[:offset, :, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[-offset:, :, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[:, :offset, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
-        assert np.all(criteria_dataarray.data[:, -offset:, :, :] == Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER)
+        # P2D_LEFT_BORDER is raised independently of disparity values
+        for i in range(criteria_dataarray.data.shape[2]):
+            for j in range(criteria_dataarray.data.shape[3]):
+                assert np.all(criteria_dataarray.data[:, :, i, j] == expected)
 
 
 class TestMaskDisparityOutsideRightImage:
@@ -279,10 +425,10 @@ class TestMaskDisparityOutsideRightImage:
         """Make ground_truth of criteria dataarray for null disparity"""
         data = np.full(img_size, Criteria.VALID)
         if offset > 0:
-            data[:offset, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-            data[-offset:, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-            data[:, :offset] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-            data[:, -offset:] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[:offset, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+            data[-offset:, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+            data[:, :offset] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+            data[:, -offset:] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         return data
 
     @pytest.fixture()
@@ -323,16 +469,16 @@ class TestMaskDisparityOutsideRightImage:
         first_row_disparity = -1
         delta_row_start = offset + abs(first_row_disparity)
         delta_row_end = offset + first_row_disparity
-        data[:delta_row_start, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        data[:delta_row_start, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         if delta_row_end > 0:
-            data[-delta_row_end:, :] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[-delta_row_end:, :] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         # Udpate col
         first_col_disparity = -5
         delta_col_start = offset + abs(first_col_disparity)
         delta_col_end = offset + first_col_disparity
-        data[:, :delta_col_start] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        data[:, :delta_col_start] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         if delta_col_end > 0:
-            data[:, -delta_col_end:] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            data[:, -delta_col_end:] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         return data
 
     @pytest.mark.parametrize(
@@ -351,7 +497,7 @@ class TestMaskDisparityOutsideRightImage:
         """
         criteria.mask_disparity_outside_right_image(offset, criteria_dataarray)
 
-        np.testing.assert_array_equal(criteria_dataarray.values[:, :, 5, 1], ground_truth_null_disparity)
+        np.testing.assert_array_equal(criteria_dataarray.values[:, :, 1, 5], ground_truth_null_disparity)
         np.testing.assert_array_equal(criteria_dataarray.values[:, :, 0, 0], ground_truth_first_disparity)
 
 
@@ -377,8 +523,8 @@ class TestMaskLeftNoData:
 
         image["msk"][no_data_row_position, no_data_col_position] = image.attrs["no_data_mask"]
 
-        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
-        expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
+        expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
+        expected_criteria_data[row_slice, col_slice, ...] = Criteria.P2D_LEFT_NODATA
 
         criteria.mask_left_no_data(image, window_size, criteria_dataarray)
 
@@ -402,14 +548,12 @@ class TestMaskLeftNoData:
 
         image["msk"][no_data_row_position, no_data_col_position] = image.attrs["no_data_mask"]
 
-        criteria_dataarray.data[no_data_row_position, no_data_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-        )
+        criteria_dataarray.data[no_data_row_position, no_data_col_position, ...] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
-        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
-        expected_criteria_data[row_slice, col_slice, ...] = Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA
+        expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
+        expected_criteria_data[row_slice, col_slice, ...] = Criteria.P2D_LEFT_NODATA
         expected_criteria_data[no_data_row_position, no_data_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         )
 
         criteria.mask_left_no_data(image, window_size, criteria_dataarray)
@@ -423,7 +567,7 @@ class TestMaskRightNoData:
 
     @pytest.mark.usefixtures("mask_image")
     @pytest.mark.parametrize(
-        ["no_data_mask", "msk", "disp_row", "disp_col", "expected_criteria"],
+        ["no_data_mask", "msk", "disp_row", "disp_col", "subpix", "expected_criteria"],
         [
             # pylint: disable=line-too-long
             pytest.param(
@@ -438,6 +582,7 @@ class TestMaskRightNoData:
                 ),
                 -1,
                 -1,
+                1,
                 np.array(
                     # fmt: off
                     [
@@ -461,6 +606,7 @@ class TestMaskRightNoData:
                     ]
                 ),
                 -1,
+                1,
                 1,
                 np.array(
                     # fmt: off
@@ -486,12 +632,13 @@ class TestMaskRightNoData:
                 ),
                 1,
                 1,
+                1,
                 np.array(
                     # fmt: off
                     [
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                     ]
                     # fmt: on
@@ -510,11 +657,12 @@ class TestMaskRightNoData:
                 ),
                 2,
                 1,
+                1,
                 np.array(
                     # fmt: off
                     [
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                     ]
@@ -534,17 +682,118 @@ class TestMaskRightNoData:
                 ),
                 2,
                 1,
+                1,
                 np.array(
                     # fmt: off
                     [
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                     ]
                     # fmt: on
                 ),
                 id="Disp 2 1 - other no_data_mask",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 1, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                2.5,
+                -1.5,
+                2,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 2.5 -1.5 - Pos (2,2), subpix=2",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [1, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                0,
+                -3.5,
+                2,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 0 -3.5 - Pos (2,0), subpix=2",
+            ),
+            pytest.param(
+                3,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 3, 0, 0],
+                        [1, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                0.75,
+                -2.25,
+                4,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 0.75 -2.25 - Pos (1,2), no_data_mask=3, subpix=4",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                1.75,
+                1,
+                4,
+                np.array(
+                    # fmt: off
+                    [
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                    ]
+                    # fmt: on
+                ),
+                id="Disp 1.75 1 - Pos (1,2), subpix=4",
             ),
         ],
         # pylint: enable=line-too-long
@@ -561,7 +810,7 @@ class TestMaskRightNoData:
 
     @pytest.mark.usefixtures("mask_image")
     @pytest.mark.parametrize(
-        ["no_data_mask", "msk", "disp_row", "disp_col", "expected_criteria"],
+        ["no_data_mask", "msk", "disp_row", "disp_col", "subpix", "expected_criteria"],
         # pylint: disable=line-too-long
         [
             pytest.param(
@@ -576,13 +825,14 @@ class TestMaskRightNoData:
                 ),
                 -1,
                 -1,
+                1,
                 np.array(
                     [
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA],
                         # fmt: on
                     ]
                 ),
@@ -600,13 +850,14 @@ class TestMaskRightNoData:
                 ),
                 -1,
                 1,
+                1,
                 np.array(
                     [
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
@@ -624,12 +875,13 @@ class TestMaskRightNoData:
                 ),
                 1,
                 1,
+                1,
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -648,12 +900,13 @@ class TestMaskRightNoData:
                 ),
                 1,
                 1,
+                1,
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -672,17 +925,118 @@ class TestMaskRightNoData:
                 ),
                 2,
                 1,
+                1,
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
                 id="Disp 2 1 - Pos (2,3)",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                2.5,
+                0.5,
+                2,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 2.5 0.5 - Pos (2,3), subpix=2",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [1, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                1.5,
+                -3.5,
+                2,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 1.5 -3.5 - Pos (2,0), subpix=2",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                2.25,
+                0.75,
+                4,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp 2.25 0.75 - Pos (2,3), subpix=4",
+            ),
+            pytest.param(
+                1,
+                np.array(
+                    [
+                        [1, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                -0.75,
+                -2.25,
+                4,
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="Disp -0.75 -2.25 - Pos (0,0), subpix=4",
             ),
         ],
         # pylint: enable=line-too-long
@@ -708,13 +1062,13 @@ class TestMaskRightNoData:
             ]
         )
 
-        criteria_dataarray.data[2, 3, ...] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        criteria_dataarray.data[2, 3, ...] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
         criteria.mask_right_no_data(image, 1, criteria_dataarray)
 
         assert (
             criteria_dataarray.sel(row=2, col=3, disp_row=1, disp_col=1).data
-            == Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA
+            == Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_RIGHT_NODATA
         )
 
 
@@ -733,7 +1087,7 @@ class TestMaskLeftInvalid:
     )
     def test_mask_left_invalid(self, img_size, image, criteria_dataarray, invalid_position):
         """
-        Test that mask_invalid_left method raises criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
+        Test that mask_invalid_left method raises criteria P2D_INVALID_MASK_LEFT
         for points whose value is neither valid_pixels or no_data_mask.
         """
         invalid_row_position, invalid_col_position = invalid_position
@@ -741,10 +1095,8 @@ class TestMaskLeftInvalid:
         # We put 2 in img_left msk because it is different from valid_pixels=0 and no_data_mask=1
         image["msk"][invalid_row_position, invalid_col_position] = 2
 
-        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
-        expected_criteria_data[invalid_row_position, invalid_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT
-        )
+        expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
+        expected_criteria_data[invalid_row_position, invalid_col_position, ...] = Criteria.P2D_INVALID_MASK_LEFT
 
         criteria.mask_left_invalid(image, criteria_dataarray)
 
@@ -767,13 +1119,11 @@ class TestMaskLeftInvalid:
         # We put 2 in img_left msk because it is different from valid_pixels=0 and no_data_mask=1
         image["msk"][invalid_row_position, invalid_col_position] = 2
 
-        criteria_dataarray.data[invalid_row_position, invalid_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
-        )
+        criteria_dataarray.data[invalid_row_position, invalid_col_position, ...] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
-        expected_criteria_data = np.full((*img_size, 9, 5), Criteria.VALID)
+        expected_criteria_data = np.full((*img_size, 5, 9), Criteria.VALID)
         expected_criteria_data[invalid_row_position, invalid_col_position, ...] = (
-            Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+            Criteria.P2D_INVALID_MASK_LEFT | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         )
 
         criteria.mask_left_invalid(image, criteria_dataarray)
@@ -787,7 +1137,7 @@ class TestMaskRightInvalid:
 
     @pytest.mark.usefixtures("mask_image")
     @pytest.mark.parametrize(
-        ["valid_pixels", "no_data_mask", "msk", "expected_criteria", "disp_col", "disp_row"],
+        ["valid_pixels", "no_data_mask", "msk", "expected_criteria", "disp_col", "disp_row", "subpix"],
         [
             # pylint: disable=line-too-long
             pytest.param(
@@ -807,12 +1157,13 @@ class TestMaskRightInvalid:
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT],
                         # fmt: on
                     ]
                 ),
                 -1,  # disp_col
                 -1,  # disp_row
+                1,  # subpix
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
@@ -830,7 +1181,7 @@ class TestMaskRightInvalid:
                     [
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
@@ -838,6 +1189,7 @@ class TestMaskRightInvalid:
                 ),
                 2,  # disp_col
                 1,  # disp_row
+                1,  # subpix
                 id="Invalid point at center of right mask with disp_row=2 and disp_col=1",
             ),
             pytest.param(
@@ -863,6 +1215,7 @@ class TestMaskRightInvalid:
                 ),
                 -1,  # disp_col
                 -1,  # disp_row
+                1,  # subpix
                 id="Invalid point at right bottom corner of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
@@ -881,13 +1234,14 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
                 -1,  # disp_col
-                -1,  # disp_row
+                -1,  # disp_row1, # subpix
+                1,  # subpix
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
@@ -907,12 +1261,13 @@ class TestMaskRightInvalid:
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
                 0,  # disp_col
                 -1,  # disp_row
+                1,  # subpix
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=0",
             ),
             pytest.param(
@@ -931,21 +1286,256 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
                 0,  # disp_col
                 -1,  # disp_row
+                1,  # subpix
                 id="Invalid point at center of right mask with no_data_mask=4, valid_pixels=3, disp_row=-1 and disp_col=0",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                1.5,  # disp_col
+                -0.5,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, disp_row=-0.5 and disp_col=1.5",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0,  # disp_col
+                0,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, disp_row=0 and disp_col=0",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0.5,  # disp_col
+                0.5,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, disp_row=0.5 and disp_col=0.5",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                3,  # disp_col
+                2.5,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, disp_row=2.5 and disp_col=3",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 3],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                -1.5,  # disp_col
+                -1,  # disp_row
+                2,  # subpix
+                id="Invalid point at right bottom corner of right mask with subpix=2, disp_row=-1 and disp_col=-1.5",
+            ),
+            pytest.param(
+                3,
+                4,
+                np.array(  # msk
+                    [
+                        [3, 3, 3, 3, 3],
+                        [3, 3, 0, 3, 4],
+                        [3, 3, 4, 3, 3],
+                        [3, 4, 3, 3, 3],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0.5,  # disp_col
+                -1,  # disp_row
+                2,  # subpix
+                id="Invalid point at center of right mask with subpix=2, no_data_mask=4, valid_pixels=3, disp_row=-1 and disp_col=0.5",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                1.25,  # disp_col
+                -0.75,  # disp_row
+                4,  # subpix
+                id="Invalid point at center of right mask with supix=4, disp_row=-0.75 and disp_col=1.25",
+            ),
+            pytest.param(
+                0,
+                1,
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                2.75,  # disp_col
+                1.5,  # disp_row
+                4,  # subpix
+                id="Invalid point at center of right mask with supix=4, disp_row=2.75 and disp_col=1.5",
+            ),
+            pytest.param(
+                3,
+                4,
+                np.array(  # msk
+                    [
+                        [3, 3, 3, 3, 3],
+                        [3, 3, 0, 3, 4],
+                        [3, 3, 4, 3, 3],
+                        [3, 4, 3, 3, 3],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                1,  # disp_col
+                -0.25,  # disp_row
+                4,  # subpix
+                id="Invalid point at center of right mask with subpix=4, no_data_mask=4, valid_pixels=3, disp_row=-0.25 and disp_col=1",
             ),
             # pylint: enable=line-too-long
         ],
     )
     def test_mask_invalid_right(self, image, criteria_dataarray, expected_criteria, disp_col, disp_row):
         """
-        Test that mask_invalid_right method raises criteria PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+        Test that mask_invalid_right method raises criteria P2D_INVALID_MASK_RIGHT
         for points whose value is neither valid_pixels or no_data_mask when we shift it by its disparity.
         """
 
@@ -990,17 +1580,17 @@ class TestMaskRightInvalid:
     )
     def test_combination(self, image, criteria_dataarray, disp_col, disp_row):
         """
-        Test that we combine Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+        Test that we combine Criteria.P2D_INVALID_MASK_RIGHT
         with existing criteria and do not override them.
         """
 
-        criteria_dataarray.data[2, 3, ...] = Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE
+        criteria_dataarray.data[2, 3, ...] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
 
         criteria.mask_right_invalid(image, criteria_dataarray)
 
         assert (
             criteria_dataarray.sel(row=2, col=3, disp_row=disp_row, disp_col=disp_col).data
-            == Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT
+            == Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_INVALID_MASK_RIGHT
         )
 
 
@@ -1061,22 +1651,8 @@ class TestGetCriteriaDataarray:
         [
             # pylint: disable=line-too-long
             pytest.param(
-                np.array(  # left msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
-                np.array(  # right msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
                 0,  # disp_col
                 0,  # disp_row
                 1,  # window_size
@@ -1093,36 +1669,22 @@ class TestGetCriteriaDataarray:
                 id="Everything is valid",
             ),
             pytest.param(
-                np.array(  # left msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
-                np.array(  # right msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
                 2,  # disp_col
                 -1,  # disp_row
                 1,  # window_size
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
-                        [Criteria.VALID , Criteria.VALID , Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
-                        [Criteria.VALID , Criteria.VALID , Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED],
+                        [Criteria.VALID , Criteria.VALID , Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED],
+                        [Criteria.VALID , Criteria.VALID , Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED],
                         # fmt: on
                     ]
                 ),
-                id="Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED overcome other criteria",
+                id="Criteria.P2D_DISPARITY_UNPROCESSED overcome other criteria",
             ),
             pytest.param(
                 np.array(  # left msk
@@ -1147,10 +1709,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA],
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT, Criteria.VALID],
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE , Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE ],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_LEFT_NODATA, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.P2D_RIGHT_NODATA],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_LEFT, Criteria.VALID],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_RIGHT_DISPARITY_OUTSIDE , Criteria.P2D_RIGHT_DISPARITY_OUTSIDE ],
                         # fmt: on
                     ]
                 ),
@@ -1179,10 +1741,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER , Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_NODATA | Criteria.P2D_INVALID_MASK_RIGHT, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_INVALID_MASK_LEFT, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER],
                         # fmt: on
                     ]
                 ),
@@ -1211,24 +1773,17 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_LEFT_NODATA  | Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_INVALIDITY_MASK_LEFT, Criteria.VALID, Criteria.VALID],
-                        [Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_LEFT_NODATA  | Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_LEFT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
                         # fmt: on
                     ]
                 ),
                 id="Centered invalid and no data in msk with window_size=1",
             ),
             pytest.param(
-                np.array(  # left msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
+                np.full((4, 5), 0),  # left msk
                 np.array(  # right msk
                     [
                         [0, 0, 0, 0, 0],
@@ -1243,10 +1798,10 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.VALID, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_NODATA | Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.VALID, Criteria.P2D_RIGHT_NODATA, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
                         # fmt: on
                     ]
                 ),
@@ -1275,46 +1830,50 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
-                        [Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER, Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
                         # fmt: on
                     ]
                 ),
-                id="Window_size=5, only Criteria.PANDORA2D_MSK_PIXEL_LEFT_BORDER is raised",
+                id="Window_size=5, only Criteria.P2D_LEFT_BORDER is raised",
             ),
             pytest.param(
-                np.array(  # left msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
-                np.array(  # right msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                    ]
-                ),
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
                 -5,  # disp_col
                 0,  # disp_row
                 1,  # window_size
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_DISPARITY_UNPROCESSED, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE, Criteria.PANDORA2D_MSK_PIXEL_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
                         # fmt: on
                     ]
                 ),
                 id="Column disparity out of the image or unprocessed for all points",
+            ),
+            pytest.param(
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
+                -5,  # disp_col
+                0,  # disp_row
+                3,  # window_size
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        # fmt: on
+                    ]
+                ),
+                id="Column disparity out of the image or unprocessed for all points and window_size=3",
             ),
             # pylint: enable=line-too-long
         ],
@@ -1337,3 +1896,116 @@ class TestGetCriteriaDataarray:
             criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col),
             expected_criteria,
         )
+
+
+class TestPeakOnEdge:
+    """
+    Test the methods linked to P2D_PEAK_ON_EDGE criteria
+    """
+
+    @pytest.fixture()
+    def row_map(self, img_size, disparity_cfg):
+        """
+        Row disparity map used for tests
+        """
+
+        row_map = np.full(img_size, 2)
+
+        # row_map[0,0] is equal to the minimum of the row disparity range
+        row_map[0, 0] = disparity_cfg[0]["init"] - disparity_cfg[0]["range"]
+        # row_map[3,3] is equal to the maximum of the row disparity range
+        row_map[3, 3] = disparity_cfg[0]["init"] + disparity_cfg[0]["range"]
+        return row_map
+
+    @pytest.fixture()
+    def col_map(self, img_size, disparity_cfg):
+        """
+        Col disparity map used for tests
+        """
+
+        col_map = np.full(img_size, -1)
+
+        # col_map[0,0] is equal to the maximum of the col disparity range
+        col_map[0, 0] = disparity_cfg[1]["init"] + disparity_cfg[1]["range"]
+        # col_map[0,0] is equal to the minimum of the col disparity range
+        col_map[4, 5] = disparity_cfg[1]["init"] - disparity_cfg[1]["range"]
+        return col_map
+
+    @pytest.fixture()
+    def row_map_full_peak(self, img_size, disparity_cfg):
+        """
+        Row disparity map with only peak on edges used for tests
+        """
+
+        # row_map is filled with the minimum of the row disparity range
+        row_map = np.full(img_size, disparity_cfg[0]["init"] - disparity_cfg[0]["range"])
+        return row_map
+
+    @pytest.fixture()
+    def col_map_full_peak(self, img_size, disparity_cfg):
+        """
+        Col disparity map with only peak on edges used for tests
+        """
+
+        # col_map is filled with the maximum of the col disparity range
+        col_map = np.full(img_size, disparity_cfg[1]["init"] + disparity_cfg[1]["range"])
+        return col_map
+
+    @pytest.fixture()
+    def map_without_peak(self, img_size):
+        """
+        Disparity map without peak on edges
+        """
+
+        return np.full(img_size, 1)
+
+    def test_apply_peak_on_edge(self, criteria_dataarray, image, cost_volumes, row_map, col_map):
+        """
+        Test the apply_peak_on_edge method
+        """
+
+        cost_volumes_coords = (cost_volumes.row.values, cost_volumes.col.values)
+
+        criteria.apply_peak_on_edge(criteria_dataarray, image, cost_volumes_coords, row_map, col_map)
+
+        assert (criteria_dataarray.data[0, 0, :, :] == Criteria.P2D_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data[4, 5, :, :] == Criteria.P2D_PEAK_ON_EDGE).all()
+        assert (criteria_dataarray.data[3, 3, :, :] == Criteria.P2D_PEAK_ON_EDGE).all()
+
+    @pytest.mark.parametrize(
+        ["drow_map", "dcol_map"],
+        [
+            pytest.param("row_map_full_peak", "col_map_full_peak", id="Row and col disparity maps full of peaks"),
+            pytest.param("row_map_full_peak", "col_map", id="Row map full of peaks"),
+            pytest.param("map_without_peak", "col_map_full_peak", id="Col map full of peaks"),
+        ],
+    )
+    def test_apply_peak_on_edge_full_peak_map(
+        self, criteria_dataarray, image, cost_volumes, drow_map, dcol_map, request
+    ):
+        """
+        Test the apply_peak_on_edge method with disparity maps full of peaks on edges
+        """
+
+        cost_volumes_coords = (cost_volumes.row.values, cost_volumes.col.values)
+
+        criteria.apply_peak_on_edge(
+            criteria_dataarray,
+            image,
+            cost_volumes_coords,
+            request.getfixturevalue(drow_map),
+            request.getfixturevalue(dcol_map),
+        )
+
+        assert (criteria_dataarray.data == Criteria.P2D_PEAK_ON_EDGE).all()
+
+    def test_apply_peak_on_edge_without_peak(self, criteria_dataarray, image, cost_volumes, map_without_peak):
+        """
+        Test the apply_peak_on_edge method with maps without peaks on edges
+        """
+
+        cost_volumes_coords = (cost_volumes.row.values, cost_volumes.col.values)
+
+        criteria.apply_peak_on_edge(criteria_dataarray, image, cost_volumes_coords, map_without_peak, map_without_peak)
+
+        assert (criteria_dataarray.data != Criteria.P2D_PEAK_ON_EDGE).all()

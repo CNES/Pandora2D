@@ -27,7 +27,7 @@ Configuration and parameters
 ----------------------------
 .. warning::
 
-    You don't need to set disparities in input section if you set the estimation step
+    You need to set disparities in input section if you set the estimation step
 
 .. list-table:: Parameters
     :header-rows: 1
@@ -42,7 +42,7 @@ Configuration and parameters
     * - *estimation_method*
       - estimation measure
       - string
-      -
+      - None
       - "phase_cross_correlation"
       - Yes
     * - *range_col*
@@ -68,14 +68,15 @@ Configuration and parameters
 
 **Example**
 
-.. sourcecode:: text
+.. code:: json
+    :name: Estimation example
 
     {
-        "input" :
+        "input":
         {
-            ...
+            // ...
         },
-        "pipeline" :
+        "pipeline":
         {
             "estimation":
             {
@@ -84,7 +85,11 @@ Configuration and parameters
                 "range_row": 5,
                 "sample_factor": 20
             }
-            ...
+            // ...
+        },
+        "output":
+        {
+            // ...
         }
     }
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -31,7 +31,7 @@ import pytest
 import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
 from pandora.margins import Margins
-from pandora2d import refinement, common, matching_cost, disparity
+from pandora2d import refinement, common, matching_cost, disparity, criteria
 from pandora2d.refinement.optical_flow import OpticalFlow
 from pandora2d.img_tools import add_disparity_grid
 
@@ -214,18 +214,18 @@ def test_reshape_to_matching_cost_window_left(dataset_image):
         {"refinement_method": "optical_flow"}, [1, 1], 3
     )  # type: ignore[abstract]
 
-    cv = np.zeros((6, 5, 5, 5))
+    cv = np.zeros((6, 5, 7, 5))
 
+    disparity_range_row = np.arange(-2, 4 + 1)
     disparity_range_col = np.arange(-2, 2 + 1)
-    disparity_range_row = np.arange(-2, 2 + 1)
 
     cost_volumes = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], cv)},
         coords={
             "row": np.arange(0, 6),
             "col": np.arange(0, 5),
-            "disp_col": disparity_range_col,
             "disp_row": disparity_range_row,
+            "disp_col": disparity_range_col,
         },
         attrs={"offset_row_col": 1},
     )
@@ -276,18 +276,18 @@ def test_reshape_to_matching_cost_window_right(dataset_image):
     col_disp_map = [2, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0]
     row_disp_map = [2, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0]
 
-    cv = np.zeros((6, 5, 5, 5))
+    cv = np.zeros((6, 5, 7, 5))
 
+    disparity_range_row = np.arange(-2, 4 + 1)
     disparity_range_col = np.arange(-2, 2 + 1)
-    disparity_range_row = np.arange(-2, 2 + 1)
 
     cost_volumes = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], cv)},
         coords={
             "row": np.arange(0, 6),
             "col": np.arange(0, 5),
-            "disp_col": disparity_range_col,
             "disp_row": disparity_range_row,
+            "disp_col": disparity_range_col,
         },
         attrs={"offset_row_col": 1},
     )
@@ -475,9 +475,9 @@ def make_cv_dataset(dataset_img, dataset_img_shift, cfg_mc):
     """
     Instantiate a cost volume dataset
     """
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg_mc["pipeline"]["matching_cost"])
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
+    matching_cost_matcher.allocate(
         img_left=dataset_img,
         img_right=dataset_img_shift,
         cfg=cfg_mc,
@@ -491,6 +491,9 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
     """
     Instantiate a disparity dataset
     """
+
+    dataset_validity = criteria.get_validity_dataset(dataset_cv["criteria"])
+
     disparity_matcher = disparity.Disparity(cfg_disp)
     delta_x, delta_y, score = disparity_matcher.compute_disp_maps(dataset_cv)
 
@@ -506,6 +509,7 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
         dataset.col_map,
         dataset.coords,
         dataset.correlation_score,
+        dataset_validity,
         attributes={"invalid_disp": np.nan},
     )
     return dataset_disp_map
@@ -681,9 +685,9 @@ class TestDisparityGrids:
     @pytest.fixture()
     def disparities(self, image: xr.Dataset, cfg: Dict, invalid_value) -> Dict:
         """Execute refinement method and return disparities."""
-        matching_cost_ = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+        matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
-        matching_cost_.allocate_cost_volume_pandora(
+        matching_cost_.allocate(
             img_left=image,
             img_right=image,
             cfg=cfg,
@@ -693,6 +697,8 @@ class TestDisparityGrids:
             img_left=image,
             img_right=image,
         )
+
+        dataset_validity = criteria.get_validity_dataset(cost_volumes["criteria"])
 
         disparity_matcher = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": invalid_value})
 
@@ -713,6 +719,7 @@ class TestDisparityGrids:
             dataset.col_map,
             dataset.coords,
             dataset.correlation_score,
+            dataset_validity,
             attributes={"invalid_disp": invalid_value},
         )
 

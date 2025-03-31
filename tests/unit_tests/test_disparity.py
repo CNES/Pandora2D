@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -90,9 +90,9 @@ def test_margins():
             np.max,
             np.array(
                 [
-                    [[np.nan, np.nan], [np.nan, np.nan], [np.nan, np.nan]],
-                    [[2.0, 3.0], [3.0, 4.0], [4.0, np.nan]],
-                    [[2.0, 2.0], [3.0, 3.0], [4.0, np.nan]],
+                    [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                    [[np.nan, 2.0, 3.0], [2.0, 3.0, 4.0], [3.0, 4.0, np.nan]],
+                    [[np.nan, 2.0, 2.0], [3.0, 3.0, 3.0], [4.0, 4.0, np.nan]],
                 ]
             ),
             id="test for maximum",
@@ -101,9 +101,9 @@ def test_margins():
             np.min,
             np.array(
                 [
-                    [[np.nan, np.nan], [np.nan, np.nan], [np.nan, np.nan]],
-                    [[0.0, 0.0], [0.0, 0.0], [0.0, np.nan]],
-                    [[0.0, 1.0], [0.0, 1.0], [0.0, np.nan]],
+                    [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                    [[np.nan, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, np.nan]],
+                    [[np.nan, 0.0, 1.0], [1.0, 0.0, 1.0], [1.0, 0.0, np.nan]],
                 ]
             ),
             id="test for minimum",
@@ -116,16 +116,16 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
     """
     # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min -1, dispy_max 0
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 1}}}
-    matching_cost_test = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_test = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
     left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 1)
     left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
-    matching_cost_test.allocate_cost_volume_pandora(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
+    matching_cost_test.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
     cvs = matching_cost_test.compute_cost_volumes(left_stereo_object, right_stereo_object)
 
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
     # searching along dispy axis
-    cvs_max = disparity_test.extrema_split(cvs, 3, extrema_func)
+    cvs_max = disparity_test.extrema_split(cvs, 2, extrema_func)
 
     np.testing.assert_allclose(cvs_max[:, :, 0], expected_result[:, :, 0], atol=1e-06)
     np.testing.assert_allclose(cvs_max[:, :, 1], expected_result[:, :, 1], atol=1e-06)
@@ -158,11 +158,11 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
     # create a cost_volume, with SAD measure, window_size 3, dispx_min 0, dispx_max 1, dispy_min -1, dispy_max 0
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 3}}}
 
-    matching_cost_test = matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    matching_cost_test = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
     left_arg["col_disparity"][1, :, :] = np.full((5, 5), 1)
     left_arg["row_disparity"][0, :, :] = np.full((5, 5), -1)
-    matching_cost_test.allocate_cost_volume_pandora(
+    matching_cost_test.allocate(
         img_left=left_arg,
         img_right=right_arg,
         cfg=cfg,
@@ -171,7 +171,7 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
 
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
     # searching along dispy axis
-    cvs_max = disparity_test.extrema_split(cvs, 3, extrema_func)
+    cvs_max = disparity_test.extrema_split(cvs, 2, extrema_func)
     min_tensor = disparity_test.arg_split(cvs_max, 2, arg_extrema_func)
 
     np.testing.assert_allclose(min_tensor, expected_result, atol=1e-06)
@@ -195,7 +195,7 @@ def cfg_mc():
 
 
 def matching_cost_obj(cfg):
-    return matching_cost.MatchingCost(cfg["pipeline"]["matching_cost"])
+    return matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
 
 @pytest.fixture()
@@ -278,12 +278,12 @@ def test_compute_disparity_map(margins, img_left, img_right, ground_truth_row, g
     """
     # create matching_cost object with measure = ssd, window_size = 1
     cfg_mc = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
-    matching_cost_matcher = matching_cost.MatchingCost(cfg_mc["pipeline"]["matching_cost"])
+    matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg_mc["pipeline"]["matching_cost"])
     # create disparity object with WTA method
     cfg_disp = {"disparity_method": "wta", "invalid_disparity": -5}
     disparity_matcher = disparity.Disparity(cfg_disp)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(
+    matching_cost_matcher.allocate(
         img_left=img_left,
         img_right=img_right,
         cfg=cfg_mc,
@@ -301,14 +301,14 @@ def test_masked_nan():
     """
     Test the capacity of disparity_computation to find nans
     """
-    cv = np.zeros((4, 5, 2, 2))
+    cv = np.full((4, 5, 5, 3), np.nan)
     # disp_x = -1, disp_y = -1
     cv[:, :, 0, 0] = np.array(
         [[np.nan, np.nan, np.nan, 6, 8], [np.nan, 0, 0, np.nan, 5], [1, 1, 1, 1, 1], [1, np.nan, 2, 3, np.nan]]
     )
 
     # disp_x = -1, disp_y = 0
-    cv[:, :, 0, 1] = np.array(
+    cv[:, :, 1, 0] = np.array(
         [[np.nan, np.nan, np.nan, 1, 2], [np.nan, 2, 2, 3, 6], [4, np.nan, 1, 1, 1], [6, 6, 6, 6, np.nan]]
     )
 
@@ -318,7 +318,7 @@ def test_masked_nan():
     )
 
     # disp_x = 0, disp_y = -1
-    cv[:, :, 1, 0] = np.array(
+    cv[:, :, 0, 1] = np.array(
         [[np.nan, np.nan, np.nan, 5, 60], [np.nan, 7, 8, 9, 10], [np.nan, np.nan, 6, 10, 11], [7, 8, 9, 10, np.nan]]
     )
 
@@ -329,12 +329,12 @@ def test_masked_nan():
     row = np.arange(c_row[0], c_row[-1] + 1)
     col = np.arange(c_col[0], c_col[-1] + 1)
 
-    disparity_range_col = np.arange(-1, 0 + 1)
-    disparity_range_row = np.arange(-1, 0 + 1)
+    disparity_range_col = np.arange(-1, 1 + 1)
+    disparity_range_row = np.arange(-1, 3 + 1)
 
     cost_volumes_dataset = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_col", "disp_row"], cv)},
-        coords={"row": row, "col": col, "disp_col": disparity_range_col, "disp_row": disparity_range_row},
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], cv)},
+        coords={"row": row, "col": col, "disp_row": disparity_range_row, "disp_col": disparity_range_col},
     )
 
     cost_volumes_dataset.attrs["type_measure"] = "max"

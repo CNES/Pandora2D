@@ -1,7 +1,7 @@
 # pylint: skip-file
 #
 # coding: utf8
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.abspath("."))
 # -- Project information -----------------------------------------------------
 
 project = "Pandora2D"
-copyright = "2024, CNES"
+copyright = "2025, CNES"
 author = "CNES"
 version = "0.3.0"
 # The full version, including alpha/beta/rc tags
@@ -73,6 +73,7 @@ autoapi_options = [
     "show-module-summary",
     "special-members",
 ]
+suppress_warnings = ["ref.python"]
 # Add any paths that contain templates here, relative to this directory.cd
 templates_path = ["_templates"]
 
@@ -96,6 +97,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 
 html_logo = "Images/logo/logo_pandora2d.png"
+html_favicon = "Images/logo/favicon.ico"
 
 html_theme_options = {
     "logo_only": True,

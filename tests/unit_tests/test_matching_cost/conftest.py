@@ -1,5 +1,5 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -71,7 +71,17 @@ def right_image(tmp_path, squared_image_size):
 
 
 @pytest.fixture()
-def input_config(left_image, right_image):
+def col_disparity():
+    return {"init": 1, "range": 1}
+
+
+@pytest.fixture()
+def row_disparity():
+    return {"init": 1, "range": 2}
+
+
+@pytest.fixture()
+def input_config(left_image, right_image, col_disparity, row_disparity):
     return {
         "left": {
             "img": left_image,
@@ -81,14 +91,40 @@ def input_config(left_image, right_image):
             "img": right_image,
             "nodata": -9999,
         },
-        "col_disparity": {"init": 1, "range": 1},
-        "row_disparity": {"init": 1, "range": 2},
+        "col_disparity": col_disparity,
+        "row_disparity": row_disparity,
     }
 
 
 @pytest.fixture()
-def matching_cost_config(step):
-    return {"matching_cost_method": "zncc", "window_size": 3, "step": step}
+def matching_cost_method():
+    return "zncc"
+
+
+@pytest.fixture()
+def window_size():
+    return 3
+
+
+@pytest.fixture()
+def subpix():
+    return 1
+
+
+@pytest.fixture()
+def matching_cost_config(step, matching_cost_method, window_size, subpix):
+    return {"matching_cost_method": matching_cost_method, "window_size": window_size, "step": step, "subpix": subpix}
+
+
+@pytest.fixture()
+def matching_cost_object(matching_cost_config):
+    """
+    Return the right matching cost object according to matching cost method
+    """
+
+    matching_cost_object = matching_cost.MatchingCostRegistry.get(matching_cost_config["matching_cost_method"])
+
+    return matching_cost_object
 
 
 @pytest.fixture()
@@ -256,39 +292,39 @@ def data_with_positive_disparity_in_col(left_zncc, right_zncc, null_disparity_gr
     full_matching_cost = np.array(
         [
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[-0.45], [-0.460179], [-0.46513027]],
-                [[-0.47058824], [-0.4756515], [np.nan]],
-                [[-0.48076922], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[-0.45, -0.460179, -0.46513027]],
+                [[-0.47058824, -0.4756515, np.nan]],
+                [[-0.48076922, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[-0.45], [-0.460179], [-0.46513027]],
-                [[-0.47058824], [-0.4756515], [np.nan]],
-                [[-0.48076922], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[-0.45, -0.460179, -0.46513027]],
+                [[-0.47058824, -0.4756515, np.nan]],
+                [[-0.48076922, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[0.0], [0.0], [0.0]],
-                [[0.0], [0.0], [np.nan]],
-                [[0.0], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[0.0, 0.0, 0.0]],
+                [[0.0, 0.0, np.nan]],
+                [[0.0, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
         ],
         dtype=np.float32,
@@ -314,39 +350,39 @@ def data_with_positive_disparity_in_row(left_zncc, right_zncc, null_disparity_gr
     full_matching_cost = np.array(
         [
             [
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan, np.nan, np.nan]],
-                [[-0.45, -0.45, 0.0]],
-                [[-0.47058824, -0.47058824, 0.0]],
-                [[-0.48076922, -0.48076922, 0.0]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[-0.45], [-0.45], [0.0]],
+                [[-0.47058824], [-0.47058824], [0.0]],
+                [[-0.48076922], [-0.48076922], [0.0]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan, np.nan, np.nan]],
-                [[-0.45, 0.0, np.nan]],
-                [[-0.47058824, 0.0, np.nan]],
-                [[-0.48076922, 0.0, np.nan]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[-0.45], [0.0], [np.nan]],
+                [[-0.47058824], [0.0], [np.nan]],
+                [[-0.48076922], [0.0], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan, np.nan, np.nan]],
-                [[0.0, np.nan, np.nan]],
-                [[0.0, np.nan, np.nan]],
-                [[0.0, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[0.0], [np.nan], [np.nan]],
+                [[0.0], [np.nan], [np.nan]],
+                [[0.0], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
         ],
         dtype=np.float32,
@@ -372,39 +408,39 @@ def data_with_negative_disparity_in_col(left_zncc, right_zncc, null_disparity_gr
     full_matching_cost = np.array(
         [
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [-0.45]],
-                [[np.nan], [-0.460179], [-0.47058824]],
-                [[-0.46513027], [-0.4756515], [-0.48076922]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, -0.45]],
+                [[np.nan, -0.460179, -0.47058824]],
+                [[-0.46513027, -0.4756515, -0.48076922]],
+                [[np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [-0.45]],
-                [[np.nan], [-0.460179], [-0.47058824]],
-                [[-0.46513027], [-0.4756515], [-0.48076922]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, -0.45]],
+                [[np.nan, -0.460179, -0.47058824]],
+                [[-0.46513027, -0.4756515, -0.48076922]],
+                [[np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [0.0]],
-                [[np.nan], [0.0], [0.0]],
-                [[0.0], [0.0], [0.0]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, 0.0]],
+                [[np.nan, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0]],
+                [[np.nan, np.nan, np.nan]],
             ],
             [
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
-                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan]],
             ],
         ],
         dtype=np.float32,
@@ -430,39 +466,39 @@ def data_with_negative_disparity_in_row(left_zncc, right_zncc, null_disparity_gr
     full_matching_cost = np.array(
         [
             [
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, -0.45]],
-                [[np.nan, np.nan, -0.47058824]],
-                [[np.nan, np.nan, -0.48076922]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [-0.45]],
+                [[np.nan], [np.nan], [-0.47058824]],
+                [[np.nan], [np.nan], [-0.48076922]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, 1.0, -0.45]],
-                [[np.nan, 1.0, -0.47058824]],
-                [[np.nan, 1.0, -0.48076922]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [1.0], [-0.45]],
+                [[np.nan], [1.0], [-0.47058824]],
+                [[np.nan], [1.0], [-0.48076922]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan, np.nan, np.nan]],
-                [[-0.45, 1.0, 0.0]],
-                [[-0.47058824, 1.0, 0.0]],
-                [[-0.48076922, 1.0, 0.0]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[-0.45], [1.0], [0.0]],
+                [[-0.47058824], [1.0], [0.0]],
+                [[-0.48076922], [1.0], [0.0]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
             [
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
+                [[np.nan], [np.nan], [np.nan]],
             ],
         ],
         dtype=np.float32,
@@ -498,23 +534,23 @@ def data_with_disparity_negative_in_row_and_positive_in_col(
             ],
             [
                 [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, -0.45], [np.nan, np.nan, -0.460179], [np.nan, np.nan, -0.46513027]],
-                [[np.nan, np.nan, -0.47058824], [np.nan, np.nan, -0.4756515], [np.nan, np.nan, np.nan]],
-                [[np.nan, np.nan, -0.48076922], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [-0.45, -0.460179, -0.46513027]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [-0.47058824, -0.4756515, np.nan]],
+                [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [-0.48076922, np.nan, np.nan]],
                 [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
             ],
             [
                 [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
-                [[np.nan, 1.0, -0.45], [np.nan, 0.99705446, -0.460179], [np.nan, 0.99227786, -0.46513027]],
-                [[np.nan, 1.0, -0.47058824], [np.nan, 0.99886817, -0.4756515], [np.nan, np.nan, np.nan]],
-                [[np.nan, 1.0, -0.48076922], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[np.nan, np.nan, np.nan], [1.0, 0.99705446, 0.99227786], [-0.45, -0.460179, -0.46513027]],
+                [[np.nan, np.nan, np.nan], [1.0, 0.99886817, np.nan], [-0.47058824, -0.4756515, np.nan]],
+                [[np.nan, np.nan, np.nan], [1.0, np.nan, np.nan], [-0.48076922, np.nan, np.nan]],
                 [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
             ],
             [
                 [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
-                [[-0.45, 1.0, 0.0], [-0.460179, 0.99705446, 0.0], [-0.46513027, 0.99227786, 0.0]],
-                [[-0.47058824, 1.0, 0.0], [-0.4756515, 0.99886817, 0.0], [np.nan, np.nan, np.nan]],
-                [[-0.48076922, 1.0, 0.0], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+                [[-0.45, -0.460179, -0.46513027], [1.0, 0.99705446, 0.99227786], [0.0, 0.0, 0.0]],
+                [[-0.47058824, -0.4756515, np.nan], [1.0, 0.99886817, np.nan], [0.0, 0.0, np.nan]],
+                [[-0.48076922, np.nan, np.nan], [1.0, np.nan, np.nan], [0.0, np.nan, np.nan]],
                 [[np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]],
             ],
             [
@@ -554,7 +590,7 @@ def margins():
 
 @pytest.fixture()
 def matching_cost_matcher(matching_cost_config):
-    return matching_cost.MatchingCost(matching_cost_config)
+    return matching_cost.PandoraMatchingCostMethods(matching_cost_config)
 
 
 @pytest.fixture()
@@ -562,7 +598,7 @@ def cost_volumes(input_config, matching_cost_matcher, configuration):
     """Create cost_volumes."""
     img_left, img_right = create_datasets_from_inputs(input_config, roi=None)
 
-    matching_cost_matcher.allocate_cost_volume_pandora(img_left=img_left, img_right=img_right, cfg=configuration)
+    matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=configuration)
 
     # compute cost volumes
     return matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)

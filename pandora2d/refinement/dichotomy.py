@@ -1,5 +1,5 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -17,7 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Module for Dichotomy refinement method.
+Module for Dichotomy refinement method (python version).
 """
 
 import logging
@@ -34,13 +34,13 @@ from . import refinement
 COST_SELECTION_METHOD_MAPPING = {"min": np.nanargmin, "max": np.nanargmax}
 
 
-@refinement.AbstractRefinement.register_subclass("dichotomy")
-class Dichotomy(refinement.AbstractRefinement):
-    """Subpixel refinement method by dichotomy."""
+@refinement.AbstractRefinement.register_subclass("dichotomy_python")
+class DichotomyPython(refinement.AbstractRefinement):
+    """Subpixel refinement method by dichotomy (python version)."""
 
     NB_MAX_ITER = 9
     schema = {
-        "refinement_method": And(str, lambda x: x in ["dichotomy"]),
+        "refinement_method": And(str, lambda x: x in ["dichotomy_python"]),
         "iterations": And(int, lambda it: it > 0),
         "filter": And(dict, lambda x: x["method"] in AbstractFilter.interpolation_filter_methods_avail),
     }
@@ -138,12 +138,17 @@ class Dichotomy(refinement.AbstractRefinement):
         cost_values[invalid_disparity_map_mask] = np.nan
 
         # Get disparities grid
+
+        # Select correct rows and columns in case of a step different from 1.
+        row_cv = cost_volumes.row.values
+        col_cv = cost_volumes.col.values
+
         # Column's min, max disparities
-        disp_min_col = img_left["col_disparity"].sel(band_disp="min").data
-        disp_max_col = img_left["col_disparity"].sel(band_disp="max").data
+        disp_min_col = img_left["col_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
+        disp_max_col = img_left["col_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
         # Row's min, max disparities
-        disp_min_row = img_left["row_disparity"].sel(band_disp="min").data
-        disp_max_row = img_left["row_disparity"].sel(band_disp="max").data
+        disp_min_row = img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
+        disp_max_row = img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
 
         # start iterations after subpixel precision: `subpixel.bit_length() - 1` found which power of 2 subpixel is,
         # and we add 1 to start at next iteration
@@ -351,11 +356,8 @@ def search_new_best_point(
     # In the same way, shifting from 0.25 precision corresponds to shift index of 0.5
     # (`index_shift = 0.5 = 0.25 * 2 = precision_shift * subpix`)
 
-    # disp_row are along columns in cost_surface, then new_cols are computed from initial_pos_disp_row
-    new_cols = disp_row_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_row
-
-    # disp_col are along rows in cost_surface, then new_rows are computed from initial_pos_disp_col
-    new_rows = disp_col_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_col
+    new_cols = disp_col_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_col
+    new_rows = disp_row_shifts * cost_surface.attrs["subpixel"] + initial_pos_disp_row
 
     # New subpixel disparity values
     new_rows_disp = disp_row_shifts + initial_disp_row
@@ -378,7 +380,7 @@ def search_new_best_point(
     # - new best disparities
     # - value of best similarity coefficient for new best disparities
     return (
-        Point(new_cols[best_index], new_rows[best_index]),
+        Point(new_rows[best_index], new_cols[best_index]),
         new_rows_disp[best_index],
         new_cols_disp[best_index],
         candidates[best_index],

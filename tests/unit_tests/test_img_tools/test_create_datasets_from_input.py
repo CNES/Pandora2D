@@ -1,5 +1,5 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -39,6 +39,27 @@ class TestReturnedValue:
     @pytest.fixture()
     def result(self, make_input_cfg):
         return img_tools.create_datasets_from_inputs(make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "correct_grid"},
+                id="Correct disparity grids",
+            ),
+            pytest.param(
+                {"row_disparity": "constant_initial_disparity", "col_disparity": "second_constant_initial_disparity"},
+                id="Correct disparity dictionaries",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_disparities_are_float32(self, result):
+        """Test disparities are float32."""
+        assert result.left["col_disparity"].dtype == np.float32
+        assert result.left["row_disparity"].dtype == np.float32
+        assert result.right["col_disparity"].dtype == np.float32
+        assert result.right["row_disparity"].dtype == np.float32
 
     @pytest.mark.parametrize(
         ["make_input_cfg"],
@@ -126,11 +147,17 @@ class TestReturnedValue:
         ],
         [
             pytest.param(
-                {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
-                [-26, 10],
-                [-5, 8],
-                [-10, 26],
-                [-8, 5],
+                {"row_disparity": "correct_grid_for_roi", "col_disparity": "second_correct_grid_for_roi"},
+                # second_correct_grid ranges from (height*width) to 0 (so 0 is excluded) ; disp_range is 5 so it is
+                # subtracted from min and added to max
+                [0.0 + 1 - 5, 375.0 * 450 + 5],
+                # correct_grid ranges from 0 to (height*width) (so (height*width) is excluded) ; disp_range is 5
+                # so it is subtracted from min and added to max
+                [0.0 - 5, 375.0 * 450 - 1 + 5],
+                # right disparity is the opposite of left disparity
+                [-(375.0 * 450 + 5), -(0.0 + 1 - 5)],
+                # right disparity is the opposite of left disparity
+                [-(375.0 * 450 - 1 + 5), -(0.0 - 5)],
                 id="Correct disparity grids",
             ),
             pytest.param(
@@ -169,37 +196,39 @@ class TestReturnedValue:
         ],
         [
             pytest.param(
-                {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
-                # Array of size 2x375x450 with alternating cols of 0, -26 and -6
-                # for array[0,::] and alternating cols of 10, -16 and 4 for array[1,::]
+                {"row_disparity": "correct_grid_for_roi", "col_disparity": "second_correct_grid_for_roi"},
+                # Array of size 2x375x450
+                # second_correct_grid ranges from (height*width) to 0 (so 0 is excluded) ; disp_range is 5 so it is
+                # subtracted from min and added to max
                 np.array(
                     [
-                        np.tile([[0, -26, -6]], (375, 450 // 3 + 1))[:, :450],
-                        np.tile([[10, -16, 4]], (375, 450 // 3 + 1))[:, :450],
+                        (np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) - 5),
+                        (np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) + 5),
                     ]
                 ),
-                # Array of size 2x375x450 with alternating rows of -3, -5 and -2
-                # for array[0,::] and alternating rows of 7, 5 and 8 for array[1,::]
+                # Array of size 2x375x450
+                # correct_grid ranges from 0 to (height*width) (so (height*width) is excluded) ; disp_range is 5
+                # so it is subtracted from min and added to max
                 np.array(
                     [
-                        np.tile([[-3], [-5], [-2]], (375 // 3 + 1, 450))[:375, :],
-                        np.tile([[7], [5], [8]], (375 // 3 + 1, 450))[:375, :],
+                        (np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) - 5),
+                        (np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) + 5),
                     ]
                 ),
-                # Array of size 2x375x450 with alternating cols of -10, 16 and -4
-                # for array[0,::] and alternating cols of 0, 26 and 6 for array[1,::]
+                # Array of size 2x375x450
+                # right is the opposite of left
                 np.array(
                     [
-                        np.tile([[-10, 16, -4]], (375, 450 // 3 + 1))[:, :450],
-                        np.tile([[0, 26, 6]], (375, 450 // 3 + 1))[:, :450],
+                        -(np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) + 5),
+                        -(np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) - 5),
                     ]
                 ),
-                # Array of size 2x375x450 with alternating rows of -7, -5 and -8
-                # for array[0,::] and alternating rows of 3, 5 and 2 for array[1,::]
+                # Array of size 2x375x450
+                # right is the opposite of left
                 np.array(
                     [
-                        np.tile([[-7], [-5], [-8]], (375 // 3 + 1, 450))[:375, :],
-                        np.tile([[3], [5], [2]], (375 // 3 + 1, 450))[:375, :],
+                        -(np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) + 5),
+                        -(np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) - 5),
                     ]
                 ),
                 id="Correct disparity grids",
@@ -244,37 +273,39 @@ class TestReturnedValue:
         ],
         [
             pytest.param(
-                {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
-                # Array of size 2x96x97 with alternating cols of 0, -26 and -6
-                # for array[0,::] and alternating cols of 10, -16 and 4 for array[1,::]
+                {"row_disparity": "correct_grid_for_roi", "col_disparity": "second_correct_grid_for_roi"},
+                # Array of size 2x96x97
+                # second_correct_grid ranges from (height*width) to 0 (so 0 is excluded) ; disp_range is 5 so it is
+                # subtracted from min and added to max
                 np.array(
                     [
-                        np.tile([[0, -26, -6]], (375, 450 // 3 + 1))[7:103, 8:105],
-                        np.tile([[10, -16, 4]], (375, 450 // 3 + 1))[7:103, 8:105],
+                        (np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) - 5)[7:103, 8:105],
+                        (np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) + 5)[7:103, 8:105],
                     ]
                 ),
-                # Array of size 2x96x97 with alternating rows of -3, -5 and -2
-                # for array[0,::] and alternating rows of 7, 5 and 8 for array[1,::]
+                # Array of size 2x96x97
+                # correct_grid ranges from 0 to (height*width) (so (height*width) is excluded) ; disp_range is 5
+                # so it is subtracted from min and added to max
                 np.array(
                     [
-                        np.tile([[-3], [-5], [-2]], (375 // 3 + 1, 450))[7:103, 8:105],
-                        np.tile([[7], [5], [8]], (375 // 3 + 1, 450))[7:103, 8:105],
+                        (np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) - 5)[7:103, 8:105],
+                        (np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) + 5)[7:103, 8:105],
                     ]
                 ),
-                # Array of size 2x96x97 with alternating cols of -10, 16 and -4
-                # for array[0,::] and alternating cols of 0, 26 and 6 for array[1,::]
+                # Array of size 2x96x97
+                # right is the opposite of left
                 np.array(
                     [
-                        np.tile([[-10, 16, -4]], (375, 450 // 3 + 1))[7:103, 8:105],
-                        np.tile([[0, 26, 6]], (375, 450 // 3 + 1))[7:103, 8:105],
+                        -(np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) + 5)[7:103, 8:105],
+                        -(np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) - 5)[7:103, 8:105],
                     ]
                 ),
-                # Array of size 2x96x97 with alternating rows of -7, -5 and -8
-                # for array[0,::] and alternating rows of 3, 5 and 2 for array[1,::]
+                # Array of size 2x96x97
+                # right is the opposite of left
                 np.array(
                     [
-                        np.tile([[-7], [-5], [-8]], (375 // 3 + 1, 450))[7:103, 8:105],
-                        np.tile([[3], [5], [2]], (375 // 3 + 1, 450))[7:103, 8:105],
+                        -(np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) + 5)[7:103, 8:105],
+                        -(np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) - 5)[7:103, 8:105],
                     ]
                 ),
                 # ROI
@@ -291,37 +322,39 @@ class TestReturnedValue:
                 id="Disparity dictionaries with centered ROI",
             ),
             pytest.param(
-                {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
-                # Array of size 2x96x102 with alternating cols of 0, -26 and -6
-                # for array[0,::] and alternating cols of 10, -16 and 4 for array[1,::]
+                {"row_disparity": "correct_grid_for_roi", "col_disparity": "second_correct_grid_for_roi"},
+                # Array of size 2x96x102
+                # second_correct_grid ranges from (height*width) to 0 (so 0 is excluded) ; disp_range is 5 so it is
+                # subtracted from min and added to max
                 np.array(
                     [
-                        np.tile([[0, -26, -6]], (375, 450 // 3 + 1))[7:103, 348:450],
-                        np.tile([[10, -16, 4]], (375, 450 // 3 + 1))[7:103, 348:450],
+                        (np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) - 5)[7:103, 348:450],
+                        (np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) + 5)[7:103, 348:450],
                     ]
                 ),
-                # Array of size 2x96x102 with alternating rows of -3, -5 and -2
-                # for array[0,::] and alternating rows of 7, 5 and 8 for array[1,::]
+                # Array of size 2x96x102
+                # correct_grid ranges from 0 to (height*width) (so (height*width) is excluded) ; disp_range is 5
+                # so it is subtracted from min and added to max
                 np.array(
                     [
-                        np.tile([[-3], [-5], [-2]], (375 // 3 + 1, 450))[7:103, 348:450],
-                        np.tile([[7], [5], [8]], (375 // 3 + 1, 450))[7:103, 348:450],
+                        (np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) - 5)[7:103, 348:450],
+                        (np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) + 5)[7:103, 348:450],
                     ]
                 ),
-                # Array of size 2x96x102 with alternating cols of -10, 16 and -4
-                # for array[0,::] and alternating cols of 0, 26 and 6 for array[1,::]
+                # Array of size 2x96x102
+                # right is the opposite of left
                 np.array(
                     [
-                        np.tile([[-10, 16, -4]], (375, 450 // 3 + 1))[7:103, 348:450],
-                        np.tile([[0, 26, 6]], (375, 450 // 3 + 1))[7:103, 348:450],
+                        -(np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) + 5)[7:103, 348:450],
+                        -(np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) - 5)[7:103, 348:450],
                     ]
                 ),
-                # Array of size 2x96x102 with alternating rows of -7, -5 and -8
-                # for array[0,::] and alternating rows of 3, 5 and 2 for array[1,::]
+                # Array of size 2x96x102
+                # right is the opposite of left
                 np.array(
                     [
-                        np.tile([[-7], [-5], [-8]], (375 // 3 + 1, 450))[7:103, 348:450],
-                        np.tile([[3], [5], [2]], (375 // 3 + 1, 450))[7:103, 348:450],
+                        -(np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) + 5)[7:103, 348:450],
+                        -(np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) - 5)[7:103, 348:450],
                     ]
                 ),
                 # ROI
@@ -338,37 +371,39 @@ class TestReturnedValue:
                 id="Disparity dictionaries with right overlapping ROI",
             ),
             pytest.param(
-                {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
-                # Array of size 2x103x97 with alternating cols of 0, -26 and -6
-                # for array[0,::] and alternating cols of 10, -16 and 4 for array[1,::]
+                {"row_disparity": "correct_grid_for_roi", "col_disparity": "second_correct_grid_for_roi"},
+                # Array of size 2x103x97
+                # second_correct_grid ranges from (height*width) to 0 (so 0 is excluded) ; disp_range is 5 so it is
+                # subtracted from min and added to max
                 np.array(
                     [
-                        np.tile([[0, -26, -6]], (375, 450 // 3 + 1))[0:103, 8:105],
-                        np.tile([[10, -16, 4]], (375, 450 // 3 + 1))[0:103, 8:105],
+                        (np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) - 5)[0:103, 8:105],
+                        (np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) + 5)[0:103, 8:105],
                     ]
                 ),
-                # Array of size 2x103x97 with alternating rows of -3, -5 and -2
-                # for array[0,::] and alternating rows of 7, 5 and 8 for array[1,::]
+                # Array of size 2x103x97
+                # correct_grid ranges from 0 to (height*width) (so (height*width) is excluded) ; disp_range is 5
+                # so it is subtracted from min and added to max
                 np.array(
                     [
-                        np.tile([[-3], [-5], [-2]], (375 // 3 + 1, 450))[0:103, 8:105],
-                        np.tile([[7], [5], [8]], (375 // 3 + 1, 450))[0:103, 8:105],
+                        (np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) - 5)[0:103, 8:105],
+                        (np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) + 5)[0:103, 8:105],
                     ]
                 ),
-                # Array of size 2x103x97 with alternating cols of -10, 16 and -4
-                # for array[0,::] and alternating cols of 0, 26 and 6 for array[1,::]
+                # Array of size 2x103x97
+                # right is the opposite of left
                 np.array(
                     [
-                        np.tile([[-10, 16, -4]], (375, 450 // 3 + 1))[0:103, 8:105],
-                        np.tile([[0, 26, 6]], (375, 450 // 3 + 1))[0:103, 8:105],
+                        -(np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) + 5)[0:103, 8:105],
+                        -(np.arange(375 * 450, 0, -1, dtype=np.float32).reshape((375, 450)) - 5)[0:103, 8:105],
                     ]
                 ),
-                # Array of size 2x103x97 with alternating rows of -7, -5 and -8
-                # for array[0,::] and alternating rows of 3, 5 and 2 for array[1,::]
+                # Array of size 2x103x97
+                # right is the opposite of left
                 np.array(
                     [
-                        np.tile([[-7], [-5], [-8]], (375 // 3 + 1, 450))[0:103, 8:105],
-                        np.tile([[3], [5], [2]], (375 // 3 + 1, 450))[0:103, 8:105],
+                        -(np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) + 5)[0:103, 8:105],
+                        -(np.arange(375 * 450, dtype=np.float32).reshape((375, 450)) - 5)[0:103, 8:105],
                     ]
                 ),
                 # ROI
@@ -452,7 +487,7 @@ class TestDisparityChecking:
 
         with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(correct_input_cfg["input"])
-        assert exc_info.value.args[0] == "Disparity should be a dictionary"
+        assert exc_info.value.args[0] == "The input disparity must be a dictionary."
 
     @pytest.mark.parametrize("disparity", [{"wrong_init": 2, "range": 2}])
     @pytest.mark.parametrize("disparity_key", ["col_disparity", "row_disparity"])
@@ -519,7 +554,7 @@ class TestDisparityChecking:
 
         with pytest.raises(ValueError) as exc_info:
             img_tools.create_datasets_from_inputs(correct_input_cfg["input"])
-        assert exc_info.value.args[0] == "Disparity should be a dictionary"
+        assert exc_info.value.args[0] == "The input disparity must be a dictionary."
 
     @pytest.mark.parametrize(
         ["make_input_cfg"],

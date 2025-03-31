@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -18,8 +18,12 @@
 #
 
 """
-Test configuration
+Test image shift methods
 """
+
+# Make pylint happy with fixtures:
+# pylint: disable=redefined-outer-name
+
 import unittest
 import pytest
 import xarray as xr
@@ -27,6 +31,30 @@ import numpy as np
 
 
 from pandora2d import img_tools
+
+
+@pytest.fixture()
+def monoband_image():
+    """Create monoband image."""
+    data = np.array(
+        ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 2, 1], [1, 1, 1, 4, 3, 1], [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1])
+    )
+
+    return xr.Dataset(
+        {"im": (["row", "col"], data)}, coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
+    ).assign_attrs({"no_data_img": -9999})
+
+
+@pytest.fixture()
+def roi_image():
+    """Create ROI image."""
+    data = np.array(
+        ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 2, 1], [1, 1, 1, 4, 3, 1], [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1])
+    )
+
+    return xr.Dataset(
+        {"im": (["row", "col"], data)}, coords={"row": np.arange(2, 7), "col": np.arange(5, 11)}
+    ).assign_attrs({"no_data_img": -9999})
 
 
 class TestShiftDispRowImg(unittest.TestCase):
@@ -97,28 +125,6 @@ class TestShiftDispRowImg(unittest.TestCase):
 
 class TestShiftSubpixImg:
     """Test shift_subpix_img function."""
-
-    @pytest.fixture()
-    def monoband_image(self):
-        """Create monoband image."""
-        data = np.array(
-            ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 2, 1], [1, 1, 1, 4, 3, 1], [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1])
-        )
-
-        return xr.Dataset(
-            {"im": (["row", "col"], data)}, coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
-        ).assign_attrs({"no_data_img": -9999})
-
-    @pytest.fixture()
-    def roi_image(self):
-        """Create ROI image."""
-        data = np.array(
-            ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 2, 1], [1, 1, 1, 4, 3, 1], [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1])
-        )
-
-        return xr.Dataset(
-            {"im": (["row", "col"], data)}, coords={"row": np.arange(2, 7), "col": np.arange(5, 11)}
-        ).assign_attrs({"no_data_img": -9999})
 
     @pytest.mark.parametrize(
         ["image", "subpix", "number", "expected"],
@@ -203,3 +209,361 @@ class TestShiftSubpixImg:
         # Test that the content of shifted_row_img and shifted_col_img are different
         with pytest.raises(AssertionError):
             np.testing.assert_array_equal(shifted_row_img[1]["im"], shifted_col_img[1]["im"])
+
+
+class TestShiftSubpixImg2d:
+    """Test shift_subpix_img_2d function."""
+
+    # pylint:disable=too-few-public-methods
+
+    @pytest.mark.parametrize(
+        ["image", "subpix", "number", "expected_row", "expected_col"],
+        [
+            pytest.param(
+                "monoband_image",
+                1,
+                0,
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
+                id="monoband image subpix=1",
+            ),
+            pytest.param(
+                "monoband_image",
+                2,
+                0,
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
+                id="monoband image subpix=2, index=0",
+            ),
+            pytest.param(
+                "monoband_image",
+                2,
+                1,
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]),
+                id="monoband image subpix=2, index=1",
+            ),
+            pytest.param(
+                "monoband_image",
+                2,
+                2,
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5]),
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
+                id="monoband image subpix=2, index=2",
+            ),
+            pytest.param(
+                "monoband_image",
+                2,
+                3,
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5]),
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]),
+                id="monoband image subpix=2, index=3",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                0,
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
+                id="monoband image subpix=4, index=0",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                1,
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
+                np.array([0.25, 1.25, 2.25, 3.25, 4.25, 5.25]),
+                id="monoband image subpix=4, index=1",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                2,
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]),
+                id="monoband image subpix=4, index=2",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                3,
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0]),
+                np.array([0.75, 1.75, 2.75, 3.75, 4.75, 5.75]),
+                id="monoband image subpix=4, index=3",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                4,
+                np.array([0.25, 1.25, 2.25, 3.25, 4.25]),
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
+                id="monoband image subpix=4, index=4",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                5,
+                np.array([0.25, 1.25, 2.25, 3.25, 4.25]),
+                np.array([0.25, 1.25, 2.25, 3.25, 4.25, 5.25]),
+                id="monoband image subpix=4, index=5",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                6,
+                np.array([0.25, 1.25, 2.25, 3.25, 4.25]),
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]),
+                id="monoband image subpix=4, index=6",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                7,
+                np.array([0.25, 1.25, 2.25, 3.25, 4.25]),
+                np.array([0.75, 1.75, 2.75, 3.75, 4.75, 5.75]),
+                id="monoband image subpix=4, index=7",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                8,
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5]),
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
+                id="monoband image subpix=4, index=8",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                9,
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5]),
+                np.array([0.25, 1.25, 2.25, 3.25, 4.25, 5.25]),
+                id="monoband image subpix=4, index=9",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                10,
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5]),
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]),
+                id="monoband image subpix=4, index=10",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                11,
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5]),
+                np.array([0.75, 1.75, 2.75, 3.75, 4.75, 5.75]),
+                id="monoband image subpix=4, index=11",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                12,
+                np.array([0.75, 1.75, 2.75, 3.75, 4.75]),
+                np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
+                id="monoband image subpix=4, index=12",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                13,
+                np.array([0.75, 1.75, 2.75, 3.75, 4.75]),
+                np.array([0.25, 1.25, 2.25, 3.25, 4.25, 5.25]),
+                id="monoband image subpix=4, index=13",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                14,
+                np.array([0.75, 1.75, 2.75, 3.75, 4.75]),
+                np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]),
+                id="monoband image subpix=4, index=14",
+            ),
+            pytest.param(
+                "monoband_image",
+                4,
+                15,
+                np.array([0.75, 1.75, 2.75, 3.75, 4.75]),
+                np.array([0.75, 1.75, 2.75, 3.75, 4.75, 5.75]),
+                id="monoband image subpix=4, index=15",
+            ),
+            pytest.param(
+                "roi_image",
+                1,
+                0,
+                np.array([2.0, 3.0, 4.0, 5.0, 6.0]),
+                np.array([5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
+                id="roi image subpix=1",
+            ),
+            pytest.param(
+                "roi_image",
+                2,
+                0,
+                np.array([2.0, 3.0, 4.0, 5.0, 6.0]),
+                np.array([5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
+                id="roi image subpix=2, index=0",
+            ),
+            pytest.param(
+                "roi_image",
+                2,
+                1,
+                np.array([2.0, 3.0, 4.0, 5.0, 6.0]),
+                np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]),
+                id="roi image subpix=2, index=1",
+            ),
+            pytest.param(
+                "roi_image",
+                2,
+                2,
+                np.array([2.5, 3.5, 4.5, 5.5, 6.5]),
+                np.array([5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
+                id="roi image subpix=2, index=2",
+            ),
+            pytest.param(
+                "roi_image",
+                2,
+                3,
+                np.array([2.5, 3.5, 4.5, 5.5, 6.5]),
+                np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]),
+                id="roi image subpix=2, index=3",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                0,
+                np.array([2.0, 3.0, 4.0, 5.0, 6.0]),
+                np.array([5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
+                id="roi image subpix=4, index=0",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                1,
+                np.array([2.0, 3.0, 4.0, 5.0, 6.0]),
+                np.array([5.25, 6.25, 7.25, 8.25, 9.25, 10.25]),
+                id="roi image subpix=4, index=1",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                2,
+                np.array([2.0, 3.0, 4.0, 5.0, 6.0]),
+                np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]),
+                id="roi image subpix=4, index=2",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                3,
+                np.array([2.0, 3.0, 4.0, 5.0, 6.0]),
+                np.array([5.75, 6.75, 7.75, 8.75, 9.75, 10.75]),
+                id="roi image subpix=4, index=3",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                4,
+                np.array([2.25, 3.25, 4.25, 5.25, 6.25]),
+                np.array([5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
+                id="roi image subpix=4, index=4",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                5,
+                np.array([2.25, 3.25, 4.25, 5.25, 6.25]),
+                np.array([5.25, 6.25, 7.25, 8.25, 9.25, 10.25]),
+                id="roi image subpix=4, index=5",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                6,
+                np.array([2.25, 3.25, 4.25, 5.25, 6.25]),
+                np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]),
+                id="roi image subpix=4, index=6",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                7,
+                np.array([2.25, 3.25, 4.25, 5.25, 6.25]),
+                np.array([5.75, 6.75, 7.75, 8.75, 9.75, 10.75]),
+                id="roi image subpix=4, index=7",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                8,
+                np.array([2.5, 3.5, 4.5, 5.5, 6.5]),
+                np.array([5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
+                id="roi image subpix=4, index=8",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                9,
+                np.array([2.5, 3.5, 4.5, 5.5, 6.5]),
+                np.array([5.25, 6.25, 7.25, 8.25, 9.25, 10.25]),
+                id="roi image subpix=4, index=9",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                10,
+                np.array([2.5, 3.5, 4.5, 5.5, 6.5]),
+                np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]),
+                id="roi image subpix=4, index=10",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                11,
+                np.array([2.5, 3.5, 4.5, 5.5, 6.5]),
+                np.array([5.75, 6.75, 7.75, 8.75, 9.75, 10.75]),
+                id="roi image subpix=4, index=11",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                12,
+                np.array([2.75, 3.75, 4.75, 5.75, 6.75]),
+                np.array([5.0, 6.0, 7.0, 8.0, 9.0, 10.0]),
+                id="roi image subpix=4, index=12",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                13,
+                np.array([2.75, 3.75, 4.75, 5.75, 6.75]),
+                np.array([5.25, 6.25, 7.25, 8.25, 9.25, 10.25]),
+                id="roi image subpix=4, index=13",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                14,
+                np.array([2.75, 3.75, 4.75, 5.75, 6.75]),
+                np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]),
+                id="roi image subpix=4, index=14",
+            ),
+            pytest.param(
+                "roi_image",
+                4,
+                15,
+                np.array([2.75, 3.75, 4.75, 5.75, 6.75]),
+                np.array([5.75, 6.75, 7.75, 8.75, 9.75, 10.75]),
+                id="roi image subpix=4, index=15",
+            ),
+        ],
+    )
+    def test_shift_subpix_img_2d(self, image, subpix, number, expected_row, expected_col, request):
+        """
+        Test the shift_subpix_img_2d method
+        """
+
+        shifted_img_2d = img_tools.shift_subpix_img_2d(request.getfixturevalue(image), subpix)
+
+        assert len(shifted_img_2d) == subpix**2
+        np.testing.assert_array_equal(expected_row, shifted_img_2d[number].row)
+        np.testing.assert_array_equal(expected_col, shifted_img_2d[number].col)

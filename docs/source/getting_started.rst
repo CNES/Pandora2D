@@ -32,7 +32,7 @@ Download our data sample to start right away !
     #uncompress data
     unzip maricopa.zip
     #run Pandora2D
-    pandora2d a_basic_pipeline.json output_dir
+    pandora2d a_basic_pipeline.json
 
 Customize
 #########

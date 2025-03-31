@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -37,6 +37,7 @@ import copy
 from typing import List, Dict, Union, NamedTuple, Any, Tuple
 from math import floor
 from numpy.typing import NDArray
+from rasterio.windows import Window
 
 import xarray as xr
 import numpy as np
@@ -129,7 +130,7 @@ def check_disparity_types(disparity: Any) -> None:
     Check that disparity a dictionary with keys "init" and range"
     where "init" is either:
 
-        - a integer
+        - an integer
         - a path to a grid with integer values
 
     :param disparity: disparity to check
@@ -140,7 +141,7 @@ def check_disparity_types(disparity: Any) -> None:
 
     # Check disparity type
     if disparity is None or not isinstance(disparity, Dict):
-        raise ValueError("Disparity should be a dictionary")
+        raise ValueError("The input disparity must be a dictionary.")
 
     # Check that dictionary keys are correct
     if not set(disparity.keys()) == {"init", "range"}:
@@ -202,7 +203,7 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
     :return: 3D numpy array containing min/max disparity grids and list with disparity source
     :rtype: Tuple[NDArray, List]
     """
-
+    disparity_dtype = np.float32
     # Creates min and max disparity grids if initial disparity is constant (int)
     if isinstance(disparity["init"], int):
 
@@ -213,7 +214,7 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
             disparity["init"] * pow(-1, right) + disparity["range"],
         ]
 
-        disp_min_max = np.array([np.full(shape, disparity) for disparity in disp_interval])
+        disp_min_max = np.array([np.full(shape, disparity) for disparity in disp_interval], dtype=disparity_dtype)
 
     # Creates min and max disparity grids if initial disparities are variable (grid)
     elif isinstance(disparity["init"], str):
@@ -222,19 +223,17 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
         rows = dataset.row.data
         cols = dataset.col.data
 
+        window = Window(cols[0], rows[0], cols.size, rows.size)
         # Get disparity data
-        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read()[
-            :, rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1
-        ]
+        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=np.float32, window=window)
 
         # Use disparity data to creates min/max grids
-        disp_min_max = np.squeeze(
-            np.array(
-                [
-                    disp_data * pow(-1, right) - disparity["range"],
-                    disp_data * pow(-1, right) + disparity["range"],
-                ]
-            )
+        disp_min_max = np.array(
+            [
+                disp_data * pow(-1, right) - disparity["range"],
+                disp_data * pow(-1, right) + disparity["range"],
+            ],
+            dtype=disparity_dtype,
         )
 
         disp_interval = [np.min(disp_min_max[0, ::]), np.max(disp_min_max[1, ::])]
@@ -281,6 +280,26 @@ def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     return img_right_shift
 
 
+def get_margins_values(init_value: Union[int, np.ndarray], range_value: int, margins: list) -> Tuple[int, int]:
+    """
+    Generate the values of margins
+
+    :param init_value: init value for disparity interval
+    :type init_value: Union[int, np.ndarray]
+    :param range_value: range value for disparity interval
+    :type range_value: int
+    :param margins: necessary value for margins
+    :type margins: int
+    :return: Margins value
+    :rtype: Tuple[int, int]
+    """
+
+    disp_min = int(np.min(init_value)) - range_value
+    disp_max = int(np.max(init_value)) + range_value
+
+    return max(margins[0] - disp_min, 0), max(margins[1] + disp_max, 0)
+
+
 def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> dict:
     """
     Return a roi which takes disparities into account.
@@ -299,28 +318,26 @@ def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> d
     :type row_disparity: Dict
     :type roi: Dict
     """
+
     new_roi = copy.deepcopy(roi)
 
     if isinstance(col_disparity["init"], str) and isinstance(row_disparity["init"], str):
-
-        # Read disparity grids
         disparity_row_init = pandora_img_tools.rasterio_open(row_disparity["init"]).read()
         disparity_col_init = pandora_img_tools.rasterio_open(col_disparity["init"]).read()
-
-        new_roi["margins"] = (
-            int(max(abs(np.min(disparity_col_init - col_disparity["range"])), roi["margins"][0])),
-            int(max(abs(np.min(disparity_row_init - row_disparity["range"])), roi["margins"][1])),
-            int(max(abs(np.max(disparity_col_init + col_disparity["range"])), roi["margins"][2])),
-            int(max(abs(np.max(disparity_row_init + row_disparity["range"])), roi["margins"][3])),
-        )
-
     else:
-        new_roi["margins"] = (
-            max(abs(col_disparity["init"] - col_disparity["range"]), roi["margins"][0]),
-            max(abs(row_disparity["init"] - row_disparity["range"]), roi["margins"][1]),
-            max(abs(col_disparity["init"] + col_disparity["range"]), roi["margins"][2]),
-            max(abs(row_disparity["init"] + row_disparity["range"]), roi["margins"][3]),
-        )
+        disparity_row_init = row_disparity["init"]
+        disparity_col_init = col_disparity["init"]
+
+    col_range = col_disparity["range"]
+    row_range = row_disparity["range"]
+
+    # for columns
+    left, right = get_margins_values(disparity_col_init, col_range, [roi["margins"][0], roi["margins"][2]])
+
+    # for rows
+    up, down = get_margins_values(disparity_row_init, row_range, [roi["margins"][1], roi["margins"][3]])
+
+    new_roi["margins"] = (left, up, right, down)
 
     # Update user ROI with new margins.
     roi["margins"] = new_roi["margins"]
@@ -377,9 +394,10 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
         "row_map": (("row", "col"), dataset["row_map"].data[up:down, left:right]),
         "col_map": (("row", "col"), dataset["col_map"].data[up:down, left:right]),
         "correlation_score": (("row", "col"), dataset["correlation_score"].data[up:down, left:right]),
+        "validity": (("row", "col", "criteria"), dataset["validity"].data[up:down, left:right, :]),
     }
 
-    coords = {"row": row[up:down], "col": col[left:right]}
+    coords = {"row": row[up:down], "col": col[left:right], "criteria": dataset.criteria.values}
 
     new_dataset = xr.Dataset(data_variables, coords)
 
@@ -485,8 +503,8 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
     :type img_right: xarray.Dataset
     :param subpix: subpixel precision = (1 or pair number)
     :type subpix: int
-    :param column: column to shift (otherwise row)
-    :type column: bool
+    :param row: row to shift (otherwise column)
+    :type row: bool
     :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
     :type order: int, optional
     :return: an array that contains the shifted right images
@@ -522,3 +540,30 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
                 )
 
     return img_right_shift
+
+
+def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> List[xr.Dataset]:
+    """
+    Return an array that contains the shifted right images in rows and columns
+
+    :param img_right: Dataset image containing the image im : 2D (row, col) xarray.Dataset
+    :type img_right: xarray.Dataset
+    :param subpix: subpixel precision = (1 or pair number)
+    :type subpix: int
+    :param column: column to shift (otherwise row)
+    :type column: bool
+    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
+    :type order: int, optional
+    :return: an array that contains the shifted right images
+    :rtype: array of xarray.Dataset
+    """
+
+    # Row shifted images
+    img_right_shift = shift_subpix_img(img_right, subpix, row=True, order=order)
+    img_right_shift_2d = []
+
+    # Columns shifted images
+    for _, img in enumerate(img_right_shift):
+        img_right_shift_2d += shift_subpix_img(img, subpix, row=False, order=order)
+
+    return img_right_shift_2d

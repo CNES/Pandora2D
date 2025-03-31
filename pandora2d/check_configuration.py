@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -28,14 +28,13 @@ from __future__ import annotations
 from typing import Dict
 import numpy as np
 import xarray as xr
-from json_checker import And, Checker, Or, MissKeyCheckerError
+from json_checker import And, Checker, Or, MissKeyCheckerError, OptionalKey
 from rasterio.io import DatasetReader
 
 from pandora.img_tools import get_metadata, rasterio_open
 from pandora.check_configuration import (
     check_dataset,
     check_images,
-    concat_conf,
     get_config_input,
     rasterio_can_open_mandatory,
     update_conf,
@@ -329,13 +328,30 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     if "matching_cost" in cfg_pipeline["pipeline"]:
         check_right_nodata_condition(cfg_input, cfg_pipeline)
 
+    output_config = get_output_config(user_cfg)
+    check_output_section(output_config)
+
     cfg_expert_mode = user_cfg.get("expert_mode", {})
     if cfg_expert_mode != {}:
         cfg_expert_mode = check_expert_mode_section(cfg_expert_mode)
 
-    cfg = concat_conf([cfg_input, cfg_roi, cfg_pipeline, cfg_expert_mode])
+    return {**cfg_input, **cfg_roi, **cfg_pipeline, **cfg_expert_mode, "output": output_config}
 
-    return cfg
+
+def get_output_config(user_cfg: Dict) -> Dict:
+    """
+    Extract output config from user_cfg and fill default values.
+    :param user_cfg:
+    :type user_cfg:
+    :return: output_config
+    :rtype: Dict
+    """
+    defaults = {"format": "tiff"}
+    try:
+        config = user_cfg["output"]
+    except KeyError:
+        raise MissKeyCheckerError("Configuration file is missing output key")
+    return {**defaults, **config}
 
 
 def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
@@ -384,6 +400,20 @@ def get_roi_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
         cfg["ROI"] = user_cfg["ROI"]
 
     return cfg
+
+
+def check_output_section(config: Dict) -> None:
+    """
+    Validate the given output section.
+
+    :param config: configuration to validate.
+    :type config: Dict
+    :return: None
+    :raise: json_checker errors in the configuration does not respect the schema.
+    """
+    schema = {"path": str, OptionalKey("format"): And(str, lambda v: v in ["tiff"])}
+    checker = Checker(schema)
+    checker.validate(config)
 
 
 input_configuration_schema = {

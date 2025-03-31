@@ -27,7 +27,7 @@ ifeq (, $(PYTHON))
 endif
 
 # Check Python version supported globally
-PYTHON_VERSION_MIN = 3.8
+PYTHON_VERSION_MIN = 3.9
 PYTHON_VERSION_CUR=$(shell $(PYTHON) -c 'import sys; print("%d.%d"% sys.version_info[0:2])')
 PYTHON_VERSION_OK=$(shell $(PYTHON) -c 'import sys; cur_ver = sys.version_info[0:2]; min_ver = tuple(map(int, "$(PYTHON_VERSION_MIN)".split("."))); print(int(cur_ver >= min_ver))')
 ifeq ($(PYTHON_VERSION_OK), 0)
@@ -47,12 +47,15 @@ help: ## this help
 .PHONY: venv
 venv: ## create virtualenv in PANDORA2D_VENV directory if not exists
 	@test -d ${PANDORA2D_VENV} || python3 -m venv ${PANDORA2D_VENV}
-	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip setuptools wheel # no check to upgrade each time
-	@touch ${PANDORA2D_VENV}/bin/activate
+	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip meson-python meson ninja pybind11 "setuptools-scm>=8" "setuptools>=61" # no check to upgrade each time
+
+.PHONY: cpp_deps
+cpp_deps: ## retrieve cpp dependencies
+	@${PANDORA2D_VENV}/bin/meson wrap update-db
 
 .PHONY: install
 install: venv ## install pandora2D (pip editable mode) without plugins
-	@test -f ${PANDORA2D_VENV}/bin/pandora2d || ${PANDORA2D_VENV}/bin/pip install -e .[dev,docs,notebook]
+	@test -f ${PANDORA2D_VENV}/bin/pandora2d || . ${PANDORA2D_VENV}/bin/activate; ${PANDORA2D_VENV}/bin/pip install --no-build-isolation --config-settings=editable-verbose=true --editable .[dev,docs,notebook] --config-settings=setup-args=-Dbuild_cpp_tests=enabled 
 	@test -f .git/hooks/pre-commit || echo "  Install pre-commit hook"
 	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
 	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
@@ -77,6 +80,11 @@ test-all: install test-unit test-functional test-resource test-performance test-
 test-unit: install ## run unit tests only (for dev) + coverage (source venv before)
 	@echo "Run unit tests"
 	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
+
+.PHONY: test-unit-cpp
+test-unit-cpp: install ## run unit cpp tests only for dev
+	@echo "Run unit cpp tests"
+	. ${PANDORA2D_VENV}/bin/activate; meson test -C build/$(shell ls build)/ -v
 
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
@@ -113,7 +121,7 @@ format: install format/black  ## run black formatting (depends install)
 .PHONY: format/black
 format/black: install  ## run black formatting (depends install) (source venv before)
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/black pandora2d tests ./*.py notebooks/snippets/*.py
+	@${PANDORA2D_VENV}/bin/black pandora2d tests notebooks/snippets/*.py
 
 ### Check code quality and linting : black, mypy, pylint
 
@@ -123,7 +131,7 @@ lint: install lint/black lint/mypy lint/pylint ## check code quality and linting
 .PHONY: lint/black
 lint/black: ## check global style with black
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/black --check pandora2d tests ./*.py notebooks/snippets/*.py
+	@${PANDORA2D_VENV}/bin/black --check pandora2d tests notebooks/snippets/*.py
 
 .PHONY: lint/mypy
 lint/mypy: ## check linting with mypy
@@ -133,7 +141,19 @@ lint/mypy: ## check linting with mypy
 .PHONY: lint/pylint
 lint/pylint: ## check linting with pylint
 	@echo "+ $@"
-	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests ./*.py --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
+	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests --recursive=true --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
+
+
+## Check cpp code quality
+
+.PHONY: coverage-cpp 
+coverage-cpp: install  ## Gcovr (depends on gcovr in venv)
+	. ${PANDORA2D_VENV}/bin/activate; gcovr --sonarqube -r . -f pandora2d/interpolation_filter_cpp > gcovr-report.xml
+
+.PHONY: cppcheck
+cppcheck: ## C++ cppcheck for CI (depends cppcheck)
+	@cppcheck -v --enable=all --xml -Ipandora2d/interpolation_filter_cpp/*.build pandora2d/interpolation_filter_cpp 2> cppcheck-report.xml
+
 
 ## Documentation section
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -41,7 +41,7 @@ THREAD_TIMEOUT = 2
 
 
 @dataclass
-class EpertModeConfig:
+class ExpertModeConfig:
     """
     Expert mode config class
     """
@@ -73,7 +73,7 @@ class Data:
         self._timestamp = value
 
 
-expert_mode_config = EpertModeConfig()
+expert_mode_config = ExpertModeConfig()
 data = Data()
 
 
@@ -287,7 +287,7 @@ def generate_figure(
     return fig
 
 
-def generate_summary(path_output: str, expert_mode_cfg: dict):
+def generate_summary(path_output: os.PathLike, expert_mode_cfg: dict):
     """
     Generate graphs referencing memory management and time for each step.
 

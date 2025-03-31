@@ -1,6 +1,6 @@
 # Credits
 
-Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 
 Pandora2d is licensed under permissive Apache 2 license (See LICENSE file).
 
@@ -10,7 +10,7 @@ This file keeps track of authors contributions.
 
 ## Development Lead
 
-* Emmanuel Dubois <emmanuel.dubois@cnes.fr>
+* Alexandre Constantin <alexandre.constantin@cnes.fr>
 * Alice de Bardonnèche-Richard <alice.de-bardonneche-richard@csgroup.eu>
 * Marie Leconte <marie.leconte@csgroup.eu>
 * Elisa Duz <elisa.duz@csgroup.eu>
@@ -18,6 +18,7 @@ This file keeps track of authors contributions.
 
 ## Contributors
 
+* Emmanuel Dubois <emmanuel.dubois@cnes.fr>
 * Emmanuelle Sarrazin <emmanuelle.sarrazin@cnes.fr>
 * Natalia Jimenez <natalia.jimenez-diaz@csgroup.eu>
 * Quentin Fardet <quentin.fardet@csgroup.eu>

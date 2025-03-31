@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding: utf8
 #
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -26,10 +26,7 @@ Test state_machine
 """
 
 import copy
-import numpy as np
-
 import pytest
-
 
 from transitions.core import MachineError
 
@@ -86,17 +83,21 @@ class TestPandora2D:
     @pytest.mark.parametrize(
         ["refinement_config", "expected"],
         [
-            pytest.param({"refinement_method": "interpolation"}, Margins(3, 3, 3, 3), id="interpolation"),
+            pytest.param(
+                {"refinement_method": "dichotomy_python", "iterations": 3, "filter": {"method": "bicubic"}},
+                Margins(1, 1, 2, 2),
+                id="dichotomy python with bicubic filter",
+            ),
             pytest.param(
                 {"refinement_method": "dichotomy", "iterations": 3, "filter": {"method": "bicubic"}},
-                Margins(2, 2, 2, 2),
-                id="dichotomy with bicubic filter",
+                Margins(1, 1, 2, 2),
+                id="dichotomy cpp with bicubic filter",
             ),
         ],
     )
-    def test_global_margins(self, refinement_config, expected) -> None:
+    def test_global_margins_disp(self, refinement_config, expected) -> None:
         """
-        Test computed global margins is as expected.
+        Test computed global margins for cost volume as expected.
         """
 
         pipeline_cfg = {
@@ -111,4 +112,28 @@ class TestPandora2D:
 
         pandora2d_machine.check_conf(pipeline_cfg)
 
-        assert pandora2d_machine.margins.global_margins == expected
+        assert pandora2d_machine.margins_disp.global_margins == expected
+
+    @pytest.mark.parametrize(
+        ["matching_cost_config", "expected"],
+        [
+            pytest.param({"matching_cost_method": "zncc"}, Margins(2, 2, 2, 2), id="zncc"),
+        ],
+    )
+    def test_global_margins_img(self, matching_cost_config, expected) -> None:
+        """
+        Test computed global margins for image as expected.
+        """
+
+        pipeline_cfg = {
+            "pipeline": {
+                "matching_cost": matching_cost_config,
+                "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            },
+        }
+
+        pandora2d_machine = state_machine.Pandora2DMachine()
+
+        pandora2d_machine.check_conf(pipeline_cfg)
+
+        assert pandora2d_machine.margins_img.global_margins == expected

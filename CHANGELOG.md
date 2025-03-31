@@ -1,5 +1,73 @@
 # Changelog
 
+## 0.5.0a1 (March 2025)
+
+### Added
+- Created criteria data array in the state machine. [#194]
+- Added dichotomy CPP module. [#211]
+- Added base matching cost class. [#208]
+- Added abstract filter CPP class. [#212]
+- Added bicubic module CPP in interpolation filter. [#215]
+- Added binding for bicubic CPP. [#216]
+- Added histogram1D and histogram2D classes. [#223]
+- Added entropy class. [#224]
+- Added Python class for mutual information. [#221]
+- Added interpolation method for the right image. [#226]
+- Added Python class for cardinal sine CPP. [#213]
+- Added margin notebook. [#235]
+- Added binding for cardinal sine CPP. [#216]
+- Added dependencies file for Meson. [#238]
+- Added compute cost volume method CPP. [#227]
+- Added binding for compute cost volume. [#229]
+- Added refinement method using dichotomy CPP. [#217]
+- Added performance tests for mutual information. [#231]
+- Added attributes JSON file. [#242]
+- Added documentation for mutual information. [#230]
+- Added peak on edge criteria. [#255]
+- Added criteria data array on cost volume. [#243]
+- Added validity mask output. [#172]
+- Added error message in documentation for mask with step. [#261]
+- Added wheel for cpp code. [#237]
+
+### Fixed
+- Fixed dichotomy with a step different from 1. [#199]
+- Improved margin management using ROI. [#196]
+- Refactored imports for Sphinx to fix documentation build. [#220]
+- Fixed subpixel on dichotomy CPP. [#218]
+- Fixed installation on Read the Docs. [#236]
+- Fixed typo for mutual information. [#258]
+- Fixed memory leak for dichotomy. [#252]
+- Fixed histogram2D computation when the number of bins is too large. [#257]
+- Fixed resource tests. [#249]
+
+### Changed
+- Separated margin types: image reading margins and disparity margins. [#197]
+- Clarified message when input disparities are not a dictionary. [#198]
+- Updated tests. [#201]
+- Refactored criteria data array allocation. [#202]
+- Updated matching cost tests. [#203]
+- Updated refinement tests. [#204]
+- Updated disparity tests. [#205]
+- Inverted disparity arguments on cost_volume. [#206]
+- Renamed dichotomy method in dichotomy_python. [#210]
+- Updated ratio display documentation. [#232]
+- Updated Sonar settings.
+- Updated type for disparity on Xarray to float32. [#222]
+- Moved from setuptools to Meson for Python. [#233]
+- Updated Makefile for CPP code. [#234]
+- Updated save dataset method. [#240]
+- Updated documentation and notebook with the new dichotomy version. [#218]
+- Updated CLI with output parameters. [#246]
+- Updated output directories. [#241]
+- Updated input path in user configuration. [#244]
+- Disabled CPP tests by default. [#260]
+- Updated Flag type for criteria. [#256]
+- Refactored CPP code. [#250]
+- Fixed interface name. [#264]
+- Standardized types in configuration tables in documentation. [#263]
+- Removed interpolation method. [#274]
+
+
 ## 0.4.0 (October 2024)
 
 ### Added

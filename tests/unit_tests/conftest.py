@@ -1,5 +1,5 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2024 CS GROUP France.
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 CS GROUP France.
 #
 # This file is part of PANDORA2D
 #
@@ -67,8 +67,7 @@ def make_empty_image(tmp_path):
     return make
 
 
-@pytest.fixture
-def correct_input_cfg(left_img_path, right_img_path):
+def _correct_input_cfg(left_img_path, right_img_path):
     return {
         "input": {
             "left": {
@@ -80,6 +79,16 @@ def correct_input_cfg(left_img_path, right_img_path):
             "row_disparity": {"init": 1, "range": 2},
         }
     }
+
+
+@pytest.fixture(scope="function")
+def correct_input_cfg(left_img_path, right_img_path):
+    return _correct_input_cfg(left_img_path, right_img_path)
+
+
+@pytest.fixture(scope="class")
+def class_scoped_correct_input_cfg(left_img_path, right_img_path):
+    return _correct_input_cfg(left_img_path, right_img_path)
 
 
 @pytest.fixture
@@ -105,7 +114,7 @@ def correct_pipeline_fixture():
         "pipeline": {
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-            "refinement": {"refinement_method": "interpolation"},
+            "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
     }
 
@@ -115,7 +124,7 @@ def false_pipeline_mc():
     return {
         "pipeline": {
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-            "refinement": {"refinement_method": "interpolation"},
+            "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
     }
 
@@ -125,7 +134,7 @@ def false_pipeline_disp():
     return {
         "pipeline": {
             "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
-            "refinement": {"refinement_method": "interpolation"},
+            "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
     }
 
@@ -182,7 +191,7 @@ def left_stereo_object():
         "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
     }
 
-    return left.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
+    return left.pipe(add_disparity_grid, {"init": 1, "range": 2}, {"init": -1, "range": 1})
 
 
 @pytest.fixture()

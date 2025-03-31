@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -19,91 +19,15 @@
 """
 Run pandora2d configurations with ROI from end to end.
 """
+from pathlib import Path
 
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 
 import pytest
-import xarray as xr
-import numpy as np
 import rasterio
 
 from pandora.common import write_data_array
-
-
-@pytest.fixture()
-def left_data():
-    """Create left data."""
-    # Create array of shape (10,10):
-    # [[ 0,  1,  2, ...,  0],
-    #  [ 1,  2,  3, ...,  10],
-    #  [...],
-    #  [8,  9,  10, ...,  17]]
-    #  [9, 10,  11, ...,  18]]
-    return xr.DataArray(
-        data=np.arange(10) + np.arange(10).reshape(-1, 1),
-        dims=("row", "col"),
-        coords={"row": np.arange(10), "col": np.arange(10)},
-    )
-
-
-@pytest.fixture()
-def right_data(left_data):
-    return left_data + 1
-
-
-@pytest.fixture()
-def transform():
-    return rasterio.Affine(0.5, 0.0, 573083.5, 0.0, -0.5, 4825333.5)
-
-
-@pytest.fixture()
-def crs():
-    return rasterio.crs.CRS.from_epsg(32631)
-
-
-@pytest.fixture()
-def left_path(tmp_path, left_data, crs, transform):
-    """Write left image and return its path."""
-    path = tmp_path / "left.tif"
-    write_data_array(
-        data_array=left_data,
-        filename=str(path),
-        crs=crs,
-        transform=transform,
-    )
-    return path
-
-
-@pytest.fixture()
-def right_path(tmp_path, right_data, crs, transform):
-    """Write right image and return its path."""
-    path = tmp_path / "right.tif"
-    write_data_array(
-        data_array=right_data,
-        filename=str(path),
-        crs=crs,
-        transform=transform,
-    )
-    return path
-
-
-@pytest.fixture()
-def configuration(left_path, right_path, correct_pipeline_without_refinement, step):
-    correct_pipeline_without_refinement["pipeline"]["matching_cost"]["step"] = step
-    return {
-        "input": {
-            "left": {
-                "img": str(left_path),
-            },
-            "right": {
-                "img": str(right_path),
-            },
-            "col_disparity": {"init": 1, "range": 2},
-            "row_disparity": {"init": 1, "range": 2},
-        },
-        **correct_pipeline_without_refinement,
-    }
 
 
 @pytest.mark.parametrize(
@@ -117,7 +41,7 @@ def configuration(left_path, right_path, correct_pipeline_without_refinement, st
         pytest.param([11, 11], (0, 0), id="Step > image"),  # Disp map corner match ROI corner
     ],
 )
-@pytest.mark.parametrize("output_file", ["columns_disparity.tif", "row_disparity.tif", "correlation_score.tif"])
+@pytest.mark.parametrize("output_file", ["col_map.tif", "row_map.tif", "correlation_score.tif"])
 def test_georeferencement(
     run_pipeline,
     configuration,
@@ -127,9 +51,9 @@ def test_georeferencement(
     output_file,
 ):
     """Test that top left and bottom right corners are well georeferenced."""
-    run_dir = run_pipeline(configuration)
+    run_pipeline(configuration)
 
-    output = rasterio.open(run_dir / "output" / output_file)
+    output = rasterio.open(Path(configuration["output"]["path"]) / "disparity_map" / output_file)
     bottom_right_disparity_indexes = output.width - 1, output.height - 1
 
     assert output.crs == crs
@@ -187,7 +111,7 @@ def configuration_with_roi(configuration, roi):
         ),
     ],
 )
-@pytest.mark.parametrize("output_file", ["columns_disparity.tif", "row_disparity.tif", "correlation_score.tif"])
+@pytest.mark.parametrize("output_file", ["col_map.tif", "row_map.tif", "correlation_score.tif"])
 def test_roi_georeferencement(
     run_pipeline,
     configuration_with_roi,
@@ -197,9 +121,9 @@ def test_roi_georeferencement(
     output_file,
 ):
     """Test that top left and bottom right corners are well georeferenced."""
-    run_dir = run_pipeline(configuration_with_roi)
+    run_pipeline(configuration_with_roi)
 
-    output = rasterio.open(run_dir / "output" / output_file)
+    output = rasterio.open(Path(configuration_with_roi["output"]["path"]) / "disparity_map" / output_file)
     bottom_right_disparity_indexes = output.width - 1, output.height - 1
 
     assert output.crs == crs
