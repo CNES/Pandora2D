@@ -82,6 +82,10 @@ class TestComparisonMedicis:
         mean_error_pandora2d_row = np.nanmean(abs(row_map_pandora2d - row_shift))
         mean_error_medicis_row = np.nanmean(abs(row_map_medicis - row_shift))
 
+        # Same float32 or float64 type as Medicis
+        mean_error_pandora2d_row = mean_error_pandora2d_row.astype(mean_error_medicis_row)
+        mean_error_pandora2d_col = mean_error_pandora2d_col.astype(mean_error_medicis_col)
+
         return mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col
 
     @pytest.fixture()
