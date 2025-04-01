@@ -149,11 +149,9 @@ class TestAllocateValidityDataset:
         Test the allocate_validity_dataset method
         """
 
-        img_left, img_right, cost_volumes = make_cost_volumes
+        *_, cost_volumes = make_cost_volumes
 
-        criteria_dataarray = criteria.get_criteria_dataarray(
-            left_image=img_left, right_image=img_right, cv=cost_volumes
-        )
+        criteria_dataarray = cost_volumes.criteria
 
         allocated_validity_mask = criteria.allocate_validity_dataset(criteria_dataarray)
 
@@ -654,11 +652,9 @@ class TestValidityMaskBand:
             - left and right masks
         """
 
-        img_left, img_right, cost_volumes = make_cost_volumes
+        *_, cost_volumes = make_cost_volumes
 
-        criteria_dataarray = criteria.get_criteria_dataarray(
-            left_image=img_left, right_image=img_right, cv=cost_volumes
-        )
+        criteria_dataarray = cost_volumes.criteria
 
         validity_mask_band = criteria.get_validity_mask_band(criteria_dataarray)
 
@@ -782,11 +778,9 @@ class TestLeftBorderBand:
         Test that the produced left border bands are correct according to the window size.
         """
 
-        img_left, img_right, cost_volumes = make_cost_volumes
+        *_, cost_volumes = make_cost_volumes
 
-        criteria_dataarray = criteria.get_criteria_dataarray(
-            left_image=img_left, right_image=img_right, cv=cost_volumes
-        )
+        criteria_dataarray = cost_volumes.criteria
 
         left_border_band = (
             criteria.get_validity_dataset(criteria_dataarray).sel(criteria="P2D_LEFT_BORDER")["validity"].data
