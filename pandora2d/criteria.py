@@ -481,12 +481,14 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
 
     validity_dataset = allocate_validity_dataset(criteria_dataarray)
 
-    validity_dataset["validity"].data[:, :, 0] = get_validity_mask_band(criteria_dataarray)
+    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(criteria_dataarray)
 
     # The P2D_LEFT_BORDER criteria doesn't depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities
     # to identify the points where the criteria is raised.
-    validity_dataset["validity"].data[:, :, 1] = Criteria.P2D_LEFT_BORDER.is_in(criteria_dataarray[:, :, 0, 0].data)
+    validity_dataset["validity"].loc[{"criteria": Criteria.P2D_LEFT_BORDER.name}] = Criteria.P2D_LEFT_BORDER.is_in(
+        criteria_dataarray[:, :, 0, 0].data
+    )
 
     return validity_dataset
 
