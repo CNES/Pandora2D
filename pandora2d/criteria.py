@@ -489,6 +489,12 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     validity_dataset["validity"].loc[{"criteria": Criteria.P2D_LEFT_BORDER.name}] = Criteria.P2D_LEFT_BORDER.is_in(
         criteria_dataarray[:, :, 0, 0].data
     )
+    disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))
+    np.logical_or.reduce(
+        Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.is_in(criteria_dataarray.data),
+        axis=disparity_axis_num,
+        out=validity_dataset["validity"].loc[{"criteria": Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.name}].data,
+    )
 
     return validity_dataset
 
