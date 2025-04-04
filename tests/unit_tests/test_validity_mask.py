@@ -23,6 +23,8 @@ Test methods from criteria.py file linked to validity_mask creation
 # pylint: disable=too-few-public-methods
 # pylint: disable=redefined-outer-name
 
+from random import choice
+
 import pytest
 import numpy as np
 import xarray as xr
@@ -789,6 +791,9 @@ class TestLeftBorderBand:
         np.testing.assert_array_equal(left_border_band, expected)
 
 
+@pytest.mark.parametrize(
+    ["criteria_var"], [pytest.param(c, id=c.name) for c in criteria.PARTIALLY_INVALIDATING_CRITERIA]
+)
 class TestGetValidityDataset:
     """Check get_validity_dataset behavior."""
 
@@ -805,66 +810,90 @@ class TestGetValidityDataset:
             },
         )
 
-    def test_no_criteria(self, criteria_dataarray):
+    @pytest.fixture()
+    def other_criteria_var(self, criteria_var):
+        return choice(list(criteria.PARTIALLY_INVALIDATING_CRITERIA - {criteria_var}))
+
+    def test_no_criteria(self, criteria_dataarray, criteria_var):
         """validity_dataset should be full of zeros."""
         result = criteria.get_validity_dataset(criteria_dataarray)
 
         assert (result["validity"].sel(criteria="validity_mask") == 0).all()
-        assert (result["validity"].sel(criteria="P2D_RIGHT_DISPARITY_OUTSIDE") == 0).all()
+        assert (result["validity"].sel(criteria=criteria_var.name) == 0).all()
 
-    def test_empty_even_with_other_criteria(self, criteria_dataarray):
+    def test_empty_even_with_other_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
         """A criteria is not affected by presence of another one."""
-        criteria_dataarray.loc[{"row": 2, "col": 1, "disp_row": -1, "disp_col": 1}] = np.uint8(
-            Criteria.P2D_RIGHT_NODATA
-        )
+        criteria_dataarray.loc[{"row": 2, "col": 1, "disp_row": -1, "disp_col": 1}] = np.uint8(other_criteria_var)
         result = criteria.get_validity_dataset(criteria_dataarray)
 
         assert result["validity"].sel(criteria="validity_mask", row=2, col=1) == 1
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
-        assert (result["validity"].sel(criteria="P2D_RIGHT_DISPARITY_OUTSIDE") == 0).all()
+        assert (result["validity"].sel(criteria=criteria_var.name) == 0).all()
 
-    def test_only_one_disparity(self, criteria_dataarray):
+    @pytest.mark.parametrize("other_criteria_var", [pytest.param(c, id=c.name) for c in criteria.INVALIDATING_CRITERIA])
+    def test_empty_even_with_invalidating_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
+        """invalidating criteria fills the cost_surface and thus invalidates point."""
+        criteria_dataarray.loc[{"row": 2, "col": 1}] = np.uint8(other_criteria_var)
+        result = criteria.get_validity_dataset(criteria_dataarray)
+
+        assert result["validity"].sel(criteria="validity_mask", row=2, col=1) == 2
+        assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
+        assert (result["validity"].sel(criteria=criteria_var.name) == 0).all()
+
+    def test_only_one_disparity(self, criteria_dataarray, criteria_var):
         """Partial invalidity is raised when a Criteria is present for at least one disparity couple."""
-        criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": 0, "disp_col": 0}] = np.uint8(
-            Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
-        )
+        criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": 0, "disp_col": 0}] = np.uint8(criteria_var)
 
         result = criteria.get_validity_dataset(criteria_dataarray)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 1
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
-        assert result["validity"].sel(criteria="P2D_RIGHT_DISPARITY_OUTSIDE", row=1, col=0) == 1
+        assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
 
-    def test_multiple_disparities(self, criteria_dataarray):
+    def test_multiple_disparities(self, criteria_dataarray, criteria_var):
         """Having a Criteria on multiple disparities does not change the result."""
-        criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": [0, 1], "disp_col": 0}] = np.uint8(
-            Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
-        )
+        criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": [0, 1], "disp_col": 0}] = np.uint8(criteria_var)
 
         result = criteria.get_validity_dataset(criteria_dataarray)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 1
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
-        assert result["validity"].sel(criteria="P2D_RIGHT_DISPARITY_OUTSIDE", row=1, col=0) == 1
+        assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
 
-    def test_multiple_criteria(self, criteria_dataarray):
+    def test_multiple_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
         """Having multiple Criteria on multiple disparities does not change the result."""
         criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": [0, 1], "disp_col": 0}] = np.uint8(
-            Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+            criteria_var | other_criteria_var
         )
 
         result = criteria.get_validity_dataset(criteria_dataarray)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 1
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
-        assert result["validity"].sel(criteria="P2D_RIGHT_DISPARITY_OUTSIDE", row=1, col=0) == 1
+        assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
+        assert result["validity"].sel(criteria=other_criteria_var.name, row=1, col=0) == 1
 
-    def test_invalid(self, criteria_dataarray):
-        """When all disparities of a point have a Criteria, the point is invalid."""
-        criteria_dataarray.loc[{"row": 1, "col": 0}] = np.uint8(Criteria.P2D_RIGHT_DISPARITY_OUTSIDE)
+    @pytest.mark.parametrize("other_criteria_var", [pytest.param(c, id=c.name) for c in criteria.INVALIDATING_CRITERIA])
+    def test_combined_with_invalidating_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
+        """invalidating criteria fills the cost_surface and thus invalidates point."""
+        criteria_dataarray.loc[{"row": 1, "col": 0}] = np.uint8(other_criteria_var)
+        criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": [0, 1], "disp_col": 0}] = np.uint8(
+            criteria_var | other_criteria_var
+        )
 
         result = criteria.get_validity_dataset(criteria_dataarray)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 2
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
-        assert result["validity"].sel(criteria="P2D_RIGHT_DISPARITY_OUTSIDE", row=1, col=0) == 1
+        assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
+        assert result["validity"].sel(criteria=other_criteria_var.name, row=1, col=0) == 1
+
+    def test_invalidating(self, criteria_dataarray, criteria_var):
+        """When all disparities of a point have a Criteria, the point is invalid."""
+        criteria_dataarray.loc[{"row": 1, "col": 0}] = np.uint8(criteria_var)
+
+        result = criteria.get_validity_dataset(criteria_dataarray)
+
+        assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 2
+        assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
+        assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
