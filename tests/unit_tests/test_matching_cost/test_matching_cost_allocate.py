@@ -59,10 +59,8 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     cost_volumes_test.attrs["type_measure"] = "max"
     cost_volumes_test.attrs["subpixel"] = 1
     cost_volumes_test.attrs["offset_row_col"] = 1
-    cost_volumes_test.attrs["cmax"] = 1
     cost_volumes_test.attrs["crs"] = None
     cost_volumes_test.attrs["transform"] = Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-    cost_volumes_test.attrs["band_correl"] = None
     cost_volumes_test.attrs["col_disparity_source"] = [-1, 3]
     cost_volumes_test.attrs["row_disparity_source"] = [-2, 0]
     cost_volumes_test.attrs["no_data_img"] = -9999
