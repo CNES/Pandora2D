@@ -40,18 +40,21 @@ def make_image():
     Create image dataset
     """
 
-    def inner(row_disparity, col_disparity, mask_data):
+    def inner(row_disparity, col_disparity, mask_data, roi=None):
         """Make image"""
         row, col = (6, 8)
 
         data = np.random.uniform(0, row * col, (row, col))
+
+        row_coords = np.arange(roi["row"]["first"], roi["row"]["last"] + 1) if roi else np.arange(data.shape[0])
+        col_coords = np.arange(roi["col"]["first"], roi["col"]["last"] + 1) if roi else np.arange(data.shape[1])
 
         return xr.Dataset(
             {
                 "im": (["row", "col"], data),
                 "msk": (["row", "col"], mask_data),
             },
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+            coords={"row": row_coords, "col": col_coords},
             attrs={
                 "no_data_img": -9999,
                 "valid_pixels": 0,
@@ -84,8 +87,8 @@ def make_cost_volumes(make_image, request):
     disp_row = request.param["row_disparity"]
     disp_col = request.param["col_disparity"]
 
-    img_left = make_image(disp_row, disp_col, request.param["msk_left"])
-    img_right = make_image(disp_row, disp_col, request.param["msk_right"])
+    img_left = make_image(disp_row, disp_col, request.param["msk_left"], request.param.get("roi"))
+    img_right = make_image(disp_row, disp_col, request.param["msk_right"], request.param.get("roi"))
 
     matching_cost_object = matching_cost.MatchingCostRegistry.get(
         cfg["pipeline"]["matching_cost"]["matching_cost_method"]
@@ -897,3 +900,272 @@ class TestGetValidityDataset:
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 2
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
         assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
+
+
+class TestRightDisparityOutputWithCostVolumes:
+    """Test various P2D_RIGHT_DISPARITY_OUTSIDE generation."""
+
+    @pytest.fixture()
+    def criteria_name(self):
+        return Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.name
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "expected"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": {"init": 0, "range": 1},
+                    "col_disparity": {"init": 0, "range": 2},
+                    "msk_left": np.full((6, 8), 0),
+                    "msk_right": np.full((6, 8), 0),
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "window_size": 1,
+                },
+                # In this case, P2D_LEFT_BORDER is not raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="Window_size=1",
+            ),
+            pytest.param(
+                {
+                    "row_disparity": {"init": 0, "range": 1},
+                    "col_disparity": {"init": 0, "range": 2},
+                    "msk_left": np.full((6, 8), 0),
+                    "msk_right": np.full((6, 8), 0),
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "window_size": 3,
+                },
+                # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
+                # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 1, 1, 1, 1, 1, 1, 0],
+                        [0, 1, 1, 0, 0, 1, 1, 0],
+                        [0, 1, 1, 0, 0, 1, 1, 0],
+                        [0, 1, 1, 1, 1, 1, 1, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                    ]
+                ),
+                id="Window_size=3",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_window_size(self, make_cost_volumes, criteria_name, expected):
+        """
+        Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to the window size.
+        """
+
+        *_, cost_volumes = make_cost_volumes
+
+        result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+
+        np.testing.assert_array_equal(result, expected)
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "expected"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": {"init": 1, "range": 1},
+                    "col_disparity": {"init": 2, "range": 2},
+                    "msk_left": np.full((6, 8), 0),
+                    "msk_right": np.full((6, 8), 0),
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "window_size": 1,
+                },
+                np.array(
+                    [
+                        [0, 0, 0, 0, 1, 1, 1, 1],
+                        [0, 0, 0, 0, 1, 1, 1, 1],
+                        [0, 0, 0, 0, 1, 1, 1, 1],
+                        [0, 0, 0, 0, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="Top left border is in",
+            ),
+            pytest.param(
+                {
+                    "row_disparity": {"init": -2, "range": 1},
+                    "col_disparity": {"init": -1, "range": 1},
+                    "msk_left": np.full((6, 8), 0),
+                    "msk_right": np.full((6, 8), 0),
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "window_size": 1,
+                },
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 0, 0, 0, 0, 0, 0],
+                        [1, 1, 0, 0, 0, 0, 0, 0],
+                    ]
+                ),
+                id="Bottom right is in",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_disparities(self, make_cost_volumes, criteria_name, expected):
+        """
+        Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to the window size.
+        """
+
+        *_, cost_volumes = make_cost_volumes
+
+        result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+
+        np.testing.assert_array_equal(result, expected)
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "expected"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": {"init": 0, "range": 1},
+                    "col_disparity": {"init": 0, "range": 2},
+                    "msk_left": np.full((6, 8), 0),
+                    "msk_right": np.full((6, 8), 0),
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "window_size": 1,
+                    "roi": {
+                        "row": {"first": 2, "last": 7},
+                        "col": {"first": 2, "last": 9},
+                    },
+                },
+                # In this case, P2D_LEFT_BORDER is not raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="Window_size=1",
+            ),
+            pytest.param(
+                {
+                    "row_disparity": {"init": 0, "range": 1},
+                    "col_disparity": {"init": 0, "range": 2},
+                    "msk_left": np.full((6, 8), 0),
+                    "msk_right": np.full((6, 8), 0),
+                    "step": [1, 1],
+                    "subpix": 1,
+                    "window_size": 3,
+                    "roi": {
+                        "row": {"first": 4, "last": 9},
+                        "col": {"first": 0, "last": 7},
+                    },
+                },
+                # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
+                # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 1, 1, 1, 1, 1, 1, 0],
+                        [0, 1, 1, 0, 0, 1, 1, 0],
+                        [0, 1, 1, 0, 0, 1, 1, 0],
+                        [0, 1, 1, 1, 1, 1, 1, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                    ]
+                ),
+                id="Window_size=3",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_roi(self, make_cost_volumes, criteria_name, expected):
+        """
+        Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to the window size.
+        """
+
+        *_, cost_volumes = make_cost_volumes
+
+        result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+
+        np.testing.assert_array_equal(result, expected)
+
+    @pytest.mark.parametrize(
+        ["make_cost_volumes", "expected"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": {"init": 0, "range": 1},
+                    "col_disparity": {"init": 0, "range": 2},
+                    "msk_left": np.full((6, 8), 0),
+                    "msk_right": np.full((6, 8), 0),
+                    "step": [1, 1],
+                    "subpix": 2,
+                    "window_size": 1,
+                },
+                # In this case, P2D_LEFT_BORDER is not raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 0, 0, 0, 0, 1, 1],
+                        [1, 1, 1, 1, 1, 1, 1, 1],
+                    ]
+                ),
+                id="Subpix=2-Window_size=1",
+            ),
+            pytest.param(
+                {
+                    "row_disparity": {"init": 0, "range": 1},
+                    "col_disparity": {"init": 0, "range": 2},
+                    "msk_left": np.full((6, 8), 0),
+                    "msk_right": np.full((6, 8), 0),
+                    "step": [1, 1],
+                    "subpix": 4,
+                    "window_size": 3,
+                },
+                # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
+                # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+                np.array(
+                    [
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 1, 1, 1, 1, 1, 1, 0],
+                        [0, 1, 1, 0, 0, 1, 1, 0],
+                        [0, 1, 1, 0, 0, 1, 1, 0],
+                        [0, 1, 1, 1, 1, 1, 1, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                    ]
+                ),
+                id="Subpix=4-Window_size=3",
+            ),
+        ],
+        indirect=["make_cost_volumes"],
+    )
+    def test_subpix(self, make_cost_volumes, criteria_name, expected):
+        """
+        Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to the window size.
+        """
+
+        *_, cost_volumes = make_cost_volumes
+
+        result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+
+        np.testing.assert_array_equal(result, expected)
