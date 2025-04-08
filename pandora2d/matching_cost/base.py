@@ -378,22 +378,3 @@ class BaseMatchingCost(ABC):
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
-
-    @staticmethod
-    def check_step_with_input_mask(cfg: Dict) -> None:
-        """
-        Check if an input mask is used with a step different from [1,1], in which case an error is raised.
-        This method will be removed once the use of a step with an input mask has been corrected.
-
-        :param cfg: user configuration
-        :type cfg: Dict
-        """
-
-        step_condition = cfg["pipeline"]["matching_cost"]["step"] != [1, 1]
-
-        if (cfg["input"]["left"]["mask"] is not None and step_condition) or (
-            cfg["input"]["right"]["mask"] is not None and step_condition
-        ):
-            raise ValueError(
-                "The use of an input mask with a step other than [1,1] will be supported in a future version."
-            )
