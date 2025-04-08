@@ -80,6 +80,25 @@ from pandora2d import criteria
                 "col_disparity": {"init": 0, "range": 2},
                 "msk_left": np.full((6, 8), 0),
                 "msk_right": np.full((6, 8), 0),
+                "step": [2, 3],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            np.array(
+                [
+                    [2, 2, 2],
+                    [2, 0, 1],
+                    [2, 1, 1],
+                ]
+            ),
+            id="No mask, window_size=3, step=[2,3]",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
                 "step": [1, 1],
                 "subpix": 1,
                 "window_size": 5,
@@ -188,6 +207,46 @@ from pandora2d import criteria
             {
                 "row_disparity": {"init": 0, "range": 1},
                 "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.array(
+                    (
+                        [
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 2, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 2, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 1, 0, 2, 0, 1],
+                            [0, 0, 0, 0, 0, 2, 0, 0],
+                        ]
+                    )
+                ),
+                "msk_right": np.array(
+                    (
+                        [
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                        ]
+                    )
+                ),
+                "step": [3, 2],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            np.array(
+                [
+                    [2, 2, 2, 2],
+                    [2, 2, 2, 2],
+                ]
+            ),
+            id="Left mask, window_size=3, step=[3,2]",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
                 "msk_left": np.full((6, 8), 0),
                 "msk_right": np.array(
                     (
@@ -290,6 +349,164 @@ from pandora2d import criteria
                 )
             ),
             id="Right mask, window_size=3",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.array(
+                    (
+                        [
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0, 0, 0],
+                            [0, 2, 0, 0, 2, 2, 2, 0],
+                            [0, 2, 0, 0, 0, 0, 0, 0],
+                            [0, 2, 2, 1, 0, 0, 0, 1],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                        ]
+                    )
+                ),
+                "step": [2, 1],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            np.array(
+                (
+                    [
+                        [2, 2, 2, 2, 2, 2, 2, 2],
+                        [2, 2, 1, 1, 1, 1, 1, 2],
+                        [2, 2, 2, 1, 1, 1, 1, 2],
+                    ]
+                )
+            ),
+            id="Right mask, window_size=3, step=[2,1]",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.array(
+                    (
+                        [
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0, 0, 0],
+                            [0, 2, 0, 0, 2, 2, 2, 0],
+                            [0, 2, 0, 0, 0, 0, 0, 0],
+                            [0, 2, 2, 1, 0, 0, 0, 1],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                        ]
+                    )
+                ),
+                "step": [1, 2],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            np.array(
+                (
+                    [
+                        [2, 2, 2, 2],
+                        [2, 1, 1, 1],
+                        [2, 1, 1, 1],
+                        [2, 2, 1, 1],
+                        [2, 2, 1, 1],
+                        [2, 2, 2, 2],
+                    ]
+                )
+            ),
+            id="Right mask, window_size=3, step=[1,2]",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.array(
+                    (
+                        [
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0, 0, 0],
+                            [0, 2, 0, 0, 2, 2, 2, 0],
+                            [0, 2, 0, 0, 0, 0, 0, 0],
+                            [0, 2, 2, 1, 0, 0, 0, 1],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                        ]
+                    )
+                ),
+                "step": [2, 2],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            np.array(
+                (
+                    [
+                        [
+                            2,
+                            2,
+                            2,
+                            2,
+                        ],
+                        [
+                            2,
+                            1,
+                            1,
+                            1,
+                        ],
+                        [
+                            2,
+                            2,
+                            1,
+                            1,
+                        ],
+                    ]
+                )
+            ),
+            id="Right mask, window_size=3, step=[2,2]",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.array(
+                    (
+                        [
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0, 0, 0],
+                            [0, 2, 0, 0, 2, 2, 2, 0],
+                            [0, 2, 0, 0, 0, 0, 0, 0],
+                            [0, 2, 2, 1, 0, 0, 0, 1],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                        ]
+                    )
+                ),
+                "step": [2, 3],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            np.array(
+                (
+                    [
+                        [
+                            2,
+                            2,
+                            2,
+                        ],
+                        [
+                            2,
+                            1,
+                            1,
+                        ],
+                        [
+                            2,
+                            1,
+                            1,
+                        ],
+                    ]
+                )
+            ),
+            id="Right mask, window_size=3, step=[2,3]",
         ),
         pytest.param(
             {
@@ -512,10 +729,8 @@ def test_validity_mask(make_cost_volumes, expected):
         - left and right masks
     """
 
-    *_, cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes
 
-    criteria_dataarray = cost_volumes.criteria
-
-    validity_mask_band = criteria.get_validity_mask_band(criteria_dataarray)
+    validity_mask_band = criteria.get_validity_mask_band(cost_volumes["criteria"])
 
     np.testing.assert_array_equal(validity_mask_band, expected)
