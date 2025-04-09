@@ -138,7 +138,7 @@ class TestRefinement:
             ("dichotomy_python", "bicubic_python"),
             ("dichotomy_python", "sinc_python"),
             ("dichotomy", "bicubic"),
-            # ("dichotomy", "sinc"),
+            ("dichotomy", "sinc"),
         ],
     )
     def test_dichotomy(self, run_pipeline, correct_input_cfg, dichotomy_pipeline, tmp_path):
@@ -159,7 +159,7 @@ class TestRefinement:
             ("dichotomy_python", "bicubic_python"),
             ("dichotomy_python", "sinc_python"),
             ("dichotomy", "bicubic"),
-            # ("dichotomy", "sinc"),
+            ("dichotomy", "sinc"),
         ],
     )
     def test_dichotomy_with_estimation(self, run_pipeline, correct_input_cfg, dichotomy_pipeline, tmp_path):
