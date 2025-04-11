@@ -85,6 +85,30 @@ def criteria_name():
             ),
             id="Window_size=3",
         ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
+                "step": [1, 1],
+                "subpix": 1,
+                "window_size": 5,
+            },
+            # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
+            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+            np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                ]
+            ),
+            id="Window_size=5",
+        ),
     ],
     indirect=["make_cost_volumes"],
 )
