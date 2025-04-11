@@ -246,20 +246,20 @@ def test_roi(make_cost_volumes, criteria_name, expected):
                 "msk_right": np.full((6, 8), 0),
                 "step": [1, 1],
                 "subpix": 2,
-                "window_size": 1,
+                "window_size": 3,
             },
             # In this case, P2D_LEFT_BORDER is not raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
             np.array(
                 [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0],
+                    [0, 1, 1, 0, 0, 1, 1, 0],
+                    [0, 1, 1, 0, 0, 1, 1, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
                 ]
             ),
-            id="Subpix=2-Window_size=1",
+            id="Subpix=2",
         ),
         pytest.param(
             {
@@ -283,7 +283,7 @@ def test_roi(make_cost_volumes, criteria_name, expected):
                     [0, 0, 0, 0, 0, 0, 0, 0],
                 ]
             ),
-            id="Subpix=4-Window_size=3",
+            id="Subpix=4",
         ),
     ],
     indirect=["make_cost_volumes"],
