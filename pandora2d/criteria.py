@@ -33,8 +33,8 @@ from pandora2d.common import (
     set_out_of_row_disparity_range_to_other_value,
 )
 
-INVALIDATING_CRITERIA = {Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_NODATA, Criteria.P2D_INVALID_MASK_LEFT}
-PARTIALLY_INVALIDATING_CRITERIA = set(Criteria) - {Criteria.VALID} - INVALIDATING_CRITERIA
+DISPARITY_INDEPENDENT_CRITERIA = {Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_NODATA, Criteria.P2D_INVALID_MASK_LEFT}
+DISPARITY_DEPENDENT_CRITERIA = set(Criteria) - {Criteria.VALID} - DISPARITY_INDEPENDENT_CRITERIA
 
 
 class FlagArray(np.ndarray):
@@ -489,13 +489,13 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     # invalidating criteria do not depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities
     # to identify the points where the criteria is raised.
-    for criterion in INVALIDATING_CRITERIA:
+    for criterion in DISPARITY_INDEPENDENT_CRITERIA:
         validity_dataset["validity"].loc[{"criteria": criterion.name}] = criterion.is_in(
             criteria_dataarray[:, :, 0, 0].data
         )
 
     disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))
-    for criterion in PARTIALLY_INVALIDATING_CRITERIA:
+    for criterion in DISPARITY_DEPENDENT_CRITERIA:
         np.logical_or.reduce(
             criterion.is_in(criteria_dataarray.data),
             axis=disparity_axis_num,

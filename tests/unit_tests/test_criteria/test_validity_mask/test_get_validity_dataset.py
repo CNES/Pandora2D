@@ -30,9 +30,7 @@ import xarray as xr
 from pandora2d import criteria
 
 
-@pytest.mark.parametrize(
-    ["criteria_var"], [pytest.param(c, id=c.name) for c in criteria.PARTIALLY_INVALIDATING_CRITERIA]
-)
+@pytest.mark.parametrize(["criteria_var"], [pytest.param(c, id=c.name) for c in criteria.DISPARITY_DEPENDENT_CRITERIA])
 class TestGetValidityDataset:
     """Check get_validity_dataset behavior."""
 
@@ -51,7 +49,7 @@ class TestGetValidityDataset:
 
     @pytest.fixture()
     def other_criteria_var(self, criteria_var):
-        return choice(list(criteria.PARTIALLY_INVALIDATING_CRITERIA - {criteria_var}))
+        return choice(list(criteria.DISPARITY_DEPENDENT_CRITERIA - {criteria_var}))
 
     def test_no_criteria(self, criteria_dataarray, criteria_var):
         """validity_dataset should be full of zeros."""
@@ -69,7 +67,9 @@ class TestGetValidityDataset:
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
         assert (result["validity"].sel(criteria=criteria_var.name) == 0).all()
 
-    @pytest.mark.parametrize("other_criteria_var", [pytest.param(c, id=c.name) for c in criteria.INVALIDATING_CRITERIA])
+    @pytest.mark.parametrize(
+        "other_criteria_var", [pytest.param(c, id=c.name) for c in criteria.DISPARITY_INDEPENDENT_CRITERIA]
+    )
     def test_empty_even_with_invalidating_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
         """invalidating criteria fills the cost_surface and thus invalidates point."""
         criteria_dataarray.loc[{"row": 2, "col": 1}] = np.uint8(other_criteria_var)
@@ -112,7 +112,9 @@ class TestGetValidityDataset:
         assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
         assert result["validity"].sel(criteria=other_criteria_var.name, row=1, col=0) == 1
 
-    @pytest.mark.parametrize("other_criteria_var", [pytest.param(c, id=c.name) for c in criteria.INVALIDATING_CRITERIA])
+    @pytest.mark.parametrize(
+        "other_criteria_var", [pytest.param(c, id=c.name) for c in criteria.DISPARITY_INDEPENDENT_CRITERIA]
+    )
     def test_combined_with_invalidating_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
         """invalidating criteria fills the cost_surface and thus invalidates point."""
         criteria_dataarray.loc[{"row": 1, "col": 0}] = np.uint8(other_criteria_var)
