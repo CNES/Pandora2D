@@ -72,7 +72,7 @@ def criteria_name():
                 "window_size": 3,
             },
             # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
-            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is not present on edges.
             np.array(
                 [
                     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -231,7 +231,7 @@ def test_disparities(make_cost_volumes, criteria_name, expected):
                 },
             },
             # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
-            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is not present on edges.
             np.array(
                 [
                     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -296,7 +296,7 @@ def test_roi(make_cost_volumes, criteria_name, expected):
                 "window_size": 3,
             },
             # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
-            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is not present on edges.
             np.array(
                 [
                     [0, 0, 0, 0, 0, 0, 0, 0],
