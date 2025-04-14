@@ -33,6 +33,9 @@ from pandora2d.common import (
     set_out_of_row_disparity_range_to_other_value,
 )
 
+DISPARITY_INDEPENDENT_CRITERIA = {Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_NODATA, Criteria.P2D_INVALID_MASK_LEFT}
+DISPARITY_DEPENDENT_CRITERIA = set(Criteria) - {Criteria.VALID} - DISPARITY_INDEPENDENT_CRITERIA
+
 
 class FlagArray(np.ndarray):
     """NDArray subclass that expects to be filled with Flags and with dedicated repr."""
@@ -481,12 +484,23 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
 
     validity_dataset = allocate_validity_dataset(criteria_dataarray)
 
-    validity_dataset["validity"].data[:, :, 0] = get_validity_mask_band(criteria_dataarray)
+    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(criteria_dataarray)
 
-    # The P2D_LEFT_BORDER criteria doesn't depend on disparities,
+    # invalidating criteria do not depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities
     # to identify the points where the criteria is raised.
-    validity_dataset["validity"].data[:, :, 1] = Criteria.P2D_LEFT_BORDER.is_in(criteria_dataarray[:, :, 0, 0].data)
+    for criterion in DISPARITY_INDEPENDENT_CRITERIA:
+        validity_dataset["validity"].loc[{"criteria": criterion.name}] = criterion.is_in(
+            criteria_dataarray[:, :, 0, 0].data
+        )
+
+    disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))
+    for criterion in DISPARITY_DEPENDENT_CRITERIA:
+        np.logical_or.reduce(
+            criterion.is_in(criteria_dataarray.data),
+            axis=disparity_axis_num,
+            out=validity_dataset["validity"].loc[{"criteria": criterion.name}].data,
+        )
 
     return validity_dataset
 
@@ -508,19 +522,10 @@ def get_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
     :rtype: xr.DataArray
     """
 
-    disp_range_total = len(criteria_dataarray.disp_row) * len(criteria_dataarray.disp_col)
-    invalid_mask = np.full((criteria_dataarray.sizes["row"], criteria_dataarray.sizes["col"]), 0)
-
-    for disp_col in criteria_dataarray.disp_col:
-        for disp_row in criteria_dataarray.disp_row:
-
-            # For each point, +1 is added to invalid_mask for each invalid disparity range
-            invalid_mask += criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col).data != Criteria.VALID
-
-    validity_mask = np.zeros_like(invalid_mask, dtype=np.uint8)
-    # If all the disparity ranges are invalid, the point is set to 2 in the validity mask
-    validity_mask[invalid_mask == disp_range_total] = 2
-    # If at least one of the disparity range is invalid, the point is set to 1 in the validity mask
-    validity_mask[(invalid_mask > 0) & (invalid_mask < disp_range_total)] = 1
-
+    disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))
+    # Fill partially invalids (at least one criteria in disparities):
+    validity_mask = np.logical_or.reduce(criteria_dataarray.data, axis=disparity_axis_num).astype(np.uint8)
+    # Fill invalids (all disparities has a criteria):
+    invalid_mask = np.logical_and.reduce(criteria_dataarray.data, axis=disparity_axis_num)
+    validity_mask[invalid_mask] = 2
     return validity_mask
