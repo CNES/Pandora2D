@@ -112,12 +112,47 @@ def test_criteria_datarray_created_in_cost_volumes(
     np.testing.assert_array_equal(pandora2d_machine.cost_volumes["criteria"].data, ground_truth_criteria_dataarray)
 
 
-def test_validity_mask_saved(correct_input_cfg, correct_pipeline_without_refinement, run_pipeline, tmp_path):
+@pytest.mark.parametrize(
+    ["input_cfg", "step", "subpix"],
+    [
+        pytest.param(
+            "correct_input_cfg",
+            [1, 1],
+            1,
+            id="No mask and step=[1,1]",
+        ),
+        pytest.param(
+            "correct_input_with_left_mask",
+            [2, 1],
+            1,
+            id="Left mask and step=[2,1]",
+        ),
+        pytest.param(
+            "correct_input_with_right_mask",
+            [1, 3],
+            2,
+            id="Right mask, step=[1,3] and subpix=2",
+        ),
+        pytest.param(
+            "correct_input_with_left_right_mask",
+            [4, 5],
+            4,
+            id="Left and right masks, step=[4,5] and subpix=4",
+        ),
+    ],
+)
+def test_validity_mask_saved(
+    input_cfg, step, subpix, correct_pipeline_without_refinement, run_pipeline, tmp_path, request
+):
     """
     Test that validity_mask is correctly saved when pandora2d pipeline is executed
     """
 
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **{"output": {"path": str(tmp_path)}}}
+    input_cfg = request.getfixturevalue(input_cfg)
+    correct_pipeline_without_refinement["pipeline"]["matching_cost"]["step"] = step
+    correct_pipeline_without_refinement["pipeline"]["matching_cost"]["subpix"] = subpix
+
+    configuration = {**input_cfg, **correct_pipeline_without_refinement, **{"output": {"path": str(tmp_path)}}}
 
     run_pipeline(configuration)
 
@@ -138,38 +173,65 @@ def test_validity_mask_saved(correct_input_cfg, correct_pipeline_without_refinem
 
 
 @pytest.mark.parametrize(
-    ["input_cfg", "step"],
+    ["input_cfg", "step", "subpix"],
     [
         pytest.param(
-            "correct_input_with_left_mask",
-            [2, 1],
-            id="Left mask and step=[2,1]",
+            "correct_input_cfg",
+            [1, 1],
+            1,
+            id="No mask and step=[1,1]",
         ),
         pytest.param(
             "correct_input_with_right_mask",
             [1, 3],
+            1,
             id="Right mask and step=[1,3]",
         ),
         pytest.param(
             "correct_input_with_left_right_mask",
             [4, 5],
-            id="Left and right masks and step=[4,5]",
+            2,
+            id="Left and right masks, step=[4,5] and subpix=2",
+        ),
+        pytest.param(
+            "correct_input_with_left_mask",
+            [2, 1],
+            4,
+            id="Left mask, step=[2,1] and subpix=4",
         ),
     ],
 )
-def test_error_mask_with_step(request, input_cfg, step, correct_pipeline_without_refinement, run_pipeline, tmp_path):
+def test_validity_mask_saved_with_roi(
+    input_cfg, step, subpix, correct_pipeline_without_refinement, run_pipeline, tmp_path, request
+):
     """
-    Temporary test: we check that an error is raised when using a step other than [1,1] with an input mask.
+    Test that validity_mask is correctly saved when pandora2d pipeline is executed with a ROI
     """
 
     input_cfg = request.getfixturevalue(input_cfg)
     correct_pipeline_without_refinement["pipeline"]["matching_cost"]["step"] = step
+    correct_pipeline_without_refinement["pipeline"]["matching_cost"]["subpix"] = subpix
 
-    configuration = {**input_cfg, **correct_pipeline_without_refinement, **{"output": {"path": str(tmp_path)}}}
+    configuration = {
+        **input_cfg,
+        "ROI": {"col": {"first": 10, "last": 100}, "row": {"first": 10, "last": 100}},
+        **correct_pipeline_without_refinement,
+        **{"output": {"path": str(tmp_path)}},
+    }
 
-    with pytest.raises(ValueError) as exc_info:
-        run_pipeline(configuration)
-    assert (
-        str(exc_info.value)
-        == "The use of an input mask with a step other than [1,1] will be supported in a future version."
-    )
+    run_pipeline(configuration)
+
+    validity_mask_path = tmp_path / "disparity_map" / "validity.tif"
+
+    # band names correspond to criteria names (except for the first, which corresponds to valid points)
+    # and to the global “validity_mask” band
+    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:])
+
+    # Check that validity_mask.tif exists
+    assert (validity_mask_path).exists()
+
+    # Check that validity_mask.tif contains nine bands of type uint8 with correct names
+    with rasterio.open(validity_mask_path) as dataset:
+        assert dataset.count == 9
+        assert all(dtype == "uint8" for dtype in dataset.dtypes)
+        assert dataset.descriptions == expected_band_names

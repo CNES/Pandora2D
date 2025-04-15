@@ -117,7 +117,7 @@ def test_window_size(make_cost_volumes, criteria_name, expected):
     Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to the window size.
     """
 
-    *_, cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes
 
     result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
 
@@ -179,7 +179,7 @@ def test_disparities(make_cost_volumes, criteria_name, expected):
     Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to disparities.
     """
 
-    *_, cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes
 
     result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
 
@@ -252,7 +252,7 @@ def test_roi(make_cost_volumes, criteria_name, expected):
     Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to ROI.
     """
 
-    *_, cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes
 
     result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
 
@@ -317,7 +317,7 @@ def test_subpix(make_cost_volumes, criteria_name, expected):
     Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to subpix.
     """
 
-    *_, cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes
 
     result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
 

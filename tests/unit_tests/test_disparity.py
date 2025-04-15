@@ -35,6 +35,7 @@ import json_checker
 from pandora.margins import Margins
 from pandora2d import matching_cost, disparity
 from pandora2d.img_tools import add_disparity_grid
+from pandora2d.constants import Criteria
 
 
 class TestCheckConf:
@@ -123,6 +124,10 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
     matching_cost_test.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
     cvs = matching_cost_test.compute_cost_volumes(left_stereo_object, right_stereo_object)
 
+    # Invalid points must not be taken into account when calculating extrema
+    invalid_index = cvs["criteria"].data != Criteria.VALID
+    cvs["cost_volumes"].data[invalid_index] = np.nan
+
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
     # searching along dispy axis
     cvs_max = disparity_test.extrema_split(cvs, 2, extrema_func)
@@ -170,6 +175,11 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
     cvs = matching_cost_test.compute_cost_volumes(left_arg, right_arg)
 
     disparity_test = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": -9999})
+
+    # Invalid points must not be taken into account when calculating extrema
+    invalid_index = cvs["criteria"].data != Criteria.VALID
+    cvs["cost_volumes"].data[invalid_index] = np.nan
+
     # searching along dispy axis
     cvs_max = disparity_test.extrema_split(cvs, 2, extrema_func)
     min_tensor = disparity_test.arg_split(cvs_max, 2, arg_extrema_func)
@@ -301,7 +311,9 @@ def test_masked_nan():
     """
     Test the capacity of disparity_computation to find nans
     """
-    cv = np.full((4, 5, 5, 3), np.nan)
+    cv = np.full((4, 5, 5, 3), np.nan, dtype=np.float32)
+    criteria = np.full((4, 5, 5, 3), Criteria.VALID)
+
     # disp_x = -1, disp_y = -1
     cv[:, :, 0, 0] = np.array(
         [[np.nan, np.nan, np.nan, 6, 8], [np.nan, 0, 0, np.nan, 5], [1, 1, 1, 1, 1], [1, np.nan, 2, 3, np.nan]]
@@ -322,6 +334,11 @@ def test_masked_nan():
         [[np.nan, np.nan, np.nan, 5, 60], [np.nan, 7, 8, 9, 10], [np.nan, np.nan, 6, 10, 11], [7, 8, 9, 10, np.nan]]
     )
 
+    # We place a random criterion at the points that are set to nan in the cv
+    # to simulate the invalidity that would be calculated by the get_criteria_dataarray method in a classic pipeline.
+    indices_nan = np.isnan(cv)
+    criteria[indices_nan] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+
     c_row = [0, 1, 2, 3]
     c_col = [0, 1, 2, 3, 4]
 
@@ -333,7 +350,10 @@ def test_masked_nan():
     disparity_range_row = np.arange(-1, 3 + 1)
 
     cost_volumes_dataset = xr.Dataset(
-        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], cv)},
+        {
+            "cost_volumes": (["row", "col", "disp_row", "disp_col"], cv),
+            "criteria": (["row", "col", "disp_row", "disp_col"], criteria),
+        },
         coords={"row": row, "col": col, "disp_row": disparity_range_row, "disp_col": disparity_range_col},
     )
 

@@ -27,7 +27,6 @@ from typing import Dict, List, Union
 import numpy as np
 import xarray as xr
 from pandora import matching_cost
-from pandora.criteria import validity_mask
 from pandora.margins import Margins
 
 from pandora2d import img_tools
@@ -200,9 +199,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
             img_left, (grid_min_col, grid_max_col), cfg_for_get_coordinates
         )
 
-        # Compute validity mask to identify invalid points in cost volume
-        self.grid = validity_mask(img_left, img_right, self.grid)
-
         super().allocate(img_left, img_right, cfg, margins)
 
     def compute_cost_volumes(
@@ -266,8 +262,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
             # Compute cost volume
             cost_volume = self.pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, self.grid)
-            # Mask cost volume
-            self.pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, grid_min_col, grid_max_col)
 
             # Add current cost volume to the cost_volumes dataset
             self.cost_volumes["cost_volumes"].data[:, :, idx, :] = cost_volume["cost_volume"].data[row_index, :, :]
