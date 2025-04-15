@@ -139,7 +139,7 @@ def test_left_border_band(make_cost_volumes, expected):
     Test that the produced left border bands are correct according to the window size.
     """
 
-    *_, cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes
 
     criteria_dataarray = cost_volumes.criteria
 

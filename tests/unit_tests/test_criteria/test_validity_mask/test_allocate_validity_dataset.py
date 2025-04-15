@@ -75,7 +75,7 @@ def test_allocate_validity_dataset(make_cost_volumes):
     Test the allocate_validity_dataset method
     """
 
-    *_, cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes
 
     criteria_dataarray = cost_volumes.criteria
 
