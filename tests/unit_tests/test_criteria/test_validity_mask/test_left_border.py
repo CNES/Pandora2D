@@ -21,10 +21,18 @@
 Test that the left border (P2D_LEFT_BORDER) band obtained with the criteria dataarray is correct.
 """
 
+# pylint: disable=redefined-outer-name
+
 import numpy as np
 import pytest
 
 from pandora2d import criteria
+from pandora2d.constants import Criteria
+
+
+@pytest.fixture()
+def criteria_name():
+    return Criteria.P2D_LEFT_BORDER.name
 
 
 @pytest.mark.parametrize(
@@ -94,28 +102,6 @@ from pandora2d import criteria
                 "msk_left": np.full((6, 8), 0),
                 "msk_right": np.full((6, 8), 0),
                 "step": [1, 1],
-                "subpix": 4,
-                "window_size": 5,
-            },
-            np.array(
-                [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                ]
-            ),
-            id="Window_size=5, subpix=4",
-        ),
-        pytest.param(
-            {
-                "row_disparity": {"init": 0, "range": 1},
-                "col_disparity": {"init": 0, "range": 2},
-                "msk_left": np.full((6, 8), 0),
-                "msk_right": np.full((6, 8), 0),
-                "step": [1, 1],
                 "subpix": 1,
                 "window_size": 7,
             },
@@ -134,7 +120,7 @@ from pandora2d import criteria
     ],
     indirect=["make_cost_volumes"],
 )
-def test_left_border_band(make_cost_volumes, expected):
+def test_window_size(make_cost_volumes, criteria_name, expected):
     """
     Test that the produced left border bands are correct according to the window size.
     """
@@ -143,8 +129,131 @@ def test_left_border_band(make_cost_volumes, expected):
 
     criteria_dataarray = cost_volumes.criteria
 
-    left_border_band = (
-        criteria.get_validity_dataset(criteria_dataarray).sel(criteria="P2D_LEFT_BORDER")["validity"].data
-    )
+    result = criteria.get_validity_dataset(criteria_dataarray).sel(criteria=criteria_name)["validity"].data
 
-    np.testing.assert_array_equal(left_border_band, expected)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ["make_cost_volumes", "expected"],
+    [
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
+                "step": [1, 1],
+                "subpix": 2,
+                "window_size": 5,
+            },
+            np.array(
+                [
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                ]
+            ),
+            id="Window_size=5, subpix=2",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
+                "step": [1, 1],
+                "subpix": 4,
+                "window_size": 5,
+            },
+            np.array(
+                [
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                ]
+            ),
+            id="Window_size=5, subpix=4",
+        ),
+    ],
+    indirect=["make_cost_volumes"],
+)
+def test_subpix(make_cost_volumes, criteria_name, expected):
+    """
+    Test that the produced left border bands are correct according to the subpix.
+    """
+
+    cost_volumes = make_cost_volumes
+
+    criteria_dataarray = cost_volumes.criteria
+
+    result = criteria.get_validity_dataset(criteria_dataarray).sel(criteria=criteria_name)["validity"].data
+
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ["make_cost_volumes", "expected"],
+    [
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
+                "step": [2, 3],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            np.array(
+                [
+                    [1, 1, 1],
+                    [1, 0, 0],
+                    [1, 0, 0],
+                ]
+            ),
+            id="Window_size=3 and step=[2,3]",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
+                "step": [1, 2],
+                "subpix": 1,
+                "window_size": 5,
+            },
+            np.array(
+                [
+                    [1, 1, 1, 1],
+                    [1, 1, 1, 1],
+                    [1, 0, 0, 1],
+                    [1, 0, 0, 1],
+                    [1, 1, 1, 1],
+                    [1, 1, 1, 1],
+                ]
+            ),
+            id="Window_size=5 and step=[1,2]",
+        ),
+    ],
+    indirect=["make_cost_volumes"],
+)
+def test_step(make_cost_volumes, criteria_name, expected):
+    """
+    Test that the produced left border bands are correct according to the step.
+    """
+
+    cost_volumes = make_cost_volumes
+
+    criteria_dataarray = cost_volumes.criteria
+
+    result = criteria.get_validity_dataset(criteria_dataarray).sel(criteria=criteria_name)["validity"].data
+
+    np.testing.assert_array_equal(result, expected)
