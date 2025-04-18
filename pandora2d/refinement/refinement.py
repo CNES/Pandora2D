@@ -64,7 +64,7 @@ class AbstractRefinement:
                         cls.refinement_methods_avail[cfg["refinement_method"]]
                     )
                 except KeyError:
-                    logging.error("No subpixel method named % supported", cfg["refinement_method"])
+                    logging.error("No subpixel method named %s supported", cfg["refinement_method"])
                     raise KeyError
             else:
                 if isinstance(cfg["refinement_method"], unicode):  # type: ignore # pylint: disable=undefined-variable
@@ -75,7 +75,7 @@ class AbstractRefinement:
                         )
                     except KeyError:
                         logging.error(
-                            "No subpixel method named % supported",
+                            "No subpixel method named %s supported",
                             cfg["refinement_method"],
                         )
                         raise KeyError

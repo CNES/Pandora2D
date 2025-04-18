@@ -104,11 +104,6 @@ class Dichotomy(refinement.AbstractRefinement):
         :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """
 
-        logging.info(
-            "This method is still under development. Currently, only disparity maps and pixel-level cost volume "
-            "are being returned."
-        )
-
         # Initial disparity maps
         row_map = disp_map["row_map"]
         col_map = disp_map["col_map"]
