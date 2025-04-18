@@ -403,7 +403,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         cv_coords = (self.cost_volumes.row.values, self.cost_volumes.col.values)
 
         criteria.apply_peak_on_edge(
-            self.cost_volumes["criteria"],
+            self.dataset_disp_maps["validity"],
             self.left_img,
             cv_coords,
             self.dataset_disp_maps["row_map"].data,

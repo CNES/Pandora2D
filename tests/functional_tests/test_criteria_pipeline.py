@@ -87,26 +87,7 @@ def test_criteria_datarray_created_in_cost_volumes(
 
     img_left, img_right = create_datasets_from_inputs(input_config=checked_cfg["input"])
 
-    dataset_disp_maps, _ = run(pandora2d_machine, img_left, img_right, checked_cfg)
-
-    # Get peak on the edges to add Criteria.P2D_PEAK_ON_EDGE in ground_truth_criteria_dataarray
-    row_peak_mask = (
-        dataset_disp_maps["row_map"].data
-        == correct_input_cfg["input"]["row_disparity"]["init"] - correct_input_cfg["input"]["row_disparity"]["range"]
-    ) | (
-        dataset_disp_maps["row_map"].data
-        == correct_input_cfg["input"]["row_disparity"]["init"] + correct_input_cfg["input"]["row_disparity"]["range"]
-    )
-
-    col_peak_mask = (
-        dataset_disp_maps["col_map"].data
-        == correct_input_cfg["input"]["col_disparity"]["init"] - correct_input_cfg["input"]["col_disparity"]["range"]
-    ) | (
-        dataset_disp_maps["col_map"].data
-        == correct_input_cfg["input"]["col_disparity"]["init"] + correct_input_cfg["input"]["col_disparity"]["range"]
-    )
-
-    ground_truth_criteria_dataarray[row_peak_mask | col_peak_mask] |= Criteria.P2D_PEAK_ON_EDGE
+    _, __ = run(pandora2d_machine, img_left, img_right, checked_cfg)
 
     # Check that criteria dataarray contains correct criteria
     np.testing.assert_array_equal(pandora2d_machine.cost_volumes["criteria"].data, ground_truth_criteria_dataarray)

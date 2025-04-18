@@ -448,7 +448,7 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_m
 
 
 def apply_peak_on_edge(
-    criteria_dataarray: xr.DataArray,
+    validity_map: xr.DataArray,
     left_image: xr.Dataset,
     cv_coords: Tuple[NDArray, NDArray],
     row_map: NDArray,
@@ -459,8 +459,8 @@ def apply_peak_on_edge(
     for which the best matching cost is found for the edge of the disparity range.
     This criteria is applied on point (row, col), for each disparity value.
 
-    :param criteria_dataaray: criteria dataarray to update
-    :type criteria_dataaray: xr.DataArray
+    :param validity_map: 3D validity map
+    :type validity_map: xr.DataArray
     :param left_image: left image
     :type left_image: xr.Dataset
     :param cv_coords: cost volumes row and column coordinates
@@ -474,13 +474,21 @@ def apply_peak_on_edge(
     # Get disparity grids according to cost volumes coordinates
     d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(left_image, cv_coords)
 
-    # Apply P2D_PEAK_ON_EDGE criteria
-    criteria_dataarray.data[(row_map == d_min_row_grid) | (row_map == d_max_row_grid)] |= np.uint8(
-        Criteria.P2D_PEAK_ON_EDGE
+    # Get P2D_PEAK_ON_EDGE and validity_mask bands
+    peak_on_edge_band = validity_map.loc[{"criteria": Criteria.P2D_PEAK_ON_EDGE.name}].data
+    validity_mask_band = validity_map.loc[{"criteria": "validity_mask"}].data
+
+    # Condition on peak on edges
+    edge_condition = np.logical_or.reduce(
+        [row_map == d_min_row_grid, row_map == d_max_row_grid, col_map == d_min_col_grid, col_map == d_max_col_grid]
     )
-    criteria_dataarray.data[(col_map == d_min_col_grid) | (col_map == d_max_col_grid)] |= np.uint8(
-        Criteria.P2D_PEAK_ON_EDGE
-    )
+
+    # Fill P2D_PEAK_ON_EDGE band in validity dataset
+    peak_on_edge_band[edge_condition] = 1
+
+    # Update global validity mask according to P2D_PEAK_ON_EDGE band.
+    global_validity_mask = (validity_mask_band == 0) & (peak_on_edge_band == 1)
+    validity_mask_band[global_validity_mask] = 1
 
 
 def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
@@ -506,7 +514,7 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     dims = ("row", "col", "criteria")
     shape = (len(coords["row"]), len(coords["col"]), len(coords["criteria"]))
 
-    # Initalize validity dataset data with zeros
+    # Initialize validity dataset data with zeros
     empty_data = np.full(shape, 0, dtype=np.uint8)
 
     dataset = xr.Dataset({"validity": xr.DataArray(empty_data, dims=dims, coords=coords)})
