@@ -417,7 +417,7 @@ class TestCheckRoiCoherence:
         """
         with pytest.raises(ValueError) as exc_info:
             check_configuration.check_roi_coherence(false_roi_sensor_first_superior_to_last["ROI"]["col"])
-        assert str(exc_info.value) == 'In ROI "first" should be lower than "last" in sensor ROI'
+        assert str(exc_info.value) == '"first" should be lower than "last" in sensor ROI'
 
 
 class TestCheckStep:
