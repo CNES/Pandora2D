@@ -61,7 +61,7 @@ Row and col parameters contain dictionaries, each is different depending on the 
      - Yes, if ROI is desired.
 
 .. note::
-    It is necessary for the **first** coordinate to be lower than the **last** coordinates.
+    It is necessary for the **first** coordinate to be lower than the **last** coordinate.
 
 **Example**
 
