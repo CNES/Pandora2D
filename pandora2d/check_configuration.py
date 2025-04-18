@@ -381,7 +381,7 @@ def check_roi_coherence(roi_cfg: dict) -> None:
     :type dim: str
     """
     if roi_cfg["first"] > roi_cfg["last"]:
-        raise ValueError('In ROI "first" should be lower than "last" in sensor ROI')
+        raise ValueError('"first" should be lower than "last" in sensor ROI')
 
 
 def get_roi_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:

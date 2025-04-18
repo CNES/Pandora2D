@@ -56,7 +56,7 @@ class AbstractEstimation:
                         cls.estimation_methods_avail[cfg["estimation_method"]]
                     )
                 except KeyError:
-                    logging.error("No estimation method named % supported", cfg["estimation_method"])
+                    logging.error("No estimation method named %s supported", cfg["estimation_method"])
                     raise KeyError
             else:
                 if isinstance(cfg["estimation_method"], unicode):  # type: ignore # pylint: disable=undefined-variable
@@ -67,7 +67,7 @@ class AbstractEstimation:
                         )
                     except KeyError:
                         logging.error(
-                            "No estimation method named % supported",
+                            "No estimation method named %s supported",
                             cfg["estimation_method"],
                         )
                         raise KeyError
