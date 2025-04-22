@@ -71,6 +71,6 @@ optical flow method.
         },
         "output":
         {
-            "output": "sequencing_example_output"
+            "path": "sequencing_example_output"
         }
     }
