@@ -46,7 +46,7 @@ Setting a range
 ---------------
 
 In situations where the user does not know the required interval range, an alternative method is provided.
-The user should leave the 'disparity_col' and 'disparity_row' parameters empty. Instead, they need to enable an estimation stage in the pipeline. This stage calculates a global shift throughout the image. By using 'range_col' and 'range_row' parameters, the user can then approximate an interval around this determined shift.
+The user must leave the 'col_disparity' and 'row_disparity' parameters empty. Instead, they need to enable an estimation stage in the pipeline. This stage calculates a global shift throughout the image. By using 'range_col' and 'range_row' parameters, the user can then approximate an interval around this determined shift.
 
 The following diagram illustrates how the disparity intervals are initialized using the estimation step:
 

@@ -27,7 +27,7 @@ Configuration and parameters
 ----------------------------
 .. warning::
 
-    You need to set disparities in input section if you set the estimation step
+    Disparities must not be specified in the configuration file if you are using estimation.
 
 .. list-table:: Parameters
     :header-rows: 1
