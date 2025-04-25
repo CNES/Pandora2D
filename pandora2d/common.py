@@ -459,11 +459,12 @@ def resolve_path_in_config(config: Dict, config_path: Path) -> Dict:
     relative_to = config_path.parent
     result["input"]["left"]["img"] = str(string_to_path(config["input"]["left"]["img"], relative_to))
     result["input"]["right"]["img"] = str(string_to_path(config["input"]["right"]["img"], relative_to))
-    col_disparity_init = config["input"]["col_disparity"]["init"]
-    if isinstance(col_disparity_init, str):
-        result["input"]["col_disparity"]["init"] = str(string_to_path(col_disparity_init, relative_to))
-    row_disparity_init = config["input"]["row_disparity"]["init"]
-    if isinstance(row_disparity_init, str):
-        result["input"]["row_disparity"]["init"] = str(string_to_path(row_disparity_init, relative_to))
+    if not "estimation" in result["pipeline"]:
+        col_disparity_init = config["input"]["col_disparity"]["init"]
+        if isinstance(col_disparity_init, str):
+            result["input"]["col_disparity"]["init"] = str(string_to_path(col_disparity_init, relative_to))
+        row_disparity_init = config["input"]["row_disparity"]["init"]
+        if isinstance(row_disparity_init, str):
+            result["input"]["row_disparity"]["init"] = str(string_to_path(row_disparity_init, relative_to))
     result["output"]["path"] = str(string_to_path(config["output"]["path"], relative_to))
     return result
