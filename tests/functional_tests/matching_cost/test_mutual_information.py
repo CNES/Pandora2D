@@ -79,7 +79,7 @@ class TestMutualInformation:
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
     def test_mutual_information_execution(self, make_cfg_for_mutual_information):
         """
-        Description : Test that execution of Pandora2d with mutual information does not fail.
+        Description : Test that execution of matching cost step with mutual information does not compute invalid points.
         Data :
             * Left_img : cones/monoband/left.png
             * Right_img : cones/monoband/right.png
@@ -99,3 +99,34 @@ class TestMutualInformation:
         with np.testing.assert_raises(AssertionError):
             assert np.all(np.isnan(dataset_disp_maps.row_map.data))
             assert np.all(np.isnan(dataset_disp_maps.col_map.data))
+
+    @pytest.mark.parametrize("subpix", [1, 2, 4])
+    @pytest.mark.parametrize("window_size", [1, 3, 5])
+    @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
+    @pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
+    @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
+    @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
+    def test_invalid_points_not_computed(self, make_cfg_for_mutual_information):
+        """
+        Description : Test that when running the matching cost step with mutual information,
+        invalid points are not computed.
+        Data :
+            * Left_img : cones/monoband/left.png
+            * Right_img : cones/monoband/right.png
+        """
+
+        pandora2d_machine = Pandora2DMachine()
+
+        cfg = check_conf(make_cfg_for_mutual_information, pandora2d_machine)
+
+        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+
+        image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+
+        # Run matching cost step
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+        pandora2d_machine.run("matching_cost", cfg)
+
+        invalid_point = np.where(pandora2d_machine.cost_volumes["criteria"].data != 0)
+        assert np.all(pandora2d_machine.cost_volumes["cost_volumes"].data[invalid_point] == 0)
