@@ -53,6 +53,12 @@ using VectorD = Eigen::VectorXd;
 using Vectorf = Eigen::VectorXf;
 
 /**
+ * @brief type used for unsigned int vectors
+ *
+ */
+using VectorUI = Eigen::Vector<uint8_t, Eigen::Dynamic>;
+
+/**
  * @brief type used for double arrays
  *
  */

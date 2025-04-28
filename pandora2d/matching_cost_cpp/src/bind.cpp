@@ -31,8 +31,8 @@ using namespace pybind11::literals;
 
 PYBIND11_MODULE(matching_cost_bind, m) {
   m.def("compute_cost_volumes_cpp", &compute_cost_volumes_cpp, "left"_a, "right"_a, "cv_values"_a,
-        "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a, "offset_cv_img_row"_a,
-        "offset_cv_img_col"_a, "window_size"_a, "step"_a, "no_data"_a,
+        "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
+        "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a, "no_data"_a,
         R"mydelimiter(
             Computes the cost values
 
@@ -42,6 +42,8 @@ PYBIND11_MODULE(matching_cost_bind, m) {
             :type right: List[NDArray[np.float64]]
             :param cv_values:  cost volumes initialized values
             :type cv_values: NDArray[np.float64]
+            :param criteria_values:  criteria values
+            :type criteria_values: NDArray[np.uint8]
             :param cv_size: cost_volume size [nb_row, nb_col, nb_disp_row, nb_disp_col]
             :type cv_size: CostVolumeSize
             :param disp_range_row:  cost volumes row disparity range

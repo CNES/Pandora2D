@@ -85,4 +85,24 @@ struct CostVolumeSize {
   unsigned int nb_disp_col;  ///< Number of col disparities
 };
 
+/**
+ * @brief Get the cost surface of a cv point (row,col)
+ *        row and col correspond to the cv index, for example the point (0,0)
+ *        is the first point of the cv but not necessarily the first image point in the ROI case
+ *
+ * @param cost_values vector of cost values
+ * @param cv_shape 4d cv shape
+ * @param row cv index
+ * @param col cv index
+ * @return P2d::VectorD or P2d::VectorUI
+ */
+template <typename T>
+T get_cost_surface(const T& cost_values, CostVolumeSize& cv_size, int row, int col) {
+  int cost_surface_size = cv_size.nb_disps();
+
+  int start_index = (row * cv_size.nb_col + col) * cost_surface_size;
+
+  return cost_values.segment(start_index, cost_surface_size);
+}
+
 #endif
