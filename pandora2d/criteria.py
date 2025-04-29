@@ -34,7 +34,9 @@ from pandora2d.common import (
 )
 
 DISPARITY_INDEPENDENT_CRITERIA = {Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_NODATA, Criteria.P2D_INVALID_MASK_LEFT}
-DISPARITY_DEPENDENT_CRITERIA = set(Criteria) - {Criteria.VALID} - DISPARITY_INDEPENDENT_CRITERIA
+DISPARITY_DEPENDENT_CRITERIA = (
+    set(Criteria) - {Criteria.VALID} - {Criteria.P2D_DISPARITY_UNPROCESSED} - DISPARITY_INDEPENDENT_CRITERIA
+)
 
 
 class FlagArray(np.ndarray):
@@ -170,6 +172,15 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     # Allocate criteria dataarray
     criteria_dataarray = allocate_criteria_dataarray(cv, data_type=np.uint8)
 
+    # Get disparity grids according to cost volumes coordinates
+    d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(
+        left_image, (cv.row.values, cv.col.values)
+    )
+
+    # Put P2D_DISPARITY_UNPROCESSED
+    # on points for which corresponding disparity is not processed
+    set_unprocessed_disp(criteria_dataarray, d_min_col_grid, d_max_col_grid, d_min_row_grid, d_max_row_grid)
+
     if "msk" in left_image.data_vars:
 
         # Raise criteria P2D_LEFT_NODATA
@@ -191,15 +202,6 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     # Raise criteria P2D_RIGHT_DISPARITY_OUTSIDE
     # for points for which window is outside right image according to disparity value
     mask_disparity_outside_right_image(cv.attrs["offset_row_col"], criteria_dataarray)
-
-    # Get disparity grids according to cost volumes coordinates
-    d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(
-        left_image, (cv.row.values, cv.col.values)
-    )
-
-    # Put P2D_DISPARITY_UNPROCESSED
-    # on points for which corresponding disparity is not processed
-    set_unprocessed_disp(criteria_dataarray, d_min_col_grid, d_max_col_grid, d_min_row_grid, d_max_row_grid)
 
     # Raise criteria P2D_LEFT_BORDER
     # on the border according to offset value, for each disparity
@@ -500,8 +502,9 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     """
 
     # Get criteria names to stock them in the 'criteria' coordinate in the allocated xr.Dataset
-    # We use every Criteria except the first one which corresponds to valid points.
-    criteria_names = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+    # We use every Criteria except the first one which corresponds to valid points
+    # and the last one which corresponds to P2D_DISPARITY_UNPROCESSED.
+    criteria_names = ["validity_mask"] + list(Criteria.__members__.keys())[1:-1]
 
     # In a future issue, we will change the list of names of the 'criteria' coordinate
     # to get automatically the criteria names described in constants.py
@@ -573,9 +576,16 @@ def get_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
     """
 
     disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))
+
+    # We put points that only have the P2D_DISPARITY_UNPROCESSED raised to VALID
+    # because we don't want to take this criterion into account in the validity dataset
+    # To be deleted when P2D_DISPARITY_UNPROCESSED has been removed
+    unprocessed_disp_mask = criteria_dataarray.data != Criteria.P2D_DISPARITY_UNPROCESSED
+    masked_criteria_dataarray = np.where(unprocessed_disp_mask, criteria_dataarray.data, Criteria.VALID)
+
     # Fill partially invalids (at least one criteria in disparities):
-    validity_mask = np.logical_or.reduce(criteria_dataarray.data, axis=disparity_axis_num).astype(np.uint8)
+    validity_mask = np.logical_or.reduce(masked_criteria_dataarray, axis=disparity_axis_num).astype(np.uint8)
     # Fill invalids (all disparities has a criteria):
-    invalid_mask = np.logical_and.reduce(criteria_dataarray.data, axis=disparity_axis_num)
+    invalid_mask = np.logical_and.reduce(masked_criteria_dataarray, axis=disparity_axis_num)
     validity_mask[invalid_mask] = 2
     return validity_mask
