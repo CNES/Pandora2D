@@ -106,8 +106,10 @@ P2D_RIGHT_NODATA
 This criterion is raised when a pixel within the matching cost window of the
 explored pixel in the right image is marked as ``NO DATA`` in the right mask.
 
-.. raw:: html
-    :file: ./Images/criteria/right_nodata_criteria.drawio.html
+.. container:: html-image
+
+    .. raw:: html
+        :file: ./Images/criteria/right_nodata_criteria.drawio.html
 
 |
 |
@@ -119,8 +121,10 @@ P2D_RIGHT_DISPARITY_OUTSIDE
 
 This criterion is raised when the matching cost window goes outside the right image.
 
-.. raw:: html
-    :file: ./Images/criteria/right_disparity_outside_criteria.drawio.html
+.. container:: html-image
+
+    .. raw:: html
+        :file: ./Images/criteria/right_disparity_outside_criteria.drawio.html
 
 |
 |
@@ -147,8 +151,10 @@ P2D_INVALID_MASK_RIGHT
 
 This criterion is raised when the explored pixel in the right image is marked as INVALID in the right mask.
 
-.. raw:: html
-    :file: ./Images/criteria/invalid_mask_right_criteria.drawio.html
+.. container:: html-image
+
+    .. raw:: html
+        :file: ./Images/criteria/invalid_mask_right_criteria.drawio.html
 
 |
 |
