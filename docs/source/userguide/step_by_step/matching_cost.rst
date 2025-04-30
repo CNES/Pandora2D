@@ -12,6 +12,7 @@ Configuration and parameters
 ----------------------------
 
 .. list-table:: Available parameters
+   :name: matching_cost available parameters
    :widths: 19 19 19 19 19 19
    :header-rows: 1
 

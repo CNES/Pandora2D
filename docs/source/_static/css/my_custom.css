@@ -45,3 +45,9 @@ html.writer-html4 .rst-content dl:not(.docutils) > dt, html.writer-html5 .rst-co
     padding: 6px;
     position: relative;
 }
+
+.html-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
