@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.5.0 (May 2025)
+
+### Added
+
+- Added P2D_RIGHT_DISPARITY_OUTSIDE in validity dataset. [#268]
+- Added P2D_INVALID_MASK_LEFT & P2D_INVALID_MASK_RIGHT in validity dataset. [#269]
+- Added P2D_LEFT_NODATA & P2D_RIGHT_NODATA in validity dataset. [#267]
+- Added P2D_PEAK_ON_EDGE in validity dataset. [#270]
+- Added validity criteria documentation. [#283]
+
+
+### Fixed
+
+- Fixed functional and resource tests execution for dichotomy. [#248]
+- Fixed errors in log. [#285]
+- Fixed errors in documentation. [#278]
+- Fixed mutual information with nb_bins greater than NB_BINS_MAX. [#286]
+- Fixed estimation bug with input disparities. [#276]
+
+### Changed
+
+- Moved cost volumes allocation in matching cost prepare step. [#280]
+- Used the criteria dataarray in WTA. [#272]
+- Updated pandora version in pyproject.toml. [#278]
+- Removed P2D_DISPARITY_UNPROCESSED in output validity.tif. [#301]
+
+
 ## 0.5.0a1 (March 2025)
 
 ### Added
