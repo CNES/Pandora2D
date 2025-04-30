@@ -102,11 +102,11 @@ def ground_truth_first_disparity(offset, img_size):
         pytest.param(49, id="offset > dimension"),
     ],
 )
-def test_nominal(offset, criteria_dataarray, ground_truth_null_disparity, ground_truth_first_disparity):
+def test_nominal(offset, image, criteria_dataarray, ground_truth_null_disparity, ground_truth_first_disparity):
     """
     Test mask_disparity_outside_right_image
     """
-    criteria.mask_disparity_outside_right_image(offset, criteria_dataarray)
+    criteria.mask_disparity_outside_right_image(image, offset, criteria_dataarray)
 
     np.testing.assert_array_equal(criteria_dataarray.values[:, :, 1, 5], ground_truth_null_disparity)
     np.testing.assert_array_equal(criteria_dataarray.values[:, :, 0, 0], ground_truth_first_disparity)

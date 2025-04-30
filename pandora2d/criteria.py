@@ -201,7 +201,7 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
 
     # Raise criteria P2D_RIGHT_DISPARITY_OUTSIDE
     # for points for which window is outside right image according to disparity value
-    mask_disparity_outside_right_image(cv.attrs["offset_row_col"], criteria_dataarray)
+    mask_disparity_outside_right_image(right_image, cv.attrs["offset_row_col"], criteria_dataarray)
 
     # Raise criteria P2D_LEFT_BORDER
     # on the border according to offset value, for each disparity
@@ -272,18 +272,20 @@ def mask_border(left_image: xr.Dataset, offset: int, criteria_dataarray: xr.Data
     criteria_dataarray.data[mask] = Criteria.P2D_LEFT_BORDER
 
 
-def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataArray) -> None:
+def mask_disparity_outside_right_image(img_right: xr.Dataset, offset: int, criteria_dataarray: xr.DataArray) -> None:
     """
     This method raises P2D_RIGHT_DISPARITY_OUTSIDE criteria for points with disparity dimension outside
     the right image
 
+    :param img_right: right image.
+    :type img_right: xr.Dataset
     :param offset: offset
     :type offset: int
     :param criteria_dataarray: 4D xarray.DataArray with all criteria
     :type criteria_dataarray: 4D xarray.DataArray
     """
-    row_coords = criteria_dataarray.row.values
-    col_coords = criteria_dataarray.col.values
+    row_coords = img_right.row.values
+    col_coords = img_right.col.values
 
     # Condition where the window is outside the image
     condition = (
