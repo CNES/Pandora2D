@@ -36,4 +36,19 @@ This file contains useful function definitions for matching_cost tests.
  */
 P2d::MatrixD create_image(std::size_t size, float mean, float std, double nb_bins = 120);
 
+/**
+ * @brief Load criteria dataarray saved as a binary file containing a 1D numpy array of type uint8
+ *
+ * @param filename: name of binary file containing the criteria array
+ */
+P2d::VectorUI load_criteria_dataarray(const std::string& filename);
+
+/**
+ * @brief Get data_path for matching cost test data
+ *
+ */
+
+extern const char* data_path_env;
+extern const std::string data_path;
+
 #endif

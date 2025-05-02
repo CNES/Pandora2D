@@ -72,12 +72,15 @@ test(
             matching_cost_src,
             test_src,
             common_src,
+            conftest_src,
         ],
         include_directories: [
             matching_cost_includes,
             test_includes,
             common_includes,
+            conftest_includes,
         ],
         dependencies: [eigen_dep, doctest_dep],
     ),
+    env: ['DATA_PATH=' + meson.current_source_dir()],
 )
