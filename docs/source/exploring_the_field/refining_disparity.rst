@@ -39,8 +39,10 @@ The position of this new best value will be used in the next step as position to
 
     *Clic on the iteration box in the legend to make corresponding step appear*
 
-    .. raw:: html
-       :file: ../Images/Dichotomy_principle.drawio.html
+    .. container:: html-image
+
+        .. raw:: html
+           :file: ../Images/Dichotomy_principle.drawio.html
 
 The method used to do the interpolation depends on the one given in the configuration of the :ref:`refinement step <refinement>`.
 It can be one of those listed in :ref:`interpolation_filters` where the fractional shift corresponds to the precision of the iteration step.

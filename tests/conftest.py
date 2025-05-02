@@ -374,10 +374,15 @@ def second_correct_grid_for_roi(left_img_shape, create_disparity_grid_fixture):
 
 
 @pytest.fixture()
-def correct_pipeline_without_refinement():
+def window_size():
+    return 5
+
+
+@pytest.fixture()
+def correct_pipeline_without_refinement(window_size):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": window_size},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         }
     }

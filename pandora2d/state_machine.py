@@ -319,9 +319,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         )
         self.matching_cost_ = MatchingCost(cfg["pipeline"][input_step])
 
-        # To be removed once the use of a step with an input mask has been corrected.
-        self.matching_cost_.check_step_with_input_mask(cfg)
-
         self.matching_cost_.allocate(self.left_img, self.right_img, cfg, self.margins_disp.get("refinement"))
 
     @mem_time_profile(name="Estimation step")
@@ -341,11 +338,22 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         row_disparity, col_disparity, shifts, extra_dict = estimation_.compute_estimation(self.left_img, self.right_img)
 
-        self.left_img = img_tools.add_disparity_grid(self.left_img, col_disparity, row_disparity)
-
         self.completed_cfg = estimation_.update_cfg_with_estimation(
             cfg, col_disparity, row_disparity, shifts, extra_dict
         )
+
+        # Update ROI margins with correct disparities
+        roi = None
+        if "ROI" in cfg:
+            roi = img_tools.get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+            # Recreate left and right image datasets with correct disparities and ROI margins
+            self.left_img, self.right_img = img_tools.create_datasets_from_inputs(
+                input_config=cfg["input"], roi=roi, estimation_cfg=None
+            )
+        else:
+            # Update disparities for left and right image datasets
+            self.left_img = img_tools.add_disparity_grid(self.left_img, col_disparity, row_disparity)
+            self.right_img = img_tools.add_disparity_grid(self.right_img, col_disparity, row_disparity)
 
     @mem_time_profile(name="Matching cost step")
     def matching_cost_run(self, _, __) -> None:
@@ -406,7 +414,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         cv_coords = (self.cost_volumes.row.values, self.cost_volumes.col.values)
 
         criteria.apply_peak_on_edge(
-            self.cost_volumes["criteria"],
+            self.dataset_disp_maps["validity"],
             self.left_img,
             cv_coords,
             self.dataset_disp_maps["row_map"].data,

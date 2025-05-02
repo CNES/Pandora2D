@@ -99,7 +99,8 @@ Histogram1D calculate_histogram1D(const P2d::MatrixD& img) {
   for (auto pixel : img.reshaped()) {
     // if we are in the NB_BINS_MAX case, some elements may be outside of the low_bound and the
     // up_bound
-    auto index = std::max(0, std::min(static_cast<int>((pixel - low_bound) / bin_width), nb_bins));
+    auto index =
+        std::max(0, std::min(static_cast<int>((pixel - low_bound) / bin_width), nb_bins - 1));
     hist_values[index] += 1;
   }
 

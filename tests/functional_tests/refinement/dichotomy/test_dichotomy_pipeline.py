@@ -79,8 +79,8 @@ def make_cfg_for_dichotomy(
     [
         ("dichotomy_python", "bicubic_python"),
         ("dichotomy_python", "sinc_python"),
+        ("dichotomy", "sinc"),
         ("dichotomy", "bicubic"),
-        # ("dichotomy", "sinc"),
     ],
 )
 @pytest.mark.parametrize("subpix", [1, 2, 4])
@@ -122,7 +122,7 @@ def test_dichotomy_execution(make_cfg_for_dichotomy):
         ("dichotomy_python", "bicubic_python"),
         ("dichotomy_python", "sinc_python"),
         ("dichotomy", "bicubic"),
-        # ("dichotomy", "sinc"),
+        ("dichotomy", "sinc"),
     ],
 )
 @pytest.mark.parametrize("subpix", [1])

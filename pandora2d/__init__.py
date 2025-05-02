@@ -101,15 +101,16 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
 
     setup_logging(verbose)
 
-    # read disparities values
-    col_disparity = cfg["input"]["col_disparity"]
-    row_disparity = cfg["input"]["row_disparity"]
-
     # check roi in user configuration
     roi = None
     if "ROI" in cfg:
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-        roi = get_roi_processing(cfg["ROI"], col_disparity, row_disparity)
+
+        # If disparities are computed with estimation step, ROI margins will be updated later
+        if "estimation" in cfg["pipeline"]:
+            roi = cfg["ROI"]
+        else:
+            roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
 
     # read images
     image_datasets = create_datasets_from_inputs(

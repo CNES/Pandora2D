@@ -25,12 +25,17 @@ from typing import Union, Type, Tuple
 import xarray as xr
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike, NDArray
+from scipy.ndimage import binary_dilation
 
-from pandora.criteria import binary_dilation_msk
 from pandora2d.constants import Criteria
 from pandora2d.common import (
     set_out_of_col_disparity_range_to_other_value,
     set_out_of_row_disparity_range_to_other_value,
+)
+
+DISPARITY_INDEPENDENT_CRITERIA = {Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_NODATA, Criteria.P2D_INVALID_MASK_LEFT}
+DISPARITY_DEPENDENT_CRITERIA = (
+    set(Criteria) - {Criteria.VALID} - {Criteria.P2D_DISPARITY_UNPROCESSED} - DISPARITY_INDEPENDENT_CRITERIA
 )
 
 
@@ -97,6 +102,34 @@ def get_disparity_grids(
     return d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid
 
 
+def binary_dilation_dataarray(img: xr.Dataset, window_size: int) -> xr.DataArray:
+    """
+    Apply scipy binary_dilation on our image dataset while keeping the coordinates.
+    Get the no_data pixels.
+
+    :param img: Dataset image containing :
+
+            - im: 2D (row, col) or 3D (band_im, row, col) xarray.DataArray float32
+            - disparity (optional): 3D (disp, row, col) xarray.DataArray float32
+            - msk (optional): 2D (row, col) xarray.DataArray int16
+            - classif (optional): 3D (band_classif, row, col) xarray.DataArray int16
+            - segm (optional): 2D (row, col) xarray.DataArray int16
+    :type img: xarray.Dataset
+    :param window_size: window size of the cost volume
+    :type window_size: int
+    :return: np.ndarray with location of pixels that are marked as no_data according to the image mask
+    :rtype: np.ndarray
+    """
+
+    dilated_mask = binary_dilation(
+        img["msk"].data == img.attrs["no_data_mask"],
+        structure=np.ones((window_size, window_size)),
+        iterations=1,
+    )
+
+    return img["msk"].copy(data=dilated_mask)
+
+
 def allocate_criteria_dataarray(
     cv: xr.Dataset, value: Union[int, float, Criteria] = Criteria.VALID, data_type: Union[DTypeLike, None] = None
 ) -> xr.DataArray:
@@ -139,6 +172,15 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     # Allocate criteria dataarray
     criteria_dataarray = allocate_criteria_dataarray(cv, data_type=np.uint8)
 
+    # Get disparity grids according to cost volumes coordinates
+    d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(
+        left_image, (cv.row.values, cv.col.values)
+    )
+
+    # Put P2D_DISPARITY_UNPROCESSED
+    # on points for which corresponding disparity is not processed
+    set_unprocessed_disp(criteria_dataarray, d_min_col_grid, d_max_col_grid, d_min_row_grid, d_max_row_grid)
+
     if "msk" in left_image.data_vars:
 
         # Raise criteria P2D_LEFT_NODATA
@@ -159,16 +201,7 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
 
     # Raise criteria P2D_RIGHT_DISPARITY_OUTSIDE
     # for points for which window is outside right image according to disparity value
-    mask_disparity_outside_right_image(cv.attrs["offset_row_col"], criteria_dataarray)
-
-    # Get disparity grids according to cost volumes coordinates
-    d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(
-        left_image, (cv.row.values, cv.col.values)
-    )
-
-    # Put P2D_DISPARITY_UNPROCESSED
-    # on points for which corresponding disparity is not processed
-    set_unprocessed_disp(criteria_dataarray, d_min_col_grid, d_max_col_grid, d_min_row_grid, d_max_row_grid)
+    mask_disparity_outside_right_image(right_image, cv.attrs["offset_row_col"], criteria_dataarray)
 
     # Raise criteria P2D_LEFT_BORDER
     # on the border according to offset value, for each disparity
@@ -239,18 +272,20 @@ def mask_border(left_image: xr.Dataset, offset: int, criteria_dataarray: xr.Data
     criteria_dataarray.data[mask] = Criteria.P2D_LEFT_BORDER
 
 
-def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataArray) -> None:
+def mask_disparity_outside_right_image(img_right: xr.Dataset, offset: int, criteria_dataarray: xr.DataArray) -> None:
     """
     This method raises P2D_RIGHT_DISPARITY_OUTSIDE criteria for points with disparity dimension outside
     the right image
 
+    :param img_right: right image.
+    :type img_right: xr.Dataset
     :param offset: offset
     :type offset: int
     :param criteria_dataarray: 4D xarray.DataArray with all criteria
     :type criteria_dataarray: 4D xarray.DataArray
     """
-    col_coords = criteria_dataarray.col.values
-    row_coords = criteria_dataarray.row.values
+    row_coords = img_right.row.values
+    col_coords = img_right.col.values
 
     # Condition where the window is outside the image
     condition = (
@@ -268,7 +303,7 @@ def mask_disparity_outside_right_image(offset: int, criteria_dataarray: xr.DataA
     criteria_dataarray.data[condition_swap] |= np.uint8(Criteria.P2D_RIGHT_DISPARITY_OUTSIDE)
 
 
-def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataaray: xr.DataArray) -> None:
+def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataarray: xr.DataArray) -> None:
     """
     Set Criteria.P2D_LEFT_NODATA on pixels where a no_data is present in the window around its
     position in the mask.
@@ -280,9 +315,11 @@ def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataara
     :param criteria_dataaray: criteria dataarray to update
     :type criteria_dataaray: xr.DataArray
     """
-    dilated_mask = binary_dilation_msk(left_image, window_size)
+    dilated_mask = binary_dilation_dataarray(left_image, window_size).sel(
+        row=criteria_dataarray.row, col=criteria_dataarray.col
+    )
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    criteria_dataaray.data[dilated_mask, ...] |= np.uint8(Criteria.P2D_LEFT_NODATA)
+    criteria_dataarray.data[dilated_mask, ...] |= np.uint8(Criteria.P2D_LEFT_NODATA)
 
 
 def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarray: xr.DataArray) -> None:
@@ -298,7 +335,8 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
     :type criteria_dataarray:
     """
     right_criteria_mask = np.full_like(img_right["msk"], Criteria.VALID, dtype=np.uint8)
-    right_binary_mask = binary_dilation_msk(img_right, window_size)
+
+    right_binary_mask = binary_dilation_dataarray(img_right, window_size)
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
     right_criteria_mask[right_binary_mask] |= np.uint8(Criteria.P2D_RIGHT_NODATA)
 
@@ -317,10 +355,10 @@ def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) 
     :param criteria_dataaray: criteria dataarray to update
     :type criteria_dataaray: xr.DataArray
     """
-    invalid_left_mask = get_invalid_mask(left_image)
+    invalid_left_mask = get_invalid_mask(left_image).sel(row=criteria_dataarray.row, col=criteria_dataarray.col)
 
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    criteria_dataarray.data[invalid_left_mask, ...] |= np.uint8(Criteria.P2D_INVALID_MASK_LEFT)
+    criteria_dataarray.data[invalid_left_mask.data, ...] |= np.uint8(Criteria.P2D_INVALID_MASK_LEFT)
 
 
 def mask_right_invalid(right_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
@@ -335,17 +373,18 @@ def mask_right_invalid(right_image: xr.Dataset, criteria_dataarray: xr.DataArray
     :param criteria_dataaray: criteria dataarray to update
     :type criteria_dataaray: xr.DataArray
     """
+
     right_criteria_mask = np.full_like(right_image["msk"], Criteria.VALID, dtype=np.uint8)
 
     invalid_right_mask = get_invalid_mask(right_image)
 
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    right_criteria_mask[invalid_right_mask] |= np.uint8(Criteria.P2D_INVALID_MASK_RIGHT)
+    right_criteria_mask[invalid_right_mask.data] |= np.uint8(Criteria.P2D_INVALID_MASK_RIGHT)
 
     apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
 
 
-def get_invalid_mask(image: xr.Dataset) -> NDArray:
+def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
     """
     Get mask for points of the image that are neither valid
     or no data.
@@ -353,10 +392,11 @@ def get_invalid_mask(image: xr.Dataset) -> NDArray:
     :param image: image with `msk` data var.
     :type image: xr.Dataset
     :return: invalid_mask: mask containing invalid points
-    :rtype: invalid_mask: NDArray
+    :rtype: invalid_mask: xr.Dataarray
     """
 
-    invalid_mask = (image.msk.data != image.attrs["no_data_mask"]) & (image.msk.data != image.attrs["valid_pixels"])
+    invalid_mask = (image.msk != image.attrs["no_data_mask"]) & (image.msk != image.attrs["valid_pixels"])
+
     return invalid_mask
 
 
@@ -370,6 +410,10 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_m
     :param right_criteria_mask: mask to apply to criteria dataarray
     :type right_criteria_mask: np.NDArray
     """
+
+    # We use a temporary mask of the same size as the image to correctly handle cases where the step is different from 1
+    mask_img_shape = np.zeros_like(right_criteria_mask, dtype=np.uint8)
+
     for row_disp, col_disp in itertools.product(
         criteria_dataarray.coords["disp_row"], criteria_dataarray.coords["disp_col"]
     ):
@@ -392,18 +436,23 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_m
         criteria_row_slice = np.s_[-row_dsp_int:] if row_dsp_int <= 0 else np.s_[:-row_dsp_int]  # type: ignore[index]
         criteria_col_slice = np.s_[-col_dsp_int:] if col_dsp_int <= 0 else np.s_[:-col_dsp_int]  # type: ignore[index]
 
+        mask_img_shape[:] = 0
+        mask_img_shape[criteria_row_slice, criteria_col_slice] |= right_criteria_mask[msk_row_slice, msk_col_slice]
+
+        # We subtract the first row and col coordinates to keep the correct indexes when processing a ROI.
         criteria_dataarray.loc[
             {
-                "row": criteria_dataarray.coords["row"][criteria_row_slice],
-                "col": criteria_dataarray.coords["col"][criteria_col_slice],
-                "disp_col": col_disp,
                 "disp_row": row_disp,
+                "disp_col": col_disp,
             }
-        ] |= right_criteria_mask[msk_row_slice, msk_col_slice]
+        ] |= mask_img_shape[
+            criteria_dataarray.coords["row"].data[:, None] - criteria_dataarray.coords["row"].data[0],
+            criteria_dataarray.coords["col"].data[None, :] - criteria_dataarray.coords["col"].data[0],
+        ]
 
 
 def apply_peak_on_edge(
-    criteria_dataarray: xr.DataArray,
+    validity_map: xr.DataArray,
     left_image: xr.Dataset,
     cv_coords: Tuple[NDArray, NDArray],
     row_map: NDArray,
@@ -414,8 +463,8 @@ def apply_peak_on_edge(
     for which the best matching cost is found for the edge of the disparity range.
     This criteria is applied on point (row, col), for each disparity value.
 
-    :param criteria_dataaray: criteria dataarray to update
-    :type criteria_dataaray: xr.DataArray
+    :param validity_map: 3D validity map
+    :type validity_map: xr.DataArray
     :param left_image: left image
     :type left_image: xr.Dataset
     :param cv_coords: cost volumes row and column coordinates
@@ -429,13 +478,21 @@ def apply_peak_on_edge(
     # Get disparity grids according to cost volumes coordinates
     d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(left_image, cv_coords)
 
-    # Apply P2D_PEAK_ON_EDGE criteria
-    criteria_dataarray.data[(row_map == d_min_row_grid) | (row_map == d_max_row_grid)] |= np.uint8(
-        Criteria.P2D_PEAK_ON_EDGE
+    # Get P2D_PEAK_ON_EDGE and validity_mask bands
+    peak_on_edge_band = validity_map.loc[{"criteria": Criteria.P2D_PEAK_ON_EDGE.name}].data
+    validity_mask_band = validity_map.loc[{"criteria": "validity_mask"}].data
+
+    # Condition on peak on edges
+    edge_condition = np.logical_or.reduce(
+        [row_map == d_min_row_grid, row_map == d_max_row_grid, col_map == d_min_col_grid, col_map == d_max_col_grid]
     )
-    criteria_dataarray.data[(col_map == d_min_col_grid) | (col_map == d_max_col_grid)] |= np.uint8(
-        Criteria.P2D_PEAK_ON_EDGE
-    )
+
+    # Fill P2D_PEAK_ON_EDGE band in validity dataset
+    peak_on_edge_band[edge_condition] = 1
+
+    # Update global validity mask according to P2D_PEAK_ON_EDGE band.
+    global_validity_mask = (validity_mask_band == 0) & (peak_on_edge_band == 1)
+    validity_mask_band[global_validity_mask] = 1
 
 
 def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
@@ -447,8 +504,9 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     """
 
     # Get criteria names to stock them in the 'criteria' coordinate in the allocated xr.Dataset
-    # We use every Criteria except the first one which corresponds to valid points.
-    criteria_names = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+    # We use every Criteria except the first one which corresponds to valid points
+    # and the last one which corresponds to P2D_DISPARITY_UNPROCESSED.
+    criteria_names = ["validity_mask"] + list(Criteria.__members__.keys())[1:-1]
 
     # In a future issue, we will change the list of names of the 'criteria' coordinate
     # to get automatically the criteria names described in constants.py
@@ -461,7 +519,7 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     dims = ("row", "col", "criteria")
     shape = (len(coords["row"]), len(coords["col"]), len(coords["criteria"]))
 
-    # Initalize validity dataset data with zeros
+    # Initialize validity dataset data with zeros
     empty_data = np.full(shape, 0, dtype=np.uint8)
 
     dataset = xr.Dataset({"validity": xr.DataArray(empty_data, dims=dims, coords=coords)})
@@ -481,12 +539,23 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
 
     validity_dataset = allocate_validity_dataset(criteria_dataarray)
 
-    validity_dataset["validity"].data[:, :, 0] = get_validity_mask_band(criteria_dataarray)
+    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(criteria_dataarray)
 
-    # The P2D_LEFT_BORDER criteria doesn't depend on disparities,
+    # invalidating criteria do not depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities
     # to identify the points where the criteria is raised.
-    validity_dataset["validity"].data[:, :, 1] = Criteria.P2D_LEFT_BORDER.is_in(criteria_dataarray[:, :, 0, 0].data)
+    for criterion in DISPARITY_INDEPENDENT_CRITERIA:
+        validity_dataset["validity"].loc[{"criteria": criterion.name}] = criterion.is_in(
+            criteria_dataarray[:, :, 0, 0].data
+        )
+
+    disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))
+    for criterion in DISPARITY_DEPENDENT_CRITERIA:
+        np.logical_or.reduce(
+            criterion.is_in(criteria_dataarray.data),
+            axis=disparity_axis_num,
+            out=validity_dataset["validity"].loc[{"criteria": criterion.name}].data,
+        )
 
     return validity_dataset
 
@@ -508,19 +577,17 @@ def get_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
     :rtype: xr.DataArray
     """
 
-    disp_range_total = len(criteria_dataarray.disp_row) * len(criteria_dataarray.disp_col)
-    invalid_mask = np.full((criteria_dataarray.sizes["row"], criteria_dataarray.sizes["col"]), 0)
+    disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))
 
-    for disp_col in criteria_dataarray.disp_col:
-        for disp_row in criteria_dataarray.disp_row:
+    # We put points that only have the P2D_DISPARITY_UNPROCESSED raised to VALID
+    # because we don't want to take this criterion into account in the validity dataset
+    # To be deleted when P2D_DISPARITY_UNPROCESSED has been removed
+    unprocessed_disp_mask = criteria_dataarray.data != Criteria.P2D_DISPARITY_UNPROCESSED
+    masked_criteria_dataarray = np.where(unprocessed_disp_mask, criteria_dataarray.data, Criteria.VALID)
 
-            # For each point, +1 is added to invalid_mask for each invalid disparity range
-            invalid_mask += criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col).data != Criteria.VALID
-
-    validity_mask = np.zeros_like(invalid_mask, dtype=np.uint8)
-    # If all the disparity ranges are invalid, the point is set to 2 in the validity mask
-    validity_mask[invalid_mask == disp_range_total] = 2
-    # If at least one of the disparity range is invalid, the point is set to 1 in the validity mask
-    validity_mask[(invalid_mask > 0) & (invalid_mask < disp_range_total)] = 1
-
+    # Fill partially invalids (at least one criteria in disparities):
+    validity_mask = np.logical_or.reduce(masked_criteria_dataarray, axis=disparity_axis_num).astype(np.uint8)
+    # Fill invalids (all disparities has a criteria):
+    invalid_mask = np.logical_and.reduce(masked_criteria_dataarray, axis=disparity_axis_num)
+    validity_mask[invalid_mask] = 2
     return validity_mask

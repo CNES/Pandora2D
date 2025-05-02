@@ -17,7 +17,7 @@
 Module for common base of all MatchingCost methods.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, List, Union, cast, Mapping
+from typing import Dict, List, Union, cast, Mapping, Tuple
 import copy
 
 from numpy.typing import NDArray
@@ -29,6 +29,7 @@ from pandora.margins import Margins
 from pandora import matching_cost as pandora_matching_cost
 
 import pandora2d.schema as cst_schema
+from pandora2d.criteria import get_criteria_dataarray
 
 
 class BaseMatchingCost(ABC):
@@ -44,7 +45,7 @@ class BaseMatchingCost(ABC):
         """
         self._cfg = self.check_conf(cfg)
 
-        self._matching_cost_method = self._cfg["matching_cost_method"]
+        self._method = self._cfg["matching_cost_method"]
         # Cast to int in order to help mypy because self.cfg is a Dict, and it can not know the type of step.
         self._step_row = cast(int, self._cfg["step"][0])
         self._step_col = cast(int, self._cfg["step"][1])
@@ -52,8 +53,9 @@ class BaseMatchingCost(ABC):
             int, self._cfg["window_size"]
         )  # _window_size attribute required to compute HalfWindowMargins
         self._subpix = cast(int, self._cfg["subpix"])
-        # To move down if #226 use option 0
         self._spline_order = cast(int, self._cfg["spline_order"])
+
+        self.cost_volumes: Union[xr.Dataset, None] = None
 
     @property
     def schema(self):
@@ -72,7 +74,6 @@ class BaseMatchingCost(ABC):
             "window_size": 5,
             "subpix": 1,
             "step": [1, 1],
-            # To move down if #226 use option 0
             "spline_order": 1,
         }
 
@@ -163,6 +164,47 @@ class BaseMatchingCost(ABC):
         cost_volumes.attrs = cost_volume_attr
 
         return cost_volumes
+
+    def get_cv_row_col_coords(
+        self, img_row_coordinates: NDArray, img_col_coordinates: NDArray, cfg: Dict
+    ) -> Tuple[NDArray, NDArray]:
+        """
+        Compute cost_volumes row and col coordinates according to image coordinates
+
+        :param img_row_coordinates: row coordinates of left image
+        :type img_row_coordinates: NDArray
+        :param img_col_coordinates: col coordinates of left image
+        :type img_col_coordinates: NDArray
+        :param cfg: matching_cost computation configuration
+        :type cfg: Dict
+        :return: a Tuple of np.ndarray that contains the right coordinates for row and col
+        :rtype: Tuple[NDArray, NDArray]
+        """
+
+        # Get updated ROI left/up margin for get_coordinates() method
+        # To get right coordinates in cost_volume when initial left_margin > cfg["ROI"]["col"]["first"]
+        # or initial up_margin > cfg["ROI"]["row"]["first"]
+        # We need to have left_margin = cfg["ROI"]["col"]["first"] and up_margin = cfg["ROI"]["row"]["first"]
+        cfg_for_get_coordinates = BaseMatchingCost.cfg_for_get_coordinates(cfg)
+
+        # Get correct coordinates to be sure to process the first point of ROI
+        if "ROI" in cfg:
+            col_coords = pandora_matching_cost.AbstractMatchingCost.get_coordinates(
+                margin=cfg_for_get_coordinates["ROI"]["margins"][0],
+                img_coordinates=img_col_coordinates,
+                step=self._step_col,
+            )
+
+            row_coords = pandora_matching_cost.AbstractMatchingCost.get_coordinates(
+                margin=cfg_for_get_coordinates["ROI"]["margins"][1],
+                img_coordinates=img_row_coordinates,
+                step=self._step_row,
+            )
+        else:
+            row_coords = np.arange(img_row_coordinates[0], img_row_coordinates[-1] + 1, self._step_row)
+            col_coords = np.arange(img_col_coordinates[0], img_col_coordinates[-1] + 1, self._step_col)
+
+        return row_coords, col_coords
 
     def get_disp_row_coords(self, img_left: xr.Dataset, margins: Margins) -> NDArray:
         """
@@ -257,7 +299,6 @@ class BaseMatchingCost(ABC):
     @abstractmethod
     def margins(self): ...
 
-    @abstractmethod
     def allocate(
         self,
         img_left: xr.Dataset,
@@ -284,6 +325,35 @@ class BaseMatchingCost(ABC):
         :return: None
         """
 
+        img_row_coordinates = img_left["im"].coords["row"].values
+        img_col_coordinates = img_left["im"].coords["col"].values
+
+        row_coords, col_coords = self.get_cv_row_col_coords(img_row_coordinates, img_col_coordinates, cfg)
+        # Get disparity coordinates for cost_volumes
+        disps_row_coords = self.get_disp_row_coords(img_left, margins)
+        disps_col_coords = self.get_disp_col_coords(img_left, margins)
+
+        grid_attrs = img_left.attrs
+
+        grid_attrs.update(
+            {
+                "window_size": self._window_size,
+                "subpixel": self._subpix,
+                "offset_row_col": int((self._window_size - 1) / 2),
+                "measure": self._method,
+                "type_measure": "max",
+                "disparity_margins": margins,
+                "step": self.step,
+            }
+        )
+
+        # Allocate 4D cost_volumes
+        self.cost_volumes = self.allocate_cost_volumes(
+            grid_attrs, row_coords, col_coords, disps_row_coords, disps_col_coords, None
+        )
+
+        self.cost_volumes["criteria"] = get_criteria_dataarray(img_left, img_right, self.cost_volumes)
+
     @abstractmethod
     def compute_cost_volumes(
         self,
@@ -308,22 +378,3 @@ class BaseMatchingCost(ABC):
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         :rtype: cost_volumes: xr.Dataset
         """
-
-    @staticmethod
-    def check_step_with_input_mask(cfg: Dict) -> None:
-        """
-        Check if an input mask is used with a step different from [1,1], in which case an error is raised.
-        This method will be removed once the use of a step with an input mask has been corrected.
-
-        :param cfg: user configuration
-        :type cfg: Dict
-        """
-
-        step_condition = cfg["pipeline"]["matching_cost"]["step"] != [1, 1]
-
-        if (cfg["input"]["left"]["mask"] is not None and step_condition) or (
-            cfg["input"]["right"]["mask"] is not None and step_condition
-        ):
-            raise ValueError(
-                "The use of an input mask with a step other than [1,1] will be supported in a future version."
-            )

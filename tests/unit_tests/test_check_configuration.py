@@ -178,24 +178,21 @@ class TestCheckInputSection:
         assert result["input"]["left"]["nodata"] == -9999
         assert result["input"]["right"]["nodata"] == -9999
 
-    @pytest.mark.parametrize(
-        "estimation_config",
-        [
-            pytest.param(None, id="without esimation config"),
-            pytest.param("basic_estimation_cfg", id="with basic config"),
-        ],
-    )
-    def test_check_nominal_case_with_estimation_config(self, correct_input_cfg, estimation_config, request):
-        """Default estimation_config value : None or basic config."""
-        if estimation_config is not None:
-            estimation_config = request.getfixturevalue(estimation_config)
-        assert check_configuration.check_input_section(correct_input_cfg, estimation_config)
+    def test_check_nominal_case_with_estimation_config(self, correct_input_cfg, basic_estimation_cfg):
+        """Default estimation_config value : basic config."""
 
-    def test_estimation_config_without_disparity(self, correct_input_cfg, basic_estimation_cfg):
-        """Default basic estimation config without disparity in user configuration."""
         del correct_input_cfg["input"]["col_disparity"]
         del correct_input_cfg["input"]["row_disparity"]
         assert check_configuration.check_input_section(correct_input_cfg, basic_estimation_cfg)
+
+    def test_estimation_config_with_disparity(self, correct_input_cfg, basic_estimation_cfg):
+        """Default basic estimation config with disparity in user configuration."""
+        with pytest.raises(
+            KeyError,
+            match="When using estimation, "
+            "the col_disparity and row_disparity keys must not be given in the configuration file",
+        ):
+            check_configuration.check_input_section(correct_input_cfg, basic_estimation_cfg)
 
 
 class TestCheckPipelineSection:
@@ -417,7 +414,7 @@ class TestCheckRoiCoherence:
         """
         with pytest.raises(ValueError) as exc_info:
             check_configuration.check_roi_coherence(false_roi_sensor_first_superior_to_last["ROI"]["col"])
-        assert str(exc_info.value) == 'In ROI "first" should be lower than "last" in sensor ROI'
+        assert str(exc_info.value) == '"first" should be lower than "last" in sensor ROI'
 
 
 class TestCheckStep:

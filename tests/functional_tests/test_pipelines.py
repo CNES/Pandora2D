@@ -31,6 +31,10 @@ import pytest
 import numpy as np
 import rasterio
 
+from pandora2d import Pandora2DMachine
+from pandora2d.check_configuration import check_conf
+from pandora2d.img_tools import create_datasets_from_inputs
+
 
 def remove_extra_keys(extended: dict, reference: dict):
     """
@@ -495,3 +499,220 @@ class TestAttributes:
         assert attrs["crs"] is None
         assert attrs["transform"] is None
         assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]
+
+
+class TestEstimation:
+    """
+    Check that pipeline with estimation step is correctly executed
+    """
+
+    @pytest.fixture()
+    def input_for_estimation(self, correct_input_cfg):
+        """
+        Input for estimation pipeline without disparity
+        """
+        del correct_input_cfg["input"]["col_disparity"]
+        del correct_input_cfg["input"]["row_disparity"]
+        return correct_input_cfg
+
+    @pytest.fixture()
+    def range_row(self):
+        """
+        Range row for estimation
+        """
+        return 5
+
+    @pytest.fixture()
+    def range_col(self):
+        """
+        Range col for estimation
+        """
+        return 5
+
+    @pytest.fixture()
+    def estimation_pipeline(self, range_row, range_col, correct_pipeline_without_refinement):
+        """
+        Pipeline with estimation only
+        """
+        return {
+            "pipeline": {
+                "estimation": {
+                    "estimation_method": "phase_cross_correlation",
+                    "range_row": range_row,
+                    "range_col": range_col,
+                    "sample_factor": 100,
+                },
+                **correct_pipeline_without_refinement["pipeline"],
+            }
+        }
+
+    @pytest.fixture()
+    def estimation_cfg(self, input_for_estimation, estimation_pipeline, tmp_path):
+        """
+        Estimation configuration
+        """
+
+        return {**input_for_estimation, **estimation_pipeline, **{"output": {"path": str(tmp_path)}}}
+
+    def test_run_estimation_pipeline(self, estimation_cfg, run_pipeline, tmp_path):
+        """
+        Description: Test pipeline with estimation
+        """
+
+        run_pipeline(estimation_cfg)
+
+        with open(tmp_path / "config.json", encoding="utf8") as output_file:
+            output_config = json.load(output_file)
+
+        # Check output configuration informations about estimation
+        estimation_cfg = output_config["pipeline"]["estimation"]
+        assert "estimated_shifts" in estimation_cfg
+        assert "error" in estimation_cfg
+        assert "phase_diff" in estimation_cfg
+
+    def test_raise_error_when_disp_given_in_cfg(self, estimation_cfg, run_pipeline):
+        """
+        Description: Test that a pipeline with the estimation and disparities in the input cfg raises an error
+        """
+
+        estimation_cfg["input"]["row_disparity"] = {"init": 0, "range": 2}
+        estimation_cfg["input"]["col_disparity"] = {"init": -1, "range": 3}
+        with pytest.raises(
+            KeyError,
+            match="When using estimation, "
+            "the col_disparity and row_disparity keys must not be given in the configuration file",
+        ):
+            run_pipeline(estimation_cfg)
+
+    @pytest.mark.parametrize(
+        [
+            "roi",
+            "range_row",
+            "range_col",
+            "window_size",
+            "estimated_d_row",
+            "estimated_d_col",
+            "expected_row",
+            "expected_col",
+        ],
+        [
+            pytest.param(
+                {
+                    "row": {"first": 50, "last": 75},
+                    "col": {"first": 50, "last": 60},
+                },
+                5,
+                5,
+                5,
+                [0, 10],
+                [-5, 5],
+                # Estimated row disparity is [0, 10]
+                # So up_margin=2 and down_margin=12
+                np.arange(48, 88),
+                # Estimated col disparity is [-5, 5]
+                # So left_margin=7 and right_margin=7
+                np.arange(43, 68),
+                id="range_row=5, range_col=5 and window_size=5",
+            ),
+            pytest.param(
+                {
+                    "row": {"first": 100, "last": 112},
+                    "col": {"first": 75, "last": 90},
+                },
+                7,
+                3,
+                3,
+                [-12, 2],
+                [-1, 5],
+                # Estimated row disparity is [-12, 2]
+                # So up_margin=13 and down_margin=3
+                np.arange(87, 116),
+                # Estimated col disparity is [-1, 5]
+                # So left_margin=2 and right_margin=6
+                np.arange(73, 97),
+                id="range_row=7, range_col=3 and window_size=3",
+            ),
+            pytest.param(
+                {
+                    "row": {"first": 212, "last": 230},
+                    "col": {"first": 310, "last": 315},
+                },
+                5,
+                7,
+                3,
+                [-6, 4],
+                [-8, 6],
+                # Estimated row disparity is [-6, 4]
+                # So up_margin=7 and down_margin=5
+                np.arange(205, 236),
+                # Estimated col disparity is [-8, 6]
+                # So left_margin=9 and right_margin=7
+                np.arange(301, 323),
+                id="range_row=5, range_col=7 and window_size=3",
+            ),
+            pytest.param(
+                {
+                    "row": {"first": 118, "last": 125},
+                    "col": {"first": 202, "last": 207},
+                },
+                9,
+                9,
+                7,
+                [-6, 12],
+                [-12, 6],
+                # Estimated row disparity is [-6, 12]
+                # So up_margin=9 and down_margin=15
+                np.arange(109, 141),
+                # Estimated col disparity is [-12, 6]
+                # So left_margin=15 and right_margin=9
+                np.arange(187, 217),
+                id="range_row=9, range_col=9 and window_size=7",
+            ),
+        ],
+    )
+    def test_run_estimation_with_roi(
+        self, estimation_cfg, roi, estimated_d_row, estimated_d_col, expected_row, expected_col
+    ):
+        """
+        Description: Test pipeline with estimation and ROI and check if image coordinates are correct.
+        """
+
+        estimation_cfg["ROI"] = roi
+
+        pandora2d_machine = Pandora2DMachine()
+
+        # Check estimation configuration
+        checked_cfg = check_conf(estimation_cfg, pandora2d_machine)
+
+        # Get ROI margins
+        checked_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+
+        # Create image datasets
+        image_datasets = create_datasets_from_inputs(
+            input_config=checked_cfg["input"],
+            roi=checked_cfg["ROI"],
+            estimation_cfg=estimation_cfg["pipeline"].get("estimation"),
+        )
+
+        # Run estimation
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, checked_cfg)
+        pandora2d_machine.run("estimation", checked_cfg)
+
+        img_shape = pandora2d_machine.left_img["im"].shape
+
+        # Check coordinates
+        np.testing.assert_array_equal(pandora2d_machine.left_img.row.values, expected_row)
+        np.testing.assert_array_equal(pandora2d_machine.left_img.col.values, expected_col)
+        # Check disparities
+        np.testing.assert_array_equal(
+            pandora2d_machine.left_img.row_disparity.sel(band_disp="min").data, np.full(img_shape, estimated_d_row[0])
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.left_img.row_disparity.sel(band_disp="max").data, np.full(img_shape, estimated_d_row[1])
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.left_img.col_disparity.sel(band_disp="min").data, np.full(img_shape, estimated_d_col[0])
+        )
+        np.testing.assert_array_equal(
+            pandora2d_machine.left_img.col_disparity.sel(band_disp="max").data, np.full(img_shape, estimated_d_col[1])
+        )

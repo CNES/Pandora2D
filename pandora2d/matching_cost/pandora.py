@@ -27,11 +27,9 @@ from typing import Dict, List, Union
 import numpy as np
 import xarray as xr
 from pandora import matching_cost
-from pandora.criteria import validity_mask
 from pandora.margins import Margins
 
 from pandora2d import img_tools
-from pandora2d.criteria import get_criteria_dataarray
 from pandora2d.common import (
     set_out_of_col_disparity_range_to_other_value,
     set_out_of_row_disparity_range_to_other_value,
@@ -58,6 +56,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         self.pandora_matching_cost_ = matching_cost.AbstractMatchingCost(  # type: ignore[abstract]
             **self.get_config_for_pandora(cfg)
         )
+
         self.grid: Union[xr.Dataset, None] = None
 
     @property
@@ -69,7 +68,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         :rtype: cfg: dict
         """
         return {
-            "matching_cost_method": self._matching_cost_method,
+            "matching_cost_method": self._method,
             "step": self.step,
             "window_size": self.window_size,
             "subpix": self._subpix,
@@ -157,43 +156,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         copy_cfg["step"] = self._step_col
         return copy_cfg
 
-    @staticmethod
-    def allocate_cost_volumes(
-        cost_volume_attr: dict,
-        row: np.ndarray,
-        col: np.ndarray,
-        disp_range_row: np.ndarray,
-        disp_range_col: np.ndarray,
-        np_data: np.ndarray = None,
-    ) -> xr.Dataset:
-        """
-        Allocate the cost volumes
-
-        :param cost_volume_attr: the cost_volume's attributes product by Pandora
-        :type cost_volume_attr: xr.Dataset
-        :param row: dimension of the image (row)
-        :type row: np.ndarray
-        :param col: dimension of the image (columns)
-        :type col: np.ndarray
-        :param disp_range_row: rows disparity range.
-        :type disp_range_row: np.ndarray
-        :param disp_range_col: columns disparity range.
-        :type disp_range_col: np.ndarray
-        :param np_data: 4D numpy.ndarray og cost_volumes. Defaults to None.
-        :type np_data: np.ndarray
-        :return: cost_volumes: 4D Dataset containing the cost_volumes
-        :rtype: cost_volumes: xr.Dataset
-        """
-
-        # Create the cost volume
-        cost_volumes = BaseMatchingCost.allocate_cost_volumes(
-            cost_volume_attr, row, col, disp_range_row, disp_range_col, np_data
-        )
-
-        delete_pandora_attributes(cost_volumes)
-
-        return cost_volumes
-
     def allocate(
         self,
         img_left: xr.Dataset,
@@ -219,8 +181,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         :type margins: Margins
         :return: None
         """
-        # Adapt Pandora matching cost configuration
-        img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
+
         grid_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
         grid_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
 
@@ -238,23 +199,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
             img_left, (grid_min_col, grid_max_col), cfg_for_get_coordinates
         )
 
-        # Compute validity mask to identify invalid points in cost volume
-        self.grid = validity_mask(img_left, img_right, self.grid)
-
-        # Add ROI margins in attributes
-        # Enables to compute cost volumes row coordinates later by using pandora.matching_cost.get_coordinates()
-        # Get updated ROI up margin for pandora method get_coordinates()
-        # To get right coordinates in cost_volume when initial up_margin > cfg["ROI"]["row"]["first"]
-        # We need to have up_margin = cfg["ROI"]["row"]["first"]
-        if "ROI" in cfg:
-            self.grid.attrs["ROI_margins_for_cv"] = (
-                cfg["ROI"]["margins"][0],
-                min(cfg["ROI"]["margins"][1], cfg["ROI"]["row"]["first"]),
-                cfg["ROI"]["margins"][2],
-                cfg["ROI"]["margins"][3],
-            )
-        else:
-            self.grid.attrs["ROI_margins_for_cv"] = None
+        super().allocate(img_left, img_right, cfg, margins)
 
     def compute_cost_volumes(
         self,
@@ -280,7 +225,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         :rtype: cost_volumes: xr.Dataset
         """
 
-        cost_volumes = xr.Dataset()
         grid_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
         grid_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
 
@@ -288,14 +232,10 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
             grid_min_col -= margins.left
             grid_max_col += margins.right
 
-        # Adapt Pandora matching cost configuration
-        img_left.attrs["disparity_source"] = img_left.attrs["col_disparity_source"]
-
         # Get disparity coordinates for cost_volumes
         disps_row = self.get_disp_row_coords(img_left, margins)
-        disps_col = self.get_disp_col_coords(img_left, margins)
 
-        row_index = None
+        row_index = self.cost_volumes.coords["row"] - img_left.coords["row"].data[0]
 
         # Contains the shifted right images (with subpixel)
         imgs_right_shift_subpixel = img_tools.shift_subpix_img(img_right, self._subpix, order=self._spline_order)
@@ -322,81 +262,30 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
             # Compute cost volume
             cost_volume = self.pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, self.grid)
-            # Mask cost volume
-            self.pandora_matching_cost_.cv_masked(img_left, img_right_shift, cost_volume, grid_min_col, grid_max_col)
-            # If first iteration, initialize cost_volumes dataset
-            if idx == 0:
-                img_row_coordinates = img_left["im"].coords["row"].values
-
-                # Case without a ROI: we only take the step into account to compute row coordinates.
-                if self.grid.attrs["ROI_margins_for_cv"] is None:
-                    row_coords = np.arange(img_row_coordinates[0], img_row_coordinates[-1] + 1, self._step_row)
-
-                # Case with a ROI: we use pandora get_coordinates() method to compute row coordinates.
-                # This method consider step and ROI margins when computing row coordinates.
-                # This ensures that the first point of the ROI given by the user is computed in the cost volume.
-                else:
-                    row_coords = self.pandora_matching_cost_.get_coordinates(
-                        margin=self.grid.attrs["ROI_margins_for_cv"][1],
-                        img_coordinates=img_row_coordinates,
-                        step=self._step_row,
-                    )
-
-                # We want row_index to start at 0
-                row_index = row_coords - img_left.coords["row"].data[0]
-
-                # Columns coordinates are already handled correctly by Pandora.
-                col_coords = cost_volume["cost_volume"].coords["col"]
-
-                cost_volumes = self.allocate_cost_volumes(
-                    cost_volume.attrs, row_coords, col_coords, disps_row, disps_col, None
-                )
 
             # Add current cost volume to the cost_volumes dataset
-            cost_volumes["cost_volumes"].data[:, :, idx, :] = cost_volume["cost_volume"].data[row_index, :, :]
+            self.cost_volumes["cost_volumes"].data[:, :, idx, :] = cost_volume["cost_volume"].data[row_index, :, :]
 
-        cost_volumes["criteria"] = get_criteria_dataarray(img_left, img_right, cost_volumes)
-
-        # Add disparity source
-        del cost_volumes.attrs["disparity_source"]
-        cost_volumes.attrs["col_disparity_source"] = img_left.attrs["col_disparity_source"]
-        cost_volumes.attrs["row_disparity_source"] = img_left.attrs["row_disparity_source"]
-        cost_volumes.attrs["disparity_margins"] = margins
-        cost_volumes.attrs["step"] = self.step
-
-        # Delete ROI_margins attributes which we used to calculate the row coordinates in the cost_volumes
-        del cost_volumes.attrs["ROI_margins_for_cv"]
+        # Add type measure to attributes for WTA
+        self.cost_volumes.attrs["type_measure"] = cost_volume.attrs["type_measure"]
 
         # Select correct rows and columns in case of a step different from 1.
-        row_cv = cost_volumes.row.values
-        col_cv = cost_volumes.col.values
+        row_cv = self.cost_volumes.row.values
+        col_cv = self.cost_volumes.col.values
 
         set_out_of_row_disparity_range_to_other_value(
-            cost_volumes["cost_volumes"],
+            self.cost_volumes["cost_volumes"],
             img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data,
             img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data,
             np.nan,
-            cost_volumes.attrs["row_disparity_source"],
+            self.cost_volumes.attrs["row_disparity_source"],
         )
         set_out_of_col_disparity_range_to_other_value(
-            cost_volumes["cost_volumes"],
+            self.cost_volumes["cost_volumes"],
             img_left["col_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data,
             img_left["col_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data,
             np.nan,
-            cost_volumes.attrs["col_disparity_source"],
+            self.cost_volumes.attrs["col_disparity_source"],
         )
 
-        return cost_volumes
-
-
-def delete_pandora_attributes(cost_volumes: xr.Dataset) -> None:
-    """
-    Delete pandora attributes in cost_volumes
-
-    :param cost_volumes: cost volumes 4D
-    :type cost_volumes: xr.Dataset
-    """
-
-    # del pandora attributes
-    del cost_volumes.attrs["col_to_compute"]
-    del cost_volumes.attrs["sampling_interval"]
+        return self.cost_volumes

@@ -12,6 +12,7 @@ Configuration and parameters
 ----------------------------
 
 .. list-table:: Available parameters
+   :name: matching_cost available parameters
    :widths: 19 19 19 19 19 19
    :header-rows: 1
 
@@ -65,11 +66,6 @@ Configuration and parameters
 
 .. warning::
     The subpix parameter can only take values 1, 2 and 4.
-
-.. warning::
-    Currently, the use of an input mask with a step other than [1,1] in the matching cost is not supported. 
-    This will be corrected in a future version. 
-
 
 **Example**
 

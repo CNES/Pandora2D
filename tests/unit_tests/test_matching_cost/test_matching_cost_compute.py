@@ -76,8 +76,15 @@ def test_steps(request, data_fixture_name, col_step, row_step):
     # compute cost volumes
     zncc = matching_cost_matcher.compute_cost_volumes(img_left=data.left, img_right=data.right)
 
+    # After deleting the calls to the pandora cv_masked and validity_mask methods in matching cost step,
+    # only points that are not no data in the ground truth are temporarily checked
+    # because some invalid points are no longer equal to nan in the calculated cost volumes.
+    valid_mask = ~np.isnan(data.full_matching_cost[::row_step, ::col_step, :, :])
+
     # indexes are : row, col, disp_x, disp_y
-    np.testing.assert_equal(zncc["cost_volumes"].data, data.full_matching_cost[::row_step, ::col_step, :, :])
+    np.testing.assert_equal(
+        zncc["cost_volumes"].data[valid_mask], data.full_matching_cost[::row_step, ::col_step, :, :][valid_mask]
+    )
 
 
 def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
@@ -121,8 +128,13 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     # compute cost volumes
     ssd = matching_cost_matcher.compute_cost_volumes(img_left=left_stereo_object, img_right=right_stereo_object)
 
+    # After deleting the calls to the pandora cv_masked and validity_mask methods in matching cost step,
+    # only points that are not no data in the ground truth are temporarily checked
+    # because some invalid points are no longer equal to nan in the calculated cost volumes.
+    valid_mask = ~np.isnan(ad_ground_truth)
+
     # check that the generated cost_volumes is equal to ground truth
-    np.testing.assert_allclose(ssd["cost_volumes"].data, ad_ground_truth, atol=1e-06)
+    np.testing.assert_allclose(ssd["cost_volumes"].data[valid_mask], ad_ground_truth[valid_mask], atol=1e-06)
 
 
 @pytest.mark.usefixtures("import_plugins")
@@ -205,8 +217,14 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     matching_cost_matcher.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
     # compute cost volumes
     sad = matching_cost_matcher.compute_cost_volumes(img_left=left_stereo_object, img_right=right_stereo_object)
+
+    # After deleting the calls to the pandora cv_masked and validity_mask methods in matching cost step,
+    # only points that are not no data in the ground truth are temporarily checked
+    # because some invalid points are no longer equal to nan in the calculated cost volumes.
+    valid_mask = ~np.isnan(ad_ground_truth)
+
     # check that the generated cost_volumes is equal to ground truth
-    np.testing.assert_allclose(sad["cost_volumes"].data, ad_ground_truth, atol=1e-06)
+    np.testing.assert_allclose(sad["cost_volumes"].data[valid_mask], ad_ground_truth[valid_mask], atol=1e-06)
 
 
 def test_compute_cv_zncc():
@@ -291,11 +309,35 @@ def test_compute_cv_zncc():
     # compute cost volumes
     zncc = matching_cost_matcher.compute_cost_volumes(img_left=left_zncc, img_right=right_zncc)
 
+    # After deleting the calls to the pandora cv_masked and validity_mask methods in matching cost step,
+    # only points that are not no data in the ground truth are temporarily checked
+    # because some invalid points are no longer equal to nan in the calculated cost volumes.
+    valid_mask_1_1_0_0 = ~np.isnan(ad_ground_truth_1_1_0_0)
+    valid_mask_1_1_1_0 = ~np.isnan(ad_ground_truth_1_1_1_0)
+    valid_mask_2_2_0_0 = ~np.isnan(ad_ground_truth_2_2_0_0)
+    valid_mask_2_2_1_0 = ~np.isnan(ad_ground_truth_2_2_1_0)
+
     # check that the generated cost_volumes is equal to ground truth
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 2, 0], ad_ground_truth_1_1_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[1, 1, 1, 0], ad_ground_truth_1_1_1_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 2, 0], ad_ground_truth_2_2_0_0, rtol=1e-06)
-    np.testing.assert_allclose(zncc["cost_volumes"].data[2, 2, 1, 0], ad_ground_truth_2_2_1_0, rtol=1e-06)
+    np.testing.assert_allclose(
+        zncc["cost_volumes"].data[1, 1, 2, 0][valid_mask_1_1_0_0],
+        ad_ground_truth_1_1_0_0[valid_mask_1_1_0_0],
+        rtol=1e-06,
+    )
+    np.testing.assert_allclose(
+        zncc["cost_volumes"].data[1, 1, 1, 0][valid_mask_1_1_1_0],
+        ad_ground_truth_1_1_1_0[valid_mask_1_1_1_0],
+        rtol=1e-06,
+    )
+    np.testing.assert_allclose(
+        zncc["cost_volumes"].data[2, 2, 2, 0][valid_mask_2_2_0_0],
+        ad_ground_truth_2_2_0_0[valid_mask_2_2_0_0],
+        rtol=1e-06,
+    )
+    np.testing.assert_allclose(
+        zncc["cost_volumes"].data[2, 2, 1, 0][valid_mask_2_2_1_0],
+        ad_ground_truth_2_2_1_0[valid_mask_2_2_1_0],
+        rtol=1e-06,
+    )
 
 
 @pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
@@ -794,6 +836,7 @@ class TestDisparityGrid:
         assert np.all(result[:, :col_index] == 0)
         assert np.all(result[:, col_index + 1 :] == 0)
 
+    @pytest.mark.xfail(reason="will pass when Criteria.P2D_DISPARITY_UNPROCESSED has been removed")
     @pytest.mark.parametrize("mock_type", ["not used"])
     def test_when_not_taken_into_account(
         self, disparity_maps, disparity_to_alter, mock_set_out_of_disparity_range_to_nan

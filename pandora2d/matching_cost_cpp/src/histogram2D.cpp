@@ -62,10 +62,10 @@ Histogram2D calculate_histogram2D(const P2d::MatrixD& img_l, const P2d::MatrixD&
   for (; pixel_l != (img_l.data() + img_l.size()); ++pixel_l, ++pixel_r) {
     auto index_l = std::max(
         0, std::min(static_cast<int>((*pixel_l - hist_l.low_bound()) / hist_l.bins_width()),
-                    nb_bins_l));
+                    nb_bins_l - 1));
     auto index_r = std::max(
         0, std::min(static_cast<int>((*pixel_r - hist_r.low_bound()) / hist_r.bins_width()),
-                    nb_bins_r));
+                    nb_bins_r - 1));
     values(index_l, index_r) += 1;
   }
   return Histogram2D(values, hist_l, hist_r);

@@ -59,10 +59,8 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     cost_volumes_test.attrs["type_measure"] = "max"
     cost_volumes_test.attrs["subpixel"] = 1
     cost_volumes_test.attrs["offset_row_col"] = 1
-    cost_volumes_test.attrs["cmax"] = 1
     cost_volumes_test.attrs["crs"] = None
     cost_volumes_test.attrs["transform"] = Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-    cost_volumes_test.attrs["band_correl"] = None
     cost_volumes_test.attrs["col_disparity_source"] = [-1, 3]
     cost_volumes_test.attrs["row_disparity_source"] = [-2, 0]
     cost_volumes_test.attrs["no_data_img"] = -9999
@@ -80,6 +78,13 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
         img_left=left_stereo_object, img_right=right_stereo_object
     )
 
+    # After deleting the calls to the pandora cv_masked and validity_mask methods in matching cost step,
+    # only points that are not no data in the ground truth are temporarily checked
+    # because some invalid points are no longer equal to nan in the calculated cost volumes.
+    valid_mask = ~np.isnan(cost_volumes_test["cost_volumes"].data)
+
     # check that the generated xarray dataset is equal to the ground truth
-    np.testing.assert_array_equal(cost_volumes_fun["cost_volumes"].data, cost_volumes_test["cost_volumes"].data)
+    np.testing.assert_array_equal(
+        cost_volumes_fun["cost_volumes"].data[valid_mask], cost_volumes_test["cost_volumes"].data[valid_mask]
+    )
     assert cost_volumes_fun.attrs == cost_volumes_test.attrs

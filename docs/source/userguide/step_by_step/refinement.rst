@@ -10,7 +10,7 @@ Optical_flow method
     The optical flow method is still in an experimental phase.
     The parameter window_size in the matching cost parameters requires a value greater than 1 .
 
-Inspired by [Lucas & Kanade]_.'s algorithm
+Inspired by [Lucas-Kanade]_'s algorithm 
 
     * We first need to suppose that pixel's shifting are subpixel between left and right images.
     * Second, we need to suppose brightness constancy between left and right images. (2)
@@ -73,7 +73,7 @@ Inspired by [Lucas & Kanade]_.'s algorithm
 The following diagram presents the different steps implemented in Pandora2d to enable
 the refinement of the disparity map with optical flow.
 
-.. [Lucas & Kanade]  An iterative image registration technique with an application to stereo vision.
+.. [Lucas-Kanade]  An iterative image registration technique with an application to stereo vision.
    Proceedings of Imaging Understanding Workshop, pages 121--130.
 
 .. figure:: ../../Images/optical_flow_schema.png

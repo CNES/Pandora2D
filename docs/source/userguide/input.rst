@@ -111,11 +111,6 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
      - Value equal to 0 for valid pixel
      - Value not equal to 0 for invalid pixel
 
-.. warning::
-    Currently, the use of an input mask with a step other than [1,1] in the matching cost is not supported. 
-    This will be corrected in a future version. 
-
-
 Examples
 ********
 

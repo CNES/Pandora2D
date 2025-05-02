@@ -31,6 +31,8 @@ import xarray as xr
 from pandora.margins.descriptors import NullMargins
 from pandora.margins import Margins
 
+from pandora2d.constants import Criteria
+
 
 class Disparity:
     """
@@ -209,37 +211,20 @@ class Disparity:
             for key in margins.keys():
                 margins[key] *= cost_volumes.attrs["subpixel"]
 
-            # Get the right index when right and down margins are equals to 0
-            if margins["right"] == 0:
-                margins["right"] = -cost_volumes.sizes["disp_col"]
-            if margins["down"] == 0:
-                margins["down"] = -cost_volumes.sizes["disp_row"]
-
-            cost_volumes_user = xr.Dataset(
-                {
-                    "cost_volumes": (
-                        ["row", "col", "disp_row", "disp_col"],
-                        cost_volumes["cost_volumes"].data[
-                            :, :, margins["up"] : -margins["down"], margins["left"] : -margins["right"]
-                        ],
-                    )
-                },
-                coords={
-                    "row": cost_volumes.coords["row"],
-                    "col": cost_volumes.coords["col"],
-                    "disp_row": cost_volumes.coords["disp_row"][margins["up"] : -margins["down"]],
-                    "disp_col": cost_volumes.coords["disp_col"][margins["left"] : -margins["right"]],
-                },
+            cost_volumes_user = cost_volumes.isel(
+                disp_row=slice(margins["up"], -margins["down"] or None),
+                disp_col=slice(margins["left"], -margins["right"] or None),
             )
+
         else:
             cost_volumes_user = cost_volumes.copy(deep=True)
 
-        indices_nan = np.isnan(cost_volumes_user["cost_volumes"].data)
+        invalid_index = cost_volumes_user["criteria"].data != Criteria.VALID
 
         # Winner Takes All strategy
         if cost_volumes.attrs["type_measure"] == "max":
 
-            cost_volumes_user["cost_volumes"].data[indices_nan] = -np.inf
+            cost_volumes_user["cost_volumes"].data[invalid_index] = -np.inf
             # -------compute disp_map row---------
             # process of maximum for dispx
             maps_max_col = self.extrema_split(cost_volumes_user, 3, np.max)
@@ -255,7 +240,7 @@ class Disparity:
 
         else:
             # -------compute disp_map row---------
-            cost_volumes_user["cost_volumes"].data[indices_nan] = np.inf
+            cost_volumes_user["cost_volumes"].data[invalid_index] = np.inf
             # process of minimum for dispx
             maps_min_col = self.extrema_split(cost_volumes_user, 3, np.min)
             # process of argmin for disp
@@ -268,8 +253,8 @@ class Disparity:
             # --------compute correlation score----
             score_map = self.get_score(maps_min_row, np.min)
 
-        invalid_mc = np.all(indices_nan, axis=(2, 3))
-        cost_volumes_user["cost_volumes"].data[indices_nan] = np.nan
+        invalid_mc = np.all(invalid_index, axis=(2, 3))
+        cost_volumes_user["cost_volumes"].data[invalid_index] = np.nan
 
         if cost_volumes["cost_volumes"].data.dtype != disp_map_col.dtype:
             disp_map_col = disp_map_col.astype(cost_volumes["cost_volumes"].data.dtype)
