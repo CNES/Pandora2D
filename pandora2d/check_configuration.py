@@ -83,25 +83,34 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
     if "input" not in user_cfg:
         raise KeyError("input key is missing")
 
+    if estimation_config is not None and (
+        ("col_disparity" in user_cfg["input"]) or ("row_disparity" in user_cfg["input"])
+    ):
+        raise KeyError(
+            "When using estimation, "
+            "the col_disparity and row_disparity keys must not be given in the configuration file"
+        )
+
     # Add missing steps and inputs defaults values in user_cfg
     cfg = update_conf(default_short_configuration_input, user_cfg)
 
-    # test disparities
-    if estimation_config is not None:
-        # add wrong disparity for checking only
-        cfg = update_conf(default_configuration_disp, cfg)
+    configuration_schema = {
+        "input": (
+            input_configuration_schema | disparity_schema if estimation_config is None else input_configuration_schema
+        )
+    }
 
     # check schema
-    configuration_schema = {"input": input_configuration_schema}
     checker = Checker(configuration_schema)
     checker.validate(cfg)
 
-    # test images
-    check_images(cfg["input"])
-
     if estimation_config is None:
+        # test disparities
         left_image_metadata = get_metadata(cfg["input"]["left"]["img"])
         check_disparity(left_image_metadata, cfg["input"])
+
+    # test images
+    check_images(cfg["input"])
 
     return cfg
 
@@ -427,6 +436,9 @@ input_configuration_schema = {
         "nodata": Or(int, lambda input: np.isnan(input), lambda input: np.isinf(input)),
         "mask": And(Or(str, lambda input: input is None), rasterio_can_open),
     },
+}
+
+disparity_schema = {
     "col_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
     "row_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
 }
@@ -442,10 +454,6 @@ default_short_configuration_input = {
             "mask": None,
         },
     }
-}
-
-default_configuration_disp = {
-    "input": {"col_disparity": {"init": -9997, "range": 2}, "row_disparity": {"init": -9997, "range": 2}}
 }
 
 roi_configuration_schema = {
