@@ -272,7 +272,8 @@ def test_roi(make_cost_volumes, criteria_name, expected):
                 "subpix": 2,
                 "window_size": 3,
             },
-            # In this case, P2D_LEFT_BORDER is not raised so P2D_RIGHT_DISPARITIY_OUTSIDE is present on edges.
+            # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
+            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is not present on edges.
             np.array(
                 [
                     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -315,6 +316,89 @@ def test_roi(make_cost_volumes, criteria_name, expected):
 def test_subpix(make_cost_volumes, criteria_name, expected):
     """
     Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to subpix.
+    """
+
+    cost_volumes = make_cost_volumes
+
+    result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ["make_cost_volumes", "expected"],
+    [
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
+                "step": [2, 2],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
+            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is not present on edges.
+            np.array(
+                [
+                    [0, 0, 0, 0],
+                    [0, 1, 0, 1],
+                    [0, 1, 1, 1],
+                ]
+            ),
+            id="Step in row and in columns: last row and last column are skipped",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
+                "step": [3, 1],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
+            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is not present on edges.
+            np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 1, 0, 0, 1, 1, 0],
+                ]
+            ),
+            id="Step in row: 2 last rows are skipped",
+        ),
+        pytest.param(
+            {
+                "row_disparity": {"init": 0, "range": 1},
+                "col_disparity": {"init": 0, "range": 2},
+                "msk_left": np.full((6, 8), 0),
+                "msk_right": np.full((6, 8), 0),
+                "step": [1, 2],
+                "subpix": 1,
+                "window_size": 3,
+            },
+            # When P2D_LEFT_BORDER is raised for a point, no other criteria is raised for this point.
+            # In this case, P2D_LEFT_BORDER is raised so P2D_RIGHT_DISPARITIY_OUTSIDE is not present on edges.
+            np.array(
+                [
+                    [0, 0, 0, 0],
+                    [0, 1, 1, 1],
+                    [0, 1, 0, 1],
+                    [0, 1, 0, 1],
+                    [0, 1, 1, 1],
+                    [0, 0, 0, 0],
+                ]
+            ),
+            id="Step in column: last column is skipped",
+        ),
+    ],
+    indirect=["make_cost_volumes"],
+)
+def test_step(make_cost_volumes, criteria_name, expected):
+    """
+    Test that the produced P2D_RIGHT_DISPARITY_OUTSIDE band is correct according to step.
     """
 
     cost_volumes = make_cost_volumes

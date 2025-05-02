@@ -288,8 +288,8 @@ def create_dataset_coords(data_row, data_col, data_score, data_validity, row, co
     Create xr.Dataset with data_row, data_col, data_score and data_validity
     as data variables and row and col as coordinates
     """
-
-    criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+    # Last criteria to be included when P2D_DISPARITY_UNPROCESSED has been removed
+    criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:-1]
     coords = {"row": row, "col": col}
     dims = ("row", "col")
 
@@ -343,7 +343,8 @@ class TestDatasetDispMaps:
             "col": col,
         }
 
-        criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+        # Last criteria to be included when P2D_DISPARITY_UNPROCESSED has been removed
+        criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:-1]
         validity = np.full((len(row), len(col), len(criteria_values)), 1)
 
         dataset_validity = xr.Dataset(

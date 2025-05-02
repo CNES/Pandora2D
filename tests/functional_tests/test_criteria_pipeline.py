@@ -139,16 +139,17 @@ def test_validity_mask_saved(
 
     validity_mask_path = tmp_path / "disparity_map" / "validity.tif"
 
-    # band names correspond to criteria names (except for the first, which corresponds to valid points)
+    # band names correspond to criteria names (except for the first, which corresponds to valid points
+    # and the last one which corresponds to P2D_DISPARITY_UNPROCESSED.)
     # and to the global “validity_mask” band
-    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:])
+    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:-1])
 
     # Check that validity_mask.tif exists
     assert (validity_mask_path).exists()
 
     # Check that validity_mask.tif contains nine bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 9
+        assert dataset.count == 8
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names
 
@@ -204,15 +205,16 @@ def test_validity_mask_saved_with_roi(
 
     validity_mask_path = tmp_path / "disparity_map" / "validity.tif"
 
-    # band names correspond to criteria names (except for the first, which corresponds to valid points)
+    # band names correspond to criteria names (except for the first, which corresponds to valid points
+    # and the last one which corresponds to P2D_DISPARITY_UNPROCESSED.)
     # and to the global “validity_mask” band
-    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:])
+    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:-1])
 
     # Check that validity_mask.tif exists
     assert (validity_mask_path).exists()
 
-    # Check that validity_mask.tif contains nine bands of type uint8 with correct names
+    # Check that validity_mask.tif contains eight bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 9
+        assert dataset.count == 8
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names
