@@ -23,6 +23,7 @@ This module contains functions associated to the computation of cost volumes in 
 
 #include <algorithm>
 
+#include <iostream>
 #include "compute_cost_volumes.hpp"
 #include "mutual_information.hpp"
 
@@ -125,14 +126,15 @@ void compute_cost_volumes_cpp(const P2d::MatrixD& left,
   int ind_cv = 0;
 
   int cost_surface_size = cv_size.nb_disps();
+  int nb_col = cv_size.nb_col;
 
   for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
     for (std::size_t col = 0; col < cv_size.nb_col; ++col)
 
     {
       // Get criteria cost surface to check if the entire cost surface is invalid
-      P2d::VectorUI criteria_cost_surface =
-          get_cost_surface<P2d::VectorUI>(criteria_values, cv_size, row, col);
+      int start_index = (row * nb_col + col) * cost_surface_size;
+      P2d::VectorUI criteria_cost_surface = criteria_values.segment(start_index, cost_surface_size);
 
       // If the entire cost surface is invalid, we do not compute cost volumes for this point
       if (all_non_zero_elements(criteria_cost_surface)) {
