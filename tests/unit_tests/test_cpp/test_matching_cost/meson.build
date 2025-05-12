@@ -18,7 +18,7 @@ test(
             common_includes,
             conftest_includes,
         ],
-        dependencies: [eigen_dep, doctest_dep],
+        dependencies: [python_dep, pybind11_dep, eigen_dep, doctest_dep],
     ),
 )
 
@@ -39,7 +39,7 @@ test(
             common_includes,
             conftest_includes,
         ],
-        dependencies: [eigen_dep, doctest_dep],
+        dependencies: [python_dep, pybind11_dep, eigen_dep, doctest_dep],
     ),
 )
 
@@ -49,7 +49,7 @@ test(
         'test_bin',
         ['test_bin.cpp', matching_cost_src, common_src],
         include_directories: [matching_cost_includes, common_includes],
-        dependencies: [eigen_dep, doctest_dep],
+        dependencies: [python_dep, pybind11_dep, eigen_dep, doctest_dep],
     ),
 )
 
@@ -59,7 +59,7 @@ test(
         'test_mutual_information',
         ['test_mutual_information.cpp', matching_cost_src, common_src],
         include_directories: [matching_cost_includes, common_includes],
-        dependencies: [eigen_dep, doctest_dep],
+        dependencies: [python_dep, pybind11_dep, eigen_dep, doctest_dep],
     ),
 )
 
@@ -80,7 +80,7 @@ test(
             common_includes,
             conftest_includes,
         ],
-        dependencies: [eigen_dep, doctest_dep],
+        dependencies: [python_dep, pybind11_dep, eigen_dep, doctest_dep],
     ),
     env: ['DATA_PATH=' + meson.current_source_dir()],
 )

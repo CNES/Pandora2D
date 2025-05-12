@@ -59,7 +59,8 @@ P2d::MatrixD create_image(std::size_t size, float mean, float std, double nb_bin
 /**
  * Load criteria dataarray saved as an 1D numpy array of type uint8
  */
-P2d::VectorUI load_criteria_dataarray(const std::string& filename) {
+py::array_t<uint8_t> load_criteria_dataarray(const std::string& filename,
+                                             const CostVolumeSize& cv_size) {
   std::ifstream file(filename, std::ios::binary);
   // Get size of file
   file.seekg(0, std::ios::end);
@@ -70,13 +71,13 @@ P2d::VectorUI load_criteria_dataarray(const std::string& filename) {
   std::vector<uint8_t> data(fileSize);
   file.read(reinterpret_cast<char*>(data.data()), fileSize);
 
-  // Convert in P2d::Vectorui
-  P2d::VectorUI eigenVector(data.size());
-  for (size_t i = 0; i < data.size(); ++i) {
-    eigenVector(i) = data[i];
-  }
+  // Convert in py::array_t<uint8_t>
+  const std::vector<size_t> cv_shape = {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row,
+                                        cv_size.nb_disp_col};
+  py::array_t<uint8_t> criteria_values(cv_shape);
+  std::memcpy(criteria_values.mutable_data(), data.data(), data.size());
 
-  return eigenVector;
+  return criteria_values;
 }
 
 /**
