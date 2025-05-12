@@ -24,8 +24,6 @@ This module contains functions associated to the Dichotomy refinement method.
 #include "dichotomy.hpp"
 #include "constant.hpp"
 
-namespace py = pybind11;
-
 /**
  * @brief Search for the new best position
  *

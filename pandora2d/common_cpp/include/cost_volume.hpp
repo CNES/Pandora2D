@@ -24,7 +24,12 @@ This module contains cost volume struct.
 #ifndef COMMON_COST_VOLUME_HPP
 #define COMMON_COST_VOLUME_HPP
 
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+
 #include "pandora2d_type.hpp"
+
+namespace py = pybind11;
 
 /**
  * @brief Cost volume size
@@ -86,23 +91,65 @@ struct CostVolumeSize {
 };
 
 /**
- * @brief Get the cost surface of a cv point (row,col)
- *        row and col correspond to the cv index, for example the point (0,0)
- *        is the first point of the cv but not necessarily the first image point in the ROI case
+ * @brief Position2D
  *
- * @param cost_values vector of cost values
- * @param cv_shape 4d cv shape
- * @param row cv index
- * @param col cv index
- * @return P2d::VectorD or P2d::VectorUI
  */
-template <typename T>
-T get_cost_surface(const T& cost_values, CostVolumeSize& cv_size, int row, int col) {
-  int cost_surface_size = cv_size.nb_disps();
+struct Position2D {
+  /**
+   * @brief Construct a new Position 2 D object
+   *
+   * @param _r : Row position
+   * @param _c : Column position
+   */
+  Position2D(unsigned int _row, unsigned int _col) : row(_row), col(_col) {};
 
-  int start_index = (row * cv_size.nb_col + col) * cost_surface_size;
+  /**
+   * @brief Construct a new Position 2 D object
+   *
+   */
+  Position2D() : Position2D(0u, 0u) {};
 
-  return cost_values.segment(start_index, cost_surface_size);
+  unsigned int row;  ///< Row position
+  unsigned int col;  ///< Column position
+};
+
+/**
+ * @brief Get the cost surfaces for one pixel
+ *
+ * @param cost_volume : 1D data
+ * @param index : pixel index to find its cost surface
+ * @param cv_size : the structure containing the dimensions of the cost volume
+ * @return P2d::MatrixU of size nb_disp_row * nb_disp_col
+ * (U can be either a float, a double or an uint_8)
+ */
+template <typename T, typename U>
+Eigen::Matrix<U, Eigen::Dynamic, Eigen::Dynamic> get_cost_surface(const py::array_t<T>& cost_volume,
+                                                                  unsigned int index,
+                                                                  CostVolumeSize& cv_size) {
+  auto index_to_position = [](unsigned int index, CostVolumeSize& cv_size) -> Position2D {
+    int quot = index / (cv_size.nb_col * cv_size.nb_disps());
+    int rem = index % (cv_size.nb_col * cv_size.nb_disps());
+    return Position2D(quot, rem / cv_size.nb_disps());
+  };
+
+  // Recover pixel index
+  Position2D p = index_to_position(index, cv_size);
+
+  // Access to array data - 4 for cost volume dimension
+  auto r_cost_volume = cost_volume.template unchecked<4>();
+
+  // Matrix creation
+  Eigen::Matrix<U, Eigen::Dynamic, Eigen::Dynamic> cost_surface(cv_size.nb_disp_row,
+                                                                cv_size.nb_disp_col);
+
+  // Data copy
+  for (std::size_t k_disp_row = 0; k_disp_row < cv_size.nb_disp_row; ++k_disp_row) {
+    for (std::size_t l_disp_col = 0; l_disp_col < cv_size.nb_disp_col; ++l_disp_col) {
+      cost_surface(k_disp_row, l_disp_col) = r_cost_volume(p.row, p.col, k_disp_row, l_disp_col);
+    }
+  }
+
+  return cost_surface;
 }
 
 #endif
