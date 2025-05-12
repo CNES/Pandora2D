@@ -388,6 +388,23 @@ class TestCheckRoiSection:
         check_configuration.check_roi_section(roi_section)
 
 
+@pytest.fixture
+def null_config():
+    return {}
+
+
+@pytest.mark.parametrize(
+    ["key", "expected"],
+    [
+        pytest.param("ROI", "correct_roi_sensor", id="Get roi section"),
+        pytest.param("toto", "null_config", id="No key in configuration"),
+    ],
+)
+def test_get_section_config(correct_roi_sensor, key, expected, request):
+    """Test get_section_config"""
+    assert check_configuration.get_section_config(correct_roi_sensor, key) == request.getfixturevalue(expected)
+
+
 def test_get_roi_pipeline(
     correct_roi_sensor,
 ) -> None:
@@ -740,3 +757,6 @@ class TestExpertModeSection:
         with pytest.raises(DictCheckerError) as err:
             check_configuration.check_expert_mode_section({"profiling": {parameter: wrong_value_parameter}})
         assert "folder_name" in err.value.args[0]
+
+
+# class TestCheckSegmentMode:
