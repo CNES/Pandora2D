@@ -23,7 +23,6 @@ This module contains functions associated to the computation of cost volumes in 
 
 #include <algorithm>
 
-#include <iostream>
 #include "compute_cost_volumes.hpp"
 #include "mutual_information.hpp"
 
@@ -77,11 +76,11 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
 /**
  * @brief Returns true if there are only elements other than 0 in the vector
  *
- * @param vec
+ * @param mat
  * @return true or false
  */
-bool all_non_zero_elements(const P2d::VectorUI& vec) {
-  return (vec.array() != 0).all();
+bool all_non_zero_elements(const P2d::MatrixUI& mat) {
+  return (mat.array() != 0).all();
 }
 
 /**
@@ -106,8 +105,8 @@ bool all_non_zero_elements(const P2d::VectorUI& vec) {
  */
 void compute_cost_volumes_cpp(const P2d::MatrixD& left,
                               const std::vector<P2d::MatrixD>& right,
-                              Eigen::Ref<P2d::VectorD> cv_values,
-                              const Eigen::Ref<P2d::VectorUI> criteria_values,
+                              py::array_t<double>& cv_values,
+                              const py::array_t<uint8_t>& criteria_values,
                               CostVolumeSize& cv_size,
                               const P2d::VectorD& disp_range_row,
                               const P2d::VectorD& disp_range_col,
@@ -126,15 +125,15 @@ void compute_cost_volumes_cpp(const P2d::MatrixD& left,
   int ind_cv = 0;
 
   int cost_surface_size = cv_size.nb_disps();
-  int nb_col = cv_size.nb_col;
+
+  P2d::MatrixUI criteria_cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
 
   for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
     for (std::size_t col = 0; col < cv_size.nb_col; ++col)
 
     {
       // Get criteria cost surface to check if the entire cost surface is invalid
-      int start_index = (row * nb_col + col) * cost_surface_size;
-      P2d::VectorUI criteria_cost_surface = criteria_values.segment(start_index, cost_surface_size);
+      criteria_cost_surface = get_cost_surface<uint8_t, uint8_t>(criteria_values, ind_cv, cv_size);
 
       // If the entire cost surface is invalid, we do not compute cost volumes for this point
       if (all_non_zero_elements(criteria_cost_surface)) {
@@ -148,7 +147,14 @@ void compute_cost_volumes_cpp(const P2d::MatrixD& left,
 
       for (std::size_t d_row = 0; d_row < cv_size.nb_disp_row; ++d_row) {
         for (std::size_t d_col = 0; d_col < cv_size.nb_disp_col; ++d_col, ind_cv++) {
-          if (criteria_values[ind_cv] != 0) {
+          // Get a view on criteria value at point (row, col, d_row, d_col)
+          auto criteria_value_view = criteria_values.unchecked<4>();
+          uint8_t criteria_value = criteria_value_view(row, col, d_row, d_col);
+
+          // Get access to cv_value at point (row, col, d_row, d_col) to be able to modify it
+          auto cv_mutable_view = cv_values.mutable_unchecked<4>();
+
+          if (criteria_value != 0) {
             continue;
           }
           int index_right =
@@ -160,7 +166,8 @@ void compute_cost_volumes_cpp(const P2d::MatrixD& left,
                          offset_cv_img_row + row * step[0] + floor(disp_range_row[d_row]),
                          offset_cv_img_col + col * step[1] + floor(disp_range_col[d_col]));
 
-          cv_values[ind_cv] = calculate_mutual_information(window_left, window_right);
+          cv_mutable_view(row, col, d_row, d_col) =
+              calculate_mutual_information(window_left, window_right);
         }
       }
     }

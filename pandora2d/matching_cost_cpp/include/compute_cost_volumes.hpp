@@ -54,10 +54,10 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
 /**
  * @brief Returns true if there are only elements other than 0 in the vector
  *
- * @param vec
+ * @param mat
  * @return true or false
  */
-bool all_non_zero_elements(const P2d::VectorUI& vec);
+bool all_non_zero_elements(const P2d::MatrixUI& mat);
 
 /**
  * @brief Compute the cost values
@@ -79,8 +79,8 @@ bool all_non_zero_elements(const P2d::VectorUI& vec);
  */
 void compute_cost_volumes_cpp(const P2d::MatrixD& left,
                               const std::vector<P2d::MatrixD>& right,
-                              Eigen::Ref<P2d::VectorD> cv_values,
-                              const Eigen::Ref<P2d::VectorUI> criteria_values,
+                              py::array_t<double>& cv_values,
+                              const py::array_t<uint8_t>& criteria_values,
                               CostVolumeSize& cv_size,
                               const P2d::VectorD& disp_range_row,
                               const P2d::VectorD& disp_range_col,
