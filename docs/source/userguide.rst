@@ -8,6 +8,7 @@ Userguide
    
    userguide/overview.rst
    userguide/input.rst
+   userguide/segment_mode.rst
    userguide/roi.rst
    userguide/step_by_step.rst
    userguide/sequencing.rst
