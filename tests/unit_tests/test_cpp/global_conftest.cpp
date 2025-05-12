@@ -46,3 +46,10 @@ P2d::MatrixD create_normal_matrix(std::size_t size, float mean, float std) {
 
   return img;
 }
+
+/**
+ * @brief Returns 1D index according to 2D position
+ */
+auto position2d_to_index(Position2D& pixel, CostVolumeSize& cv_size) -> unsigned int {
+  return pixel.row * (cv_size.nb_col * cv_size.nb_disps()) + pixel.col * cv_size.nb_disps();
+};
