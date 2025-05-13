@@ -25,6 +25,7 @@ import numpy as np
 import xarray as xr
 from json_checker import And
 
+from ..constants import Criteria
 from ..interpolation_filter import AbstractFilter
 from ..refinement_cpp import refinement_bind
 from . import refinement
@@ -109,11 +110,12 @@ class Dichotomy(refinement.AbstractRefinement):
         col_map = disp_map["col_map"]
 
         # Get score map
-        cost_values, invalid_disparity_map_mask = create_cost_values_map(cost_volumes, disp_map)
+        cost_values = create_cost_values_map(cost_volumes, disp_map)
 
-        # Get fake criteria_map
-        # TO BE REMOVE WHEN CRITERIA MAP WILL BE FINISHED
-        criteria_map = create_criteria_map(cost_volumes, disp_map, img_left, invalid_disparity_map_mask)
+        criteria_map = (
+            (disp_map["validity"].sel(criteria="validity_mask") == 2).astype(int)  # select invalids
+            | disp_map["validity"].sel(criteria=Criteria.P2D_PEAK_ON_EDGE.name)
+        ).data
 
         subpixel = cost_volumes.attrs["subpixel"]
         cost_volume_type = cost_volumes["cost_volumes"].data.dtype
@@ -213,7 +215,7 @@ def index_to_disparity(index_map: np.ndarray, shift: int, subpixel: int) -> np.n
     return (index_map / subpixel) + shift
 
 
-def create_cost_values_map(cost_volumes: xr.Dataset, disp_map: xr.Dataset) -> Tuple[np.ndarray, np.ndarray]:
+def create_cost_values_map(cost_volumes: xr.Dataset, disp_map: xr.Dataset) -> np.ndarray:
     """
     Return the map with best matching score
 
@@ -238,54 +240,7 @@ def create_cost_values_map(cost_volumes: xr.Dataset, disp_map: xr.Dataset) -> Tu
     invalid_col_disparity_map_mask: np.ndarray = (
         col_map.isnull().data if np.isnan(invalid_disparity) else col_map.isin(invalid_disparity).data
     )
-    cost_values = cost_volumes.cost_volumes.sel(
+    return cost_volumes.cost_volumes.sel(
         disp_row=row_map.where(~invalid_row_disparity_map_mask, cost_volumes.coords["disp_row"][0]),
         disp_col=col_map.where(~invalid_col_disparity_map_mask, cost_volumes.coords["disp_col"][0]),
     ).data
-    # Values are NaN if either row or column disparities are invalid
-    invalid_disparity_map_mask = invalid_row_disparity_map_mask | invalid_col_disparity_map_mask
-    cost_values[invalid_disparity_map_mask] = np.nan
-
-    return cost_values, invalid_disparity_map_mask
-
-
-def create_criteria_map(
-    cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, invalid_disparity_map_mask: np.ndarray
-) -> np.ndarray:
-    """
-    Return the map with PEAK_ON EDGE and invalid disparity
-
-    TO BE REMOVE WHEN CRITERIA MAP WILL BE FINISHED
-
-    :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-    :type cost_volumes: xarray.Dataset
-    :param disp_map: pixel disparity maps
-    :type disp_map: xarray.Dataset
-    :param img_left: left image dataset
-    :type img_left: xarray.Dataset
-    :return: the crriteria map
-    :rtype: np.ndarray
-    """
-
-    # Initial disparity maps
-    row_map = disp_map["row_map"]
-    col_map = disp_map["col_map"]
-
-    # Select correct rows and columns in case of a step different from 1.
-    row_cv = cost_volumes.row.values
-    col_cv = cost_volumes.col.values
-    # Column's min, max disparities
-    disp_min_col = img_left["col_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
-    disp_max_col = img_left["col_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
-    # Row's min, max disparities
-    disp_min_row = img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data
-    disp_max_row = img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data
-    # Create a fake criteria_map with P2D_PEAK_ON_EDGE & INVALID_DISPARITY
-    criteria_map = np.full(row_map.shape, 0.0, dtype=cost_volumes["cost_volumes"].data.dtype)
-    criteria_map[row_map == disp_min_row] = 1.0
-    criteria_map[row_map == disp_max_row] = 1.0
-    criteria_map[col_map == disp_min_col] = 1.0
-    criteria_map[col_map == disp_max_col] = 1.0
-    criteria_map[invalid_disparity_map_mask] = 1.0
-
-    return criteria_map
