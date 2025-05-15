@@ -184,6 +184,30 @@ def mask_path(left_img_path, tmp_path):
 
 
 @pytest.fixture
+def full_invalid_mask_path(left_img_path, tmp_path):
+    """Create a mask full of invalid and save it in tmp"""
+
+    with rasterio.open(left_img_path) as src:
+        width = src.width
+        height = src.height
+
+    mask = xr.DataArray(
+        data=np.full((height, width), 2, dtype=np.uint8),
+        dims=["height", "width"],
+        coords={"height": range(height), "width": range(width)},
+    )
+
+    path = tmp_path / "full_invalid_mask_left.tif"
+
+    write_data_array(
+        data_array=mask,
+        filename=str(path),
+    )
+
+    return path
+
+
+@pytest.fixture
 def correct_input_with_left_mask(left_img_path, right_img_path, mask_path):
     return {
         "input": {

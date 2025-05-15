@@ -25,6 +25,7 @@ This file contains useful function definitions for tests.
 #define CONFTEST_HPP
 
 #include <doctest.h>
+#include "cost_volume.hpp"
 #include "pandora2d_type.hpp"
 
 /**
@@ -51,5 +52,13 @@ void check_inside_eigen_element(const T& data, const T& expected) {
  * @param std: image standard deviation
  */
 P2d::MatrixD create_normal_matrix(std::size_t size, float mean, float std);
+
+/**
+ * @brief Returns 1D index according to 2D position
+ *
+ * @param pixel 2D position
+ * @param cv_size cost volume size
+ */
+auto position2d_to_index(Position2D& pixel, CostVolumeSize& cv_size) -> unsigned int;
 
 #endif

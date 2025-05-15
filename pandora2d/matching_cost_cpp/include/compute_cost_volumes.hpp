@@ -52,14 +52,12 @@ P2d::MatrixD get_window(const P2d::MatrixD& img, int window_size, int index_row,
 int interpolated_right_image_index(int subpix, double disp_row, double disp_col);
 
 /**
- * @brief Check if en Eigen matrix contains an element given as parameter
+ * @brief Returns true if there are only elements other than 0 in the vector
  *
- * @param matrix Eigen matrix
- * @param element to check
- * @return true
- * @return false
+ * @param mat
+ * @return true or false
  */
-bool contains_element(const P2d::MatrixD& matrix, double element);
+bool all_non_zero_elements(const P2d::MatrixUI& mat);
 
 /**
  * @brief Compute the cost values
@@ -67,6 +65,7 @@ bool contains_element(const P2d::MatrixD& matrix, double element);
  * @param left image
  * @param right list of right images
  * @param cv_values initialized cost values
+ * @param criteria_values criteria values
  * @param cv_size : cost volume size information
  * @param disp_range_row cost volumes row disparity range
  * @param disp_range_col cost volumes col disparity range
@@ -80,7 +79,8 @@ bool contains_element(const P2d::MatrixD& matrix, double element);
  */
 void compute_cost_volumes_cpp(const P2d::MatrixD& left,
                               const std::vector<P2d::MatrixD>& right,
-                              Eigen::Ref<P2d::VectorD> cv_values,
+                              py::array_t<double>& cv_values,
+                              const py::array_t<uint8_t>& criteria_values,
                               CostVolumeSize& cv_size,
                               const P2d::VectorD& disp_range_row,
                               const P2d::VectorD& disp_range_col,

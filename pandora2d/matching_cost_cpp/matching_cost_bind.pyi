@@ -28,6 +28,7 @@ def compute_cost_volumes_cpp(
     left: NDArray[np.float64],
     right: List[NDArray[np.float64]],
     cv_values: NDArray[np.float64],
+    criteria_values: NDArray[np.uint8],
     cv_size: CostVolumeSize,
     disp_range_row: NDArray[np.float64],
     disp_range_col: NDArray[np.float64],
@@ -46,6 +47,8 @@ def compute_cost_volumes_cpp(
     :type right: List[NDArray[np.float64]]
     :param cv_values:  cost volumes initialized values
     :type cv_values: NDArray[np.float64]
+    :param criteria_values:  criteria values
+    :type criteria_values: NDArray[np.uint8]
     :param cv_size: cost_volume size [nb_row, nb_col, nb_disp_row, nb_disp_col]
     :type cv_size: CostVolumeSize
     :param disp_range_row:  cost volumes row disparity range

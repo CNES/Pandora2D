@@ -41,6 +41,11 @@ using MatrixD = Eigen::MatrixXd;
 using Matrixf = Eigen::MatrixXf;
 
 /**
+ * @brief type used for unsigned int matrix
+ */
+using MatrixUI = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>;
+
+/**
  * @brief type used for double vectors
  *
  */

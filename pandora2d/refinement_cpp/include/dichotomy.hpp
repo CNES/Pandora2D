@@ -24,9 +24,6 @@ This module contains functions associated to the Dichotomy refinement method.
 #ifndef DICHOTOMY_HPP
 #define DICHOTOMY_HPP
 
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
-
 #include <Eigen/Dense>
 #include <map>
 
@@ -35,8 +32,6 @@ This module contains functions associated to the Dichotomy refinement method.
 #include "operation.hpp"
 #include "pandora2d_type.hpp"
 
-namespace py = pybind11;
-
 /**
  * @brief Mapping of cost selection methods
  *
@@ -44,66 +39,6 @@ namespace py = pybind11;
 const std::map<std::string, int (*)(const P2d::VectorD&)> COST_SELECTION_METHOD_MAPPING = {
     {"min", nanargmin},
     {"max", nanargmax}};
-
-/**
- * @brief Position2D
- *
- */
-struct Position2D {
-  /**
-   * @brief Construct a new Position 2 D object
-   *
-   * @param _r : Row position
-   * @param _c : Column position
-   */
-  Position2D(unsigned int _row, unsigned int _col) : row(_row), col(_col) {};
-
-  /**
-   * @brief Construct a new Position 2 D object
-   *
-   */
-  Position2D() : Position2D(0u, 0u) {};
-
-  unsigned int row;  ///< Row position
-  unsigned int col;  ///< Column position
-};
-
-/**
- * @brief Get the cost surfaces for one pixel
- *
- * @param cost_volume : 1D data
- * @param index : pixel index to find its cost surface
- * @param cv_size : the structure containing the dimensions of the cost volume
- * @return P2d::MatrixD of size nb_disp_row * nb_disp_col
- */
-template <typename T>
-P2d::MatrixD get_cost_surface(py::array_t<T>& cost_volume,
-                              unsigned int index,
-                              CostVolumeSize& cv_size) {
-  auto index_to_position = [](unsigned int index, CostVolumeSize& cv_size) -> Position2D {
-    int quot = index / (cv_size.nb_col * cv_size.nb_disps());
-    int rem = index % (cv_size.nb_col * cv_size.nb_disps());
-    return Position2D(quot, rem / cv_size.nb_disps());
-  };
-
-  // Recover pixel index
-  Position2D p = index_to_position(index, cv_size);
-
-  // Access to array data - 4 for cost volume dimension
-  auto r_cost_volume = cost_volume.template unchecked<4>();
-
-  // Matrix creation
-  P2d::MatrixD cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
-
-  // Data copy
-  for (std::size_t k_disp_row = 0; k_disp_row < cv_size.nb_disp_row; ++k_disp_row) {
-    for (std::size_t l_disp_col = 0; l_disp_col < cv_size.nb_disp_col; ++l_disp_col) {
-      cost_surface(k_disp_row, l_disp_col) = r_cost_volume(p.row, p.col, k_disp_row, l_disp_col);
-    }
-  }
-
-  return cost_surface;
-}
 
 /**
  * @brief Search for the new best position
@@ -178,7 +113,7 @@ void compute_dichotomy(py::array_t<T> cost_volume,
       continue;
 
     // get cost_surface
-    cost_surface = get_cost_surface<T>(cost_volume, index, cv_size);
+    cost_surface = get_cost_surface<T, double>(cost_volume, index, cv_size);
     double pos_row_disp =
         (std::is_same_v<T, float>) ? static_cast<double>(*pos_disp_row_it) : *pos_disp_row_it;
     double pos_col_disp =

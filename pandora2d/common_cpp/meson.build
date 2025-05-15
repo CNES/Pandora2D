@@ -5,7 +5,7 @@ bind_src = files('src/bind.cpp')
 
 py.extension_module(
     'common_bind',
-    bind_src,
+    [bind_src, common_src],
     subdir: 'pandora2d/common_cpp',
     install: true,
     include_directories: common_includes,

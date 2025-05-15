@@ -85,7 +85,7 @@ class MutualInformation(BaseMatchingCost):
         imgs_right_dataset = shift_subpix_img_2d(img_right, self.cost_volumes.attrs["subpixel"])
 
         imgs_right = [right["im"].values for right in imgs_right_dataset]
-        cv_values = self.cost_volumes["cost_volumes"].data.ravel().astype(np.float64)
+        cv_values = self.cost_volumes["cost_volumes"].data.astype(np.float64)
         offset_cv_img_row = self.cost_volumes.row.data[0] - img_left.row.data[0]
         offset_cv_img_col = self.cost_volumes.col.data[0] - img_left.col.data[0]
 
@@ -94,6 +94,7 @@ class MutualInformation(BaseMatchingCost):
             img_left["im"].data,
             imgs_right,
             cv_values,
+            self.cost_volumes["criteria"].data,
             common_bind.CostVolumeSize(*self.cost_volumes["cost_volumes"].shape),
             self.cost_volumes.disp_row.data,
             self.cost_volumes.disp_col.data,
@@ -104,7 +105,5 @@ class MutualInformation(BaseMatchingCost):
             self.cost_volumes.attrs["no_data_img"],
         )
 
-        cv_values_reshaped = cv_values.reshape(self.cost_volumes["cost_volumes"].shape)
-        self.cost_volumes["cost_volumes"] = (("row", "col", "disp_row", "disp_col"), cv_values_reshaped)
-
+        self.cost_volumes["cost_volumes"].data = cv_values
         return self.cost_volumes

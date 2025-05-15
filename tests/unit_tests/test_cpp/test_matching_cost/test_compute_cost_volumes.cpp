@@ -23,33 +23,13 @@ This module contains tests associated to mutual information computation.
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
+#include <pybind11/embed.h>
 #include "compute_cost_volumes.hpp"
+#include "conftest.hpp"
 #include "cost_volume.hpp"
 #include "global_conftest.hpp"
 
 constexpr double INIT_VALUE_CV = 0.0;  ///< initial value used to fill the cv
-
-/**
- * @brief Get the cost surface of a cv point (row,col)
- *        row and col correspond to the cv index, for example the point (0,0)
- *        is the first point of the cv but not necessarily the first image point in the ROI case
- *
- * @param cost_values vector of cost values
- * @param cv_shape 4d cv shape
- * @param row cv index
- * @param col cv index
- * @return P2d::VectorD
- */
-P2d::VectorD get_cost_surface(const P2d::VectorD& cost_values,
-                              CostVolumeSize& cv_size,
-                              int row,
-                              int col) {
-  int cost_surface_size = cv_size.nb_disps();
-
-  int start_index = (row * cv_size.nb_col + col) * cost_surface_size;
-
-  return cost_values.segment(start_index, cost_surface_size);
-};
 
 TEST_CASE("Test get_window method") {
   P2d::MatrixD img(5, 5);
@@ -202,21 +182,23 @@ TEST_CASE("Test get_index_right method") {
   }
 }
 
-TEST_CASE("Test contains_element method") {
-  P2d::MatrixD mat(3, 3);
-  mat << 1.0, 2.0, 3.0, 4.0, 3.0, 6.0, 2.0, 1.0, 0.0;
+TEST_CASE("Test has_only_non_zero_elements method") {
+  P2d::MatrixUI mat(3, 3);
+  ;
 
-  SUBCASE("Test if a double is in a matrix") {
-    CHECK(contains_element(mat, 0.0) == true);
-    CHECK(contains_element(mat, 5.0) == false);
+  SUBCASE("Test a vector with only non zero elements") {
+    mat << 1, 2, 3, 4, 3, 1, 2, 1, 4;
+    CHECK(all_non_zero_elements(mat) == true);
   }
 
-  SUBCASE("Test if a nan is in a matrix") {
-    P2d::MatrixD mat_nan(3, 3);
-    mat_nan << 1.0, 2.0, nan("1"), 4.0, 3.0, 6.0, 2.0, 1.0, 0.0;
+  SUBCASE("Test a vector with some zero elements") {
+    mat << 1, 0, 0, 4, 3, 0, 2, 1, 0;
+    CHECK(all_non_zero_elements(mat) == false);
+  }
 
-    CHECK(contains_element(mat, nan("1")) == false);
-    CHECK(contains_element(mat_nan, nan("1")) == true);
+  SUBCASE("Test a vector with only zero elements") {
+    P2d::MatrixUI mat_zero = P2d::MatrixUI::Zero(3, 3);
+    CHECK(all_non_zero_elements(mat_zero) == false);
   }
 }
 
@@ -249,7 +231,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   CostVolumeSize cv_size = CostVolumeSize(5, 5, 3, 5);
 
   // Initialized cv values
-  P2d::VectorD cv_values = P2d::VectorD::Zero(cv_size.size());
+  py::scoped_interpreter guard{};
+  std::vector<double> zeros(cv_size.size(), 0.);
+  py::array_t<double> cv_values(
+      {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
+
+  // Initialized pixel
+  Position2D pixel = Position2D();
 
   // Disparity ranges
   P2d::VectorD disp_range_row(3);
@@ -271,17 +259,23 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   double no_data = -9999;
 
   SUBCASE("Cost surface of top left point") {
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
-                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, no_data);
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/top_left_criteria.bin", cv_size);
 
-    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 0, 0);
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
 
-    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::MatrixD cost_surface =
+        get_cost_surface<double, double>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
 
+    P2d::MatrixD cost_surface_gt(disp_range_row.size(), disp_range_col.size());
+
+    // We are on the top left edge of the image, so the criterion P2D_LEFT_BORDER
+    // is raised for the entire cost surface
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV,
-                       INIT_VALUE_CV, INIT_VALUE_CV, 0.31127812445913294, INIT_VALUE_CV, INIT_VALUE_CV, 
+                       INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, 
                        INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV;
     // clang-format on
 
@@ -290,13 +284,18 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   }
 
   SUBCASE("Cost surface of center point") {
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
-                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, no_data);
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/center_criteria.bin", cv_size);
 
-    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
 
-    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    pixel = Position2D(2, 2);
+    P2d::MatrixD cost_surface =
+        get_cost_surface<double, double>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
+
+    P2d::MatrixD cost_surface_gt(disp_range_row.size(), disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, 0.22478750958935989, 0.22478750958935989, 0.072780225783732888, INIT_VALUE_CV,
@@ -308,12 +307,40 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   }
 
+  SUBCASE("All points are invalid") {
+    // All points of cost volumes are invalid
+    std::vector<double> ones(cv_size.size(), 1.);
+    py::array_t<double> criteria_values(
+        {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, ones.data());
+
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
+    // Get a view on cv values
+    auto cv_values_view = cv_values.unchecked<4>();
+
+    // Check that all points of cost volumes are equal to INIT_VALUE_CV
+    for (ssize_t row = 0; row < cv_values_view.shape(0); ++row)
+      for (ssize_t col = 0; col < cv_values_view.shape(1); ++col)
+        for (ssize_t d_row = 0; d_row < cv_values_view.shape(2); ++d_row)
+          for (ssize_t d_col = 0; d_col < cv_values_view.shape(3); ++d_col)
+            CHECK(cv_values_view(row, col, d_row, d_col) == INIT_VALUE_CV);
+
+    CHECK(cv_values.size() == cv_size.size());
+  }
+
   SUBCASE("Cost surface of center point with not centered disparities") {
     // CV size
     CostVolumeSize cv_size = CostVolumeSize(5, 5, 3, 3);
 
     // Initialized cv values
-    P2d::VectorD cv_values = P2d::VectorD::Zero(cv_size.size());
+    std::vector<double> zeros(cv_size.size(), 0.);
+    py::array_t<double> cv_values(
+        {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
+
+    // Criteria values
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/not_centered_disp_criteria.bin", cv_size);
 
     // Disparity ranges
     P2d::VectorD disp_range_row(3);
@@ -321,13 +348,15 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     P2d::VectorD disp_range_col(3);
     disp_range_col << 0.0, 1.0, 2.0;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
-                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, no_data);
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
 
-    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
+    pixel = Position2D(2, 2);
+    P2d::MatrixD cost_surface =
+        get_cost_surface<double, double>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
 
-    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::MatrixD cost_surface_gt(disp_range_row.size(), disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV,
@@ -339,19 +368,28 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
   }
 
-  SUBCASE("Cost surface with step_row=2 and step_col=3") {
+  SUBCASE("Cost surface with step_row=2, step_col=3") {
     // Smaller shape with step=[2,3]
     CostVolumeSize cv_size = CostVolumeSize(3, 2, 3, 5);
-    cv_values = P2d::VectorD::Zero(cv_size.size());
+    std::vector<double> zeros(cv_size.size(), 0.);
+    py::array_t<double> cv_values(
+        {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
+
+    // Criteria values
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/step_[2,3]_criteria.bin", cv_size);
+
     step << 2, 3;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
-                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, no_data);
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
 
-    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 1, 1);
+    pixel = Position2D(1, 1);
+    P2d::MatrixD cost_surface =
+        get_cost_surface<double, double>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
 
-    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::MatrixD cost_surface_gt(disp_range_row.size(), disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << 0.22478750958935989, 0.22478750958935989, 0.072780225783732888, INIT_VALUE_CV, INIT_VALUE_CV, 
@@ -399,7 +437,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
     // Biggest shape with subpix=2
     CostVolumeSize cv_size = CostVolumeSize(5, 5, 5, 9);
-    cv_values = P2d::VectorD::Zero(cv_size.size());
+    std::vector<double> zeros(cv_size.size(), 0.);
+    py::array_t<double> cv_values(
+        {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
+
+    // Criteria values
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/subpix_2_criteria.bin", cv_size);
 
     // Largest disparity ranges with subpix=2
     P2d::VectorD disp_range_row(5);
@@ -407,13 +451,18 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     P2d::VectorD disp_range_col(9);
     disp_range_col << -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
-                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, no_data);
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
 
-    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
+    pixel = Position2D(2, 2);
+    P2d::MatrixD cost_surface =
+        get_cost_surface<double, double>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
 
-    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::MatrixD cost_surface_gt(disp_range_row.size(), disp_range_col.size());
+
+    // When a subpix other than 1 is used, the method used to calculate the criteria is nearest
+    // neighbor. In this case, for disp_col=1.5, we round up to disp_col=2.
     // clang-format off
     cost_surface_gt <<
     // d_col    -2          -1.5         -1                               d_row
@@ -421,7 +470,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         //     -0.5                      0              0.5
         0.0072146184745174313, 0.22478750958935989, 0.32440939317155548,  // -1
         //        1                      1.5             2
-        0.072780225783732888, 0.072780225783732888, INIT_VALUE_CV,        //-1
+        0.072780225783732888,        INIT_VALUE_CV, INIT_VALUE_CV,        //-1
 
 
     // d_col   -2           -1.5         -1                               d_row
@@ -429,7 +478,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         //  -0.5                          0              0.5
         0.018310781820059185, 0.091091007603791629, 0.14556045156746578,  // -0.5
         //   1                            1.5            2
-        0.0072146184745172093, 0.37887883713522919, INIT_VALUE_CV,        // -0.5
+        0.0072146184745172093,       INIT_VALUE_CV, INIT_VALUE_CV,        // -0.5
 
 
     // d_col  -2            -1.5         -1                               d_row
@@ -437,7 +486,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         //  -0.5                          0               0.5
         0.091091007603791851, 0.10218717094933361, 0.091091007603791851,  // 0
         //  1                             1.5              2
-        0.37887883713522919, 0.018310781820059185, INIT_VALUE_CV,         // 0
+        0.37887883713522919,        INIT_VALUE_CV, INIT_VALUE_CV,         // 0
 
 
     // d_col -2              -1.5        -1                               d_row
@@ -445,7 +494,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         //  -0.5                          0               0.5
         0.091091007603791851, 0.072780225783732, 0.32440939317155526,     // 0.5
         //  1                             1.5             2
-        0.10218717094933316, 0.22943684069673953, INIT_VALUE_CV,          // 0.5
+        0.10218717094933316, INIT_VALUE_CV, INIT_VALUE_CV,                // 0.5
 
 
     // d_col -2               -1.5        -1                              d_row
@@ -453,7 +502,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
         //  -0.5                          0               0.5
         0.072780225783732666, 0.22478750958935989, 0.10218717094933316,   // 1
         //  1                             1.5             2
-        0.0072146184745172093, 0.0072146184745174313, INIT_VALUE_CV;      // 1
+        0.0072146184745172093, INIT_VALUE_CV, INIT_VALUE_CV;              // 1
     // clang-format on
 
     CHECK(cv_values.size() == cv_size.size());
@@ -496,7 +545,13 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
     // Biggest shape with subpix=2
     CostVolumeSize cv_size = CostVolumeSize(5, 5, 5, 9);
-    P2d::VectorD cv_values = P2d::VectorD::Zero(cv_size.size());
+    std::vector<double> zeros(cv_size.size(), 0.);
+    py::array_t<double> cv_values(
+        {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
+
+    // Criteria values
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/subpix_2_criteria.bin", cv_size);
 
     // Largest disparity ranges with subpix=2
     P2d::VectorD disp_range_row(5);
@@ -514,14 +569,18 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     Eigen::Vector2i step;
     step << 1, 1;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
-                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, no_data);
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
 
-    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 2, 2);
+    pixel = Position2D(2, 2);
+    P2d::MatrixD cost_surface =
+        get_cost_surface<double, double>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
 
-    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::MatrixD cost_surface_gt(disp_range_row.size(), disp_range_col.size());
 
+    // When a subpix other than 1 is used, the method used to calculate the criteria is nearest
+    // neighbor. In this case, for disp_col=1.5, we round up to disp_col=2.
     // clang-format off
     cost_surface_gt <<
     // d_col    -2          -1.5         -1                               d_row
@@ -569,27 +628,57 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   };
 
   SUBCASE("Cost surface with ROI") {
+    // Is equivalent to ROI: {"col": {"first": 0, "last": 1},
+    //                       "row": {"first": 2, "last": 2},
+    //                        "margins": [2, 2, 2, 2]}
+
+    // Left image
+    P2d::MatrixD img_left(5, 4);
+    // clang-format off
+    img_left << 1.0, 2.0, 3.0, 4.0, 
+                6.0, 7.0, 8.0, 9.0, 
+                11.0, 12.0, 13.0, 14.0, 
+                16.0, 17.0, 18.0, 19.0, 
+                21.0, 22.0, 23.0, 24.0;
+    // clang-format on
+
+    // Right image
+    std::vector<P2d::MatrixD> imgs_right;
+
+    P2d::MatrixD right_1(5, 4);
+    // clang-format off
+    right_1 << 1., 2., 3., 4., 
+              2., 2., 2., 2., 
+              4., 3., 2., 1., 
+              1., 3., 3., 3., 
+              1., 3., 2., 4.;
+    // clang-format on
+
+    imgs_right.push_back(right_1);
+
     // Smallest shape with ROI
-    CostVolumeSize cv_size = CostVolumeSize(3, 2, 3, 5);
-    cv_values = P2d::VectorD::Zero(cv_size.size());
+    CostVolumeSize cv_size = CostVolumeSize(5, 4, 3, 5);
+    std::vector<double> zeros(cv_size.size(), 0.);
+    py::array_t<double> cv_values(
+        {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
+    // Criteria values
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/roi_criteria.bin", cv_size);
 
-    // When ROI is used, we can have an offset between image and cv first index
-    // to be sure to compute the first point of ROI
-    offset_cv_img_row = 2;
-    offset_cv_img_col = 3;
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
-                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, no_data);
+    pixel = Position2D(2, 2);
+    P2d::MatrixD cost_surface =
+        get_cost_surface<double, double>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
 
-    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 0, 0);
-
-    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::MatrixD cost_surface_gt(disp_range_row.size(), disp_range_col.size());
 
     // clang-format off
-    cost_surface_gt << 0.22478750958935989, 0.22478750958935989, 0.072780225783732888, INIT_VALUE_CV, INIT_VALUE_CV, 
-                       0.22478750958935989, 0.10218717094933361, 0.37887883713522919, INIT_VALUE_CV, INIT_VALUE_CV, 
-                       0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV, INIT_VALUE_CV;
+    cost_surface_gt << INIT_VALUE_CV, .22478750958935989, 0.22478750958935989, INIT_VALUE_CV, INIT_VALUE_CV,
+                       INIT_VALUE_CV, .22478750958935989, 0.10218717094933361, INIT_VALUE_CV, INIT_VALUE_CV, 
+                       INIT_VALUE_CV, .0072146184745172093, 0.22478750958935989, INIT_VALUE_CV, INIT_VALUE_CV;
     // clang-format on
 
     CHECK(cv_values.size() == cv_size.size());
@@ -597,29 +686,63 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   }
 
   SUBCASE("Cost surface with ROI and step=[1,2]") {
-    // Smallest shape with ROI
-    CostVolumeSize cv_size = CostVolumeSize(5, 2, 3, 5);
-    cv_values = P2d::VectorD::Zero(cv_size.size());
+    // Is equivalent to ROI: {"col": {"first": 1, "last": 2},
+    //                        "row": {"first": 1, "last": 2},
+    //                        "margins": [1, 1, 1, 1]}
 
-    // When ROI is used, we can have an offset between image and cv first index
+    // Left image
+    P2d::MatrixD img_left(5, 4);
+    // clang-format off
+    img_left << 1.0, 2.0, 3.0, 4.0, 
+                6.0, 7.0, 8.0, 9.0, 
+                11.0, 12.0, 13.0, 14.0, 
+                16.0, 17.0, 18.0, 19.0;
+    // clang-format on
+
+    // Right image
+    std::vector<P2d::MatrixD> imgs_right;
+
+    P2d::MatrixD right_1(5, 4);
+    // clang-format off
+    right_1 << 1., 2., 3., 4., 
+              2., 2., 2., 2., 
+              4., 3., 2., 1., 
+              1., 3., 3., 3.;
+    // clang-format on
+
+    imgs_right.push_back(right_1);
+
+    // Smallest shape with ROI
+    CostVolumeSize cv_size = CostVolumeSize(4, 2, 3, 5);
+    std::vector<double> zeros(cv_size.size(), 0.);
+    py::array_t<double> cv_values(
+        {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
+
+    // Criteria values
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/roi_step_[1,2]_criteria.bin", cv_size);
+
+    // When ROI is used with a step different from 1,
+    // we can have an offset between image and cv first index
     // to be sure to compute the first point of ROI
     offset_cv_img_col = 1;
 
     step << 1, 2;
-    ;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, cv_size, disp_range_row,
-                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, no_data);
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
 
-    P2d::VectorD cost_surface = get_cost_surface(cv_values, cv_size, 1, 0);
+    pixel = Position2D(1, 0);
+    P2d::MatrixD cost_surface =
+        get_cost_surface<double, double>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
 
-    P2d::VectorD cost_surface_gt(disp_range_row.size() * disp_range_col.size());
+    P2d::MatrixD cost_surface_gt(disp_range_row.size(), disp_range_col.size());
 
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV, INIT_VALUE_CV,
-                       INIT_VALUE_CV, INIT_VALUE_CV, 0.22478750958935989,  0.22478750958935989, 0.072780225783732888, 
-                       INIT_VALUE_CV, INIT_VALUE_CV,  0.22478750958935989,  0.10218717094933361,  0.37887883713522919;
+                       INIT_VALUE_CV, INIT_VALUE_CV, 0.22478751, 0.22478751, INIT_VALUE_CV,
+                       INIT_VALUE_CV, INIT_VALUE_CV, 0.22478751, 0.102187171, INIT_VALUE_CV;
     // clang-format on
 
     CHECK(cv_values.size() == cv_size.size());

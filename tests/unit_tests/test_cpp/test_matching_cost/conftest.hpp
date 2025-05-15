@@ -24,7 +24,12 @@ This file contains useful function definitions for matching_cost tests.
 #ifndef MATCHING_COST_CONFTEST_HPP
 #define MATCHING_COST_CONFTEST_HPP
 
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+#include "cost_volume.hpp"
 #include "pandora2d_type.hpp"
+
+namespace py = pybind11;
 
 /**
  * @brief Create an image for tests
@@ -35,5 +40,22 @@ This file contains useful function definitions for matching_cost tests.
  * @param nb_bins: bins number for image histogram
  */
 P2d::MatrixD create_image(std::size_t size, float mean, float std, double nb_bins = 120);
+
+/**
+ * @brief Load criteria dataarray saved as a binary file containing a 1D numpy array of type uint8
+ *
+ * @param filename: name of binary file containing the criteria array
+ * @param cv_size: cost volumes size
+ */
+py::array_t<uint8_t> load_criteria_dataarray(const std::string& filename,
+                                             const CostVolumeSize& cv_size);
+
+/**
+ * @brief Get data_path for matching cost test data
+ *
+ */
+
+extern const char* data_path_env;
+extern const std::string data_path;
 
 #endif

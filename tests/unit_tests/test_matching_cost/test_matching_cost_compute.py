@@ -1726,19 +1726,23 @@ class TestMutualInformation:
         return {"init": 0, "range": 2}
 
     @pytest.mark.parametrize(
-        ["step", "subpix", "point", "expected"],
+        ["step", "subpix", "point", "row_disparity", "col_disparity", "expected"],
         [
             pytest.param(
                 [1, 1],
                 1,
                 [0, 0],  # [row, col]
-                np.array([[0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.3112781, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0]]),
+                {"init": 0, "range": 1},
+                {"init": 0, "range": 2},
+                np.array([[0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0]]),
                 id="Cost surface of top left point",
             ),
             pytest.param(
                 [1, 1],
                 1,
                 [2, 2],  # [row, col]
+                {"init": 0, "range": 1},
+                {"init": 0, "range": 2},
                 np.array(
                     [
                         [0.0, 0.2247875, 0.2247875, 0.07278022, 0.0],
@@ -1749,9 +1753,20 @@ class TestMutualInformation:
                 id="Cost surface of center point",
             ),
             pytest.param(
+                [1, 1],
+                1,
+                [2, 2],  # [row, col]
+                {"init": -1, "range": 1},
+                {"init": 1, "range": 1},
+                np.array([[0.0, 0.0, 0.0], [0.2247875, 0.0727802, 0.0], [0.1021872, 0.3788788, 0.0]]),
+                id="Cost surface of center point with not centered disparities",
+            ),
+            pytest.param(
                 [2, 3],
                 1,
                 [1, 1],  # [row, col]
+                {"init": 0, "range": 1},
+                {"init": 0, "range": 2},
                 np.array(
                     [
                         [0.2247875, 0.2247875, 0.07278023, 0.0, 0.0],
@@ -1765,6 +1780,8 @@ class TestMutualInformation:
                 [1, 1],
                 2,
                 [2, 2],  # [row, col]
+                {"init": 0, "range": 1},
+                {"init": 0, "range": 2},
                 np.array(
                     [
                         [0, 0, 0.2247875, 0.007214618, 0.2247875, 0.3244094, 0.07278023, 0, 0],
@@ -1805,12 +1822,12 @@ class TestMutualInformation:
                 [1, 1],
                 1,
                 [2, 2],  # [row, col]
-                {"col": {"first": 2, "last": 2}, "row": {"first": 2, "last": 2}, "margins": [2, 2, 2, 2]},
+                {"col": {"first": 0, "last": 1}, "row": {"first": 2, "last": 2}, "margins": [2, 2, 2, 2]},
                 np.array(
                     [
-                        [0.0, 0.2247875, 0.2247875, 0.07278022, 0.0],
-                        [0.0, 0.2247875, 0.1021872, 0.3788788, 0.0],
-                        [0.0, 0.00721462, 0.2247875, 0.00721462, 0.0],
+                        [0.0, 0.2247875, 0.2247875, 0.0, 0.0],
+                        [0.0, 0.2247875, 0.1021872, 0.0, 0.0],
+                        [0.0, 0.00721462, 0.2247875, 0.0, 0.0],
                     ]
                 ),
                 id="ROI without step",
@@ -1819,12 +1836,12 @@ class TestMutualInformation:
                 [1, 2],
                 1,
                 [1, 0],  # [row, col]
-                {"col": {"first": 1, "last": 3}, "row": {"first": 1, "last": 3}, "margins": [1, 1, 1, 1]},
+                {"col": {"first": 1, "last": 2}, "row": {"first": 1, "last": 2}, "margins": [1, 1, 1, 1]},
                 np.array(
                     [
                         [0.0, 0.0, 0.0, 0.0, 0.0],
-                        [0.0, 0.0, 0.22478751, 0.22478751, 0.0727802258],
-                        [0.0, 0.0, 0.22478751, 0.102187171, 0.378878837],
+                        [0.0, 0.0, 0.22478751, 0.22478751, 0.0],
+                        [0.0, 0.0, 0.22478751, 0.102187171, 0.0],
                     ]
                 ),
                 id="ROI with step = [1,2]",
