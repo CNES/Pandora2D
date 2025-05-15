@@ -63,8 +63,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         ["wrong_refinement_method_name", "dichotomy_class"],
         [
-            pytest.param("invalid_name", refinement.dichotomy.DichotomyPython),
-            pytest.param("invalid_name", refinement.dichotomy_cpp.Dichotomy),
+            pytest.param("invalid_name", refinement.dichotomy.DichotomyPython, id="Dichotomy Python"),
+            pytest.param("invalid_name", refinement.dichotomy_cpp.Dichotomy, id="Dichotomy C++"),
         ],
     )
     def test_method_field(self, config_dichotomy, wrong_refinement_method_name, dichotomy_class):
@@ -80,8 +80,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_iterations_below_minimum(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
@@ -96,8 +96,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_iterations_above_maximum(self, config_dichotomy, caplog, dichotomy_class, dichotomy_class_str):
@@ -118,7 +118,10 @@ class TestCheckConf:
     @pytest.mark.parametrize("iterations", [1, 9])
     @pytest.mark.parametrize(
         "dichotomy_instance_name",
-        ["dichotomy_python_instance", "dichotomy_cpp_instance"],
+        [
+            pytest.param("dichotomy_python_instance", id="Dichotomy Python"),
+            pytest.param("dichotomy_cpp_instance", id="Dichotomy C++"),
+        ],
     )
     def test_iterations_in_allowed_range(self, request, iterations, dichotomy_instance_name):
         """It should not fail."""
@@ -128,10 +131,10 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         ["dichotomy_instance_name", "filter_name"],
         [
-            ("dichotomy_python_instance", "bicubic"),
-            ("dichotomy_python_instance", "sinc_python"),
-            ("dichotomy_cpp_instance", "bicubic"),
-            ("dichotomy_cpp_instance", "sinc"),
+            pytest.param("dichotomy_python_instance", "bicubic", id="Dichotomy Python-filter bicubic"),
+            pytest.param("dichotomy_python_instance", "sinc_python", id="Dichotomy Python-filter sinc_python"),
+            pytest.param("dichotomy_cpp_instance", "bicubic", id="Dichotomy C++-filter bicubic"),
+            pytest.param("dichotomy_cpp_instance", "sinc", id="Dichotomy C++-filter sinc"),
         ],
     )
     def test_valid_filter_names(self, request, config_dichotomy, dichotomy_instance_name):
@@ -178,8 +181,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         ["dichotomy_class", "dichotomy_class_str"],
         [
-            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_faild_with_invalid_filter_name(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
@@ -193,8 +196,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_fails_on_missing_keys(self, config_dichotomy, missing, dichotomy_class, dichotomy_class_str):
@@ -213,8 +216,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_fails_on_unexpected_key(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
@@ -269,8 +272,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_precision_is_logged(
@@ -330,8 +333,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_result_of_one_iteration(
@@ -362,8 +365,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     @pytest.mark.parametrize("iterations", [2])
@@ -396,8 +399,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_with_nans_in_disp_map(
@@ -433,8 +436,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_with_invalid_values_in_disp_map(
@@ -474,8 +477,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_disparity_map_is_within_range(  # pylint: disable=too-many-arguments
@@ -566,8 +569,8 @@ def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expect
 @pytest.mark.parametrize(
     ["refinement_method", "dichotomy_class"],
     [
-        pytest.param("dichotomy_python", refinement.dichotomy.DichotomyPython),
-        pytest.param("dichotomy", refinement.dichotomy_cpp.Dichotomy),
+        pytest.param("dichotomy_python", refinement.dichotomy.DichotomyPython, id="Dichotomy Python"),
+        pytest.param("dichotomy", refinement.dichotomy_cpp.Dichotomy, id="Dichotomy C++"),
     ],
 )
 @pytest.mark.parametrize(
