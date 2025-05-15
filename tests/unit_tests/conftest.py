@@ -169,6 +169,16 @@ def false_roi_sensor_first_superior_to_last():
     }
 
 
+@pytest.fixture
+def correct_segment_mode():
+    return {
+        "segment_mode": {
+            "enable": True,
+            "memory_per_work": 4000,
+        }
+    }
+
+
 @pytest.fixture()
 def left_stereo_object():
     """

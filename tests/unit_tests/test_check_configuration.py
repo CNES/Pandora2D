@@ -24,6 +24,7 @@
 Test configuration
 """
 
+from copy import deepcopy
 import random
 import string
 import pytest
@@ -388,6 +389,23 @@ class TestCheckRoiSection:
         check_configuration.check_roi_section(roi_section)
 
 
+@pytest.fixture
+def null_config():
+    return {}
+
+
+@pytest.mark.parametrize(
+    ["key", "expected"],
+    [
+        pytest.param("ROI", "correct_roi_sensor", id="Get roi section"),
+        pytest.param("toto", "null_config", id="No key in configuration"),
+    ],
+)
+def test_get_section_config(correct_roi_sensor, key, expected, request):
+    """Test get_section_config"""
+    assert check_configuration.get_section_config(correct_roi_sensor, key) == request.getfixturevalue(expected)
+
+
 def test_get_roi_pipeline(
     correct_roi_sensor,
 ) -> None:
@@ -395,6 +413,15 @@ def test_get_roi_pipeline(
     Test get_roi_pipeline function
     """
     assert correct_roi_sensor == check_configuration.get_roi_config(correct_roi_sensor)
+
+
+def test_get_segment_mode_config(
+    correct_segment_mode,
+) -> None:
+    """
+    Test get_segment_mode_config function
+    """
+    assert correct_segment_mode == check_configuration.get_segment_mode_config(correct_segment_mode)
 
 
 class TestCheckRoiCoherence:
@@ -740,3 +767,58 @@ class TestExpertModeSection:
         with pytest.raises(DictCheckerError) as err:
             check_configuration.check_expert_mode_section({"profiling": {parameter: wrong_value_parameter}})
         assert "folder_name" in err.value.args[0]
+
+
+class TestCheckSegmentMode:
+    """
+    Description : Test check_segment_mode_section.
+    Requirement :
+    """
+
+    def test_expect_segment_mode_section(self):
+        """
+        Description : Test if segment_mode section is missing
+        """
+        with pytest.raises(MissKeyCheckerError, match="segment_mode"):
+            check_configuration.check_segment_mode_section({"input": {}})
+
+    def test_nominal_case(self, correct_segment_mode) -> None:
+        """
+        Test function for checking user segment_mode section
+        """
+        # with a correct segment_mode in check_segment_mode_section should return nothing
+        assert check_configuration.check_segment_mode_section(correct_segment_mode)
+
+    @pytest.mark.parametrize(
+        ["parameter", "wrong_value_parameter"],
+        [
+            pytest.param("enable", 12, id="error enable value with an int"),
+            pytest.param("enable", 12.0, id="error enable value with a float"),
+            pytest.param("enable", [True, True], id="error enable value with a list of boolean"),
+            pytest.param("enable", [1, 1], id="error enable value with a list of int"),
+            pytest.param("enable", {"value": True}, id="error enable value with a dictionnary"),
+            pytest.param("memory_per_work", 0, id="error memory_per_work value with a zero"),
+            pytest.param("memory_per_work", -10, id="error memory_per_work value with a negative number"),
+            pytest.param("memory_per_work", 10.12, id="error memory_per_work value with a float"),
+            pytest.param("memory_per_work", [True, True], id="error enable memory_per_work with a list of boolean"),
+            pytest.param("memory_per_work", [1000, 1000], id="error enable memory_per_work with a list of int"),
+            pytest.param("enable", {"value": 2000}, id="error enable value with a dictionnary"),
+        ],
+    )
+    def test_wrong_configuration_raises_exception(self, correct_segment_mode, parameter, wrong_value_parameter):
+        """
+        Description : Raises an exception if the enable parameter are not a boolean
+        """
+        false_config = deepcopy(correct_segment_mode)
+        false_config["segment_mode"][parameter] = wrong_value_parameter
+        with pytest.raises(BaseException):
+            check_configuration.check_segment_mode_section(false_config)
+
+    def test_update_configuration_without_segment_mode_section(self):
+        """
+        Description : Check that a section is returned specifying that the mode is false if it is not present in the
+        user configuration
+        """
+        assert (
+            check_configuration.check_segment_mode_section({}) == check_configuration.default_segment_mode_configuration
+        )
