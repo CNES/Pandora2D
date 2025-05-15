@@ -983,102 +983,109 @@ def test_search_new_best_point(
     assert result == expected
 
 
+@pytest.fixture()
+def left_img_non_uniform_grid(left_img):
+    """
+    Creates a left image dataset with non-uniform disparity grids
+    """
+
+    # We set the minimum rows disparity at 3 for the point [0,1]
+    left_img["row_disparity"][0, 0, 1] = 3
+    # We set the maximum columns disparity at 1 for the point [1,0]
+    left_img["col_disparity"][1, 1, 0] = 1
+
+    left_img.attrs["row_disparity_source"] = "non-uniform-grid"
+    left_img.attrs["col_disparity_source"] = "non-uniform-grid"
+
+    return left_img
+
+
+@pytest.fixture()
+def sparse_cost_volumes(zeros_cost_volumes, min_disparity_row, max_disparity_col):
+    """Build cost volumes."""
+    # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
+    # but use coordinates for disp_row and disp_col
+
+    # For point [0,2], the best cost value is set for minimal row disparity
+    # corresponding cost surface is:
+
+    #    [ 0.,  0.,  0.,  0.,  0.,  0.]
+    #    [ 0.,  0.,  0.,  0.,  0.,  0.]
+    #    [ 10., 8.,  0.,  0.,  0.,  0.]
+    #    [ 8.,  9.,  0.,  0.,  0.,  0.]
+    #    [ 0.,  0.,  0.,  0.,  0.,  0.]
+    #    [ 0.,  0.,  0.,  0.,  0.,  0.]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[
+        {"disp_col": [0, 1], "disp_row": min_disparity_row + 1}
+    ] = [8, 9]
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[{"disp_col": [0, 1], "disp_row": min_disparity_row}] = [
+        10,
+        8,
+    ]
+
+    # For point [0,1], the best cost value is set for row disparity greater than the minimal one
+    # corresponding cost surface is:
+
+    #   [ 0.,  0.,  0.,  0.,  0.,  0.]
+    #   [ 0.,  0.,  0.,  0.,  0.,  0.]
+    #   [ 0.,  8., 10.,  0.,  0.,  0.]
+    #   [ 0.,  9.,  8.,  0.,  0.,  0.]
+    #   [ 0.,  0.,  0.,  0.,  0.,  0.]
+    #   [ 0.,  0.,  0.,  0.,  0.,  0.]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 3}] = [8, 9]
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 4}] = [10, 8]
+
+    # For point [0,0], the best cost value is set for col disparity greater than the minimal one
+    # corresponding cost surface is:
+
+    #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 4.9 , 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 4.99, 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 5.  , 0.  , 0.  , 0.  ]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=0).loc[
+        {"disp_col": [max_disparity_col - 2, max_disparity_col - 1, max_disparity_col], "disp_row": 4}
+    ] = [
+        4.9,
+        4.99,
+        5,
+    ]
+
+    # For point [1,0], the best cost value is set for col disparity lower than the maximal one
+    # corresponding cost surface is:
+
+    #    [0.  , 0.  , 4.9 , 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 4.99, 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 5.  , 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
+    #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=1, col=0).loc[{"disp_col": [-2, -1, 0], "disp_row": 4}] = [
+        4.9,
+        4.99,
+        5,
+    ]
+
+    return zeros_cost_volumes
+
+
 @pytest.mark.parametrize(
     "dichotomy_instance_name",
-    ["dichotomy_python_instance", "dichotomy_cpp_instance"],
+    [
+        pytest.param("dichotomy_python_instance", id="Dichotomy Python"),
+        pytest.param("dichotomy_cpp_instance", id="Dichotomy C++"),
+    ],
 )
 class TestExtremaOnEdges:
     """
     Test that points for which best cost value is on the edge of disparity range
     are not processed by dichotomy loop.
     """
-
-    @pytest.fixture()
-    def left_img_non_uniform_grid(self, left_img):
-        """
-        Creates a left image dataset with non-uniform disparity grids
-        """
-
-        # We set the minimum rows disparity at 3 for the point [0,1]
-        left_img["row_disparity"][0, 0, 1] = 3
-        # We set the maximum columns disparity at 1 for the point [1,0]
-        left_img["col_disparity"][1, 1, 0] = 1
-
-        # TODO: modify disparity source
-
-        return left_img
-
-    @pytest.fixture()
-    def cost_volumes(self, zeros_cost_volumes, min_disparity_row, max_disparity_col):
-        """Build cost volumes."""
-        # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
-        # but use coordinates for disp_row and disp_col
-
-        # For point [0,2], the best cost value is set for minimal row disparity
-        # corresponding cost surface is:
-
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 10., 8.,  0.,  0.,  0.,  0.]
-        #    [ 8.,  9.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[
-            {"disp_col": [0, 1], "disp_row": min_disparity_row + 1}
-        ] = [8, 9]
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[
-            {"disp_col": [0, 1], "disp_row": min_disparity_row}
-        ] = [10, 8]
-
-        # For point [0,1], the best cost value is set for row disparity greater than the minimal one
-        # corresponding cost surface is:
-
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  8., 10.,  0.,  0.,  0.]
-        #   [ 0.,  9.,  8.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 3}] = [8, 9]
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 4}] = [10, 8]
-
-        # For point [0,0], the best cost value is set for maximal col disparity
-        # corresponding cost surface is:
-
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.9 , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.99, 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 5.  , 0.  , 0.  , 0.  ]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=0).loc[
-            {"disp_col": [max_disparity_col - 2, max_disparity_col - 1, max_disparity_col], "disp_row": 4}
-        ] = [
-            4.9,
-            4.99,
-            5,
-        ]
-
-        # For point [1,0], the best cost value is set for col disparity lower than the maximal one
-        # corresponding cost surface is:
-
-        #    [0.  , 0.  , 4.9 , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.99, 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 5.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=1, col=0).loc[{"disp_col": [-2, -1, 0], "disp_row": 4}] = [
-            4.9,
-            4.99,
-            5,
-        ]
-
-        return zeros_cost_volumes
 
     @pytest.fixture()
     def dataset_disp_maps_from_uniform_grid(
@@ -1184,11 +1191,18 @@ class TestExtremaOnEdges:
             attrs={"invalid_disp": invalid_disparity},
         )
 
-    def test_uniform_disparity_grid(
+    @pytest.mark.parametrize(
+        "dataset_disp_maps_fixture",
+        [
+            pytest.param("dataset_disp_maps_from_uniform_grid", id="uniform disparity grid"),
+            pytest.param("dataset_disp_maps_from_non_uniform_grid", id="non-uniform disparity grid"),
+        ],
+    )
+    def test_disparity_grid(
         self,
         request,
-        cost_volumes,
-        dataset_disp_maps_from_uniform_grid,
+        sparse_cost_volumes,
+        dataset_disp_maps_fixture,
         left_img,
         dichotomy_instance_name,
         mocker: MockerFixture,
@@ -1198,150 +1212,38 @@ class TestExtremaOnEdges:
         are not processed by dichotomy loop using uniform disparity grids
         """
 
-        copy_disp_map = copy.deepcopy(dataset_disp_maps_from_uniform_grid)
+        dataset_disp_maps = request.getfixturevalue(dataset_disp_maps_fixture)
+        copy_disp_map = copy.deepcopy(dataset_disp_maps)
 
         dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
+            sparse_cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
         )
 
         # Extrema on the edge of row disparity range for point [0,2] --> unchanged row map value after dichotomy loop
-        assert result_disp_row[0, 2] == dataset_disp_maps_from_uniform_grid["row_map"][0, 2]
+        assert result_disp_row[0, 2] == dataset_disp_maps["row_map"][0, 2]
         # Extrema not on the edge for point [0,1] --> changed row map value after dichotomy loop
-        assert result_disp_row[0, 1] != dataset_disp_maps_from_uniform_grid["row_map"][0, 1]
+        assert result_disp_row[0, 1] != dataset_disp_maps["row_map"][0, 1]
 
         # Extrema on the edge of col disparity range for point [0,0] --> unchanged col map value after dichotomy loop
-        assert result_disp_col[0, 0] == dataset_disp_maps_from_uniform_grid["col_map"][0, 0]
+        assert result_disp_col[0, 0] == dataset_disp_maps["col_map"][0, 0]
         # Extrema not on the edge for point [1,0] --> changed col map value after dichotomy loop
-        assert result_disp_col[1, 0] != dataset_disp_maps_from_uniform_grid["col_map"][1, 0]
-
-    def test_non_uniform_disparity_grid(
-        self,
-        request,
-        cost_volumes,
-        dataset_disp_maps_from_non_uniform_grid,
-        left_img_non_uniform_grid,
-        dichotomy_instance_name,
-        mocker: MockerFixture,
-    ):
-        """
-        Test that points for which best cost value is on the edge of disparity range
-        are not processed by dichotomy loop using non-uniform disparity grids
-        """
-
-        copy_disp_map = copy.deepcopy(dataset_disp_maps_from_non_uniform_grid)
-
-        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
-        result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, left_img_non_uniform_grid, img_right=mocker.ANY
-        )
-
-        # Extrema on the edge of row disparity range for point [0,2] --> unchanged row map value after dichotomy loop
-        assert result_disp_row[0, 2] == dataset_disp_maps_from_non_uniform_grid["row_map"][0, 2]
-        # Extrema not on the edge for point [0,1] --> changed row map value after dichotomy loop
-        assert result_disp_row[0, 1] != dataset_disp_maps_from_non_uniform_grid["row_map"][0, 1]
-
-        # Extrema on the edge of col disparity range for point [0,0] --> unchanged col map value after dichotomy loop
-        assert result_disp_col[0, 0] == dataset_disp_maps_from_non_uniform_grid["col_map"][0, 0]
-        # Extrema not on the edge for point [1,0] --> changed col map value after dichotomy loop
-        assert result_disp_col[1, 0] != dataset_disp_maps_from_non_uniform_grid["col_map"][1, 0]
+        assert result_disp_col[1, 0] != dataset_disp_maps["col_map"][1, 0]
 
 
 @pytest.mark.parametrize("invalid_disparity", [-9999, np.nan])
 @pytest.mark.parametrize(
     "dichotomy_instance_name",
-    ["dichotomy_python_instance", "dichotomy_cpp_instance"],
+    [
+        pytest.param("dichotomy_python_instance", id="Dichotomy Python"),
+        pytest.param("dichotomy_cpp_instance", id="Dichotomy C++"),
+    ],
 )
 class TestInvalidDisparity:
     """
     Test that points for which best cost value is on the edge of disparity range
     are not processed by dichotomy loop.
     """
-
-    @pytest.fixture()
-    def left_img_non_uniform_grid(self, left_img):
-        """
-        Creates a left image dataset with non-uniform disparity grids
-        """
-
-        # We set the minimum rows disparity at 3 for the point [0,1]
-        left_img["row_disparity"][0, 0, 1] = 3
-        # We set the maximum columns disparity at 1 for the point [1,0]
-        left_img["col_disparity"][1, 1, 0] = 1
-
-        return left_img
-
-    @pytest.fixture()
-    def cost_volumes(self, zeros_cost_volumes, min_disparity_row, max_disparity_col):
-        """Build cost volumes."""
-        # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
-        # but use coordinates for disp_row and disp_col
-
-        # For point [0,2], the best cost value is set for minimal row disparity
-        # corresponding cost surface is:
-
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 10., 8.,  0.,  0.,  0.,  0.]
-        #    [ 8.,  9.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[
-            {"disp_col": [0, 1], "disp_row": min_disparity_row + 1}
-        ] = [8, 9]
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[
-            {"disp_col": [0, 1], "disp_row": min_disparity_row}
-        ] = [10, 8]
-
-        # For point [0,1], the best cost value is set for row disparity greater than the minimal one
-        # corresponding cost surface is:
-
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  8., 10.,  0.,  0.,  0.]
-        #   [ 0.,  9.,  8.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 3}] = [8, 9]
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 4}] = [10, 8]
-
-        # For point [0,0], the best cost value is set for maximal col disparity
-        # corresponding cost surface is:
-
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.9 , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.99, 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 5.  , 0.  , 0.  , 0.  ]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=0).loc[
-            {"disp_col": [max_disparity_col - 2, max_disparity_col - 1, max_disparity_col], "disp_row": 4}
-        ] = [
-            4.9,
-            4.99,
-            5,
-        ]
-
-        # For point [1,0], the best cost value is set for col disparity lower than the maximal one
-        # corresponding cost surface is:
-
-        #    [0.  , 0.  , 4.9 , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.99, 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 5.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=1, col=0).loc[{"disp_col": [-2, -1, 0], "disp_row": 4}] = [
-            4.9,
-            4.99,
-            5,
-        ]
-
-        return zeros_cost_volumes
 
     @pytest.fixture()
     def dataset_disp_maps(self, invalid_disparity, rows, cols):
@@ -1377,12 +1279,19 @@ class TestInvalidDisparity:
             attrs={"invalid_disp": invalid_disparity},
         )
 
-    def test_uniform_disparity_grid(
+    @pytest.mark.parametrize(
+        "image_fixture",
+        [
+            pytest.param("left_img", id="uniform disparity grid"),
+            pytest.param("left_img_non_uniform_grid", id="non-uniform disparity grid"),
+        ],
+    )
+    def test_disparity_grid(
         self,
         request,
-        cost_volumes,
+        sparse_cost_volumes,
         dataset_disp_maps,
-        left_img,
+        image_fixture,
         dichotomy_instance_name,
         invalid_disparity,
         mocker: MockerFixture,
@@ -1395,42 +1304,20 @@ class TestInvalidDisparity:
         copy_disp_map = copy.deepcopy(dataset_disp_maps)
 
         dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+        left_image = request.getfixturevalue(image_fixture)
+
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
+            sparse_cost_volumes, copy_disp_map, left_image, img_right=mocker.ANY
         )
 
+        # point [0,2] is invalid --> row map is invalid
         assert result_disp_row[0, 2] == invalid_disparity or np.isnan(dataset_disp_maps["row_map"][0, 2])
+        # point [0,1] is valid --> changed row map value after dichotomy loop
         assert result_disp_row[0, 1] != dataset_disp_maps["row_map"][0, 1]
 
+        # point [0,0] is invalid --> col map is invalid
         assert result_disp_col[0, 0] == invalid_disparity or np.isnan(dataset_disp_maps["col_map"][0, 0])
-        assert result_disp_col[1, 0] != dataset_disp_maps["col_map"][1, 0]
-
-    def test_non_uniform_disparity_grid(  # pylint: disable=too-many-arguments
-        self,
-        request,
-        cost_volumes,
-        dataset_disp_maps,
-        left_img_non_uniform_grid,
-        dichotomy_instance_name,
-        invalid_disparity,
-        mocker: MockerFixture,
-    ):
-        """
-        Test that points for which best cost value is on the edge of disparity range
-        are not processed by dichotomy loop using non-uniform disparity grids
-        """
-
-        copy_disp_map = copy.deepcopy(dataset_disp_maps)
-
-        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
-        result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, left_img_non_uniform_grid, img_right=mocker.ANY
-        )
-
-        assert result_disp_row[0, 2] == invalid_disparity or np.isnan(dataset_disp_maps["row_map"][0, 2])
-        assert result_disp_row[0, 1] != dataset_disp_maps["row_map"][0, 1]
-
-        assert result_disp_col[0, 0] == invalid_disparity or np.isnan(dataset_disp_maps["col_map"][0, 0])
+        # point [1,0] is valid --> changed col map value after dichotomy loop
         assert result_disp_col[1, 0] != dataset_disp_maps["col_map"][1, 0]
 
 
