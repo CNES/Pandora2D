@@ -22,7 +22,7 @@
 """
 Tests pandora2d machine execution with mutual information
 """
-
+import time
 import pytest
 import numpy as np
 
@@ -130,3 +130,57 @@ class TestMutualInformation:
 
         invalid_point = np.where(pandora2d_machine.cost_volumes["criteria"].data != 0)
         assert np.all(pandora2d_machine.cost_volumes["cost_volumes"].data[invalid_point] == 0)
+
+    @pytest.mark.parametrize("subpix", [1])
+    @pytest.mark.parametrize("window_size", [5])
+    @pytest.mark.parametrize("step", [[1, 1]])
+    @pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 150}, "row": {"first": 100, "last": 150}}])
+    @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
+    @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
+    def test_computation_time_with_mask(self, make_cfg_for_mutual_information, full_invalid_mask_path):
+        """
+        Description : Test that the matching cost step with mutual information is faster when
+        using an input mask. (Some points are not computed in this case)
+        Data :
+            * Left_img : cones/monoband/left.png
+            * Right_img : cones/monoband/right.png
+        """
+
+        # Computation without mask
+
+        pandora2d_machine = Pandora2DMachine()
+
+        cfg = check_conf(make_cfg_for_mutual_information, pandora2d_machine)
+
+        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+
+        image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+
+        # Run matching cost step
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+        start_time = time.time()
+        pandora2d_machine.run("matching_cost", cfg)
+        duration = time.time() - start_time
+
+        # Computation with mask
+
+        pandora2d_machine = Pandora2DMachine()
+
+        cfg = check_conf(make_cfg_for_mutual_information, pandora2d_machine)
+
+        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+
+        cfg["input"]["left"]["mask"] = full_invalid_mask_path
+
+        image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+
+        # Run matching cost step
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+        start_time_mask = time.time()
+        pandora2d_machine.run("matching_cost", cfg)
+        duration_mask = time.time() - start_time_mask
+
+        # Check that the more invalid points, the faster the mutual information computation.
+        assert duration > duration_mask
