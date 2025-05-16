@@ -38,6 +38,7 @@ from typing import List, Dict, Union, NamedTuple, Any, Tuple
 from math import floor
 from numpy.typing import NDArray
 from rasterio.windows import Window
+from rasterio.io import DatasetReader
 
 import xarray as xr
 import numpy as np
@@ -294,8 +295,7 @@ def get_margins_values(init_value: Union[int, np.ndarray], range_value: int, mar
     :rtype: Tuple[int, int]
     """
 
-    disp_min = int(np.min(init_value)) - range_value
-    disp_max = int(np.max(init_value)) + range_value
+    disp_min, disp_max = get_extrema_disparity(init_value, range_value)
 
     return max(margins[0] - disp_min, 0), max(margins[1] + disp_max, 0)
 
@@ -321,21 +321,14 @@ def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> d
 
     new_roi = copy.deepcopy(roi)
 
-    if isinstance(col_disparity["init"], str) and isinstance(row_disparity["init"], str):
-        disparity_row_init = pandora_img_tools.rasterio_open(row_disparity["init"]).read()
-        disparity_col_init = pandora_img_tools.rasterio_open(col_disparity["init"]).read()
-    else:
-        disparity_row_init = row_disparity["init"]
-        disparity_col_init = col_disparity["init"]
-
-    col_range = col_disparity["range"]
-    row_range = row_disparity["range"]
+    disparity_row_init = get_initial_disparity(row_disparity)
+    disparity_col_init = get_initial_disparity(col_disparity)
 
     # for columns
-    left, right = get_margins_values(disparity_col_init, col_range, [roi["margins"][0], roi["margins"][2]])
+    left, right = get_margins_values(disparity_col_init, col_disparity["range"], [roi["margins"][0], roi["margins"][2]])
 
     # for rows
-    up, down = get_margins_values(disparity_row_init, row_range, [roi["margins"][1], roi["margins"][3]])
+    up, down = get_margins_values(disparity_row_init, row_disparity["range"], [roi["margins"][1], roi["margins"][3]])
 
     new_roi["margins"] = (left, up, right, down)
 
@@ -567,3 +560,39 @@ def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> L
         img_right_shift_2d += shift_subpix_img(img, subpix, row=False, order=order)
 
     return img_right_shift_2d
+
+
+def get_initial_disparity(disparity: Dict) -> Union[DatasetReader, int]:
+    """
+    Return initial disparity
+
+    :param disparity: init and range for disparities in columns.
+    :type disparity: Dict
+    :return: initial disparity
+    :rtype: Union[DatasetReader, int]
+    """
+
+    if isinstance(disparity["init"], str):
+        disparity_init = pandora_img_tools.rasterio_open(disparity["init"]).read()
+    else:
+        disparity_init = disparity["init"]
+
+    return disparity_init
+
+
+def get_extrema_disparity(init_value: Union[DatasetReader, int], range_value: int) -> Tuple[int, int]:
+    """
+    Returns [min, max] disparity
+
+    :param init: initial disparity
+    :type init: Union[DatasetReader, int]
+    :param range: disparity exploration value
+    :type range: int
+    :return: [min disparity, max disparity]
+    :rtype: Tuple[int, int]
+    """
+
+    disp_min = int(np.min(init_value)) - range_value
+    disp_max = int(np.max(init_value)) + range_value
+
+    return disp_min, disp_max
