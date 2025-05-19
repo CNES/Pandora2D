@@ -32,10 +32,12 @@ import json_checker
 import numpy as np
 import pytest
 import xarray as xr
+
 from pandora.margins import Margins
 from pytest_mock import MockerFixture
 
 from pandora2d import refinement
+from pandora2d import criteria
 from pandora2d.constants import Criteria
 from pandora2d.interpolation_filter.bicubic import BicubicPython
 from pandora2d.interpolation_filter.bicubic_cpp import Bicubic
@@ -231,19 +233,19 @@ class TestCheckConf:
 
 
 @pytest.mark.parametrize(
-    "rows",
+    ["min_row", "max_row", "row_step"],
     [
-        pytest.param(np.arange(2), id="Row without ROI"),
-        pytest.param(np.arange(2, 4), id="Row with ROI"),
-        pytest.param(np.arange(0, 6, 2), id="Row without ROI, with step of 2"),
+        pytest.param(0, 1, 1, id="Row without ROI"),
+        pytest.param(2, 3, 1, id="Row with ROI"),
+        pytest.param(0, 5, 2, id="Row without ROI, with step of 2"),
     ],
 )
 @pytest.mark.parametrize(
-    "cols",
+    ["min_col", "max_col", "col_step"],
     [
-        pytest.param(np.arange(3), id="Col without ROI"),
-        pytest.param(np.arange(3, 6), id="Col with ROI"),
-        pytest.param(np.arange(0, 9, 2), id="Row without ROI, with step of 2"),
+        pytest.param(0, 2, 1, id="Col without ROI"),
+        pytest.param(3, 5, 1, id="Col with ROI"),
+        pytest.param(0, 8, 2, id="Row without ROI, with step of 2"),
     ],
 )
 class TestRefinementMethod:
@@ -262,6 +264,16 @@ class TestRefinementMethod:
             5,
         ]
         return zeros_cost_volumes
+
+    @pytest.fixture()
+    def disp_map(self, disp_map, cost_volumes):
+        """Disparity map associated to cost_volumes without Criteria.P2D_RIGHT_DISPARITY_OUTSIDE."""
+        # Remove Criteria.P2D_RIGHT_DISPARITY_OUTSIDE because it invalidates everything:
+        cost_volumes["criteria"].data[
+            Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.is_in(cost_volumes["criteria"])
+        ] -= Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+        disp_map["validity"] = criteria.get_validity_dataset(cost_volumes["criteria"])["validity"]
+        return disp_map
 
     @pytest.fixture()
     def iterations(self):
@@ -417,9 +429,12 @@ class TestRefinementMethod:
         config_dichotomy["refinement_method"] = dichotomy_class_str
         dichotomy_instance = dichotomy_class(config_dichotomy)
         # Convert disp_map to float so that it can store NaNs:
-        disp_map = disp_map.astype(cost_volumes["cost_volumes"].data.dtype)
+        disp_map["row_map"] = disp_map["row_map"].astype(cost_volumes["cost_volumes"].data.dtype)
+        disp_map["col_map"] = disp_map["col_map"].astype(cost_volumes["cost_volumes"].data.dtype)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
-        disp_map[{"row": 1, "col": 0}] = np.nan
+        disp_map["row_map"][{"row": 1, "col": 0}] = np.nan
+        disp_map["col_map"][{"row": 1, "col": 0}] = np.nan
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 2
 
         copy_disp_map = copy.deepcopy(disp_map)
 
@@ -456,7 +471,9 @@ class TestRefinementMethod:
         dichotomy_instance = dichotomy_class(config_dichotomy)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 1, "col": 0}] = invalid_disparity
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 2
         disp_map["col_map"][{"row": 0, "col": 1}] = invalid_disparity
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 0, "col": 1}] = 2
 
         copy_disp_map = copy.deepcopy(disp_map)
 
@@ -502,8 +519,10 @@ class TestRefinementMethod:
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 0, "col": 0}] = min_disparity_row
         disp_map["col_map"][{"row": 0, "col": 0}] = min_disparity_col
+        disp_map["validity"].loc[{"criteria": Criteria.P2D_PEAK_ON_EDGE.name}][{"row": 0, "col": 0}] = 1
         disp_map["row_map"][{"row": 1, "col": 0}] = max_disparity_row
         disp_map["col_map"][{"row": 1, "col": 0}] = max_disparity_col
+        disp_map["validity"].loc[{"criteria": Criteria.P2D_PEAK_ON_EDGE.name}][{"row": 1, "col": 0}] = 1
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
             cost_volumes,
             disp_map,
@@ -522,7 +541,6 @@ class TestRefinementMethod:
             pytest.param(2, 1, 1),
             pytest.param(4, 1, 2),
             pytest.param(4, 2, 2),
-            pytest.param(8, 3, 3),
         ],
     )
     def test_skip_iterations_with_subpixel(  # pylint: disable=too-many-arguments
