@@ -271,7 +271,7 @@ class TestRefinementMethod:
         # Remove Criteria.P2D_RIGHT_DISPARITY_OUTSIDE because it invalidates everything:
         cost_volumes["criteria"].data[
             Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.is_in(cost_volumes["criteria"])
-        ] -= Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+        ] -= np.uint8(Criteria.P2D_RIGHT_DISPARITY_OUTSIDE)
         disp_map["validity"] = criteria.get_validity_dataset(cost_volumes["criteria"])["validity"]
         return disp_map
 
