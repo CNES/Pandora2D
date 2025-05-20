@@ -1244,12 +1244,12 @@ class TestExtremaOnEdges:
         # Extrema on the edge of row disparity range for point [0,2] --> unchanged row map value after dichotomy loop
         assert result_disp_row[0, 2] == dataset_disp_maps["row_map"][0, 2]
         # Extrema not on the edge for point [0,1] --> changed row map value after dichotomy loop
-        assert result_disp_row[0, 1] != dataset_disp_maps["row_map"][0, 1]
+        assert result_disp_row[0, 1] == dataset_disp_maps["row_map"][0, 1] - 0.25
 
         # Extrema on the edge of col disparity range for point [0,0] --> unchanged col map value after dichotomy loop
         assert result_disp_col[0, 0] == dataset_disp_maps["col_map"][0, 0]
         # Extrema not on the edge for point [1,0] --> changed col map value after dichotomy loop
-        assert result_disp_col[1, 0] != dataset_disp_maps["col_map"][1, 0]
+        assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
 
 
 @pytest.mark.parametrize("invalid_disparity", [-9999, np.nan])
@@ -1334,12 +1334,12 @@ class TestInvalidDisparity:
         # point [0,2] is invalid --> row map is invalid
         assert result_disp_row[0, 2] == invalid_disparity or np.isnan(dataset_disp_maps["row_map"][0, 2])
         # point [0,1] is valid --> changed row map value after dichotomy loop
-        assert result_disp_row[0, 1] != dataset_disp_maps["row_map"][0, 1]
+        assert result_disp_row[0, 1] == dataset_disp_maps["row_map"][0, 1] - 0.25
 
         # point [0,0] is invalid --> col map is invalid
         assert result_disp_col[0, 0] == invalid_disparity or np.isnan(dataset_disp_maps["col_map"][0, 0])
         # point [1,0] is valid --> changed col map value after dichotomy loop
-        assert result_disp_col[1, 0] != dataset_disp_maps["col_map"][1, 0]
+        assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
 
 
 class TestChangeDisparityToIndex:
