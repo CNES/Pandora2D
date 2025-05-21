@@ -1019,7 +1019,7 @@ def left_img_non_uniform_grid(left_img):
 
 
 @pytest.fixture()
-def sparse_cost_volumes(zeros_cost_volumes, min_disparity_row, max_disparity_col):
+def sparse_cost_volumes(zeros_cost_volumes, min_disparity_row):
     """Build cost volumes."""
     # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
     # but use coordinates for disp_row and disp_col
@@ -1111,11 +1111,12 @@ class TestExtremaOnEdges:
     """
 
     @pytest.fixture()
-    def dataset_disp_maps_from_uniform_grid(
+    def dataset_disp_maps(
         self,
+        request,
         invalid_disparity,
         sparse_cost_volumes,
-        left_img,
+        left_image_fixture_name,
         rows,
         cols,
         min_disparity_row,
@@ -1156,69 +1157,23 @@ class TestExtremaOnEdges:
             attrs={"invalid_disp": invalid_disparity},
         )
         coords = (sparse_cost_volumes.coords["row"], sparse_cost_volumes.coords["col"])
-        criteria.apply_peak_on_edge(result["validity"], left_img, coords, row, col)
-
-        # Peak on edge map is equal to:
-        # [[0, 0, 1],
-        #  [0, 1, 1]]
-
-        return result
-
-    @pytest.fixture()
-    def dataset_disp_maps_from_non_uniform_grid(
-        self,
-        dataset_disp_maps_from_uniform_grid,
-        sparse_cost_volumes,
-        invalid_disparity,
-        rows,
-        cols,
-        left_img_non_uniform_grid,
-    ):
-        """Fake disparity maps containing extrema on edges of disparity range."""
-
-        # Build criteria with only `validity_mask` and P2D_PEAK_ON_EDGE
-        criteria_data = np.full((rows.size, cols.size, 2), 0, dtype=np.uint8)
-
-        row = dataset_disp_maps_from_uniform_grid["row_map"].data
-
-        # row map is equal to:
-        # [[4., 4., 2.],
-        #  [4., 7., 2.]]
-
-        col = dataset_disp_maps_from_uniform_grid["col_map"].data
-
-        # col map is equal to:
-        # [[0., 0., 0.],
-        #  [0., -2., -2.]]
-
-        result = xr.Dataset(
-            {
-                "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
-                "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
-                "validity": (["row", "col", "criteria"], criteria_data),
-            },
-            coords={
-                "row": rows,
-                "col": cols,
-                "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
-            },
-            attrs={"invalid_disp": invalid_disparity},
+        criteria.apply_peak_on_edge(
+            result["validity"], request.getfixturevalue(left_image_fixture_name), coords, row, col
         )
-        coords = (sparse_cost_volumes.coords["row"], sparse_cost_volumes.coords["col"])
-        criteria.apply_peak_on_edge(result["validity"], left_img_non_uniform_grid, coords, row, col)
-
-        # Peak on edge map is equal to:
-        # [[1, 1, 1],
-        #  [1, 1, 1]]
-
         return result
 
+    @pytest.mark.parametrize(
+        "left_image_fixture_name",
+        [
+            pytest.param("left_img", id="uniform grid"),
+        ],
+    )
     def test_uniform_disparity_grid(
         self,
         request,
         sparse_cost_volumes,
-        dataset_disp_maps_from_uniform_grid,
-        left_img,
+        dataset_disp_maps,
+        left_image_fixture_name,
         dichotomy_instance_name,
         mocker: MockerFixture,
     ):
@@ -1227,11 +1182,12 @@ class TestExtremaOnEdges:
         are not processed by dichotomy loop using uniform disparity grids
         """
 
-        copy_disp_map = copy.deepcopy(dataset_disp_maps_from_uniform_grid)
+        copy_disp_map = copy.deepcopy(dataset_disp_maps)
 
         dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+        left_image = request.getfixturevalue(left_image_fixture_name)
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            sparse_cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
+            sparse_cost_volumes, copy_disp_map, left_image, img_right=mocker.ANY
         )
 
         # result_disp_row is equal to:
@@ -1243,28 +1199,32 @@ class TestExtremaOnEdges:
         # [-0.25     -2.       -2.  ]
 
         # Extrema on the edge of row disparity range for point [0,2] --> unchanged row map value after dichotomy loop
-        assert result_disp_row[0, 2] == dataset_disp_maps_from_uniform_grid["row_map"][0, 2]
+        assert result_disp_row[0, 2] == dataset_disp_maps["row_map"][0, 2]
         # Extrema on the edge of row disparity range for point [1,1] --> unchanged row map value after dichotomy loop
-        assert result_disp_row[1, 1] == dataset_disp_maps_from_uniform_grid["row_map"][1, 1]
+        assert result_disp_row[1, 1] == dataset_disp_maps["row_map"][1, 1]
         # Extrema not on the edge for point [0,1] --> changed row map value after dichotomy loop
-        assert result_disp_row[0, 1] == dataset_disp_maps_from_uniform_grid["row_map"][0, 1] - 0.25
+        assert result_disp_row[0, 1] == dataset_disp_maps["row_map"][0, 1] - 0.25
 
-        # Extrema on the edge of col disparity range for point [0,0] --> unchanged col map value after dichotomy loop
-        assert result_disp_col[0, 0] == dataset_disp_maps_from_uniform_grid["col_map"][0, 0] - 0.25
+        # Extrema not on the edge for point [0,0] --> changed col map value after dichotomy loop
+        assert result_disp_col[0, 0] == dataset_disp_maps["col_map"][0, 0] - 0.25
         # Extrema not on the edge for point [1,0] --> changed col map value after dichotomy loop
-        assert result_disp_col[1, 0] == dataset_disp_maps_from_uniform_grid["col_map"][1, 0] - 0.25
+        assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
         # Extrema on the edge of col disparity range for point [1,1] --> unchanged col map value after dichotomy loop
-        assert result_disp_col[1, 1] == dataset_disp_maps_from_uniform_grid["col_map"][1, 1]
+        assert result_disp_col[1, 1] == dataset_disp_maps["col_map"][1, 1]
 
+    @pytest.mark.parametrize(
+        "left_image_fixture_name",
+        [
+            pytest.param("left_img_non_uniform_grid", id="non-uniform grid"),
+        ],
+    )
     def test_non_uniform_disparity_grid(  # pylint: disable=too-many-arguments
         self,
         request,
         sparse_cost_volumes,
-        dataset_disp_maps_from_non_uniform_grid,
-        left_img_non_uniform_grid,
+        dataset_disp_maps,
+        left_image_fixture_name,
         dichotomy_instance_name,
-        max_disparity_row,
-        min_disparity_col,
         mocker: MockerFixture,
     ):
         """
@@ -1272,11 +1232,12 @@ class TestExtremaOnEdges:
         are not processed by dichotomy loop using non-uniform disparity grids
         """
 
-        copy_disp_map = copy.deepcopy(dataset_disp_maps_from_non_uniform_grid)
+        copy_disp_map = copy.deepcopy(dataset_disp_maps)
 
         dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+        left_image = request.getfixturevalue(left_image_fixture_name)
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            sparse_cost_volumes, copy_disp_map, left_img_non_uniform_grid, img_right=mocker.ANY
+            sparse_cost_volumes, copy_disp_map, left_image, img_right=mocker.ANY
         )
 
         # result_disp_row is equal to:
@@ -1288,16 +1249,16 @@ class TestExtremaOnEdges:
         # [0.      -2.    -2. ]
 
         # Extrema on the edge of row disparity range for point [0,2] --> unchanged row map value after dichotomy loop
-        assert result_disp_row[0, 2] == dataset_disp_maps_from_non_uniform_grid["row_map"][0, 2]
+        assert result_disp_row[0, 2] == dataset_disp_maps["row_map"][0, 2]
         # Extrema on the edge of row disparity range for point [1,1] --> unchanged row map value after dichotomy loop
-        assert result_disp_row[1, 1] == dataset_disp_maps_from_non_uniform_grid["row_map"][1, 1]
+        assert result_disp_row[1, 1] == dataset_disp_maps["row_map"][1, 1]
         # Extrema on the edge of row disparity range for point [0,1] --> unchanged row map value after dichotomy loop
-        assert result_disp_row[0, 1] == dataset_disp_maps_from_non_uniform_grid["row_map"][0, 1]
+        assert result_disp_row[0, 1] == dataset_disp_maps["row_map"][0, 1]
 
-        # Extrema on the edge of col disparity range for point [0,0] --> unchanged col map value after dichotomy loop
-        assert result_disp_col[0, 0] == dataset_disp_maps_from_non_uniform_grid["col_map"][0, 0] - 0.25
+        # Extrema not on the edge for point [0,0] --> changed col map value after dichotomy loop
+        assert result_disp_col[0, 0] == dataset_disp_maps["col_map"][0, 0] - 0.25
         # Extrema on the edge of col disparity range for point [1,0] --> unchanged col map value after dichotomy loop
-        assert result_disp_col[1, 0] == dataset_disp_maps_from_non_uniform_grid["col_map"][1, 0]
+        assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0]
 
 
 @pytest.mark.parametrize("invalid_disparity", [-9999, np.nan])
