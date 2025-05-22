@@ -23,7 +23,6 @@ Test the refinement.dichotomy module.
 # pylint: disable=redefined-outer-name
 # pylint: disable=too-many-lines
 # pylint: disable=too-many-arguments
-# pylint: disable=too-many-positional-arguments
 
 import copy
 import logging
@@ -279,7 +278,7 @@ class TestRefinementMethod:
     def iterations(self):
         return 1
 
-    @pytest.mark.parametrize("subpixel", [1, 2])
+    @pytest.mark.parametrize("subpix", [1, 2])
     @pytest.mark.parametrize(["iterations", "precision"], [[1, 0.5], [2, 0.25], [3, 0.125]])
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
@@ -536,7 +535,7 @@ class TestRefinementMethod:
         assert np.nanmax(result_disp_col) <= max_disparity_col
 
     @pytest.mark.parametrize(
-        ["subpixel", "iterations", "nb_of_skipped"],
+        ["subpix", "iterations", "nb_of_skipped"],
         [
             pytest.param(2, 1, 1),
             pytest.param(4, 1, 2),
@@ -549,7 +548,7 @@ class TestRefinementMethod:
         cost_volumes,
         disp_map,
         left_img,
-        subpixel,
+        subpix,
         nb_of_skipped,
         caplog,
         mocker: MockerFixture,
@@ -567,7 +566,7 @@ class TestRefinementMethod:
         np.testing.assert_array_equal(result_disp_row, disp_map["row_map"])
         np.testing.assert_array_equal(result_disp_col, disp_map["col_map"])
         assert (
-            f"With subpixel of `{subpixel}` the `{nb_of_skipped}` first dichotomy iterations will be skipped."
+            f"With subpixel of `{subpix}` the `{nb_of_skipped}` first dichotomy iterations will be skipped."
             in caplog.messages
         )
 
@@ -1346,7 +1345,7 @@ class TestInvalidDisparity:
 class TestChangeDisparityToIndex:
 
     @pytest.mark.parametrize(
-        ["map", "shift", "subpixel", "expected"],
+        ["map", "shift", "subpix", "expected"],
         [
             pytest.param(
                 xr.DataArray(
@@ -1394,13 +1393,13 @@ class TestChangeDisparityToIndex:
             ),
         ],
     )
-    def test_disparity_to_index(self, map, shift, subpixel, expected):
+    def test_disparity_to_index(self, map, shift, subpix, expected):
         """Test disparity_to_index method"""
-        result = refinement.dichotomy_cpp.disparity_to_index(map, shift, subpixel)
+        result = refinement.dichotomy_cpp.disparity_to_index(map, shift, subpix)
         np.testing.assert_array_equal(result, expected)
 
     @pytest.mark.parametrize(
-        ["map", "shift", "subpixel", "expected"],
+        ["map", "shift", "subpix", "expected"],
         [
             pytest.param(
                 np.array([[0, 1, 2], [1, 1, 2]]),
@@ -1432,7 +1431,7 @@ class TestChangeDisparityToIndex:
             ),
         ],
     )
-    def test_index_to_disparity(self, map, shift, subpixel, expected):
+    def test_index_to_disparity(self, map, shift, subpix, expected):
         """Test index_to_disparity_method"""
-        result = refinement.dichotomy_cpp.index_to_disparity(map, shift, subpixel)
+        result = refinement.dichotomy_cpp.index_to_disparity(map, shift, subpix)
         np.testing.assert_array_equal(result, expected)

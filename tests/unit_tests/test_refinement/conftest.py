@@ -111,21 +111,6 @@ def type_measure():
     return "max"
 
 
-@pytest.fixture()
-def subpixel():
-    return 1
-
-
-@pytest.fixture()
-def matching_cost_config(matching_cost_method, window_size, step, subpixel):
-    return {
-        "matching_cost_method": matching_cost_method,
-        "window_size": window_size,
-        "step": step,
-        "subpix": subpixel,
-    }
-
-
 # Once the criteria for identifying extremas at the edge of disparity ranges has been implemented,
 # this fixture could possibly be removed.
 @pytest.fixture()
