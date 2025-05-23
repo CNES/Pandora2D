@@ -24,19 +24,20 @@ Test the refinement.dichotomy module.
 # pylint: disable=too-many-lines
 # pylint: disable=too-many-arguments
 
-import logging
 import copy
+import logging
 
+import json_checker
 import numpy as np
 import pytest
-import json_checker
-
 import xarray as xr
 
 from pandora.margins import Margins
 from pytest_mock import MockerFixture
 
 from pandora2d import refinement
+from pandora2d import criteria
+from pandora2d.constants import Criteria
 from pandora2d.interpolation_filter.bicubic import BicubicPython
 from pandora2d.interpolation_filter.bicubic_cpp import Bicubic
 
@@ -63,8 +64,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         ["wrong_refinement_method_name", "dichotomy_class"],
         [
-            pytest.param("invalid_name", refinement.dichotomy.DichotomyPython),
-            pytest.param("invalid_name", refinement.dichotomy_cpp.Dichotomy),
+            pytest.param("invalid_name", refinement.dichotomy.DichotomyPython, id="Dichotomy Python"),
+            pytest.param("invalid_name", refinement.dichotomy_cpp.Dichotomy, id="Dichotomy C++"),
         ],
     )
     def test_method_field(self, config_dichotomy, wrong_refinement_method_name, dichotomy_class):
@@ -80,8 +81,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_iterations_below_minimum(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
@@ -96,8 +97,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_iterations_above_maximum(self, config_dichotomy, caplog, dichotomy_class, dichotomy_class_str):
@@ -118,7 +119,10 @@ class TestCheckConf:
     @pytest.mark.parametrize("iterations", [1, 9])
     @pytest.mark.parametrize(
         "dichotomy_instance_name",
-        ["dichotomy_python_instance", "dichotomy_cpp_instance"],
+        [
+            pytest.param("dichotomy_python_instance", id="Dichotomy Python"),
+            pytest.param("dichotomy_cpp_instance", id="Dichotomy C++"),
+        ],
     )
     def test_iterations_in_allowed_range(self, request, iterations, dichotomy_instance_name):
         """It should not fail."""
@@ -128,10 +132,10 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         ["dichotomy_instance_name", "filter_name"],
         [
-            ("dichotomy_python_instance", "bicubic"),
-            ("dichotomy_python_instance", "sinc_python"),
-            ("dichotomy_cpp_instance", "bicubic"),
-            ("dichotomy_cpp_instance", "sinc"),
+            pytest.param("dichotomy_python_instance", "bicubic", id="Dichotomy Python-filter bicubic"),
+            pytest.param("dichotomy_python_instance", "sinc_python", id="Dichotomy Python-filter sinc_python"),
+            pytest.param("dichotomy_cpp_instance", "bicubic", id="Dichotomy C++-filter bicubic"),
+            pytest.param("dichotomy_cpp_instance", "sinc", id="Dichotomy C++-filter sinc"),
         ],
     )
     def test_valid_filter_names(self, request, config_dichotomy, dichotomy_instance_name):
@@ -178,8 +182,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         ["dichotomy_class", "dichotomy_class_str"],
         [
-            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_faild_with_invalid_filter_name(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
@@ -193,8 +197,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_fails_on_missing_keys(self, config_dichotomy, missing, dichotomy_class, dichotomy_class_str):
@@ -213,8 +217,8 @@ class TestCheckConf:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_fails_on_unexpected_key(self, config_dichotomy, dichotomy_class, dichotomy_class_str):
@@ -228,19 +232,19 @@ class TestCheckConf:
 
 
 @pytest.mark.parametrize(
-    "rows",
+    ["min_row", "max_row", "row_step"],
     [
-        pytest.param(np.arange(2), id="Row without ROI"),
-        pytest.param(np.arange(2, 4), id="Row with ROI"),
-        pytest.param(np.arange(0, 6, 2), id="Row without ROI, with step of 2"),
+        pytest.param(0, 1, 1, id="Row without ROI"),
+        pytest.param(2, 3, 1, id="Row with ROI"),
+        pytest.param(0, 5, 2, id="Row without ROI, with step of 2"),
     ],
 )
 @pytest.mark.parametrize(
-    "cols",
+    ["min_col", "max_col", "col_step"],
     [
-        pytest.param(np.arange(3), id="Col without ROI"),
-        pytest.param(np.arange(3, 6), id="Col with ROI"),
-        pytest.param(np.arange(0, 9, 2), id="Row without ROI, with step of 2"),
+        pytest.param(0, 2, 1, id="Col without ROI"),
+        pytest.param(3, 5, 1, id="Col with ROI"),
+        pytest.param(0, 8, 2, id="Row without ROI, with step of 2"),
     ],
 )
 class TestRefinementMethod:
@@ -261,16 +265,26 @@ class TestRefinementMethod:
         return zeros_cost_volumes
 
     @pytest.fixture()
+    def disp_map(self, disp_map, cost_volumes):
+        """Disparity map associated to cost_volumes without Criteria.P2D_RIGHT_DISPARITY_OUTSIDE."""
+        # Remove Criteria.P2D_RIGHT_DISPARITY_OUTSIDE because it invalidates everything:
+        cost_volumes["criteria"].data[Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.is_in(cost_volumes["criteria"])] -= np.uint8(
+            Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+        )
+        disp_map["validity"] = criteria.get_validity_dataset(cost_volumes["criteria"])["validity"]
+        return disp_map
+
+    @pytest.fixture()
     def iterations(self):
         return 1
 
-    @pytest.mark.parametrize("subpixel", [1, 2])
+    @pytest.mark.parametrize("subpix", [1, 2])
     @pytest.mark.parametrize(["iterations", "precision"], [[1, 0.5], [2, 0.25], [3, 0.125]])
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_precision_is_logged(
@@ -330,8 +344,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_result_of_one_iteration(
@@ -362,8 +376,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     @pytest.mark.parametrize("iterations", [2])
@@ -396,8 +410,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_with_nans_in_disp_map(
@@ -414,9 +428,12 @@ class TestRefinementMethod:
         config_dichotomy["refinement_method"] = dichotomy_class_str
         dichotomy_instance = dichotomy_class(config_dichotomy)
         # Convert disp_map to float so that it can store NaNs:
-        disp_map = disp_map.astype(cost_volumes["cost_volumes"].data.dtype)
+        disp_map["row_map"] = disp_map["row_map"].astype(cost_volumes["cost_volumes"].data.dtype)
+        disp_map["col_map"] = disp_map["col_map"].astype(cost_volumes["cost_volumes"].data.dtype)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
-        disp_map[{"row": 1, "col": 0}] = np.nan
+        disp_map["row_map"][{"row": 1, "col": 0}] = np.nan
+        disp_map["col_map"][{"row": 1, "col": 0}] = np.nan
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 2
 
         copy_disp_map = copy.deepcopy(disp_map)
 
@@ -433,8 +450,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_with_invalid_values_in_disp_map(
@@ -453,7 +470,9 @@ class TestRefinementMethod:
         dichotomy_instance = dichotomy_class(config_dichotomy)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 1, "col": 0}] = invalid_disparity
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 2
         disp_map["col_map"][{"row": 0, "col": 1}] = invalid_disparity
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 0, "col": 1}] = 2
 
         copy_disp_map = copy.deepcopy(disp_map)
 
@@ -474,8 +493,8 @@ class TestRefinementMethod:
     @pytest.mark.parametrize(
         "dichotomy_class, dichotomy_class_str",
         [
-            (refinement.dichotomy.DichotomyPython, "dichotomy_python"),
-            (refinement.dichotomy_cpp.Dichotomy, "dichotomy"),
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
         ],
     )
     def test_disparity_map_is_within_range(  # pylint: disable=too-many-arguments
@@ -499,8 +518,10 @@ class TestRefinementMethod:
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 0, "col": 0}] = min_disparity_row
         disp_map["col_map"][{"row": 0, "col": 0}] = min_disparity_col
+        disp_map["validity"].loc[{"criteria": Criteria.P2D_PEAK_ON_EDGE.name}][{"row": 0, "col": 0}] = 1
         disp_map["row_map"][{"row": 1, "col": 0}] = max_disparity_row
         disp_map["col_map"][{"row": 1, "col": 0}] = max_disparity_col
+        disp_map["validity"].loc[{"criteria": Criteria.P2D_PEAK_ON_EDGE.name}][{"row": 1, "col": 0}] = 1
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
             cost_volumes,
             disp_map,
@@ -514,12 +535,11 @@ class TestRefinementMethod:
         assert np.nanmax(result_disp_col) <= max_disparity_col
 
     @pytest.mark.parametrize(
-        ["subpixel", "iterations", "nb_of_skipped"],
+        ["subpix", "iterations", "nb_of_skipped"],
         [
             pytest.param(2, 1, 1),
             pytest.param(4, 1, 2),
             pytest.param(4, 2, 2),
-            pytest.param(8, 3, 3),
         ],
     )
     def test_skip_iterations_with_subpixel(  # pylint: disable=too-many-arguments
@@ -528,7 +548,7 @@ class TestRefinementMethod:
         cost_volumes,
         disp_map,
         left_img,
-        subpixel,
+        subpix,
         nb_of_skipped,
         caplog,
         mocker: MockerFixture,
@@ -546,7 +566,7 @@ class TestRefinementMethod:
         np.testing.assert_array_equal(result_disp_row, disp_map["row_map"])
         np.testing.assert_array_equal(result_disp_col, disp_map["col_map"])
         assert (
-            f"With subpixel of `{subpixel}` the `{nb_of_skipped}` first dichotomy iterations will be skipped."
+            f"With subpixel of `{subpix}` the `{nb_of_skipped}` first dichotomy iterations will be skipped."
             in caplog.messages
         )
 
@@ -566,8 +586,8 @@ def test_pre_computed_filter_fractional_shifts(dichotomy_python_instance, expect
 @pytest.mark.parametrize(
     ["refinement_method", "dichotomy_class"],
     [
-        pytest.param("dichotomy_python", refinement.dichotomy.DichotomyPython),
-        pytest.param("dichotomy", refinement.dichotomy_cpp.Dichotomy),
+        pytest.param("dichotomy_python", refinement.dichotomy.DichotomyPython, id="Dichotomy Python"),
+        pytest.param("dichotomy", refinement.dichotomy_cpp.Dichotomy, id="Dichotomy C++"),
     ],
 )
 @pytest.mark.parametrize(
@@ -983,9 +1003,105 @@ def test_search_new_best_point(
     assert result == expected
 
 
+@pytest.fixture()
+def left_img_non_uniform_grid(left_img):
+    """
+    Creates a left image dataset with non-uniform disparity grids
+    """
+
+    # We set the minimum rows disparity at 4 for the point [0,1]
+    left_img["row_disparity"][0, 0, 1] = 4
+    # We set the maximum columns disparity at 0 for the point [1,0]
+    left_img["col_disparity"][1, 1, 0] = 0
+
+    return left_img
+
+
+@pytest.fixture()
+def sparse_cost_volumes(zeros_cost_volumes, min_disparity_row):
+    """Build cost volumes."""
+    # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
+    # but use coordinates for disp_row and disp_col
+
+    # For point [0,2], the best cost value is set for minimal row disparity
+    # corresponding cost surface is:
+
+    # [[0., 0., 10., 8., 0., 0.],
+    #  [0., 0., 8.,  9., 0., 0.],
+    #  [0., 0., 0.,  0., 0., 0.],
+    #  [0., 0., 0.,  0., 0., 0.],
+    #  [0., 0., 0.,  0., 0., 0.],
+    #  [0., 0., 0.,  0., 0., 0.]]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[
+        {"disp_col": [0, 1], "disp_row": min_disparity_row + 1}
+    ] = [8, 9]
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[{"disp_col": [0, 1], "disp_row": min_disparity_row}] = [
+        10,
+        8,
+    ]
+
+    # For point [0,1], the best cost value is set for row disparity greater than the minimal one
+    # corresponding cost surface is:
+
+    # [[0., 0., 0.,  0., 0., 0.],
+    #  [0., 0., 8.,  9., 0., 0.],
+    #  [0., 0., 10., 8., 0., 0.],
+    #  [0., 0., 0.,  0., 0., 0.],
+    #  [0., 0., 0.,  0., 0., 0.],
+    #  [0., 0., 0.,  0., 0., 0.]]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 3}] = [8, 9]
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 4}] = [10, 8]
+
+    # For point [0,0], the best cost value is set for col disparity greater than the minimal one
+    # corresponding cost surface is:
+
+    # [[0.,  0.,   0., 0., 0., 0.],
+    #  [0.,  0.,   0., 0., 0., 0.],
+    #  [4.9, 4.99, 5., 0., 0., 0.],
+    #  [0.,  0.,   0., 0., 0., 0.],
+    #  [0.,  0.,   0., 0., 0., 0.],
+    #  [0.,  0.,   0., 0., 0., 0.]]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=0).loc[{"disp_col": [-2, -1, 0], "disp_row": 4}] = [4.9, 4.99, 5]
+
+    # For point [1,0], the best cost value is set for col disparity lower than the maximal one
+    # corresponding cost surface is:
+
+    # [[0.  , 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [4.9 , 4.99, 5.  , 0.  , 0.  , 0.  ],
+    #  [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=1, col=0).loc[{"disp_col": [-2, -1, 0], "disp_row": 4}] = [4.9, 4.99, 5]
+
+    # For point [1,1], the best cost value is set for maximal col disparity
+    # corresponding cost surface is:
+
+    # [[0.  , 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [4.9 , 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [4.99, 0.  , 0.  , 0.  , 0.  , 0.  ],
+    #  [5.  , 0.  , 0.  , 0.  , 0.  , 0.  ]]
+
+    zeros_cost_volumes["cost_volumes"].isel(row=1, col=1).loc[{"disp_col": -2, "disp_row": [5, 6, 7]}] = [
+        4.9,
+        4.99,
+        5,
+    ]
+    return zeros_cost_volumes
+
+
 @pytest.mark.parametrize(
     "dichotomy_instance_name",
-    ["dichotomy_python_instance", "dichotomy_cpp_instance"],
+    [
+        pytest.param("dichotomy_python_instance", id="Dichotomy Python"),
+        pytest.param("dichotomy_cpp_instance", id="Dichotomy C++"),
+    ],
 )
 class TestExtremaOnEdges:
     """
@@ -994,124 +1110,71 @@ class TestExtremaOnEdges:
     """
 
     @pytest.fixture()
-    def left_img_non_uniform_grid(self, left_img):
-        """
-        Creates a left image dataset with non uniform disparity grids
-        """
-
-        # We set the minimum rows disparity at 4 for the point [0,1]
-        left_img["row_disparity"][0, 0, 1] = 4
-        # We set the maximum columns disparity at 0 for the point [1,0]
-        left_img["col_disparity"][1, 1, 0] = 0
-
-        return left_img
-
-    @pytest.fixture()
-    def cost_volumes(self, zeros_cost_volumes, min_disparity_row, max_disparity_col):
-        """Build cost volumes."""
-        # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
-        # but use coordinates for disp_row and disp_col
-
-        # For point [0,2], the best cost value is set for minimal row disparity
-        # corresponding cost surface is:
-
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 10., 8.,  0.,  0.,  0.,  0.]
-        #    [ 8.,  9.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #    [ 0.,  0.,  0.,  0.,  0.,  0.]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[
-            {"disp_col": [0, 1], "disp_row": min_disparity_row + 1}
-        ] = [8, 9]
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[
-            {"disp_col": [0, 1], "disp_row": min_disparity_row}
-        ] = [10, 8]
-
-        # For point [0,1], the best cost value is set for row disparity greater than the minimal one
-        # corresponding cost surface is:
-
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  8., 10.,  0.,  0.,  0.]
-        #   [ 0.,  9.,  8.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-        #   [ 0.,  0.,  0.,  0.,  0.,  0.]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 3}] = [8, 9]
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=1).loc[{"disp_col": [0, 1], "disp_row": 4}] = [10, 8]
-
-        # For point [0,0], the best cost value is set for maximal col disparity
-        # corresponding cost surface is:
-
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.9 , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.99, 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 5.  , 0.  , 0.  , 0.  ]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=0).loc[
-            {"disp_col": [max_disparity_col - 2, max_disparity_col - 1, max_disparity_col], "disp_row": 4}
-        ] = [
-            4.9,
-            4.99,
-            5,
-        ]
-
-        # For point [1,0], the best cost value is set for col disparity lower than the maximal one
-        # corresponding cost surface is:
-
-        #    [0.  , 0.  , 4.9 , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 4.99, 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 5.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-        #    [0.  , 0.  , 0.  , 0.  , 0.  , 0.  ]
-
-        zeros_cost_volumes["cost_volumes"].isel(row=1, col=0).loc[{"disp_col": [-2, -1, 0], "disp_row": 4}] = [
-            4.9,
-            4.99,
-            5,
-        ]
-
-        return zeros_cost_volumes
-
-    @pytest.fixture()
-    def dataset_disp_maps(self, invalid_disparity, rows, cols, min_disparity_row, max_disparity_col, min_disparity_col):
+    def dataset_disp_maps(
+        self,
+        request,
+        invalid_disparity,
+        sparse_cost_volumes,
+        left_image_fixture_name,
+        rows,
+        cols,
+        min_disparity_row,
+        max_disparity_row,
+        min_disparity_col,
+    ):
         """Fake disparity maps containing extrema on edges of disparity range."""
+
+        # Build empty criteria with only `validity_mask` and P2D_PEAK_ON_EDGE
+        criteria_data = np.full((rows.size, cols.size, 2), 0, dtype=np.uint8)
 
         row = np.full((rows.size, cols.size), 4.0)
         row[:, 2] = min_disparity_row
-        row[1, 1] = min_disparity_row
+        row[1, 1] = max_disparity_row
 
         # row map is equal to:
-        # [4., 4., 2.]
-        # [4., 2., 2.]
+        # [[4., 4., 2.],
+        #  [4., 7., 2.]]
 
         col = np.full((rows.size, cols.size), 0.0)
-        col[0, 0] = max_disparity_col
         col[1, -2:] = min_disparity_col
 
         # col map is equal to:
-        # [3.,  0.,   0.]
-        # [0., -2.,  -2.]
+        # [[0., 0., 0.],
+        #  [0., -2., -2.]]
 
-        return xr.Dataset(
+        result = xr.Dataset(
             {
                 "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
                 "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
+                "validity": (["row", "col", "criteria"], criteria_data),
             },
             coords={
                 "row": rows,
                 "col": cols,
+                "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
             },
             attrs={"invalid_disp": invalid_disparity},
         )
+        coords = (sparse_cost_volumes.coords["row"], sparse_cost_volumes.coords["col"])
+        criteria.apply_peak_on_edge(
+            result["validity"], request.getfixturevalue(left_image_fixture_name), coords, row, col
+        )
+        return result
 
+    @pytest.mark.parametrize(
+        "left_image_fixture_name",
+        [
+            pytest.param("left_img", id="uniform grid"),
+        ],
+    )
     def test_uniform_disparity_grid(
-        self, request, cost_volumes, dataset_disp_maps, left_img, dichotomy_instance_name, mocker: MockerFixture
+        self,
+        request,
+        sparse_cost_volumes,
+        dataset_disp_maps,
+        left_image_fixture_name,
+        dichotomy_instance_name,
+        mocker: MockerFixture,
     ):
         """
         Test that points for which best cost value is on the edge of disparity range
@@ -1121,82 +1184,168 @@ class TestExtremaOnEdges:
         copy_disp_map = copy.deepcopy(dataset_disp_maps)
 
         dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+        left_image = request.getfixturevalue(left_image_fixture_name)
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
+            sparse_cost_volumes, copy_disp_map, left_image, img_right=mocker.ANY
         )
 
         # result_disp_row is equal to:
         # [4.   3.75 2.  ]
-        # [4.   2.   2.  ]
+        # [4.   7.   2.  ]
 
         # result_disp_col is equal to:
-        # [3.      0.25      0.  ]
-        # [-0.25.  -2.      -2.  ]
+        # [-0.25      0.25      0.  ]
+        # [-0.25     -2.       -2.  ]
 
         # Extrema on the edge of row disparity range for point [0,2] --> unchanged row map value after dichotomy loop
         assert result_disp_row[0, 2] == dataset_disp_maps["row_map"][0, 2]
+        # Extrema on the edge of row disparity range for point [1,1] --> unchanged row map value after dichotomy loop
+        assert result_disp_row[1, 1] == dataset_disp_maps["row_map"][1, 1]
         # Extrema not on the edge for point [0,1] --> changed row map value after dichotomy loop
         assert result_disp_row[0, 1] == dataset_disp_maps["row_map"][0, 1] - 0.25
 
-        # Extrema on the edge of col disparity range for point [0,0] --> unchanged col map value after dichotomy loop
-        assert result_disp_col[0, 0] == dataset_disp_maps["col_map"][0, 0]
+        # Extrema not on the edge for point [0,0] --> changed col map value after dichotomy loop
+        assert result_disp_col[0, 0] == dataset_disp_maps["col_map"][0, 0] - 0.25
         # Extrema not on the edge for point [1,0] --> changed col map value after dichotomy loop
         assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
+        # Extrema on the edge of col disparity range for point [1,1] --> unchanged col map value after dichotomy loop
+        assert result_disp_col[1, 1] == dataset_disp_maps["col_map"][1, 1]
 
+    @pytest.mark.parametrize(
+        "left_image_fixture_name",
+        [
+            pytest.param("left_img_non_uniform_grid", id="non-uniform grid"),
+        ],
+    )
     def test_non_uniform_disparity_grid(  # pylint: disable=too-many-arguments
         self,
         request,
-        cost_volumes,
+        sparse_cost_volumes,
         dataset_disp_maps,
-        left_img_non_uniform_grid,
+        left_image_fixture_name,
         dichotomy_instance_name,
-        max_disparity_row,
-        min_disparity_col,
         mocker: MockerFixture,
     ):
         """
         Test that points for which best cost value is on the edge of disparity range
-        are not processed by dichotomy loop using non uniform disparity grids
+        are not processed by dichotomy loop using non-uniform disparity grids
         """
 
         copy_disp_map = copy.deepcopy(dataset_disp_maps)
 
         dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+        left_image = request.getfixturevalue(left_image_fixture_name)
         result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
-            cost_volumes, copy_disp_map, left_img_non_uniform_grid, img_right=mocker.ANY
+            sparse_cost_volumes, copy_disp_map, left_image, img_right=mocker.ANY
         )
 
         # result_disp_row is equal to:
         # [4.   4.   2.  ]
-        # [4.   2.   2.  ]
+        # [4.   7.   2.  ]
 
         # result_disp_col is equal to:
-        # [3.    0.     0. ]
-        # [0.   -2.    -2. ]
+        # [-0.25    0.     0. ]
+        # [0.      -2.    -2. ]
 
         # Extrema on the edge of row disparity range for point [0,2] --> unchanged row map value after dichotomy loop
         assert result_disp_row[0, 2] == dataset_disp_maps["row_map"][0, 2]
+        # Extrema on the edge of row disparity range for point [1,1] --> unchanged row map value after dichotomy loop
+        assert result_disp_row[1, 1] == dataset_disp_maps["row_map"][1, 1]
         # Extrema on the edge of row disparity range for point [0,1] --> unchanged row map value after dichotomy loop
         assert result_disp_row[0, 1] == dataset_disp_maps["row_map"][0, 1]
 
-        # For point [0,1] row disparity range is not [min_disparity_row, max_disparity_row] but [4, max_disparity_row],
-        # we check that resulting disparity row is in this range.
-        assert result_disp_row[0, 1] in range(4, max_disparity_row + 1)
-
-        # Extrema on the edge of col disparity range for point [0,0] --> unchanged col map value after dichotomy loop
-        assert result_disp_col[0, 0] == dataset_disp_maps["col_map"][0, 0]
+        # Extrema not on the edge for point [0,0] --> changed col map value after dichotomy loop
+        assert result_disp_col[0, 0] == dataset_disp_maps["col_map"][0, 0] - 0.25
         # Extrema on the edge of col disparity range for point [1,0] --> unchanged col map value after dichotomy loop
         assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0]
 
-        # For point [1,0] col disparity range is not [min_disparity_col, max_disparity_col] but [min_disparity_col, 0],
-        # we check that resulting disparity row is in this range.
-        assert result_disp_col[1, 0] in range(min_disparity_col, 0 + 1)
+
+@pytest.mark.parametrize("invalid_disparity", [-9999, np.nan])
+@pytest.mark.parametrize(
+    "dichotomy_instance_name",
+    [
+        pytest.param("dichotomy_python_instance", id="Dichotomy Python"),
+        pytest.param("dichotomy_cpp_instance", id="Dichotomy C++"),
+    ],
+)
+class TestInvalidDisparity:
+    """
+    Test that points for which best cost value is on the edge of disparity range
+    are not processed by dichotomy loop.
+    """
+
+    @pytest.fixture()
+    def dataset_disp_maps(self, invalid_disparity, rows, cols):
+        """Fake disparity maps containing extrema on edges of disparity range."""
+
+        row_criteria = np.full((rows.size, cols.size, 2), 0, dtype=np.uint8)
+
+        row = np.full((rows.size, cols.size), 4.0)
+        row[:, 2] = invalid_disparity
+        row_criteria[:, 2, 0] = 2  # Invalid
+        row[1, 1] = invalid_disparity
+        row_criteria[1, 1, 0] = 2  # Invalid
+
+        col_criteria = np.full((rows.size, cols.size, 2), 0, dtype=np.uint8)
+
+        col = np.full((rows.size, cols.size), 0.0)
+        col[0, 0] = invalid_disparity
+        col_criteria[0, 0, 0] = 2  # Invalid
+        col[1, -2:] = invalid_disparity
+        col_criteria[1, -2:, 0] = 2  # Invalid
+
+        return xr.Dataset(
+            {
+                "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
+                "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
+                "validity": (["row", "col", "criteria"], row_criteria | col_criteria),
+            },
+            coords={
+                "row": rows,
+                "col": cols,
+                "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
+            },
+            attrs={"invalid_disp": invalid_disparity},
+        )
+
+    def test_disparity_grid(
+        self,
+        request,
+        sparse_cost_volumes,
+        dataset_disp_maps,
+        left_img,
+        dichotomy_instance_name,
+        invalid_disparity,
+        mocker: MockerFixture,
+    ):
+        """
+        Test that points for which best cost value is on invalid disparity and
+        are not processed by dichotomy loop using uniform disparity grids
+        """
+
+        copy_disp_map = copy.deepcopy(dataset_disp_maps)
+
+        dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
+
+        result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
+            sparse_cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
+        )
+
+        # point [0,2] is invalid --> row map is invalid
+        assert result_disp_row[0, 2] == invalid_disparity or np.isnan(dataset_disp_maps["row_map"][0, 2])
+        # point [0,1] is valid --> changed row map value after dichotomy loop
+        assert result_disp_row[0, 1] == dataset_disp_maps["row_map"][0, 1] - 0.25
+
+        # point [0,0] is invalid --> col map is invalid
+        assert result_disp_col[0, 0] == invalid_disparity or np.isnan(dataset_disp_maps["col_map"][0, 0])
+        # point [1,0] is valid --> changed col map value after dichotomy loop
+        assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
 
 
 class TestChangeDisparityToIndex:
 
     @pytest.mark.parametrize(
-        ["map", "shift", "subpixel", "expected"],
+        ["map", "shift", "subpix", "expected"],
         [
             pytest.param(
                 xr.DataArray(
@@ -1244,13 +1393,13 @@ class TestChangeDisparityToIndex:
             ),
         ],
     )
-    def test_disparity_to_index(self, map, shift, subpixel, expected):
+    def test_disparity_to_index(self, map, shift, subpix, expected):
         """Test disparity_to_index method"""
-        result = refinement.dichotomy_cpp.disparity_to_index(map, shift, subpixel)
+        result = refinement.dichotomy_cpp.disparity_to_index(map, shift, subpix)
         np.testing.assert_array_equal(result, expected)
 
     @pytest.mark.parametrize(
-        ["map", "shift", "subpixel", "expected"],
+        ["map", "shift", "subpix", "expected"],
         [
             pytest.param(
                 np.array([[0, 1, 2], [1, 1, 2]]),
@@ -1282,7 +1431,7 @@ class TestChangeDisparityToIndex:
             ),
         ],
     )
-    def test_index_to_disparity(self, map, shift, subpixel, expected):
+    def test_index_to_disparity(self, map, shift, subpix, expected):
         """Test index_to_disparity_method"""
-        result = refinement.dichotomy_cpp.index_to_disparity(map, shift, subpixel)
+        result = refinement.dichotomy_cpp.index_to_disparity(map, shift, subpix)
         np.testing.assert_array_equal(result, expected)

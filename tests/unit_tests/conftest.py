@@ -19,6 +19,9 @@
 #
 """Module with global test fixtures."""
 
+# Make pylint happy with fixtures:
+# pylint: disable=redefined-outer-name
+
 from copy import deepcopy
 import numpy as np
 import xarray as xr
@@ -344,3 +347,28 @@ def wrong_size_grid(left_img_shape, create_disparity_grid_fixture):
     init_band = np.random.randint(-3, 4, size=(height - 2, width + 4))
 
     return create_disparity_grid_fixture(init_band, 3, "wrong_size_disparity.tif")
+
+
+@pytest.fixture()
+def matching_cost_method():
+    return "zncc"
+
+
+@pytest.fixture()
+def window_size():
+    return 3
+
+
+@pytest.fixture()
+def subpix():
+    return 1
+
+
+@pytest.fixture()
+def matching_cost_config(matching_cost_method, window_size, step, subpix):
+    return {
+        "matching_cost_method": matching_cost_method,
+        "window_size": window_size,
+        "step": step,
+        "subpix": subpix,
+    }

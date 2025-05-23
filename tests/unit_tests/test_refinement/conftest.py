@@ -25,21 +25,65 @@ Conftest for dichotomy cpp and python versions module.
 
 import numpy as np
 import pytest
-
 import xarray as xr
 
-from pandora2d.matching_cost import PandoraMatchingCostMethods
 from pandora2d import refinement
+from pandora2d.matching_cost import PandoraMatchingCostMethods
 
 
 @pytest.fixture()
-def rows():
-    return np.arange(2)
+def matching_cost_method():
+    return "sad"
 
 
 @pytest.fixture()
-def cols():
-    return np.arange(3)
+def row_step():
+    return 1
+
+
+@pytest.fixture()
+def col_step():
+    return 1
+
+
+@pytest.fixture()
+def step(row_step, col_step):
+    return [row_step, col_step]
+
+
+@pytest.fixture()
+def window_size():
+    return 1
+
+
+@pytest.fixture()
+def min_row():
+    return 0
+
+
+@pytest.fixture()
+def max_row():
+    return 1
+
+
+@pytest.fixture()
+def rows(min_row, max_row, step):
+    return np.arange(min_row, max_row + 1, step[0])
+
+
+@pytest.fixture()
+def min_col():
+    return 0
+
+
+@pytest.fixture()
+def max_col():
+    return 2
+
+
+@pytest.fixture()
+def cols(min_col, max_col, step):
+    return np.arange(min_col, max_col + 1, step[1])
 
 
 @pytest.fixture()
@@ -65,11 +109,6 @@ def max_disparity_col():
 @pytest.fixture()
 def type_measure():
     return "max"
-
-
-@pytest.fixture()
-def subpixel():
-    return 1
 
 
 # Once the criteria for identifying extremas at the edge of disparity ranges has been implemented,
@@ -122,39 +161,20 @@ def left_img(rows, cols, min_disparity_row, max_disparity_row, min_disparity_col
 
 
 @pytest.fixture()
-def zeros_cost_volumes(
-    rows,
-    cols,
-    min_disparity_row,
-    max_disparity_row,
-    min_disparity_col,
-    max_disparity_col,
-    type_measure,
-    subpixel,
-):
-    """Create a cost_volumes full of zeros."""
-    number_of_disparity_col = int((max_disparity_col - min_disparity_col) * subpixel + 1)
-    number_of_disparity_row = int((max_disparity_row - min_disparity_row) * subpixel + 1)
-
-    data = np.zeros((rows.size, cols.size, number_of_disparity_col, number_of_disparity_row))
-    attrs = {
-        "col_disparity_source": [min_disparity_col, max_disparity_col],
-        "row_disparity_source": [min_disparity_row, max_disparity_row],
-        "col_to_compute": 1,
-        "sampling_interval": 1,
-        "type_measure": type_measure,
-        "step": [1, 1],
-        "subpixel": subpixel,
-    }
-
-    return PandoraMatchingCostMethods.allocate_cost_volumes(
-        attrs,
-        rows,
-        cols,
-        np.linspace(min_disparity_row, max_disparity_row, number_of_disparity_row),
-        np.linspace(min_disparity_col, max_disparity_col, number_of_disparity_col),
-        data,
+def right_img(left_img):
+    data = np.roll(left_img["im"].data, 2)
+    data[:2] = 0
+    return left_img.copy(
+        deep=True,
+        data={"im": data, "row_disparity": left_img["row_disparity"], "col_disparity": left_img["col_disparity"]},
     )
+
+
+@pytest.fixture()
+def zeros_cost_volumes(matching_cost_config, left_img, right_img):
+    matching_cost = PandoraMatchingCostMethods(matching_cost_config)
+    matching_cost.allocate(left_img, right_img, matching_cost_config)
+    return matching_cost.cost_volumes
 
 
 @pytest.fixture()
