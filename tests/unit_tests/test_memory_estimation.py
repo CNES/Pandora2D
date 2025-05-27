@@ -21,12 +21,26 @@ This file contains unit tests associated to the pandora2d memory estimation
 """
 
 import tracemalloc
+from contextlib import contextmanager
 import pytest
 from pandora.margins import Margins
 from pandora2d import memory_estimation
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 from pandora2d.check_configuration import check_conf
 from pandora2d.state_machine import Pandora2DMachine
+from pandora2d.criteria import get_criteria_dataarray
+
+
+@contextmanager
+def memory_tracer():
+    """
+    Measure consumed memory
+    """
+    tracemalloc.start()
+    try:
+        yield lambda: tracemalloc.get_traced_memory()[0] / memory_estimation.BYTE_TO_MB
+    finally:
+        tracemalloc.stop()
 
 
 class TestInputSize:
@@ -272,14 +286,12 @@ class TestInputSize:
         memory_computed = 2 * memory_estimation.input_size(height, width, data_variables)
 
         # Memory consumed when creating the two images datasets
-        tracemalloc.start()
-        image_datasets = create_datasets_from_inputs(correct_input_cfg["input"])
-        current, _ = tracemalloc.get_traced_memory()
-        current_mb = current / memory_estimation.BYTE_TO_MB
-        tracemalloc.stop()
+        with memory_tracer() as get_memory:
+            image_datasets = create_datasets_from_inputs(correct_input_cfg["input"])
+            memory_measured = get_memory()
 
         # Check that the estimated image dataset memory corresponds to the measured memory within 10%.
-        assert memory_computed == pytest.approx(current_mb, rel=0.10)
+        assert memory_computed == pytest.approx(memory_measured, rel=0.10)
         # Check that the estimated image dataset memory corresponds to the result of
         # image_dataset.left.nbytes +  image_dataset.right.nbytes
         image_dataset_nbytes = (image_datasets.left.nbytes + image_datasets.right.nbytes) / memory_estimation.BYTE_TO_MB
@@ -318,17 +330,216 @@ class TestInputSize:
         memory_computed = 2 * memory_estimation.input_size(height, width, data_variables)
 
         # Memory consumed when creating the two images datasets
-        tracemalloc.start()
-        image_datasets = create_datasets_from_inputs(cfg["input"], roi)
-        current, _ = tracemalloc.get_traced_memory()
-        current_mb = current / memory_estimation.BYTE_TO_MB
-        tracemalloc.stop()
+        with memory_tracer() as get_memory:
+            image_datasets = create_datasets_from_inputs(cfg["input"], roi)
+            memory_measured = get_memory()
 
         # Check that the estimated image dataset memory corresponds to the measured memory within 25%.
         # Estimated dataset size is 0.37 and measured dataset size is 0.39.
         # Total measured memory is 0.47.
-        assert memory_computed == pytest.approx(current_mb, rel=0.25)
+        assert memory_computed == pytest.approx(memory_measured, rel=0.25)
         # Check that the estimated image dataset memory corresponds to the result of
         # image_dataset.left.nbytes +  image_dataset.right.nbytes
         image_dataset_nbytes = (image_datasets.left.nbytes + image_datasets.right.nbytes) / memory_estimation.BYTE_TO_MB
         assert memory_computed == pytest.approx(image_dataset_nbytes, rel=0.05)
+
+
+class TestCostVolumesSize:
+    """
+    Test methods linked to cost volumes size computation
+    """
+
+    @pytest.mark.parametrize("size", [(375, 450)])  # (height, width)
+    @pytest.mark.parametrize(
+        ["row_disparity", "col_disparity", "step", "subpix", "margins_disp", "data_vars", "expected"],
+        [
+            pytest.param(
+                {"init": 0, "range": 2},
+                {"init": 0, "range": 2},
+                [1, 1],
+                1,
+                Margins(0, 0, 0, 0),
+                ["cost_volumes_float", "criteria"],
+                20.117,
+                id="Float cost volumes",
+            ),
+            pytest.param(
+                {"init": 0, "range": 2},
+                {"init": 0, "range": 2},
+                [1, 1],
+                1,
+                Margins(0, 0, 0, 0),
+                ["cost_volumes_double", "criteria"],
+                36.210,
+                id="Double cost volumes",
+            ),
+            pytest.param(
+                {"init": 0, "range": 2},
+                {"init": 0, "range": 2},
+                [2, 3],
+                1,
+                Margins(0, 0, 0, 0),
+                ["cost_volumes_float", "criteria"],
+                3.362,
+                id="Step=[2,3]",
+            ),
+            pytest.param(
+                {"init": 0, "range": 2},
+                {"init": 0, "range": 2},
+                [1, 1],
+                4,
+                Margins(0, 0, 0, 0),
+                ["cost_volumes_float", "criteria"],
+                232.547,
+                id="Subpix=4",
+            ),
+            pytest.param(
+                {"init": 0, "range": 2},
+                {"init": 0, "range": 2},
+                [1, 1],
+                1,
+                Margins(1, 2, 3, 4),
+                ["cost_volumes_float", "criteria"],
+                79.662,
+                id="Margins_disp=(1,2,3,4)",
+            ),
+            pytest.param(
+                {"init": 2, "range": 1},
+                {"init": -6, "range": 3},
+                [1, 1],
+                1,
+                Margins(0, 0, 0, 0),
+                ["cost_volumes_float", "criteria"],
+                16.898,
+                id="Disp row different from disp col",
+            ),
+            pytest.param(
+                {"init": 2, "range": 1},
+                {"init": -6, "range": 3},
+                [2, 1],
+                4,
+                Margins(1, 3, 2, 5),
+                ["cost_volumes_float", "criteria"],
+                611.964,
+                id="Combinaison of parameters",
+            ),
+        ],
+    )
+    def test_cost_volumes_size(
+        self, matching_cost_config, size, col_disparity, row_disparity, margins_disp, data_vars, expected
+    ):
+        """
+        Test the cost_volumes_size method
+        """
+
+        user_cfg = {
+            "input": {"col_disparity": col_disparity, "row_disparity": row_disparity},
+            "pipeline": {"matching_cost": matching_cost_config},
+        }
+
+        assert (
+            pytest.approx(
+                memory_estimation.cost_volumes_size(user_cfg, size[0], size[1], margins_disp, data_vars), abs=1e-3
+            )
+            == expected
+        )
+
+    def get_cv_coords(self, left_image, cfg, matching_cost_instance, pandora2d_machine):
+        """
+        Get cost volumes coordinates to call allocate_cost_volumes method
+        """
+
+        img_row_coordinates = left_image["im"].coords["row"].values
+        img_col_coordinates = left_image["im"].coords["col"].values
+
+        row_coords, col_coords = matching_cost_instance.get_cv_row_col_coords(
+            img_row_coordinates, img_col_coordinates, cfg
+        )
+        # Get disparity coordinates for cost_volumes
+        disps_row_coords = matching_cost_instance.get_disp_row_coords(
+            left_image, pandora2d_machine.margins_disp.global_margins
+        )
+        disps_col_coords = matching_cost_instance.get_disp_col_coords(
+            left_image, pandora2d_machine.margins_disp.global_margins
+        )
+
+        return row_coords, col_coords, disps_row_coords, disps_col_coords
+
+    def get_cv_attributes(self, left_image, matching_cost_cfg, pandora2d_machine):
+        """
+        Get cost volumes attributes to call allocate_cost_volumes method
+        """
+
+        grid_attrs = left_image.attrs
+
+        grid_attrs.update(
+            {
+                "window_size": matching_cost_cfg["window_size"],
+                "subpixel": matching_cost_cfg["subpix"],
+                "offset_row_col": int((matching_cost_cfg["window_size"] - 1) / 2),
+                "measure": matching_cost_cfg["matching_cost_method"],
+                "type_measure": "max",
+                "disparity_margins": pandora2d_machine.margins_disp.global_margins,
+                "step": matching_cost_cfg["step"],
+            }
+        )
+
+        return grid_attrs
+
+    @pytest.fixture()
+    def user_cfg_cv_memory(self, correct_input_cfg, matching_cost_config):
+        """
+        User configuration to test cost volumes memory estimation
+        """
+
+        user_cfg = {
+            **correct_input_cfg,
+            "pipeline": {
+                "matching_cost": matching_cost_config,
+                "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            },
+            "output": {"path": "memory_cv_output"},
+        }
+
+        return user_cfg
+
+    @pytest.mark.parametrize("subpix", [1, 2, 4])
+    @pytest.mark.parametrize("step", [[1, 1], [2, 1], [3, 3]])
+    def test_memory_cost_volumes(self, user_cfg_cv_memory, matching_cost_object):
+        """
+        Test that the value returned by cost_volumes_size corresponds to the memory occupied by the cost volume dataset.
+        """
+
+        pandora2d_machine = Pandora2DMachine()
+
+        cfg = check_conf(user_cfg_cv_memory, pandora2d_machine)
+
+        # Compute cost volumes size estimation
+        height, width = memory_estimation.get_img_size(cfg["input"]["left"]["img"])
+        memory_computed = memory_estimation.cost_volumes_size(
+            cfg, height, width, pandora2d_machine.margins_disp.global_margins, memory_estimation.CV_FLOAT_DATA_VAR
+        )
+
+        image_datasets = create_datasets_from_inputs(cfg["input"])
+
+        matching_cost_ = matching_cost_object(cfg["pipeline"]["matching_cost"])
+
+        # Get cost volumes coordinates and attributes
+        row_coords, col_coords, disps_row_coords, disps_col_coords = self.get_cv_coords(
+            image_datasets.left, cfg, matching_cost_, pandora2d_machine
+        )
+        grid_attrs = self.get_cv_attributes(image_datasets.left, cfg["pipeline"]["matching_cost"], pandora2d_machine)
+
+        # Memory consumed when allocating the 4D cost volumes dataset
+        with memory_tracer() as get_memory:
+            cost_volumes = matching_cost_.allocate_cost_volumes(
+                grid_attrs, row_coords, col_coords, disps_row_coords, disps_col_coords, None
+            )
+            cost_volumes["criteria"] = get_criteria_dataarray(image_datasets.left, image_datasets.right, cost_volumes)
+            memory_measured = get_memory()
+
+        # Check that the estimated image dataset memory corresponds to the measured memory within 5%.
+        assert memory_computed == pytest.approx(memory_measured, rel=0.05)
+        # Check that the estimated cost volumes dataset memory corresponds to the result of cost_volumes.nbytes
+        cv_nbytes = (cost_volumes.nbytes) / memory_estimation.BYTE_TO_MB
+        assert memory_computed == pytest.approx(cv_nbytes, rel=0.05)
