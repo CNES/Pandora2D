@@ -49,7 +49,7 @@ class BicubicPython(AbstractFilter):
         super().__init__(cfg)
 
     @property
-    def margins(self):
+    def margins(self):  # type: ignore[override]
         """Return filter's Margins."""
         return Margins(1, 1, 2, 2)
 

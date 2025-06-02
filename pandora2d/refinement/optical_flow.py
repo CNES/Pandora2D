@@ -90,7 +90,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         return cfg
 
     @property
-    def margins(self):
+    def margins(self):  # type: ignore[override]
         values = (self._window_size // 2 * ele for _ in range(2) for ele in self._step)
         return Margins(*values)
 

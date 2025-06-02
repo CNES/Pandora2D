@@ -57,7 +57,7 @@ class CardinalSinePython(AbstractFilter):
             raise ValueError(f"fractional_shift greater than 0 and lower than 1 expected, got {fractional_shift}")
 
     @property
-    def margins(self):
+    def margins(self):  # type: ignore[override]
         """Return filter's Margins."""
         return Margins(self._HALF_SIZE, self._HALF_SIZE, self._HALF_SIZE, self._HALF_SIZE)
 
