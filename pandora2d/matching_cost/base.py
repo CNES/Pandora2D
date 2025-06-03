@@ -56,6 +56,7 @@ class BaseMatchingCost(ABC):
         self._spline_order = cast(int, self._cfg["spline_order"])
 
         self.cost_volumes: Union[xr.Dataset, None] = None
+        self.shifted_right_images: List[xr.Dataset] = []
 
     @property
     def schema(self):
@@ -353,6 +354,20 @@ class BaseMatchingCost(ABC):
         )
 
         self.cost_volumes["criteria"] = get_criteria_dataarray(img_left, img_right, self.cost_volumes)
+
+        self.set_shifted_right_images(img_right)
+
+    @abstractmethod
+    def set_shifted_right_images(self, img_right: xr.Dataset) -> None:
+        """
+        Compute shifted by subpix right image and assign `shifted_right_images` attribute.
+
+        :param img_right: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xr.Dataset
+        :return: None
+        """
 
     @abstractmethod
     def compute_cost_volumes(

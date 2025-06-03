@@ -201,6 +201,18 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
         super().allocate(img_left, img_right, cfg, margins)
 
+    def set_shifted_right_images(self, img_right: xr.Dataset) -> None:
+        """
+        Compute shifted by subpix right image and assign `shifted_right_images` attribute.
+
+        :param img_right: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xr.Dataset
+        :return: None
+        """
+        self.shifted_right_images = img_tools.shift_subpix_img(img_right, self._subpix, order=self._spline_order)
+
     def compute_cost_volumes(
         self,
         img_left: xr.Dataset,
@@ -237,28 +249,25 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
         row_index = self.cost_volumes.coords["row"] - img_left.coords["row"].data[0]
 
-        # Contains the shifted right images (with subpixel)
-        imgs_right_shift_subpixel = img_tools.shift_subpix_img(img_right, self._subpix, order=self._spline_order)
-
         for idx, disp_row in enumerate(disps_row):
             i_right = int((disp_row % 1) * self._subpix)
 
-            # Images contained in imgs_right_shift_subpixel are already shifted by 1/subpix.
+            # Images contained in self.shifted_right_images are already shifted by 1/subpix.
             # In order for img_right_shift to contain the right image shifted from disp_row,
             # we call img_tools.shift_disp_row_img with np.floor(disp_row).
 
             # For example if subpix=2 and disp_row=1.5
             # i_right=1
-            # imgs_right_shift_subpixel[i_right] is shifted by 0.5
+            # self.shifted_right_images[i_right] is shifted by 0.5
             # In img_tools.shift_disp_row_img we shift it by np.floor(1.5)=1 --> In addition it is shifted by 1.5
 
             # Another example if subpix=4 and disp_row=-1.25
             # i_right=3
-            # imgs_right_shift_subpixel[i_right] is shifted by 0.75
+            # self.shifted_right_images[i_right] is shifted by 0.75
             # In img_tools.shift_disp_row_img we shift it by np.floor(-1.25)=-2 --> In addition it is shifted by -1.25
 
             # Shift image in the y axis
-            img_right_shift = img_tools.shift_disp_row_img(imgs_right_shift_subpixel[i_right], np.floor(disp_row))
+            img_right_shift = img_tools.shift_disp_row_img(self.shifted_right_images[i_right], np.floor(disp_row))
 
             # Compute cost volume
             cost_volume = self.pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, self.grid)
