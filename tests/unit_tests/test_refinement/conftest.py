@@ -67,7 +67,13 @@ def max_row():
 
 
 @pytest.fixture()
-def rows(min_row, max_row, step):
+def image_row_coordinates(min_row, max_row):
+    return np.arange(min_row, max_row + 1)
+
+
+@pytest.fixture()
+def row_coordinates_with_step(min_row, max_row, step):
+    """Row coordinates used into disparity map and cost volume"""
     return np.arange(min_row, max_row + 1, step[0])
 
 
@@ -82,7 +88,13 @@ def max_col():
 
 
 @pytest.fixture()
-def cols(min_col, max_col, step):
+def image_col_coordinates(min_col, max_col):
+    return np.arange(min_col, max_col + 1)
+
+
+@pytest.fixture()
+def col_coordinates_with_step(min_col, max_col, step):
+    """Col coordinates used into disparity map and cost volume"""
     return np.arange(min_col, max_col + 1, step[1])
 
 
@@ -114,20 +126,27 @@ def type_measure():
 # Once the criteria for identifying extremas at the edge of disparity ranges has been implemented,
 # this fixture could possibly be removed.
 @pytest.fixture()
-def left_img(rows, cols, min_disparity_row, max_disparity_row, min_disparity_col, max_disparity_col):
+def left_img(
+    image_row_coordinates,
+    image_col_coordinates,
+    min_disparity_row,
+    max_disparity_row,
+    min_disparity_col,
+    max_disparity_col,
+):
     """
     Creates a left image dataset
     """
 
     img = xr.Dataset(
-        {"im": (["row", "col"], np.full((rows.size, cols.size), 0))},
-        coords={"row": rows, "col": cols},
+        {"im": (["row", "col"], np.full((image_row_coordinates.size, image_col_coordinates.size), 0))},
+        coords={"row": image_row_coordinates, "col": image_col_coordinates},
     )
 
-    d_min_col = np.full((rows.size, cols.size), min_disparity_col)
-    d_max_col = np.full((rows.size, cols.size), max_disparity_col)
-    d_min_row = np.full((rows.size, cols.size), min_disparity_row)
-    d_max_row = np.full((rows.size, cols.size), max_disparity_row)
+    d_min_col = np.full((image_row_coordinates.size, image_col_coordinates.size), min_disparity_col)
+    d_max_col = np.full((image_row_coordinates.size, image_col_coordinates.size), max_disparity_col)
+    d_min_row = np.full((image_row_coordinates.size, image_col_coordinates.size), min_disparity_row)
+    d_max_row = np.full((image_row_coordinates.size, image_col_coordinates.size), max_disparity_row)
 
     # Once the variable disparity grids have been introduced into pandora2d,
     # it will be possible to call a method such as add_disparity_grid
@@ -192,20 +211,20 @@ def invalid_disparity():
 
 
 @pytest.fixture()
-def disp_map(invalid_disparity, rows, cols):
+def disp_map(invalid_disparity, row_coordinates_with_step, col_coordinates_with_step):
     """Fake disparity maps with alternating values."""
-    row = np.full(rows.size * cols.size, 4.0)
+    row = np.full(row_coordinates_with_step.size * col_coordinates_with_step.size, 4.0)
     row[::2] = 5
-    col = np.full(rows.size * cols.size, 0.0)
+    col = np.full(row_coordinates_with_step.size * col_coordinates_with_step.size, 0.0)
     col[::2] = 1
     return xr.Dataset(
         {
-            "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
-            "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
+            "row_map": (["row", "col"], row.reshape((row_coordinates_with_step.size, col_coordinates_with_step.size))),
+            "col_map": (["row", "col"], col.reshape((row_coordinates_with_step.size, col_coordinates_with_step.size))),
         },
         coords={
-            "row": rows,
-            "col": cols,
+            "row": row_coordinates_with_step,
+            "col": col_coordinates_with_step,
         },
         attrs={"invalid_disp": invalid_disparity},
     )

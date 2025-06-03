@@ -1116,8 +1116,8 @@ class TestExtremaOnEdges:
         invalid_disparity,
         sparse_cost_volumes,
         left_image_fixture_name,
-        rows,
-        cols,
+        row_coordinates_with_step,
+        col_coordinates_with_step,
         min_disparity_row,
         max_disparity_row,
         min_disparity_col,
@@ -1125,9 +1125,9 @@ class TestExtremaOnEdges:
         """Fake disparity maps containing extrema on edges of disparity range."""
 
         # Build empty criteria with only `validity_mask` and P2D_PEAK_ON_EDGE
-        criteria_data = np.full((rows.size, cols.size, 2), 0, dtype=np.uint8)
+        criteria_data = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
 
-        row = np.full((rows.size, cols.size), 4.0)
+        row = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 4.0)
         row[:, 2] = min_disparity_row
         row[1, 1] = max_disparity_row
 
@@ -1135,7 +1135,7 @@ class TestExtremaOnEdges:
         # [[4., 4., 2.],
         #  [4., 7., 2.]]
 
-        col = np.full((rows.size, cols.size), 0.0)
+        col = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 0.0)
         col[1, -2:] = min_disparity_col
 
         # col map is equal to:
@@ -1144,13 +1144,19 @@ class TestExtremaOnEdges:
 
         result = xr.Dataset(
             {
-                "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
-                "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
+                "row_map": (
+                    ["row", "col"],
+                    row.reshape((row_coordinates_with_step.size, col_coordinates_with_step.size)),
+                ),
+                "col_map": (
+                    ["row", "col"],
+                    col.reshape((row_coordinates_with_step.size, col_coordinates_with_step.size)),
+                ),
                 "validity": (["row", "col", "criteria"], criteria_data),
             },
             coords={
-                "row": rows,
-                "col": cols,
+                "row": row_coordinates_with_step,
+                "col": col_coordinates_with_step,
                 "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
             },
             attrs={"invalid_disp": invalid_disparity},
@@ -1275,20 +1281,20 @@ class TestInvalidDisparity:
     """
 
     @pytest.fixture()
-    def dataset_disp_maps(self, invalid_disparity, rows, cols):
+    def dataset_disp_maps(self, invalid_disparity, row_coordinates_with_step, col_coordinates_with_step):
         """Fake disparity maps containing extrema on edges of disparity range."""
 
-        row_criteria = np.full((rows.size, cols.size, 2), 0, dtype=np.uint8)
+        row_criteria = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
 
-        row = np.full((rows.size, cols.size), 4.0)
+        row = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 4.0)
         row[:, 2] = invalid_disparity
         row_criteria[:, 2, 0] = 2  # Invalid
         row[1, 1] = invalid_disparity
         row_criteria[1, 1, 0] = 2  # Invalid
 
-        col_criteria = np.full((rows.size, cols.size, 2), 0, dtype=np.uint8)
+        col_criteria = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
 
-        col = np.full((rows.size, cols.size), 0.0)
+        col = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 0.0)
         col[0, 0] = invalid_disparity
         col_criteria[0, 0, 0] = 2  # Invalid
         col[1, -2:] = invalid_disparity
@@ -1296,13 +1302,19 @@ class TestInvalidDisparity:
 
         return xr.Dataset(
             {
-                "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
-                "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
+                "row_map": (
+                    ["row", "col"],
+                    row.reshape((row_coordinates_with_step.size, col_coordinates_with_step.size)),
+                ),
+                "col_map": (
+                    ["row", "col"],
+                    col.reshape((row_coordinates_with_step.size, col_coordinates_with_step.size)),
+                ),
                 "validity": (["row", "col", "criteria"], row_criteria | col_criteria),
             },
             coords={
-                "row": rows,
-                "col": cols,
+                "row": row_coordinates_with_step,
+                "col": col_coordinates_with_step,
                 "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
             },
             attrs={"invalid_disp": invalid_disparity},
