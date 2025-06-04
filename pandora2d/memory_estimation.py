@@ -32,14 +32,21 @@ BYTE_TO_MB = 1024 * 1024
 IMG_DATA_VAR = ["im", "row_disparity_min", "row_disparity_max", "col_disparity_min", "col_disparity_max"]
 # Data variables in image datasets when using input mask
 IMG_DATA_VAR_MASK = ["im", "row_disparity_min", "row_disparity_max", "col_disparity_min", "col_disparity_max", "msk"]
+# Data variables in float32 cost volumes
+CV_FLOAT_DATA_VAR = ["cost_volumes_float", "criteria"]
+# Data variables in float64/double cost volumes
+CV_DOUBLE_DATA_VAR = ["cost_volumes_double", "criteria"]
 
-data_vars_type_size = {
+DATA_VARS_TYPE_SIZE = {
     "im": np.float32().nbytes,
     "row_disparity_min": np.float32().nbytes,
     "row_disparity_max": np.float32().nbytes,
     "col_disparity_min": np.float32().nbytes,
     "col_disparity_max": np.float32().nbytes,
     "msk": np.int16().nbytes,
+    "cost_volumes_float": np.float32().nbytes,
+    "cost_volumes_double": np.float64().nbytes,
+    "criteria": np.uint8().nbytes,
 }
 
 
@@ -139,7 +146,7 @@ def get_roi_margins(row_disparity, col_disparity, global_margins: Margins) -> Ma
     return Margins(left, up, right, down)
 
 
-def img_dataset_size(height: int, width: int, sum_nb_bytes: int) -> float:
+def img_dataset_size(height: int, width: int, nb_bytes: int) -> float:
     """
     Returns image dataset size (MB) according to width, height and sum of the number of bytes corresponding
     to the different data types contained in the image dataset.
@@ -148,13 +155,13 @@ def img_dataset_size(height: int, width: int, sum_nb_bytes: int) -> float:
     :type height: int
     :param width: image or ROI number of columns
     :type width: int
-    :param sum_nb_bytes: sum of the number of bytes.
-    :type sum_nb_bytes: int
+    :param nb_bytes: sum of the number of bytes.
+    :type nb_bytes: int
     :return: size of image dataset in MB
     :rtype: float
     """
 
-    return (height * width * (sum_nb_bytes)) / BYTE_TO_MB
+    return (height * width * (nb_bytes)) / BYTE_TO_MB
 
 
 def input_size(height: int, width: int, data_vars: List[str]) -> float:
@@ -172,10 +179,49 @@ def input_size(height: int, width: int, data_vars: List[str]) -> float:
     :rtype: float
     """
 
-    sum_nb_bytes = 0
-
     # Compute input configuration size according to each data variable contained in the image dataset
-    for data in data_vars:
-        sum_nb_bytes += data_vars_type_size[data]
+    nb_bytes = sum(DATA_VARS_TYPE_SIZE[data_var] for data_var in data_vars)
 
-    return img_dataset_size(height, width, sum_nb_bytes)
+    return img_dataset_size(height, width, nb_bytes)
+
+
+def cost_volumes_size(user_cfg: Dict, height: int, width: int, margins_disp: Margins, data_vars: List[str]) -> float:
+    """
+    Returns 4D cost volumes size (MB) according to image width, height,
+    number of disparities, subpix, step and data variables contained in the cost volumes dataset.
+
+    :param user_cfg: user configuration
+    :type user_cfg: Dict
+    :param height: image or ROI number of rows
+    :type height: int
+    :param width: image or ROI number of columns
+    :type width: int
+    :param margins_disp: disparity margins computed in the check conf
+    :type margins_disp: Margins
+    :param data_vars: data variables contained in the cost_volumes dataset.
+    :type data_vars: List of str
+    :return: size of image dataset in MB
+    :rtype: float
+    """
+
+    nb_disp_row, nb_disp_col = get_nb_disp(user_cfg["input"]["row_disparity"], user_cfg["input"]["col_disparity"])
+
+    # Add disparity margins to get the real disparity numbers in the cost volumes
+    nb_disp_row_with_margins = nb_disp_row + margins_disp.up + margins_disp.down
+    nb_disp_col_with_margins = nb_disp_col + margins_disp.left + margins_disp.right
+    # Get cost volumes parameters used in size estimation
+    subpix = user_cfg["pipeline"]["matching_cost"]["subpix"]
+    step = user_cfg["pipeline"]["matching_cost"]["step"]
+    # Get cost volumes shape
+    cv_shape = (
+        np.ceil(height / step[0])  # nb rows
+        * np.ceil(width / step[1])  # nb cols
+        * ((nb_disp_row_with_margins - 1) * subpix + 1)  # nb disp row
+        * ((nb_disp_col_with_margins - 1) * subpix + 1)  # nb disp col
+    )
+
+    nb_bytes = sum(DATA_VARS_TYPE_SIZE[data_var] for data_var in data_vars)
+
+    cv_size = nb_bytes * cv_shape / BYTE_TO_MB
+
+    return cv_size

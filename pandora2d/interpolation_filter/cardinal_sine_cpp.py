@@ -56,12 +56,12 @@ class CardinalSine(AbstractFilter):
             raise ValueError(f"fractional_shift greater than 0 and lower than 1 expected, got {fractional_shift}")
 
     @property
-    def _SIZE(self):  # pylint: disable=invalid-name
+    def _SIZE(self):  # type: ignore[override] # pylint: disable=invalid-name
         """Return filter's size."""
         return self.cpp_instance.size
 
     @property
-    def margins(self):
+    def margins(self):  # type: ignore[override]
         """Return filter's Margins."""
         cpp_margins = self.cpp_instance.get_margins()
 

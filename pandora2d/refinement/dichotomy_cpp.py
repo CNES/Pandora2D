@@ -78,7 +78,7 @@ class Dichotomy(refinement.AbstractRefinement):
         return cfg
 
     @property
-    def margins(self):
+    def margins(self):  # type: ignore[override]
         """
         Create margins for dichotomy object.
 

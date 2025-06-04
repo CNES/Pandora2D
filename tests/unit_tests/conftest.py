@@ -29,7 +29,7 @@ from rasterio import Affine
 import pytest
 from skimage.io import imsave
 
-from pandora2d import Pandora2DMachine
+from pandora2d import Pandora2DMachine, matching_cost
 from pandora2d.img_tools import add_disparity_grid
 
 
@@ -372,3 +372,14 @@ def matching_cost_config(matching_cost_method, window_size, step, subpix):
         "step": step,
         "subpix": subpix,
     }
+
+
+@pytest.fixture()
+def matching_cost_object(matching_cost_config):
+    """
+    Return the right matching cost object according to matching cost method
+    """
+
+    matching_cost_object = matching_cost.MatchingCostRegistry.get(matching_cost_config["matching_cost_method"])
+
+    return matching_cost_object
