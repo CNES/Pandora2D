@@ -160,7 +160,7 @@ class TestShiftSubpixImg:
             pytest.param(
                 "monoband_image", 4, 3, np.array([0.75, 1.75, 2.75, 3.75, 4.75]), id="monoband image subpix 0.75"
             ),
-            pytest.param("roi_image", 2, 1, np.array([2.5, 3.5, 4.5, 5.5, 6.5]), id="monoband image subpix 0.25"),
+            pytest.param("roi_image", 2, 1, np.array([2.5, 3.5, 4.5, 5.5, 6.5]), id="monoband image subpix 0.5"),
         ],
     )
     def test_row(self, image, subpix, number, expected, request):
@@ -169,7 +169,7 @@ class TestShiftSubpixImg:
         """
         shifted_img = img_tools.shift_subpix_img(request.getfixturevalue(image), subpix, True)
 
-        # check if columns coordinates has been shifted
+        # check if row coordinates has been shifted
         np.testing.assert_array_equal(expected, shifted_img[number].row)
 
     def test_apply_row_and_col(self, monoband_image):

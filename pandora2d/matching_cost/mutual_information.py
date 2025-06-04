@@ -26,6 +26,7 @@ from json_checker import And
 
 import numpy as np
 import xarray as xr
+
 from pandora.margins import Margins
 from pandora.margins.descriptors import HalfWindowMargins
 
@@ -57,6 +58,18 @@ class MutualInformation(BaseMatchingCost):
 
         return schema
 
+    def set_shifted_right_images(self, img_right: xr.Dataset) -> None:
+        """
+        Compute shifted by subpix right image and assign `shifted_right_images` attribute.
+
+        :param img_right: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xr.Dataset
+        :return: None
+        """
+        self.shifted_right_images = shift_subpix_img_2d(img_right, self._subpix)
+
     def compute_cost_volumes(
         self,
         img_left: xr.Dataset,
@@ -82,9 +95,8 @@ class MutualInformation(BaseMatchingCost):
 
         # Add type measure to attributes for WTA
         self.cost_volumes.attrs["type_measure"] = "max"
-        imgs_right_dataset = shift_subpix_img_2d(img_right, self.cost_volumes.attrs["subpixel"])
 
-        imgs_right = [right["im"].values for right in imgs_right_dataset]
+        imgs_right = [right["im"].values for right in self.shifted_right_images]
         cv_values = self.cost_volumes["cost_volumes"].data.astype(np.float64)
         offset_cv_img_row = self.cost_volumes.row.data[0] - img_left.row.data[0]
         offset_cv_img_col = self.cost_volumes.col.data[0] - img_left.col.data[0]
