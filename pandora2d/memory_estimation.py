@@ -148,7 +148,7 @@ def get_roi_margins(row_disparity, col_disparity, global_margins: Margins) -> Ma
 
 def img_dataset_size(height: int, width: int, nb_bytes: int) -> float:
     """
-    Returns image dataset size (MB) according to width, height and sum of the number of bytes corresponding
+    Return image dataset size (MB) according to width, height and sum of the number of bytes corresponding
     to the different data types contained in the image dataset.
 
     :param height: image or ROI number of rows
@@ -164,9 +164,9 @@ def img_dataset_size(height: int, width: int, nb_bytes: int) -> float:
     return (height * width * (nb_bytes)) / BYTE_TO_MB
 
 
-def input_size(height: int, width: int, data_vars: List[str]) -> float:
+def estimate_input_size(height: int, width: int, data_vars: List[str]) -> float:
     """
-    Returns input configuration size (MB) according to image width, height
+    Estimate input configuration size (MB) according to image width, height
     and data variables contained in the image dataset.
 
     :param height: image or ROI number of rows
@@ -185,9 +185,11 @@ def input_size(height: int, width: int, data_vars: List[str]) -> float:
     return img_dataset_size(height, width, nb_bytes)
 
 
-def cost_volumes_size(user_cfg: Dict, height: int, width: int, margins_disp: Margins, data_vars: List[str]) -> float:
+def estimate_cost_volumes_size(
+    user_cfg: Dict, height: int, width: int, margins_disp: Margins, data_vars: List[str]
+) -> float:
     """
-    Returns 4D cost volumes size (MB) according to image width, height,
+    Estimate 4D cost volumes size (MB) according to image width, height,
     number of disparities, subpix, step and data variables contained in the cost volumes dataset.
 
     :param user_cfg: user configuration

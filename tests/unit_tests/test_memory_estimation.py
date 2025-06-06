@@ -287,7 +287,7 @@ class TestInputSize:
         Test the input_size method
         """
 
-        assert pytest.approx(memory_estimation.input_size(height, width, data_vars), abs=1e-3) == expected
+        assert pytest.approx(memory_estimation.estimate_input_size(height, width, data_vars), abs=1e-3) == expected
 
     def test_memory_input(self, correct_input_cfg):
         """
@@ -299,7 +299,7 @@ class TestInputSize:
         data_variables = memory_estimation.IMG_DATA_VAR
 
         # We have a factor of x2 for left and right images
-        memory_computed = 2 * memory_estimation.input_size(height, width, data_variables)
+        memory_computed = 2 * memory_estimation.estimate_input_size(height, width, data_variables)
 
         # Memory consumed when creating the two images datasets
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
@@ -342,7 +342,7 @@ class TestInputSize:
         data_variables = memory_estimation.IMG_DATA_VAR
 
         # We have a factor of x2 for left and right images
-        memory_computed = 2 * memory_estimation.input_size(height, width, data_variables)
+        memory_computed = 2 * memory_estimation.estimate_input_size(height, width, data_variables)
 
         # Memory consumed when creating the two images datasets
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
@@ -453,7 +453,8 @@ class TestCostVolumesSize:
 
         assert (
             pytest.approx(
-                memory_estimation.cost_volumes_size(user_cfg, size[0], size[1], margins_disp, data_vars), abs=1e-3
+                memory_estimation.estimate_cost_volumes_size(user_cfg, size[0], size[1], margins_disp, data_vars),
+                abs=1e-3,
             )
             == expected
         )
@@ -530,7 +531,7 @@ class TestCostVolumesSize:
 
         # Compute cost volumes size estimation
         height, width = memory_estimation.get_img_size(cfg["input"]["left"]["img"])
-        memory_computed = memory_estimation.cost_volumes_size(
+        memory_computed = memory_estimation.estimate_cost_volumes_size(
             cfg, height, width, pandora2d_machine.margins_disp.global_margins, memory_estimation.CV_FLOAT_DATA_VAR
         )
 
