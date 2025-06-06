@@ -225,3 +225,24 @@ def cost_volumes_size(user_cfg: Dict, height: int, width: int, margins_disp: Mar
     cv_size = nb_bytes * cv_shape / BYTE_TO_MB
 
     return cv_size
+
+
+def estimate_shifted_right_images_size(height: int, width: int, subpix: int) -> float:
+    """
+    Estimate the size in MB of the list of shifted right images (excluding the original right image itself).
+
+    :param height: height of image
+    :type height: int
+    :param width: width of image
+    :type width: int
+    :param subpix: subpixel
+    :type subpix:
+    :return: estimated size in MB
+    :rtype: float
+    """
+    one_image_size = img_dataset_size(height, width, DATA_VARS_TYPE_SIZE["im"])
+    # When subpix is 1, no new image is created; instead, a reference to the original right image is used.
+    # As a result, even though the list of shifted right images contains `subpix * subpix` images,
+    # we need to take into account one less image in the memory estimation:
+    number_of_images = subpix * subpix - 1
+    return one_image_size * number_of_images

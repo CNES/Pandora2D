@@ -28,7 +28,7 @@ from pandora.margins import Margins
 from pandora2d import memory_estimation
 from pandora2d.check_configuration import check_conf
 from pandora2d.criteria import get_criteria_dataarray
-from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
+from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing, shift_subpix_img_2d
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -556,3 +556,29 @@ class TestCostVolumesSize:
         # Check that the estimated cost volumes dataset memory corresponds to the result of cost_volumes.nbytes
         cv_nbytes = (cost_volumes.nbytes) / memory_estimation.BYTE_TO_MB
         assert memory_computed == pytest.approx(cv_nbytes, rel=0.05)
+
+
+class TestShiftedRightImages:
+    """Test memory consumption of shifted right images."""
+
+    @pytest.fixture()
+    def right_image(self, correct_input_cfg):
+        return create_datasets_from_inputs(correct_input_cfg["input"]).right
+
+    @pytest.mark.parametrize("subpix", [1, 2, 4])
+    def test(self, right_image, subpix):
+        """Test memory consumption of shifted right images."""
+
+        with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
+            images = shift_subpix_img_2d(right_image, subpix)
+        # We exclude the first image from the count as it is excluded in estimate_shifted_right_images_size
+        images_size = sum(image.nbytes for image in images[1:]) / memory_estimation.BYTE_TO_MB
+
+        result = memory_estimation.estimate_shifted_right_images_size(
+            right_image.dims["row"], right_image.dims["col"], subpix
+        )
+
+        assert result == pytest.approx(images_size, rel=0.05)
+        # When subpix = 1, we approximate with absolute tolerance since we expect a value close to 0,
+        # making relative tolerance irrelevant in this case.
+        assert result == pytest.approx(memory_tracer.current, rel=0.95, abs=1e-2)
