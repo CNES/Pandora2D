@@ -21,26 +21,42 @@ This file contains unit tests associated to the pandora2d memory estimation
 """
 
 import tracemalloc
-from contextlib import contextmanager
+
 import pytest
 from pandora.margins import Margins
+
 from pandora2d import memory_estimation
-from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 from pandora2d.check_configuration import check_conf
-from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.criteria import get_criteria_dataarray
+from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
+from pandora2d.state_machine import Pandora2DMachine
 
 
-@contextmanager
-def memory_tracer():
+class MemoryTracer:
     """
-    Measure consumed memory
+    Measure consumed memory in bytes.
     """
-    tracemalloc.start()
-    try:
-        yield lambda: tracemalloc.get_traced_memory()[0] / memory_estimation.BYTE_TO_MB
-    finally:
+
+    def __init__(self, unit_factor=1):
+        self.unit_factor = unit_factor
+        self._current = 0
+        self._peak = 0
+
+    def __enter__(self):
+        tracemalloc.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._current, self._peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
+
+    @property
+    def current(self):
+        return self._current / self.unit_factor
+
+    @property
+    def peak(self):
+        return self._peak / self.unit_factor
 
 
 class TestInputSize:
@@ -286,12 +302,11 @@ class TestInputSize:
         memory_computed = 2 * memory_estimation.input_size(height, width, data_variables)
 
         # Memory consumed when creating the two images datasets
-        with memory_tracer() as get_memory:
+        with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
             image_datasets = create_datasets_from_inputs(correct_input_cfg["input"])
-            memory_measured = get_memory()
 
         # Check that the estimated image dataset memory corresponds to the measured memory within 10%.
-        assert memory_computed == pytest.approx(memory_measured, rel=0.10)
+        assert memory_computed == pytest.approx(memory_tracer.current, rel=0.10)
         # Check that the estimated image dataset memory corresponds to the result of
         # image_dataset.left.nbytes +  image_dataset.right.nbytes
         image_dataset_nbytes = (image_datasets.left.nbytes + image_datasets.right.nbytes) / memory_estimation.BYTE_TO_MB
@@ -330,14 +345,13 @@ class TestInputSize:
         memory_computed = 2 * memory_estimation.input_size(height, width, data_variables)
 
         # Memory consumed when creating the two images datasets
-        with memory_tracer() as get_memory:
+        with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
             image_datasets = create_datasets_from_inputs(cfg["input"], roi)
-            memory_measured = get_memory()
 
         # Check that the estimated image dataset memory corresponds to the measured memory within 25%.
         # Estimated dataset size is 0.37 and measured dataset size is 0.39.
         # Total measured memory is 0.47.
-        assert memory_computed == pytest.approx(memory_measured, rel=0.25)
+        assert memory_computed == pytest.approx(memory_tracer.current, rel=0.25)
         # Check that the estimated image dataset memory corresponds to the result of
         # image_dataset.left.nbytes +  image_dataset.right.nbytes
         image_dataset_nbytes = (image_datasets.left.nbytes + image_datasets.right.nbytes) / memory_estimation.BYTE_TO_MB
@@ -531,15 +545,14 @@ class TestCostVolumesSize:
         grid_attrs = self.get_cv_attributes(image_datasets.left, cfg["pipeline"]["matching_cost"], pandora2d_machine)
 
         # Memory consumed when allocating the 4D cost volumes dataset
-        with memory_tracer() as get_memory:
+        with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
             cost_volumes = matching_cost_.allocate_cost_volumes(
                 grid_attrs, row_coords, col_coords, disps_row_coords, disps_col_coords, None
             )
             cost_volumes["criteria"] = get_criteria_dataarray(image_datasets.left, image_datasets.right, cost_volumes)
-            memory_measured = get_memory()
 
         # Check that the estimated image dataset memory corresponds to the measured memory within 5%.
-        assert memory_computed == pytest.approx(memory_measured, rel=0.05)
+        assert memory_computed == pytest.approx(memory_tracer.current, rel=0.05)
         # Check that the estimated cost volumes dataset memory corresponds to the result of cost_volumes.nbytes
         cv_nbytes = (cost_volumes.nbytes) / memory_estimation.BYTE_TO_MB
         assert memory_computed == pytest.approx(cv_nbytes, rel=0.05)
