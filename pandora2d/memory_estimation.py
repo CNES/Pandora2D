@@ -148,7 +148,7 @@ def get_roi_margins(row_disparity, col_disparity, global_margins: Margins) -> Ma
 
 def img_dataset_size(height: int, width: int, nb_bytes: int) -> float:
     """
-    Returns image dataset size (MB) according to width, height and sum of the number of bytes corresponding
+    Return image dataset size (MB) according to width, height and sum of the number of bytes corresponding
     to the different data types contained in the image dataset.
 
     :param height: image or ROI number of rows
@@ -164,9 +164,9 @@ def img_dataset_size(height: int, width: int, nb_bytes: int) -> float:
     return (height * width * (nb_bytes)) / BYTE_TO_MB
 
 
-def input_size(height: int, width: int, data_vars: List[str]) -> float:
+def estimate_input_size(height: int, width: int, data_vars: List[str]) -> float:
     """
-    Returns input configuration size (MB) according to image width, height
+    Estimate input configuration size (MB) according to image width, height
     and data variables contained in the image dataset.
 
     :param height: image or ROI number of rows
@@ -185,9 +185,11 @@ def input_size(height: int, width: int, data_vars: List[str]) -> float:
     return img_dataset_size(height, width, nb_bytes)
 
 
-def cost_volumes_size(user_cfg: Dict, height: int, width: int, margins_disp: Margins, data_vars: List[str]) -> float:
+def estimate_cost_volumes_size(
+    user_cfg: Dict, height: int, width: int, margins_disp: Margins, data_vars: List[str]
+) -> float:
     """
-    Returns 4D cost volumes size (MB) according to image width, height,
+    Estimate 4D cost volumes size (MB) according to image width, height,
     number of disparities, subpix, step and data variables contained in the cost volumes dataset.
 
     :param user_cfg: user configuration
@@ -225,3 +227,24 @@ def cost_volumes_size(user_cfg: Dict, height: int, width: int, margins_disp: Mar
     cv_size = nb_bytes * cv_shape / BYTE_TO_MB
 
     return cv_size
+
+
+def estimate_shifted_right_images_size(height: int, width: int, subpix: int) -> float:
+    """
+    Estimate the size in MB of the list of shifted right images (excluding the original right image itself).
+
+    :param height: height of image
+    :type height: int
+    :param width: width of image
+    :type width: int
+    :param subpix: subpixel
+    :type subpix:
+    :return: estimated size in MB
+    :rtype: float
+    """
+    one_image_size = img_dataset_size(height, width, DATA_VARS_TYPE_SIZE["im"])
+    # When subpix is 1, no new image is created; instead, a reference to the original right image is used.
+    # As a result, even though the list of shifted right images contains `subpix * subpix` images,
+    # we need to take into account one less image in the memory estimation:
+    number_of_images = subpix * subpix - 1
+    return one_image_size * number_of_images
