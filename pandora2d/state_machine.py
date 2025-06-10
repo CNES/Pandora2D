@@ -321,6 +321,28 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         self.matching_cost_.allocate(self.left_img, self.right_img, cfg, self.margins_disp.get("refinement"))
 
+        # Compute validity dataset
+        dataset_validity = criteria.get_validity_dataset(self.matching_cost_.cost_volumes["criteria"])
+
+        # Allocate disparity maps dataset
+        self.dataset_disp_maps = common.dataset_disp_maps(
+            self.matching_cost_.cost_volumes.coords,
+            dataset_validity,
+            {
+                "offset": {
+                    "row": cfg.get("ROI", {}).get("row", {}).get("first", 0),
+                    "col": cfg.get("ROI", {}).get("col", {}).get("first", 0),
+                },
+                "step": {
+                    "row": cfg["pipeline"]["matching_cost"]["step"][0],
+                    "col": cfg["pipeline"]["matching_cost"]["step"][1],
+                },
+                "invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"],
+                "crs": self.left_img.crs,
+                "transform": self.left_img.transform,
+            },
+        )
+
     @mem_time_profile(name="Estimation step")
     def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -388,28 +410,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         map_col, map_row, correlation_score = disparity_.compute_disp_maps(self.cost_volumes)
 
-        dataset_validity = criteria.get_validity_dataset(self.cost_volumes["criteria"])
-
-        self.dataset_disp_maps = common.dataset_disp_maps(
-            map_row,
-            map_col,
-            self.cost_volumes.coords,
-            correlation_score,
-            dataset_validity,
-            {
-                "offset": {
-                    "row": cfg.get("ROI", {}).get("row", {}).get("first", 0),
-                    "col": cfg.get("ROI", {}).get("col", {}).get("first", 0),
-                },
-                "step": {
-                    "row": cfg["pipeline"]["matching_cost"]["step"][0],
-                    "col": cfg["pipeline"]["matching_cost"]["step"][1],
-                },
-                "invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"],
-                "crs": self.left_img.crs,
-                "transform": self.left_img.transform,
-            },
-        )
+        common.fill_dataset_disp_maps(self.dataset_disp_maps, map_row, map_col, correlation_score)
 
         cv_coords = (self.cost_volumes.row.values, self.cost_volumes.col.values)
 
@@ -446,6 +447,5 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         refine_map_col, refine_map_row, correlation_score = refinement_run.refinement_method(
             self.cost_volumes, self.dataset_disp_maps, self.left_img, self.right_img
         )
-        self.dataset_disp_maps["row_map"].data = refine_map_row
-        self.dataset_disp_maps["col_map"].data = refine_map_col
-        self.dataset_disp_maps["correlation_score"].data = correlation_score
+
+        common.fill_dataset_disp_maps(self.dataset_disp_maps, refine_map_row, refine_map_col, correlation_score)
