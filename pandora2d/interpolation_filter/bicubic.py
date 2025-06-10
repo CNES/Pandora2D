@@ -21,7 +21,7 @@
 from functools import lru_cache
 
 import numpy as np
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 from .interpolation_filter import AbstractFilter
 
@@ -49,7 +49,7 @@ class BicubicPython(AbstractFilter):
         super().__init__(cfg)
 
     @property
-    def margins(self):  # type: ignore[override]
+    def margins(self):
         """Return filter's Margins."""
         return Margins(1, 1, 2, 2)
 

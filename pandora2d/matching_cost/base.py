@@ -16,20 +16,19 @@
 """
 Module for common base of all MatchingCost methods.
 """
-from abc import ABC, abstractmethod
-from typing import Dict, List, Union, cast, Mapping, Tuple
 import copy
+from abc import ABC, abstractmethod
+from typing import Dict, List, Mapping, Tuple, Union, cast
 
-from numpy.typing import NDArray
 import numpy as np
 import xarray as xr
 from json_checker import And, Checker
-
-from pandora.margins import Margins
+from numpy.typing import NDArray
 from pandora import matching_cost as pandora_matching_cost
 
 import pandora2d.schema as cst_schema
 from pandora2d.criteria import get_criteria_dataarray
+from pandora2d.margins import Margins
 
 
 class BaseMatchingCost(ABC):

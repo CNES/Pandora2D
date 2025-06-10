@@ -23,7 +23,7 @@ This module contains methods associated to the pandora2d memory estimation
 from typing import Tuple, Dict, List
 import numpy as np
 from pandora.img_tools import rasterio_open
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 from pandora2d.img_tools import get_margins_values, get_initial_disparity, get_extrema_disparity
 
 BYTE_TO_MB = 1024 * 1024

@@ -29,7 +29,7 @@ import xarray as xr
 from json_checker import And
 from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 import pandora2d.schema as cst_schema
 from . import refinement
@@ -90,7 +90,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         return cfg
 
     @property
-    def margins(self):  # type: ignore[override]
+    def margins(self):
         values = (self._window_size // 2 * ele for _ in range(2) for ele in self._step)
         return Margins(*values)
 
