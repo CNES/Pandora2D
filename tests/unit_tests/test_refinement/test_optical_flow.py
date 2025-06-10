@@ -493,6 +493,7 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
     """
 
     dataset_validity = criteria.get_validity_dataset(dataset_cv["criteria"])
+    dataset_disp_map = common.dataset_disp_maps(dataset_cv.coords, dataset_validity, {"invalid_disp": np.nan})
 
     disparity_matcher = disparity.Disparity(cfg_disp)
     delta_x, delta_y, score = disparity_matcher.compute_disp_maps(dataset_cv)
@@ -504,13 +505,11 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
     }
     coords = {"row": dataset_cv.row.data, "col": dataset_cv.col.data}
     dataset = xr.Dataset(data_variables, coords)
-    dataset_disp_map = common.dataset_disp_maps(
+    common.fill_dataset_disp_maps(
+        dataset_disp_map,
         dataset.row_map,
         dataset.col_map,
-        dataset.coords,
         dataset.correlation_score,
-        dataset_validity,
-        attributes={"invalid_disp": np.nan},
     )
     return dataset_disp_map
 
@@ -693,12 +692,15 @@ class TestDisparityGrids:
             cfg=cfg,
         )
 
+        dataset_validity = criteria.get_validity_dataset(matching_cost_.cost_volumes["criteria"])
+        dataset_disp_map = common.dataset_disp_maps(
+            matching_cost_.cost_volumes.coords, dataset_validity, {"invalid_disp": invalid_value}
+        )
+
         cost_volumes = matching_cost_.compute_cost_volumes(
             img_left=image,
             img_right=image,
         )
-
-        dataset_validity = criteria.get_validity_dataset(cost_volumes["criteria"])
 
         disparity_matcher = disparity.Disparity({"disparity_method": "wta", "invalid_disparity": invalid_value})
 
@@ -714,13 +716,11 @@ class TestDisparityGrids:
 
         dataset = xr.Dataset(data_variables, coords)
 
-        dataset_disp_map = common.dataset_disp_maps(
+        common.fill_dataset_disp_maps(
+            dataset_disp_map,
             dataset.row_map,
             dataset.col_map,
-            dataset.coords,
             dataset.correlation_score,
-            dataset_validity,
-            attributes={"invalid_disp": invalid_value},
         )
 
         test = refinement.AbstractRefinement(
