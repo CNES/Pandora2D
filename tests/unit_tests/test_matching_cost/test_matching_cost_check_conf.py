@@ -26,7 +26,7 @@ import importlib.util
 import json_checker
 import pytest
 from pandora.matching_cost import AbstractMatchingCost
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 from pandora2d import matching_cost
 

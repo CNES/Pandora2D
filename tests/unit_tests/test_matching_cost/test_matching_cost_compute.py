@@ -34,7 +34,7 @@ from rasterio import Affine
 from skimage.io import imsave
 
 import pytest
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 from pandora2d import matching_cost, disparity
 from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 

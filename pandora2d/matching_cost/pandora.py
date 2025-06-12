@@ -27,7 +27,8 @@ from typing import Dict, List, Union
 import numpy as np
 import xarray as xr
 from pandora import matching_cost
-from pandora.margins import Margins
+from pandora.margins import Margins as PandoraMargins
+from pandora2d.margins import Margins
 
 from pandora2d import img_tools
 from pandora2d.common import (
@@ -136,7 +137,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         # Does nothing as we just want to override superclass behavior
 
     @property
-    def margins(self) -> Margins:
+    def margins(self) -> PandoraMargins:
         """
         Get margins from pandora correlation measurement
 

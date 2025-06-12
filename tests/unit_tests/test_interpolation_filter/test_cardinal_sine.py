@@ -25,7 +25,7 @@ import json_checker.core.exceptions
 import numpy as np
 import pytest
 
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 import pandora2d.interpolation_filter
 import pandora2d.interpolation_filter_cpp.interpolation_filter_bind

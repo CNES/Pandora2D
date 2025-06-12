@@ -23,12 +23,16 @@ This file contains unit tests associated to the pandora2d memory estimation
 import tracemalloc
 
 import pytest
-from pandora.margins import Margins
 
 from pandora2d import memory_estimation
 from pandora2d.check_configuration import check_conf
 from pandora2d.criteria import get_criteria_dataarray
-from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing, shift_subpix_img_2d
+from pandora2d.img_tools import (
+    create_datasets_from_inputs,
+    get_roi_processing,
+    shift_subpix_img_2d,
+)
+from pandora2d.margins import Margins
 from pandora2d.state_machine import Pandora2DMachine
 
 

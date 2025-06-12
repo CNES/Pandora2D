@@ -29,7 +29,7 @@ import math
 import numpy as np
 from json_checker import Checker
 
-from pandora.margins.descriptors import NullMargins
+from pandora2d.margins import NullMargins
 
 
 class AbstractFilter(ABC):
@@ -39,7 +39,6 @@ class AbstractFilter(ABC):
 
     interpolation_filter_methods_avail: Dict = {}
     _interpolation_filter_method = None
-    margins = NullMargins()
     _SIZE = 4
     cpp_instance = None
 
@@ -68,6 +67,11 @@ class AbstractFilter(ABC):
         :return: None
         """
         self.cfg = self.check_conf(cfg)
+
+    @property
+    def margins(self):
+        """Return filter's Margins."""
+        return NullMargins()
 
     def check_conf(self, cfg: Dict) -> Dict:
         """

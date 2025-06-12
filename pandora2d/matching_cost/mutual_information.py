@@ -27,10 +27,10 @@ from json_checker import And
 import numpy as np
 import xarray as xr
 
-from pandora.margins import Margins
-from pandora.margins.descriptors import HalfWindowMargins
+from pandora2d.margins import Margins
 
 from pandora2d.img_tools import shift_subpix_img_2d
+from pandora2d.margins import UniformMargins
 from pandora2d.matching_cost.registry import MatchingCostRegistry
 from .base import BaseMatchingCost
 
@@ -44,7 +44,10 @@ class MutualInformation(BaseMatchingCost):
     Mutual Information class
     """
 
-    margins = HalfWindowMargins()
+    @property
+    def margins(self) -> Margins:
+        """Return matching costs' Margins."""
+        return UniformMargins(int((self._window_size - 1) / 2))
 
     @property
     def schema(self):

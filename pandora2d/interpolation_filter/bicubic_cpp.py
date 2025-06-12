@@ -20,7 +20,7 @@
 
 import numpy as np
 
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 from .interpolation_filter import AbstractFilter
 from ..interpolation_filter_cpp import interpolation_filter_bind
@@ -48,7 +48,7 @@ class Bicubic(AbstractFilter):
         self.cpp_instance = interpolation_filter_bind.Bicubic()
 
     @property
-    def margins(self):  # type: ignore[override]
+    def margins(self):
         """Return filter's Margins."""
 
         cpp_margins = self.cpp_instance.get_margins()

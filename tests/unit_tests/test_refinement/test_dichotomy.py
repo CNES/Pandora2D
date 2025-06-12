@@ -31,15 +31,13 @@ import json_checker
 import numpy as np
 import pytest
 import xarray as xr
-
-from pandora.margins import Margins
 from pytest_mock import MockerFixture
 
-from pandora2d import refinement
-from pandora2d import criteria
+from pandora2d import criteria, refinement
 from pandora2d.constants import Criteria
 from pandora2d.interpolation_filter.bicubic import BicubicPython
 from pandora2d.interpolation_filter.bicubic_cpp import Bicubic
+from pandora2d.margins import Margins
 
 
 def test_factory(dichotomy_python_instance, dichotomy_cpp_instance):

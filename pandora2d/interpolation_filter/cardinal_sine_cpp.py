@@ -24,7 +24,7 @@ import numpy as np
 from json_checker import And, OptionalKey
 from numpy.typing import NDArray
 
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 from .interpolation_filter import AbstractFilter
 from ..interpolation_filter_cpp import interpolation_filter_bind
@@ -61,7 +61,7 @@ class CardinalSine(AbstractFilter):
         return self.cpp_instance.size
 
     @property
-    def margins(self):  # type: ignore[override]
+    def margins(self):
         """Return filter's Margins."""
         cpp_margins = self.cpp_instance.get_margins()
 

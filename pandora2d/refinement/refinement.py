@@ -31,7 +31,7 @@ from json_checker import Checker
 import xarray as xr
 import numpy as np
 
-from pandora.margins.descriptors import NullMargins
+from pandora2d.margins import NullMargins
 
 
 class AbstractRefinement:
@@ -43,7 +43,6 @@ class AbstractRefinement:
 
     refinement_methods_avail: Dict = {}
     _refinement_method = None
-    margins = NullMargins()
 
     schema: Dict  # This will raise an AttributeError if not override in subclasses
 
@@ -122,6 +121,11 @@ class AbstractRefinement:
         :return: None
         """
         self.cfg = self.check_conf(cfg)
+
+    @property
+    def margins(self):
+        """Return refinement's Margins."""
+        return NullMargins()
 
     @classmethod
     def check_conf(cls, cfg: Dict) -> Dict:

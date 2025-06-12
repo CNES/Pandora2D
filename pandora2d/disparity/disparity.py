@@ -28,8 +28,8 @@ from json_checker import Or, And, Checker
 import numpy as np
 import xarray as xr
 
-from pandora.margins.descriptors import NullMargins
-from pandora.margins import Margins
+from pandora2d.margins import NullMargins
+from pandora2d.margins import Margins
 
 from pandora2d.constants import Criteria
 
@@ -40,11 +40,15 @@ class Disparity:
     """
 
     _INVALID_DISPARITY = -9999
-    margins = NullMargins()
 
     def __init__(self, cfg: Dict) -> None:
         self.cfg = self.check_conf(cfg)
         self._invalid_disparity = self.cfg["invalid_disparity"]
+
+    @property
+    def margins(self):
+        """Return disparity map's Margins."""
+        return NullMargins()
 
     def check_conf(self, cfg: Dict) -> Dict:
         """
