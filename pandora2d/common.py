@@ -246,33 +246,24 @@ def set_pixel_size(dataset: xr.Dataset, row_step: int = 1, col_step: int = 1) ->
 
 
 def dataset_disp_maps(
-    delta_row: np.ndarray,
-    delta_col: np.ndarray,
     coords: Coordinates,
-    correlation_score: np.ndarray,
     dataset_validity: xr.Dataset,
     attributes: dict = None,
 ) -> xr.Dataset:
     """
     Create the dataset containing disparity maps and score maps
-
-    :param delta_row: disparity map for row
-    :type delta_row: np.ndarray
-    :param delta_col: disparity map for col
-    :type delta_col: np.ndarray
     :param coords: disparity maps coordinates
     :type coords: xr.Coordinates
-    :param correlation_score: score map
-    :type correlation_score: np.ndarray
     :param dataset_validity: xr.Dataset containing validity informations
     :type dataset_validity: xr.Dataset
     :param attributes: disparity map for col
     :type attributes: dict
-    :return: dataset: Dataset with the disparity maps and score with the data variables :
+    :return: dataset: Dataset with the empty disparity maps and score with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)
             - col_map 2D xarray.DataArray (row, col)
             - score 2D xarray.DataArray (row, col)
+
     :rtype: xarray.Dataset
     """
 
@@ -290,9 +281,11 @@ def dataset_disp_maps(
 
     dims = ("row", "col")
 
-    dataarray_row = xr.DataArray(delta_row, dims=dims, coords=coords)
-    dataarray_col = xr.DataArray(delta_col, dims=dims, coords=coords)
-    dataarray_score = xr.DataArray(correlation_score, dims=dims, coords=coords)
+    # Initialize data arrays filled with invalid_disp value
+    empty_data = np.full((len(coords.get("row")), len(coords.get("col"))), attributes["invalid_disp"])
+    dataarray_row = xr.DataArray(empty_data, dims=dims, coords=coords)
+    dataarray_col = xr.DataArray(empty_data, dims=dims, coords=coords)
+    dataarray_score = xr.DataArray(empty_data, dims=dims, coords=coords)
 
     dataset = xr.Dataset(
         {
@@ -308,6 +301,30 @@ def dataset_disp_maps(
         dataset.attrs = attributes
 
     return dataset
+
+
+def fill_dataset_disp_maps(
+    disparity_dataset: xr.Dataset,
+    delta_row: np.ndarray,
+    delta_col: np.ndarray,
+    correlation_score: np.ndarray,
+) -> None:
+    """
+    Fill the dataset with computed disparity maps and score maps
+
+    :param disparity_dataset: initialized disparity maps dataset
+    :type disparity_dataset: xr.Dataset
+    :param delta_row: disparity map for row
+    :type delta_row: np.ndarray
+    :param delta_col: disparity map for col
+    :type delta_col: np.ndarray
+    :param correlation_score: score map
+    :type correlation_score: np.ndarray
+    """
+
+    disparity_dataset["row_map"].data = delta_row
+    disparity_dataset["col_map"].data = delta_col
+    disparity_dataset["correlation_score"].data = correlation_score
 
 
 def set_out_of_row_disparity_range_to_other_value(
