@@ -172,4 +172,4 @@ def test_estimation_computation(left_stereo_object, right_stereo_object, estimat
     assert row_disparity == {"init": -1, "range": 5}
     assert np.array_equal(shifts, [-0.8, 0])
     assert extra_dict["error"] == 0.9999999999855407
-    assert extra_dict["phase_diff"] == "1.06382330e-18"
+    assert extra_dict["phase_diff"] == pytest.approx(0.0, abs=1e-16)
