@@ -113,8 +113,6 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
             img_left["im"].data, img_right["im"].data, upsample_factor=self._sample_factor
         )
 
-        # reformat outputs
-        phasediff = "{:.{}e}".format(phasediff, 8)
         # -shifts because of pandora2d convention
         row_disparity = {"init": round(-shifts[0]), "range": int(self._range_row)}
         col_disparity = {"init": round(-shifts[1]), "range": int(self._range_col)}
