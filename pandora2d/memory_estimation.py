@@ -90,31 +90,24 @@ def get_img_size(img_path: str, roi: Dict = None) -> Tuple[int, int]:
     return height, width
 
 
-def get_nb_disp(row_disparity: Dict, col_disparity: Dict) -> Tuple[int, int]:
+def get_nb_disp(disparity: Dict) -> int:
     """
-    Get number of row and col disparities
+    Get number of disparities.
 
-    :param row_disparity: init and range for disparities in rows.
-    :type row_disparity: Dict
-    :param col_disparity: init and range for disparities in columns.
-    :type col_disparity: Dict
-    :return:  number of row disparities and number of column disparities
-    :rtype: Tuple[int,int]
+    :param disparity: init and range for disparities.
+    :type disparity: Dict
+    :return:  number of disparities
+    :rtype: int
     """
 
     # Get initial disparity values
-    disparity_row_init = get_initial_disparity(row_disparity)
-    disparity_col_init = get_initial_disparity(col_disparity)
+    initial_disparity = get_initial_disparity(disparity)
 
     # Get minimum and maximum disparities
-    disp_min_row, disp_max_row = get_extrema_disparity(disparity_row_init, row_disparity["range"])
-    disp_min_col, disp_max_col = get_extrema_disparity(disparity_col_init, col_disparity["range"])
+    min_disparity, max_disparity = get_extrema_disparity(initial_disparity, disparity["range"])
 
     # Get number of disparities
-    nb_disp_row = disp_max_row - disp_min_row + 1
-    nb_disp_col = disp_max_col - disp_min_col + 1
-
-    return nb_disp_row, nb_disp_col
+    return max_disparity - min_disparity + 1
 
 
 def get_roi_margins(row_disparity, col_disparity, global_margins: Margins) -> Margins:
@@ -206,7 +199,8 @@ def estimate_cost_volumes_size(
     :rtype: float
     """
 
-    nb_disp_row, nb_disp_col = get_nb_disp(user_cfg["input"]["row_disparity"], user_cfg["input"]["col_disparity"])
+    nb_disp_row = get_nb_disp(user_cfg["input"]["row_disparity"])
+    nb_disp_col = get_nb_disp(user_cfg["input"]["col_disparity"])
 
     # Add disparity margins to get the real disparity numbers in the cost volumes
     nb_disp_row_with_margins = nb_disp_row + margins_disp.up + margins_disp.down

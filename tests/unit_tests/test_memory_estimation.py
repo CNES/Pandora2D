@@ -106,57 +106,51 @@ class TestInputSize:
             memory_estimation.get_img_size(left_img_path, roi)
 
     @pytest.mark.parametrize(
-        ["row_disparity", "col_disparity", "expected"],
+        ["disparity", "expected"],
         [
             pytest.param(
                 {"init": 0, "range": 2},
-                {"init": 0, "range": 3},
-                (5, 7),
+                5,
                 id="Centered disparities",
             ),
             pytest.param(
                 {"init": 3, "range": 1},
-                {"init": 0, "range": 3},
-                (3, 7),
-                id="Positive row disparity",
+                3,
+                id="Positive disparity",
             ),
             pytest.param(
-                {"init": 0, "range": 2},
                 {"init": -5, "range": 4},
-                (5, 9),
-                id="Negative col disparity",
+                9,
+                id="Negative disparity",
             ),
         ],
     )
-    def test_get_nb_disp(self, row_disparity, col_disparity, expected):
+    def test_get_nb_disp(self, disparity, expected):
         """
         Test the get_nb_disp method
         """
 
-        assert memory_estimation.get_nb_disp(row_disparity, col_disparity) == expected
+        assert memory_estimation.get_nb_disp(disparity) == expected
 
     @pytest.mark.parametrize(
-        ["row_disparity", "col_disparity", "expected"],
+        ["disparity", "expected"],
         [
             pytest.param(
                 "correct_grid",
+                14,
+            ),
+            pytest.param(
                 "second_correct_grid",
-                (14, 37),
-                id="Grid disparities",
+                37,
             ),
         ],
     )
-    def test_get_nb_disp_with_grid(self, row_disparity, col_disparity, expected, request):
+    def test_get_nb_disp_with_grid(self, disparity, expected, request):
         """
         Test the get_nb_disp method with grid disparities
         """
 
-        assert (
-            memory_estimation.get_nb_disp(
-                request.getfixturevalue(row_disparity), request.getfixturevalue(col_disparity)
-            )
-            == expected
-        )
+        assert memory_estimation.get_nb_disp(request.getfixturevalue(disparity)) == expected
 
     @pytest.mark.parametrize(
         ["row_disparity", "col_disparity", "global_margins", "expected"],
