@@ -676,4 +676,4 @@ class TestShiftedRightImages:
         assert result == pytest.approx(images_size, rel=0.05)
         # When subpix = 1, we approximate with absolute tolerance since we expect a value close to 0,
         # making relative tolerance irrelevant in this case.
-        assert result == pytest.approx(memory_tracer.current, rel=0.95, abs=1e-2)
+        assert result == pytest.approx(memory_tracer.current, rel=0.05, abs=1e-2)
