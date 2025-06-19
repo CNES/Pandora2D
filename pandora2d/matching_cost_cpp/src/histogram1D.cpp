@@ -29,7 +29,7 @@ This module contains functions associated to histogram.
  *
  * @param _values: on histogram
  * @param _nb_bins: number of bins
- * @param _low_bound: smaller value on histogram
+ * @param _low_bound: smallest value on histogram
  * @param _bins_width: size of one bin on histogram
  */
 Histogram1D::Histogram1D(P2d::VectorD& values,
@@ -42,7 +42,7 @@ Histogram1D::Histogram1D(P2d::VectorD& values,
  * @brief Construct a new Histogram 1D
  *
  * @param _nb_bins: number of bins
- * @param _low_bound: smaller value on histogram
+ * @param _low_bound: smallest value on histogram
  * @param _bins_width: size of one bin on histogram
  */
 Histogram1D::Histogram1D(std::size_t nb_bins, double low_bound, double bins_width)

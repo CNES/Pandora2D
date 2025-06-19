@@ -78,14 +78,12 @@ TEST_CASE("Test calculate_histogram1D function") {
 
     auto hist = calculate_histogram1D(m);
 
-    double up_bound = hist.low_bound() + hist.nb_bins() * hist.bins_width();
-
     check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Ones(2) * 2);
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
     CHECK(hist.low_bound() < m.minCoeff());
-    CHECK(up_bound > m.maxCoeff());
+    CHECK(hist.up_bound() > m.maxCoeff());
   }
 
   SUBCASE("negative low_bound & positive matrix coefficients") {
@@ -97,14 +95,12 @@ TEST_CASE("Test calculate_histogram1D function") {
 
     auto hist = calculate_histogram1D(m);
 
-    double up_bound = hist.low_bound() + hist.nb_bins() * hist.bins_width();
-
     check_inside_eigen_element<P2d::VectorD>(hist.values(), hist_expected);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == doctest::Approx(-1.0795972).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(6.3863981).epsilon(1e-7));
     CHECK(hist.low_bound() < m.minCoeff());
-    CHECK(up_bound > m.maxCoeff());
+    CHECK(hist.up_bound() > m.maxCoeff());
   }
 
   SUBCASE("negative low_bound & matrix coefficients") {
@@ -113,14 +109,12 @@ TEST_CASE("Test calculate_histogram1D function") {
 
     auto hist = calculate_histogram1D(m);
 
-    double up_bound = hist.low_bound() + hist.nb_bins() * hist.bins_width();
-
     check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Ones(2) * 2);
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(-14.9587716).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
     CHECK(hist.low_bound() < m.minCoeff());
-    CHECK(up_bound > m.maxCoeff());
+    CHECK(hist.up_bound() > m.maxCoeff());
   }
 
   SUBCASE("positive & negative matrix coefficients") {
@@ -133,21 +127,17 @@ TEST_CASE("Test calculate_histogram1D function") {
 
     auto hist = calculate_histogram1D(m);
 
-    double up_bound = hist.low_bound() + hist.nb_bins() * hist.bins_width();
-
     check_inside_eigen_element<P2d::VectorD>(hist.values(), hist_expected);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == doctest::Approx(-0.6199559).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(0.5466373).epsilon(1e-7));
     CHECK(hist.low_bound() < m.minCoeff());
-    CHECK(up_bound > m.maxCoeff());
+    CHECK(hist.up_bound() > m.maxCoeff());
   }
 
   SUBCASE("test with a 120 bins image (nb_bins > NB_BINS_MAX)") {
     auto m = create_image(std::size_t(81), 0., 0.5);
     auto hist = calculate_histogram1D(m);
-
-    double up_bound = hist.low_bound() + hist.nb_bins() * hist.bins_width();
 
     auto bins_width = get_bins_width(m);
     auto dynamic_range = m.maxCoeff() - m.minCoeff();
@@ -160,6 +150,6 @@ TEST_CASE("Test calculate_histogram1D function") {
     // the histogram lower bound is greater than the image minimum coefficient,
     // and the histogram upper bound is smaller than the image maximum coefficient.
     CHECK(hist.low_bound() > m.minCoeff());
-    CHECK(up_bound < m.maxCoeff());
+    CHECK(hist.up_bound() < m.maxCoeff());
   }
 }

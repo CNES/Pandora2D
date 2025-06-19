@@ -36,7 +36,7 @@ class Histogram1D {
    * @brief Construct a new Histogram1D object
    * @param values: on histogram
    * @param nb_bins: number of bins
-   * @param low_bound: smaller value on histogram
+   * @param low_bound: smallest value on histogram
    * @param bins_width: size of one bin on histogram
    */
   Histogram1D(P2d::VectorD& values, std::size_t nb_bins, double low_bound, double bins_width);
@@ -44,7 +44,7 @@ class Histogram1D {
   /**
    * @brief Construct a new Histogram1D object
    * @param nb_bins: number of bins
-   * @param low_bound: smaller value on histogram
+   * @param low_bound: smallest value on histogram
    * @param bins_width: size of one bin on histogram
    *
    */
@@ -83,6 +83,13 @@ class Histogram1D {
    * @return double
    */
   double low_bound() const { return m_low_bound; };
+
+  /**
+   * @brief Get the Up Bound object
+   *
+   * @return double
+   */
+  double up_bound() const { return m_low_bound + m_nb_bins * m_bins_width; };
 
   /**
    * @brief Get the Bin Width object
