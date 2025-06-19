@@ -23,6 +23,7 @@ This file contains unit tests associated to the pandora2d memory estimation
 import tracemalloc
 
 import pytest
+import pandora
 
 from pandora2d import memory_estimation
 from pandora2d.check_configuration import check_conf
@@ -32,7 +33,7 @@ from pandora2d.img_tools import (
     get_roi_processing,
     shift_subpix_img_2d,
 )
-from pandora2d.margins import Margins
+from pandora2d.margins import Margins, NullMargins
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -106,57 +107,84 @@ class TestInputSize:
             memory_estimation.get_img_size(left_img_path, roi)
 
     @pytest.mark.parametrize(
-        ["row_disparity", "col_disparity", "expected"],
+        ["disparity", "before_margins", "after_margins", "subpix", "expected"],
         [
             pytest.param(
                 {"init": 0, "range": 2},
-                {"init": 0, "range": 3},
-                (5, 7),
+                0,
+                0,
+                1,
+                5,
                 id="Centered disparities",
             ),
             pytest.param(
                 {"init": 3, "range": 1},
-                {"init": 0, "range": 3},
-                (3, 7),
-                id="Positive row disparity",
+                0,
+                0,
+                1,
+                3,
+                id="Positive disparity",
+            ),
+            pytest.param(
+                {"init": -5, "range": 4},
+                0,
+                0,
+                1,
+                9,
+                id="Negative disparity",
             ),
             pytest.param(
                 {"init": 0, "range": 2},
-                {"init": -5, "range": 4},
-                (5, 9),
-                id="Negative col disparity",
+                2,
+                0,
+                1,
+                7,
+                id="Centered disparities with before margins",
+            ),
+            pytest.param(
+                {"init": 0, "range": 2},
+                0,
+                4,
+                1,
+                9,
+                id="Centered disparities with after margins",
+            ),
+            pytest.param(
+                {"init": 0, "range": 2},
+                0,
+                0,
+                4,
+                17,
+                id="Centered disparities with subpix",
             ),
         ],
     )
-    def test_get_nb_disp(self, row_disparity, col_disparity, expected):
+    def test_get_nb_disp(self, disparity, before_margins, after_margins, subpix, expected):
         """
         Test the get_nb_disp method
         """
 
-        assert memory_estimation.get_nb_disp(row_disparity, col_disparity) == expected
+        assert memory_estimation.get_nb_disp(disparity, before_margins, after_margins, subpix) == expected
 
     @pytest.mark.parametrize(
-        ["row_disparity", "col_disparity", "expected"],
+        ["disparity", "expected"],
         [
             pytest.param(
                 "correct_grid",
+                14,
+            ),
+            pytest.param(
                 "second_correct_grid",
-                (14, 37),
-                id="Grid disparities",
+                37,
             ),
         ],
     )
-    def test_get_nb_disp_with_grid(self, row_disparity, col_disparity, expected, request):
+    def test_get_nb_disp_with_grid(self, disparity, expected, request):
         """
         Test the get_nb_disp method with grid disparities
         """
 
-        assert (
-            memory_estimation.get_nb_disp(
-                request.getfixturevalue(row_disparity), request.getfixturevalue(col_disparity)
-            )
-            == expected
-        )
+        assert memory_estimation.get_nb_disp(request.getfixturevalue(disparity)) == expected
 
     @pytest.mark.parametrize(
         ["row_disparity", "col_disparity", "global_margins", "expected"],
@@ -187,7 +215,7 @@ class TestInputSize:
                 {"init": -4, "range": 2},
                 Margins(1, 2, 3, 4),
                 Margins(7, 3, 1, 5),
-                id="egative col disparity",
+                id="Negative col disparity",
             ),
         ],
     )
@@ -563,6 +591,68 @@ class TestCostVolumesSize:
         assert memory_computed == pytest.approx(cv_nbytes, rel=0.05)
 
 
+class TestPandoraCostVolumesSize:
+    """
+    Test methods linked to pandora's cost volumes size computation
+    """
+
+    @pytest.fixture()
+    def input_config(self, correct_input_cfg):
+        """Input section of the configuration file with different disparity ranges for rows and columns."""
+        correct_input_cfg["input"]["row_disparity"] = {"init": 1, "range": 3}
+        correct_input_cfg["input"]["col_disparity"] = {"init": 1, "range": 2}
+        return correct_input_cfg
+
+    @pytest.fixture()
+    def left_image(self, input_config):
+        """Left image according to input section of the configuration file."""
+        return create_datasets_from_inputs(input_config["input"]).left
+
+    @pytest.fixture()
+    def pandora_matching_cost_config(self, subpix):
+        """Matching cost section of the configuration file."""
+        return {
+            "matching_cost_method": "ssd",
+            "window_size": 3,
+            "subpix": subpix,
+            "step": 1,
+        }
+
+    @pytest.fixture()
+    def config(self, input_config, pandora_matching_cost_config):
+        """Full configuration."""
+        return {
+            **input_config,
+            "pipeline": {"matching_cost": pandora_matching_cost_config},
+        }
+
+    @pytest.mark.parametrize("subpix", [1, 2, 4])
+    @pytest.mark.parametrize("margins", [NullMargins(), Margins(1, 2, 3, 4)])
+    def test(self, left_image, config, margins):
+        """Test that cost volumes size computation works as expected."""
+
+        height, width = left_image.sizes["row"], left_image.sizes["col"]
+        pandora_matching_cost = pandora.matching_cost.AbstractMatchingCost(  # type: ignore[abstract]
+            **config["pipeline"]["matching_cost"]
+        )
+
+        with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
+            cost_volume = pandora_matching_cost.allocate_cost_volume(
+                left_image,
+                (
+                    left_image["col_disparity"].sel(band_disp="min").data - margins.left,
+                    left_image["col_disparity"].sel(band_disp="max").data + margins.right,
+                ),
+                config,
+            )
+        estimation = memory_estimation.estimate_pandora_cost_volume_size(config, height, width, margins)
+
+        assert estimation == pytest.approx(
+            cost_volume["cost_volume"].data.nbytes / memory_estimation.BYTE_TO_MB, rel=0.05
+        )
+        assert estimation == pytest.approx(memory_tracer.current, rel=0.05, abs=1e-2)
+
+
 class TestShiftedRightImages:
     """Test memory consumption of shifted right images."""
 
@@ -586,4 +676,4 @@ class TestShiftedRightImages:
         assert result == pytest.approx(images_size, rel=0.05)
         # When subpix = 1, we approximate with absolute tolerance since we expect a value close to 0,
         # making relative tolerance irrelevant in this case.
-        assert result == pytest.approx(memory_tracer.current, rel=0.95, abs=1e-2)
+        assert result == pytest.approx(memory_tracer.current, rel=0.05, abs=1e-2)

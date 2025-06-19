@@ -90,31 +90,30 @@ def get_img_size(img_path: str, roi: Dict = None) -> Tuple[int, int]:
     return height, width
 
 
-def get_nb_disp(row_disparity: Dict, col_disparity: Dict) -> Tuple[int, int]:
+def get_nb_disp(disparity: Dict, before_margins: int = 0, after_margins: int = 0, subpix: int = 1) -> int:
     """
-    Get number of row and col disparities
+    Get number of disparities.
 
-    :param row_disparity: init and range for disparities in rows.
-    :type row_disparity: Dict
-    :param col_disparity: init and range for disparities in columns.
-    :type col_disparity: Dict
-    :return:  number of row disparities and number of column disparities
-    :rtype: Tuple[int,int]
+    :param disparity: init and range for disparities.
+    :type disparity: Dict
+    :param before_margins: Margins before the minimum disparity.
+    :type before_margins: int
+    :param after_margins: Margins after the maximum disparity.
+    :type after_margins: int
+    :param subpix: subpix
+    :type subpix: int
+    :return:  number of disparities
+    :rtype: int
     """
 
     # Get initial disparity values
-    disparity_row_init = get_initial_disparity(row_disparity)
-    disparity_col_init = get_initial_disparity(col_disparity)
+    initial_disparity = get_initial_disparity(disparity)
 
     # Get minimum and maximum disparities
-    disp_min_row, disp_max_row = get_extrema_disparity(disparity_row_init, row_disparity["range"])
-    disp_min_col, disp_max_col = get_extrema_disparity(disparity_col_init, col_disparity["range"])
+    min_disparity, max_disparity = get_extrema_disparity(initial_disparity, disparity["range"])
 
     # Get number of disparities
-    nb_disp_row = disp_max_row - disp_min_row + 1
-    nb_disp_col = disp_max_col - disp_min_col + 1
-
-    return nb_disp_row, nb_disp_col
+    return (max_disparity - min_disparity + before_margins + after_margins) * subpix + 1
 
 
 def get_roi_margins(row_disparity, col_disparity, global_margins: Margins) -> Margins:
@@ -206,21 +205,15 @@ def estimate_cost_volumes_size(
     :rtype: float
     """
 
-    nb_disp_row, nb_disp_col = get_nb_disp(user_cfg["input"]["row_disparity"], user_cfg["input"]["col_disparity"])
-
-    # Add disparity margins to get the real disparity numbers in the cost volumes
-    nb_disp_row_with_margins = nb_disp_row + margins_disp.up + margins_disp.down
-    nb_disp_col_with_margins = nb_disp_col + margins_disp.left + margins_disp.right
     # Get cost volumes parameters used in size estimation
     subpix = user_cfg["pipeline"]["matching_cost"]["subpix"]
     step = user_cfg["pipeline"]["matching_cost"]["step"]
+
+    nb_disp_row = get_nb_disp(user_cfg["input"]["row_disparity"], margins_disp.up, margins_disp.down, subpix)
+    nb_disp_col = get_nb_disp(user_cfg["input"]["col_disparity"], margins_disp.left, margins_disp.right, subpix)
+
     # Get cost volumes shape
-    cv_shape = (
-        np.ceil(height / step[0])  # nb rows
-        * np.ceil(width / step[1])  # nb cols
-        * ((nb_disp_row_with_margins - 1) * subpix + 1)  # nb disp row
-        * ((nb_disp_col_with_margins - 1) * subpix + 1)  # nb disp col
-    )
+    cv_shape = np.ceil(height / step[0]) * np.ceil(width / step[1]) * nb_disp_row * nb_disp_col
 
     nb_bytes = sum(DATA_VARS_TYPE_SIZE[data_var] for data_var in data_vars)
 
@@ -248,3 +241,26 @@ def estimate_shifted_right_images_size(height: int, width: int, subpix: int) -> 
     # we need to take into account one less image in the memory estimation:
     number_of_images = subpix * subpix - 1
     return one_image_size * number_of_images
+
+
+def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, margins: Margins) -> float:
+    """
+    Estimate the size in MB of the cost volume according to image width, height, and refinement margins.
+
+    :param config: user configuration.
+    :type config: Dict
+    :param height: image or ROI number of rows
+    :type height: int
+    :param width: image or ROI number of columns
+    :type width: int
+    :param margins: Refinement margins.
+    :type margins: Margins
+    :return: estimated size in MB.
+    :rtype: float
+    """
+    subpix = config["pipeline"]["matching_cost"]["subpix"]
+    disparity_size = get_nb_disp(config["input"]["col_disparity"], margins.left, margins.right, subpix)
+
+    image_size = height * width
+
+    return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
