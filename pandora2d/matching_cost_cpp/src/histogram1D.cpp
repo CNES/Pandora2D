@@ -22,7 +22,6 @@ This module contains functions associated to histogram.
 */
 
 #include "histogram1D.hpp"
-#include <iostream>
 #include "bin.hpp"
 
 /**
@@ -30,7 +29,7 @@ This module contains functions associated to histogram.
  *
  * @param _values: on histogram
  * @param _nb_bins: number of bins
- * @param _low_bound: smaller value on histogram
+ * @param _low_bound: smallest value on histogram
  * @param _bins_width: size of one bin on histogram
  */
 Histogram1D::Histogram1D(P2d::VectorD& values,
@@ -43,7 +42,7 @@ Histogram1D::Histogram1D(P2d::VectorD& values,
  * @brief Construct a new Histogram 1D
  *
  * @param _nb_bins: number of bins
- * @param _low_bound: smaller value on histogram
+ * @param _low_bound: smallest value on histogram
  * @param _bins_width: size of one bin on histogram
  */
 Histogram1D::Histogram1D(std::size_t nb_bins, double low_bound, double bins_width)
@@ -68,20 +67,21 @@ Histogram1D::Histogram1D(const P2d::MatrixD& img) {
  */
 void Histogram1D::create(const P2d::MatrixD& img) {
   m_bins_width = get_bins_width(img);
-  double dynamic_range = img.maxCoeff() - img.minCoeff();
+  double min_coeff = img.minCoeff();
+  double max_coeff = img.maxCoeff();
+  double dynamic_range = max_coeff - min_coeff;
   m_nb_bins = static_cast<int>(1. + (dynamic_range / m_bins_width));
 
   // check nb_bins > NB_BINS_MAX
   if (m_nb_bins > NB_BINS_MAX) {
     m_nb_bins = NB_BINS_MAX;
     auto moment = variance(img);
-    double max = std::min(4. * moment, img.maxCoeff());
-    double min = std::max(-4. * moment, img.minCoeff());
-    dynamic_range = max - min;
+    max_coeff = std::min(4. * moment, max_coeff);
+    min_coeff = std::max(-4. * moment, min_coeff);
+    dynamic_range = max_coeff - min_coeff;
   }
 
-  m_low_bound =
-      img.minCoeff() - (static_cast<double>(m_nb_bins) * m_bins_width - dynamic_range) / 2.;
+  m_low_bound = min_coeff - (static_cast<double>(m_nb_bins) * m_bins_width - dynamic_range) / 2.;
 }
 
 /**
