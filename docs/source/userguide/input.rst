@@ -105,6 +105,8 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
 
 .. warning::
     With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`) , `nodata` only accepts `int` type.
+    
+    In addition, when the `nodata` value entered is `NaN` or `inf`, it is replaced by -9999  in the image datasets to avoid disrupting processing.
 
 .. note::
     Only one-band masks are accepted by pandora2d. Mask must comply with the following convention :

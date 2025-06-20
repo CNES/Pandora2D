@@ -24,7 +24,6 @@ Test image shift methods
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 
-import unittest
 import pytest
 import xarray as xr
 import numpy as np
@@ -34,93 +33,194 @@ from pandora2d import img_tools
 
 
 @pytest.fixture()
-def monoband_image():
+def no_data_img_attribute():
+    """No data image"""
+    return -9999
+
+
+@pytest.fixture()
+def monoband_image(no_data_img_attribute):
     """Create monoband image."""
     data = np.array(
-        ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 2, 1], [1, 1, 1, 4, 3, 1], [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1])
+        ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 2, 1], [1, 1, 1, 4, 3, 1], [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]),
+        dtype=np.float32,
     )
 
     return xr.Dataset(
         {"im": (["row", "col"], data)}, coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])}
-    ).assign_attrs({"no_data_img": -9999})
+    ).assign_attrs(
+        {
+            "no_data_img": no_data_img_attribute,
+        }
+    )
 
 
 @pytest.fixture()
-def roi_image():
+def roi_image(monoband_image):
     """Create ROI image."""
+    return monoband_image.assign_coords({"row": np.arange(2, 7), "col": np.arange(5, 11)})
+
+
+@pytest.fixture()
+def no_data_image(no_data_img_attribute):
+    """Create an image with no_data=-9999"""
+
     data = np.array(
-        ([1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 2, 1], [1, 1, 1, 4, 3, 1], [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1])
+        (
+            [1, 1, 1, 1, -9999, 1],
+            [-9999, 1, 1, 1, 2, 1],
+            [1, 1, 1, 4, 3, 1],
+            [1, 1, 1, -9999, 1, 1],
+            [1, 1, 1, 1, 1, 1],
+        ),
+        dtype=np.float32,
     )
 
     return xr.Dataset(
         {"im": (["row", "col"], data)}, coords={"row": np.arange(2, 7), "col": np.arange(5, 11)}
-    ).assign_attrs({"no_data_img": -9999})
-
-
-class TestShiftDispRowImg(unittest.TestCase):
-    """
-    test shift_disp_row_img function.
-    """
-
-    def setUp(self) -> None:
-        """
-        Method called to prepare the test fixture
-
-        """
-        # original image
-        data = np.array(([1, 1, 1], [1, 1, 1], [1, 1, 1]))
-        # original mask
-        mask = np.array(([0, 0, 0], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
-        # create original dataset
-        self.data = xr.Dataset(
-            {"im": (["row", "col"], data), "msk": (["row", "col"], mask)},
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-        )
-        # add attributes for mask
-        self.data.attrs = {
-            "no_data_img": -9999,
-            "valid_pixels": 0,  # arbitrary default value
-            "no_data_mask": 1,
+    ).assign_attrs(
+        {
+            "no_data_img": no_data_img_attribute,
         }
-        no_data_pixels = np.where(data == np.nan)
-        self.data["msk"] = xr.DataArray(
-            np.full((data.shape[0], data.shape[1]), self.data.attrs["valid_pixels"]).astype(np.int16),
-            dims=["row", "col"],
-        )
-        # associate nan value in mask to the no_data param
-        self.data["msk"].data[no_data_pixels] = int(self.data.attrs["no_data_mask"])
+    )
 
-        # create the dataset of an image with dec_y = 1
-        shifted_data = np.array([[1, 1, 1], [1, 1, 1], [-9999, -9999, -9999]])
-        # original mask
-        shifted_mask = np.array(([1, 1, 1], [0, 0, 0], [0, 0, 0]), dtype=np.int16)
-        self.data_down = xr.Dataset(
-            {"im": (["row", "col"], shifted_data), "msk": (["row", "col"], shifted_mask)},
-            coords={"row": np.arange(shifted_data.shape[0]), "col": np.arange(shifted_data.shape[1])},
-        )
 
-        self.data_down.attrs = {
-            "no_data_img": -9999,
-            "valid_pixels": 0,  # arbitrary default value
-            "no_data_mask": 1,
-        }
+class TestShiftDispRowImg:
+    """
+    Test shift_disp_row_img method
+    """
 
-        no_data_pixels = np.where(shifted_data == -9999)
-        self.data_down["msk"] = xr.DataArray(
-            np.full((shifted_data.shape[0], shifted_data.shape[1]), self.data_down.attrs["valid_pixels"]).astype(
-                np.int16
+    @pytest.mark.parametrize(
+        ["image", "disp_row", "no_data_img_attribute", "expected"],
+        [
+            pytest.param(
+                "monoband_image",
+                1,
+                -9999,
+                np.array(
+                    (
+                        [1, 1, 1, 1, 2, 1],
+                        [1, 1, 1, 4, 3, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [-9999, -9999, -9999, -9999, -9999, -9999],
+                    ),
+                    dtype=np.float32,
+                ),
+                id="monoband image, disp_row=1 and no_data_img=-9999",
             ),
-            dims=["row", "col"],
-        )
-        # associate nan value in mask to the no_data param
-        self.data_down["msk"].data[no_data_pixels] = int(self.data_down.attrs["no_data_mask"])
+            pytest.param(
+                "monoband_image",
+                1,
+                5,
+                np.array(
+                    (
+                        [1, 1, 1, 1, 2, 1],
+                        [1, 1, 1, 4, 3, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [5, 5, 5, 5, 5, 5],
+                    ),
+                    dtype=np.float32,
+                ),
+                id="monoband image, disp_row=1 and no_data_img=5",
+            ),
+            pytest.param(
+                "monoband_image",
+                -2,
+                -9999,
+                np.array(
+                    (
+                        [-9999, -9999, -9999, -9999, -9999, -9999],
+                        [-9999, -9999, -9999, -9999, -9999, -9999],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 2, 1],
+                        [1, 1, 1, 4, 3, 1],
+                    ),
+                    dtype=np.float32,
+                ),
+                id="monoband image, disp_row=-2 and no_data_img=-9999",
+            ),
+            pytest.param(
+                "no_data_image",
+                1,
+                -9999,
+                np.array(
+                    (
+                        [-9999, 1, 1, 1, 2, 1],
+                        [1, 1, 1, 4, 3, 1],
+                        [1, 1, 1, -9999, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [-9999, -9999, -9999, -9999, -9999, -9999],
+                    ),
+                    dtype=np.float32,
+                ),
+                id="no_data image, disp_row=1 and no_data_img=-9999",
+            ),
+        ],
+    )
+    def test_shift_disp_row_img(self, image, disp_row, no_data_img_attribute, expected, request):
+        """
+        Test shift_disp_row_img method
+        """
 
-    def test_shift_disp_row_img(self):
+        image_to_shift = request.getfixturevalue(image)
+        shifted_img = img_tools.shift_disp_row_img(image_to_shift, disp_row)
+
+        np.testing.assert_array_equal(shifted_img["im"].data, expected)
+        np.testing.assert_array_equal(shifted_img.row.values, image_to_shift.row.values)
+        np.testing.assert_array_equal(shifted_img.col.values, image_to_shift.col.values)
+        assert shifted_img.attrs["no_data_img"] == no_data_img_attribute
+
+    @pytest.mark.parametrize(
+        ["image", "disp_row", "expected"],
+        [
+            pytest.param(
+                "monoband_image",
+                1,
+                np.array(
+                    (
+                        [1, 1, 1, 1, 2, 1],
+                        [1, 1, 1, 4, 3, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [-9999, -9999, -9999, -9999, -9999, -9999],
+                    ),
+                    dtype=np.float32,
+                ),
+                id="monoband image disp_row=1",
+            ),
+            pytest.param(
+                "monoband_image",
+                -2,
+                np.array(
+                    (
+                        [-9999, -9999, -9999, -9999, -9999, -9999],
+                        [-9999, -9999, -9999, -9999, -9999, -9999],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 2, 1],
+                        [1, 1, 1, 4, 3, 1],
+                    ),
+                    dtype=np.float32,
+                ),
+                id="monoband image disp_row=-2",
+            ),
+        ],
+    )
+    def test_shift_disp_row_img_with_no_data_is_nan(self, image, disp_row, expected, request):
         """
-        Test of shift_disp_row_img function
+        Test shift_disp_row_img method when right image is given with "NaN" as no data value.
+        We check that the value of no_data has been replaced by -9999 and that there is no propagation of NaN.
         """
-        my_data_down = img_tools.shift_disp_row_img(self.data, 1)
-        assert my_data_down.equals(self.data_down)
+
+        image_to_shift = request.getfixturevalue(image)
+        image_to_shift.attrs["no_data_img"] = np.nan
+        shifted_img = img_tools.shift_disp_row_img(image_to_shift, disp_row)
+
+        np.testing.assert_array_equal(shifted_img["im"].data, expected)
+        np.testing.assert_array_equal(shifted_img.row.values, image_to_shift.row.values)
+        np.testing.assert_array_equal(shifted_img.col.values, image_to_shift.col.values)
+        assert shifted_img.attrs["no_data_img"] == -9999
 
 
 class TestShiftSubpixImg:
@@ -138,7 +238,7 @@ class TestShiftSubpixImg:
             pytest.param(
                 "monoband_image", 4, 3, np.array([0.75, 1.75, 2.75, 3.75, 4.75, 5.75]), id="monoband image subpix 0.75"
             ),
-            pytest.param("roi_image", 2, 1, np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]), id="monoband image subpix 0.25"),
+            pytest.param("roi_image", 2, 1, np.array([5.5, 6.5, 7.5, 8.5, 9.5, 10.5]), id="roi image subpix 0.25"),
         ],
     )
     def test_column(self, image, subpix, number, expected, request):
