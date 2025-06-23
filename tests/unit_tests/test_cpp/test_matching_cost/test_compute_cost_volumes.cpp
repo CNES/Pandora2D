@@ -32,7 +32,7 @@ This module contains tests associated to mutual information computation.
 constexpr double INIT_VALUE_CV = 0.0;  ///< initial value used to fill the cv
 
 TEST_CASE("Test get_window method") {
-  P2d::MatrixD img(5, 5);
+  P2d::Matrixf img(5, 5);
   // clang-format off
   img << 1.0, 2.0, 3.0, 4.0, 5.0, 
          6.0, 7.0, 8.0, 9.0, 10.0, 
@@ -42,56 +42,56 @@ TEST_CASE("Test get_window method") {
   // clang-format on
 
   SUBCASE("1x1 window") {
-    P2d::MatrixD window_gt(1, 1);
+    P2d::Matrixf window_gt(1, 1);
     window_gt << 8.0;
-    P2d::MatrixD window = get_window(img, 1, 1, 2);
-    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
+    P2d::Matrixf window = get_window<float>(img, 1, 1, 2);
+    check_inside_eigen_element<P2d::Matrixf>(window, window_gt);
   }
 
   SUBCASE("3x3 window") {
-    P2d::MatrixD window_gt(3, 3);
+    P2d::Matrixf window_gt(3, 3);
     window_gt << 7.0, 8.0, 9.0, 12.0, 13.0, 14.0, 17.0, 18.0, 19.0;
-    P2d::MatrixD window = get_window(img, 3, 2, 2);
-    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
+    P2d::Matrixf window = get_window<float>(img, 3, 2, 2);
+    check_inside_eigen_element<P2d::Matrixf>(window, window_gt);
   }
 
   SUBCASE("3x3 window on the border") {
     P2d::MatrixD window_gt(2, 2);
     window_gt << 1.0, 2.0, 6.0, 7.0;
 
-    P2d::MatrixD window = get_window(img, 3, 0, 0);
+    P2d::MatrixD window = get_window<double>(img, 3, 0, 0);
     check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
   }
 
   SUBCASE("3x3 window on the border with negative index") {
-    P2d::MatrixD window_gt(2, 1);
+    P2d::Matrixf window_gt(2, 1);
     window_gt << 1.0, 6.0;
-    P2d::MatrixD window = get_window(img, 3, 0, -1);
-    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
+    P2d::Matrixf window = get_window<float>(img, 3, 0, -1);
+    check_inside_eigen_element<P2d::Matrixf>(window, window_gt);
     ;
   }
 
   SUBCASE("3x3 window out of the image") {
     P2d::MatrixD window_gt(0, 0);
-    P2d::MatrixD window = get_window(img, 3, -2, -2);
+    P2d::MatrixD window = get_window<double>(img, 3, -2, -2);
     check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
     ;
   }
 
   SUBCASE("5x5 window") {
-    P2d::MatrixD window = get_window(img, 5, 2, 2);
-    check_inside_eigen_element<P2d::MatrixD>(window, img);
+    P2d::Matrixf window = get_window<float>(img, 5, 2, 2);
+    check_inside_eigen_element<P2d::Matrixf>(window, img);
   }
 
   SUBCASE("5x5 window on the border") {
-    P2d::MatrixD window_gt(3, 5);
+    P2d::Matrixf window_gt(3, 5);
     // clang-format off
     window_gt << 11.0, 12.0, 13.0, 14.0, 15.0, 
                  16.0, 17.0, 18.0, 19.0, 20.0, 
                  21.0, 22.0, 23.0, 24.0, 25.0;
     // clang-format on
-    P2d::MatrixD window = get_window(img, 5, 4, 2);
-    check_inside_eigen_element<P2d::MatrixD>(window, window_gt);
+    P2d::Matrixf window = get_window<float>(img, 5, 4, 2);
+    check_inside_eigen_element<P2d::Matrixf>(window, window_gt);
   }
 }
 
@@ -204,7 +204,7 @@ TEST_CASE("Test has_only_non_zero_elements method") {
 
 TEST_CASE("Test compute_cost_volumes_cpp method") {
   // Left image
-  P2d::MatrixD img_left(5, 5);
+  P2d::Matrixf img_left(5, 5);
   // clang-format off
   img_left << 1.0, 2.0, 3.0, 4.0, 5.0, 
               6.0, 7.0, 8.0, 9.0, 10.0, 
@@ -214,9 +214,9 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   // clang-format on
 
   // Right image
-  std::vector<P2d::MatrixD> imgs_right;
+  std::vector<P2d::Matrixf> imgs_right;
 
-  P2d::MatrixD right_1(5, 5);
+  P2d::Matrixf right_1(5, 5);
   // clang-format off
   right_1 << 1., 2., 3., 4., 2., 
              2., 2., 2., 2., 2., 
@@ -305,6 +305,35 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
     CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<P2d::MatrixD>(cost_surface, cost_surface_gt);
+  }
+
+  SUBCASE("Cost surface of center point with float cost volumes") {
+    // Initialized cv values
+    std::vector<float> zeros(cv_size.size(), 0.);
+    py::array_t<float> cv_values(
+        {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
+
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/center_criteria.bin", cv_size);
+
+    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
+                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
+                             window_size, step, no_data);
+
+    pixel = Position2D(2, 2);
+    P2d::Matrixf cost_surface =
+        get_cost_surface<float, float>(cv_values, position2d_to_index(pixel, cv_size), cv_size);
+
+    P2d::Matrixf cost_surface_gt(disp_range_row.size(), disp_range_col.size());
+
+    // clang-format off
+    cost_surface_gt << INIT_VALUE_CV, 0.224787, 0.224787, 0.072780, INIT_VALUE_CV,
+                       INIT_VALUE_CV, 0.224787, 0.102187, 0.378878, INIT_VALUE_CV, 
+                       INIT_VALUE_CV, 0.007214, 0.224787, 0.007214, INIT_VALUE_CV;
+    // clang-format on
+
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<P2d::Matrixf>(cost_surface, cost_surface_gt);
   }
 
   SUBCASE("All points are invalid") {
@@ -403,7 +432,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
 
   SUBCASE("Cost surface with subpix=2") {
     // When subpix=2, we have 4 right images
-    P2d::MatrixD right_2(5, 5);
+    P2d::Matrixf right_2(5, 5);
 
     // clang-format off
     right_2 << 1.5, 2.5, 3.5, 3., 1., 
@@ -413,7 +442,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                2., 2.5, 3., 4., 1.;
     // clang-format on
 
-    P2d::MatrixD right_3(5, 5);
+    P2d::Matrixf right_3(5, 5);
     // clang-format off
     right_3 << 1.5, 2., 2.5, 3., 2., 
                3., 2.5, 2., 1.5, 3., 
@@ -422,7 +451,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                1., 3., 2., 4., 4.;
     // clang-format on
 
-    P2d::MatrixD right_4(5, 5);
+    P2d::Matrixf right_4(5, 5);
     // clang-format off
     right_4 << 1.75, 2.25, 2.75, 2.5, 2., 
                2., 2.25, 1.75, 2.25, 2., 
@@ -512,7 +541,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
   SUBCASE("Cost surface with subpix=2 and no data values") {
     // When subpix=2, we have 4 right images
 
-    P2d::MatrixD right_2(5, 5);
+    P2d::Matrixf right_2(5, 5);
     // clang-format off
     right_2 << 1.5, 2.5, 3.5, 3., -9999., 
                2., 2., 2., 2., -9999., 
@@ -521,7 +550,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                2., 2.5, 3., 4., -9999.;
     // clang-format on
 
-    P2d::MatrixD right_3(5, 5);
+    P2d::Matrixf right_3(5, 5);
     // clang-format off
     right_3 << 1.5, 2., 2.5, 3., 2., 
                3., 2.5, 2., 1.5, 3., 
@@ -530,7 +559,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
                -9999., -9999., -9999., -9999., -9999.;
     // clang-format on
 
-    P2d::MatrixD right_4(5, 5);
+    P2d::Matrixf right_4(5, 5);
     // clang-format off
     right_4 << 1.75, 2.25, 2.75, 2.5, -9999., 
                2.75, 2.25, 1.75, 2.25, -9999., 
@@ -633,7 +662,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     //                        "margins": [2, 2, 2, 2]}
 
     // Left image
-    P2d::MatrixD img_left(5, 4);
+    P2d::Matrixf img_left(5, 4);
     // clang-format off
     img_left << 1.0, 2.0, 3.0, 4.0, 
                 6.0, 7.0, 8.0, 9.0, 
@@ -643,9 +672,9 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     // Right image
-    std::vector<P2d::MatrixD> imgs_right;
+    std::vector<P2d::Matrixf> imgs_right;
 
-    P2d::MatrixD right_1(5, 4);
+    P2d::Matrixf right_1(5, 4);
     // clang-format off
     right_1 << 1., 2., 3., 4., 
               2., 2., 2., 2., 
@@ -691,7 +720,7 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     //                        "margins": [1, 1, 1, 1]}
 
     // Left image
-    P2d::MatrixD img_left(5, 4);
+    P2d::Matrixf img_left(5, 4);
     // clang-format off
     img_left << 1.0, 2.0, 3.0, 4.0, 
                 6.0, 7.0, 8.0, 9.0, 
@@ -700,9 +729,9 @@ TEST_CASE("Test compute_cost_volumes_cpp method") {
     // clang-format on
 
     // Right image
-    std::vector<P2d::MatrixD> imgs_right;
+    std::vector<P2d::Matrixf> imgs_right;
 
-    P2d::MatrixD right_1(5, 4);
+    P2d::Matrixf right_1(5, 4);
     // clang-format off
     right_1 << 1., 2., 3., 4., 
               2., 2., 2., 2., 
