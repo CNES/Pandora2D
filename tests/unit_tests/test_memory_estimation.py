@@ -20,10 +20,13 @@
 This file contains unit tests associated to the pandora2d memory estimation
 """
 
+# pylint: disable=redefined-outer-name,too-few-public-methods
+
 import tracemalloc
 
-import pytest
+import numpy as np
 import pandora
+import pytest
 
 from pandora2d import memory_estimation
 from pandora2d.check_configuration import check_conf
@@ -35,6 +38,22 @@ from pandora2d.img_tools import (
 )
 from pandora2d.margins import Margins, NullMargins
 from pandora2d.state_machine import Pandora2DMachine
+
+
+@pytest.fixture()
+def input_config(correct_input_cfg, random_left_image_path, random_right_image_path):
+    """Input section of the configuration file with different disparity ranges for rows and columns."""
+    correct_input_cfg["input"]["left"]["img"] = random_left_image_path
+    correct_input_cfg["input"]["right"]["img"] = random_right_image_path
+    correct_input_cfg["input"]["row_disparity"] = {"init": 1, "range": 3}
+    correct_input_cfg["input"]["col_disparity"] = {"init": 1, "range": 2}
+    return correct_input_cfg
+
+
+@pytest.fixture()
+def image_datasets(input_config):
+    """Left and right images according to input section of the configuration file."""
+    return create_datasets_from_inputs(input_config["input"])
 
 
 class MemoryTracer:
@@ -600,18 +619,6 @@ class TestPandoraCostVolumesSize:
     """
 
     @pytest.fixture()
-    def input_config(self, correct_input_cfg):
-        """Input section of the configuration file with different disparity ranges for rows and columns."""
-        correct_input_cfg["input"]["row_disparity"] = {"init": 1, "range": 3}
-        correct_input_cfg["input"]["col_disparity"] = {"init": 1, "range": 2}
-        return correct_input_cfg
-
-    @pytest.fixture()
-    def left_image(self, input_config):
-        """Left image according to input section of the configuration file."""
-        return create_datasets_from_inputs(input_config["input"]).left
-
-    @pytest.fixture()
     def pandora_matching_cost_config(self, subpix):
         """Matching cost section of the configuration file."""
         return {
@@ -631,20 +638,20 @@ class TestPandoraCostVolumesSize:
 
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("margins", [NullMargins(), Margins(1, 2, 3, 4)])
-    def test(self, left_image, config, margins):
+    def test(self, image_datasets, config, margins):
         """Test that cost volumes size computation works as expected."""
 
-        height, width = left_image.sizes["row"], left_image.sizes["col"]
+        height, width = image_datasets.left.sizes["row"], image_datasets.left.sizes["col"]
         pandora_matching_cost = pandora.matching_cost.AbstractMatchingCost(  # type: ignore[abstract]
             **config["pipeline"]["matching_cost"]
         )
 
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
             cost_volume = pandora_matching_cost.allocate_cost_volume(
-                left_image,
+                image_datasets.left,
                 (
-                    left_image["col_disparity"].sel(band_disp="min").data - margins.left,
-                    left_image["col_disparity"].sel(band_disp="max").data + margins.right,
+                    image_datasets.left["col_disparity"].sel(band_disp="min").data - margins.left,
+                    image_datasets.left["col_disparity"].sel(band_disp="max").data + margins.right,
                 ),
                 config,
             )
@@ -659,21 +666,17 @@ class TestPandoraCostVolumesSize:
 class TestShiftedRightImages:
     """Test memory consumption of shifted right images."""
 
-    @pytest.fixture()
-    def right_image(self, correct_input_cfg):
-        return create_datasets_from_inputs(correct_input_cfg["input"]).right
-
     @pytest.mark.parametrize("subpix", [1, 2, 4])
-    def test(self, right_image, subpix):
+    def test(self, image_datasets, subpix):
         """Test memory consumption of shifted right images."""
 
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
-            images = shift_subpix_img_2d(right_image, subpix)
-        # We exclude the first image from the count as it is excluded in estimate_shifted_right_images_size
+            images = shift_subpix_img_2d(image_datasets.right, subpix)
+        # We exclude the first image from the count as it is excluded in estimate_shifted_image_datasets.rights_size
         images_size = sum(image.nbytes for image in images[1:]) / memory_estimation.BYTE_TO_MB
 
         result = memory_estimation.estimate_shifted_right_images_size(
-            right_image.dims["row"], right_image.dims["col"], subpix
+            image_datasets.right.dims["row"], image_datasets.right.dims["col"], subpix
         )
 
         assert result == pytest.approx(images_size, rel=0.05)

@@ -183,6 +183,35 @@ def correct_segment_mode():
 
 
 @pytest.fixture()
+def image_size():
+    return 1000, 1000
+
+
+@pytest.fixture()
+def random_left_image_path(tmp_path, image_size):
+    """
+    Create a fake left image
+    """
+    image_path = tmp_path / "left_img.png"
+    data = np.random.randint(255, size=image_size, dtype=np.uint8)
+    imsave(image_path, data)
+
+    return image_path
+
+
+@pytest.fixture()
+def random_right_image_path(tmp_path, image_size):
+    """
+    Create a fake right image
+    """
+    image_path = tmp_path / "right_img.png"
+    data = np.random.randint(255, size=image_size, dtype=np.uint8)
+    imsave(image_path, data)
+
+    return image_path
+
+
+@pytest.fixture()
 def left_stereo_object():
     """
     Create left stereo object
