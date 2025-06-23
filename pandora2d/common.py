@@ -25,9 +25,9 @@ This module contains functions allowing to save the results and the configuratio
 
 import json
 from copy import deepcopy
+from os import PathLike
 from pathlib import Path
 from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
-from os import PathLike
 
 import numpy as np
 import xarray as xr
@@ -249,6 +249,7 @@ def dataset_disp_maps(
     coords: Coordinates,
     dataset_validity: xr.Dataset,
     attributes: dict = None,
+    dtype: np.typing.DTypeLike = np.float32,
 ) -> xr.Dataset:
     """
     Create the dataset containing disparity maps and score maps
@@ -280,19 +281,15 @@ def dataset_disp_maps(
     }
 
     dims = ("row", "col")
-
-    # Initialize data arrays filled with invalid_disp value
-    empty_data = np.full((len(coords.get("row")), len(coords.get("col"))), attributes["invalid_disp"])
-    dataarray_row = xr.DataArray(empty_data, dims=dims, coords=coords)
-    dataarray_col = xr.DataArray(empty_data, dims=dims, coords=coords)
-    dataarray_score = xr.DataArray(empty_data, dims=dims, coords=coords)
+    shape = (len(coords.get("row")), len(coords.get("col")))
 
     dataset = xr.Dataset(
         {
-            "row_map": dataarray_row,
-            "col_map": dataarray_col,
-            "correlation_score": dataarray_score,
-        }
+            "row_map": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
+            "col_map": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
+            "correlation_score": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
+        },
+        coords=coords,
     )
 
     dataset = xr.merge([dataset, dataset_validity])
