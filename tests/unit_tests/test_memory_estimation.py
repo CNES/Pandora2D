@@ -55,6 +55,9 @@ class MemoryTracer:
         self._current, self._peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(current: {self.current}, peak: {self.peak})"
+
     @property
     def current(self):
         return self._current / self.unit_factor
