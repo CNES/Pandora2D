@@ -259,6 +259,8 @@ def dataset_disp_maps(
     :type dataset_validity: xr.Dataset
     :param attributes: disparity map for col
     :type attributes: dict
+    :param dtype: dtype of the dataset
+    :type dtype: np.typing.DTypeLike
     :return: dataset: Dataset with the empty disparity maps and score with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)

@@ -341,6 +341,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
                 "crs": self.left_img.crs,
                 "transform": self.left_img.transform,
             },
+            self.matching_cost_.cost_volumes["cost_volumes"].dtype,
         )
 
     @mem_time_profile(name="Estimation step")

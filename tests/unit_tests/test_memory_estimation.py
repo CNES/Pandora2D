@@ -23,12 +23,13 @@ This file contains unit tests associated to the pandora2d memory estimation
 # pylint: disable=redefined-outer-name,too-few-public-methods
 
 import tracemalloc
+from typing import Tuple
 
 import numpy as np
 import pandora
 import pytest
 
-from pandora2d import memory_estimation
+from pandora2d import common, criteria, memory_estimation
 from pandora2d.check_configuration import check_conf
 from pandora2d.criteria import get_criteria_dataarray
 from pandora2d.img_tools import (
@@ -37,6 +38,7 @@ from pandora2d.img_tools import (
     shift_subpix_img_2d,
 )
 from pandora2d.margins import Margins, NullMargins
+from pandora2d.matching_cost import MutualInformation
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -683,3 +685,60 @@ class TestShiftedRightImages:
         # When subpix = 1, we approximate with absolute tolerance since we expect a value close to 0,
         # making relative tolerance irrelevant in this case.
         assert result == pytest.approx(memory_tracer.current, rel=0.05, abs=1e-2)
+
+
+class TestDatasetDispMap:
+    """Test memory estimation of dataset disp map."""
+
+    @pytest.fixture()
+    def matching_cost_config(self, step):
+        """Matching cost section of the configuration file."""
+        return {
+            "matching_cost_method": "mutual_information",
+            "window_size": 3,
+            "step": step,
+            "subpix": 1,
+        }
+
+    @pytest.fixture()
+    def config(self, input_config, matching_cost_config):
+        """Full configuration."""
+        return {
+            **input_config,
+            "pipeline": {"matching_cost": matching_cost_config},
+        }
+
+    @pytest.mark.parametrize("dtype_argument", [np.float32, "float32"])
+    @pytest.mark.parametrize("step", [[1, 1], [1, 2], [2, 1]])
+    @pytest.mark.parametrize("image_size", [(200, 300), (700, 500)])
+    def test(self, config, image_datasets, image_size: Tuple[int, int], dtype_argument):
+        """Test coherence between estimated memory consumption and actual memory consumption."""
+
+        matching_cost = MutualInformation(config["pipeline"]["matching_cost"])
+        matching_cost.allocate(image_datasets.left, image_datasets.right, config["pipeline"]["matching_cost"])
+        cost_volumes = matching_cost.cost_volumes
+
+        with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
+            dataset_validity = criteria.get_validity_dataset(cost_volumes["criteria"])
+            dataset_disp_maps = common.dataset_disp_maps(
+                cost_volumes.cost_volumes.coords,
+                dataset_validity,
+                {
+                    "offset": {
+                        "row": config.get("ROI", {}).get("row", {}).get("first", 0),
+                        "col": config.get("ROI", {}).get("col", {}).get("first", 0),
+                    },
+                    "step": {
+                        "row": config["pipeline"]["matching_cost"]["step"][0],
+                        "col": config["pipeline"]["matching_cost"]["step"][1],
+                    },
+                    "invalid_disp": -9999,
+                    "crs": image_datasets.left.crs,
+                    "transform": image_datasets.left.transform,
+                },
+            )
+
+        estimation = memory_estimation.estimate_dataset_disp_map_size(config, *image_size, dtype_argument)
+
+        assert estimation == pytest.approx(dataset_disp_maps.nbytes / memory_estimation.BYTE_TO_MB, rel=0.05)
+        assert estimation == pytest.approx(memory_tracer.current, rel=0.05, abs=1e-2)

@@ -20,11 +20,15 @@
 This module contains methods associated to the pandora2d memory estimation
 """
 
-from typing import Tuple, Dict, List
+from typing import Dict, List, Tuple
+
 import numpy as np
+from numpy.typing import DTypeLike
 from pandora.img_tools import rasterio_open
+
+from pandora2d.constants import Criteria
+from pandora2d.img_tools import get_extrema_disparity, get_initial_disparity, get_margins_values
 from pandora2d.margins import Margins
-from pandora2d.img_tools import get_margins_values, get_initial_disparity, get_extrema_disparity
 
 BYTE_TO_MB = 1024 * 1024
 
@@ -264,3 +268,31 @@ def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, mar
     image_size = height * width
 
     return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
+
+
+def estimate_dataset_disp_map_size(config: Dict, height: int, width: int, dtype: DTypeLike) -> float:
+    """
+    Estimate the size in MB of the disparity map dataset.
+
+    :param config: user configuration.
+    :type config: Dict
+    :param height: image or ROI number of rows.
+    :type height: int
+    :param width: image or ROI number of columns.
+    :type width: int
+    :param dtype: dtype of the disparity map (should be same as cost volumes dataset).
+    :type dtype: np.typing.DTypeLike
+    :return: estimated size in MB.
+    :rtype: float
+    """
+    step = config["pipeline"]["matching_cost"]["step"]
+    image_size = np.ceil(height / step[0]) * np.ceil(width / step[1])
+    number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
+    # Beware: when Criteria.P2D_DISPARITY_UNPROCESSED will be removed the number of criteria will need to be
+    # incremented by one in order to take the validity_mask band into account:
+    number_of_validity_bands = len(Criteria.__members__)
+    data_vars_size = (
+        number_of_dtyped_datavars * np.dtype(dtype).itemsize
+        + number_of_validity_bands * DATA_VARS_TYPE_SIZE["criteria"]
+    )
+    return image_size * data_vars_size / BYTE_TO_MB
