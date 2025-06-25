@@ -22,6 +22,7 @@ This module contains functions associated to the matching cost computation step
 with mutual information method.
 """
 
+import logging
 from json_checker import And
 
 import numpy as np
@@ -56,6 +57,7 @@ class MutualInformation(BaseMatchingCost):
         schema.update(
             {
                 "matching_cost_method": And(str, lambda x: x in ["mutual_information"]),
+                "float_precision": And(str, lambda x: np.dtype(x) in [np.float32, np.float64]),
             }
         )
 
@@ -100,15 +102,28 @@ class MutualInformation(BaseMatchingCost):
         self.cost_volumes.attrs["type_measure"] = "max"
 
         imgs_right = [right["im"].values for right in self.shifted_right_images]
-        cv_values = self.cost_volumes["cost_volumes"].data.astype(np.float64)
         offset_cv_img_row = self.cost_volumes.row.data[0] - img_left.row.data[0]
         offset_cv_img_col = self.cost_volumes.col.data[0] - img_left.col.data[0]
 
+        if np.issubdtype(self.cost_volumes["cost_volumes"].data.dtype, np.float32):
+            compute_cost_volumes_cpp = matching_cost_bind.compute_cost_volumes_cpp_float
+
+            if self.cost_volumes.attrs["measure"] == "mutual_information":
+                logging.warning(
+                    "When the mutual information method is chosen, cost volumes can be returned in float32, "
+                    "but for the moment histograms and entropies are still calculated in float64.",
+                )
+
+        elif np.issubdtype(self.cost_volumes["cost_volumes"].data.dtype, np.float64):
+            compute_cost_volumes_cpp = matching_cost_bind.compute_cost_volumes_cpp_double
+        else:
+            raise TypeError("Cost volume must be in np.float32 or np.float64")
+
         # Call compute_cost_volumes_cpp
-        matching_cost_bind.compute_cost_volumes_cpp_double(
+        compute_cost_volumes_cpp(
             img_left["im"].data,
             imgs_right,
-            cv_values,
+            self.cost_volumes["cost_volumes"].data,
             self.cost_volumes["criteria"].data,
             common_bind.CostVolumeSize(*self.cost_volumes["cost_volumes"].shape),
             self.cost_volumes.disp_row.data,
@@ -120,5 +135,4 @@ class MutualInformation(BaseMatchingCost):
             self.cost_volumes.attrs["no_data_img"],
         )
 
-        self.cost_volumes["cost_volumes"].data = cv_values
         return self.cost_volumes
