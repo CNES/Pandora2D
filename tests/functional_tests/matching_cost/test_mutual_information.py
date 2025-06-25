@@ -35,12 +35,12 @@ from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 
 
 @pytest.fixture()
-def cfg_for_mutual_information(
-    correct_input_for_functional_tests,
-    window_size,
-    subpix,
-    step,
-):
+def float_precision():
+    return "float32"
+
+
+@pytest.fixture()
+def cfg_for_mutual_information(correct_input_for_functional_tests, window_size, subpix, step, float_precision):
     """
     Return user configuration to test mutual information method
     """
@@ -53,6 +53,7 @@ def cfg_for_mutual_information(
                 "window_size": window_size,
                 "subpix": subpix,
                 "step": step,
+                "float_precision": float_precision,
             },
             "disparity": {
                 "disparity_method": "wta",
@@ -88,8 +89,8 @@ class TestMutualInformation:
     @pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
     @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
-    @pytest.mark.parametrize("cv_dtype", [np.float64])
-    def test_mutual_information_execution(self, cv_dtype, cfg_for_mutual_information_with_roi):
+    @pytest.mark.parametrize("float_precision", ["float64", "float32"])
+    def test_mutual_information_execution(self, float_precision, cfg_for_mutual_information_with_roi):
         """
         Description : Test that execution of Pandora2d with mutual information does not fail.
         Data :
@@ -110,7 +111,7 @@ class TestMutualInformation:
         # Checking that resulting disparity maps are not full of nans
         assert not np.all(np.isnan(dataset_disp_maps.row_map.data))
         assert not np.all(np.isnan(dataset_disp_maps.col_map.data))
-        assert pandora2d_machine.cost_volumes["cost_volumes"].data.dtype == cv_dtype
+        assert pandora2d_machine.cost_volumes["cost_volumes"].data.dtype == np.dtype(float_precision)
 
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
