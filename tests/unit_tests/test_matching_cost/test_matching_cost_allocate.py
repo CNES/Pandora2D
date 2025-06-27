@@ -520,7 +520,7 @@ class TestCvFloatPrecision:
     Test that the cost volumes is allocated with the right type
     """
 
-    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python"])
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python", "zncc"])
     @pytest.mark.parametrize("float_precision", ["float32", "f", "f4"])
     def test_cost_volumes_float_precision(self, input_config, matching_cost_config, matching_cost_object):
         """
@@ -537,7 +537,7 @@ class TestCvFloatPrecision:
 
         assert matching_cost_test.cost_volumes["cost_volumes"].dtype == np.float32
 
-    @pytest.mark.parametrize("matching_cost_method", ["mutual_information"])
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc"])
     @pytest.mark.parametrize("float_precision", ["float64", "d", "f8"])
     def test_cost_volumes_double_precision(self, input_config, matching_cost_config, matching_cost_object):
         """
