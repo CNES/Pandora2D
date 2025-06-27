@@ -73,7 +73,7 @@ def make_cost_volumes(make_image, request):
     cfg = {
         "pipeline": {
             "matching_cost": {
-                "matching_cost_method": "zncc",
+                "matching_cost_method": "zncc_python",
                 "window_size": request.param["window_size"],
                 "step": request.param["step"],
                 "subpix": request.param["subpix"],

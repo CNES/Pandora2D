@@ -406,7 +406,7 @@ def window_size():
 def correct_pipeline_without_refinement(window_size):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": window_size},
+            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": window_size},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         }
     }

@@ -56,7 +56,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
         coords={"row": row, "col": col, "disp_row": disparity_range_row, "disp_col": disparity_range_col},
     )
 
-    cost_volumes_test.attrs["measure"] = "zncc"
+    cost_volumes_test.attrs["measure"] = "zncc_python"
     cost_volumes_test.attrs["window_size"] = 3
     cost_volumes_test.attrs["type_measure"] = "max"
     cost_volumes_test.attrs["subpixel"] = 1
@@ -72,7 +72,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     cost_volumes_test.attrs["disparity_margins"] = None
 
     # data by function compute_cost_volume
-    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3}}}
+    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc_python", "window_size": 3}}}
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
     matching_cost_matcher.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
@@ -122,7 +122,7 @@ def roi_image(monoband_image):
 class TestShiftedRightImagesAffectation:
     """Test shift_subpix_img function."""
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python"])
     @pytest.mark.parametrize(
         ["image", "subpix", "number", "expected"],
         [
@@ -520,7 +520,7 @@ class TestCvFloatPrecision:
     Test that the cost volumes is allocated with the right type
     """
 
-    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python"])
     @pytest.mark.parametrize("float_precision", ["float32", "f", "f4"])
     def test_cost_volumes_float_precision(self, input_config, matching_cost_config, matching_cost_object):
         """

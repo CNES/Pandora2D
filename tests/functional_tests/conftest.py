@@ -31,7 +31,7 @@ from pandora.common import write_data_array
 def correct_pipeline_with_optical_flow():
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "optical_flow"},
         }
@@ -42,7 +42,7 @@ def correct_pipeline_with_optical_flow():
 def correct_pipeline_with_dichotomy_python():
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "dichotomy_python", "iterations": 2, "filter": {"method": "bicubic"}},
         }
@@ -53,7 +53,7 @@ def correct_pipeline_with_dichotomy_python():
 def correct_pipeline_with_dichotomy_cpp():
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "dichotomy", "iterations": 2, "filter": {"method": "bicubic"}},
         }

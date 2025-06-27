@@ -240,7 +240,7 @@ class TestCheckPipelineSection:
         """
         steps = {
             "estimation": {"estimated_shifts": [-0.5, 1.3], "error": [1.0], "phase_diff": [1.0]},
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
@@ -269,7 +269,7 @@ class TestCheckPipelineSection:
         cfg = {
             "input": input_multiband_cfg,
             "pipeline": {
-                "matching_cost": {"matching_cost_method": "zncc", "window_size": 5, "subpix": 2},
+                "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5, "subpix": 2},
                 "disparity": {"disparity_method": "wta"},
             },
             "output": {"path": "here"},
@@ -517,22 +517,22 @@ class TestCheckConfMatchingCostNodataCondition:
             check_configuration.check_conf(configuration, pandora2d_machine)
 
     @pytest.mark.parametrize("right_nodata", [432])
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python"])
     def test_passes_with_int(self, pandora2d_machine, configuration):
         """Right nodata must be an integer."""
         check_configuration.check_conf(configuration, pandora2d_machine)
 
     @pytest.mark.parametrize("right_nodata", ["NaN", "inf"])
-    @pytest.mark.parametrize("matching_cost_method", ["zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python"])
     def test_zncc_passes_with(self, pandora2d_machine, configuration):
-        """Right nodata can be inf or nan with zncc matching_cost_method."""
+        """Right nodata can be inf or nan with zncc_python matching_cost_method."""
         check_configuration.check_conf(configuration, pandora2d_machine)
 
     @pytest.mark.parametrize("right_nodata", [0.2, None])
-    @pytest.mark.parametrize("matching_cost_method", ["zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python"])
     def test_zncc_fails_with(self, pandora2d_machine, configuration):
         """
-        Description : Right nodata can not be float or nan with zncc matching_cost_method.
+        Description : Right nodata can not be float or nan with zncc_python matching_cost_method.
         Data :
         - Left image : cones/monoband/left.png
         - Right image : cones/monoband/right.png
@@ -575,7 +575,7 @@ class TestDisparityRangeAgainstImageSize:
                 "col_disparity": col_disparity,
             },
             "pipeline": {
-                "matching_cost": {"matching_cost_method": "zncc", "window_size": 1},
+                "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 1},
             },
             "output": {"path": "path"},
         }

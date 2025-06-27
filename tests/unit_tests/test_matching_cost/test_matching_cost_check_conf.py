@@ -39,14 +39,14 @@ def test_check_conf():
     Data :
     Requirement : EX_MC_ZNCC_00
     """
-    matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "zncc", "window_size": 5})
+    matching_cost.PandoraMatchingCostMethods({"matching_cost_method": "zncc_python", "window_size": 5})
 
 
 def test_check_conf_mutual_information():
     """
     Description : test check_conf of matching cost pipeline with mutual information
     """
-    matching_cost.MutualInformation({"matching_cost_method": "mutual_information", "window_size": 5})
+    matching_cost.CorrelationMethods({"matching_cost_method": "mutual_information", "window_size": 5})
 
 
 def test_invalid_method():
@@ -64,10 +64,10 @@ class TestFactory:
     Test instances of BaseMatchingCost
     """
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc", "sad", "ssd"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "sad", "ssd"])
     def test_factory(self, matching_cost_config, matching_cost_object):
         """
-        Description : With 'matching_cost_method' equals to 'zncc', 'sad', 'ssd',
+        Description : With 'matching_cost_method' equals to 'zncc_python', 'sad', 'ssd',
         we should get a PandoraMatchingCostMethods object.
         """
 
@@ -84,10 +84,10 @@ class TestFactory:
 
         matching_cost_instance = matching_cost_object(matching_cost_config)
         assert isinstance(matching_cost_instance, matching_cost.BaseMatchingCost)
-        assert isinstance(matching_cost_instance, matching_cost.MutualInformation)
+        assert isinstance(matching_cost_instance, matching_cost.CorrelationMethods)
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "sad", "ssd", "mutual_information"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "sad", "ssd", "mutual_information"])
 class TestWindowSize:
     """
     Description : Test window_size parameter values.
@@ -130,7 +130,7 @@ class TestMCCNNConf:
         assert "window_size" in err.value.args[0]
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
 class TestStep:
     """
     Description : Test step in matching_cost configuration
@@ -182,7 +182,7 @@ class TestStep:
             matching_cost_object({"matching_cost_method": matching_cost_method, "window_size": 5, "step": ["2", 3]})
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
 def test_margins(matching_cost_method, matching_cost_object):
     """
     test margins of matching cost pipeline
@@ -197,14 +197,14 @@ class TestFloatPrecision:
     Description : Test float precision in matching_cost configuration
     """
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
     @pytest.mark.parametrize("float_precision", ["float32", "f", "f4"])
     def test_nominal_case(self, matching_cost_method, matching_cost_object, float_precision):
         matching_cost_object(
             {"matching_cost_method": matching_cost_method, "window_size": 5, "float_precision": float_precision}
         )
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
     def test_default_value(self, matching_cost_method, matching_cost_object):
         result = matching_cost_object({"matching_cost_method": matching_cost_method, "window_size": 5})
         assert result.cfg["float_precision"] == "float32"
@@ -216,14 +216,14 @@ class TestFloatPrecision:
             {"matching_cost_method": matching_cost_method, "window_size": 5, "float_precision": float_precision}
         )
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc", "sad", "ssd"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "sad", "ssd"])
     def test_fails_with_float64_and_pandora_methods(self, matching_cost_method, matching_cost_object):
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
             matching_cost_object(
                 {"matching_cost_method": matching_cost_method, "window_size": 5, "float_precision": "float64"}
             )
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
     @pytest.mark.parametrize("float_precision", ["f32", "test", 3])
     def test_fails_with_incorrect_float_precision(self, matching_cost_method, matching_cost_object, float_precision):
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
