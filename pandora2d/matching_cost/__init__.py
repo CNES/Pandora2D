@@ -23,4 +23,4 @@ Init file for matching cost module
 from .registry import MatchingCostRegistry
 from .base import BaseMatchingCost
 from .pandora import PandoraMatchingCostMethods
-from .mutual_information import MutualInformation
+from .correlation import CorrelationMethods
