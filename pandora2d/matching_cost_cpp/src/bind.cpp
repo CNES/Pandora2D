@@ -33,6 +33,7 @@ PYBIND11_MODULE(matching_cost_bind, m) {
   m.def("compute_cost_volumes_cpp_float", &compute_cost_volumes_cpp<float>, "left"_a, "right"_a,
         "cv_values"_a, "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
         "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a, "no_data"_a,
+        "matching_cost_method"_a,
         R"mydelimiter(
             Computes the cost values in float32
 
@@ -60,11 +61,14 @@ PYBIND11_MODULE(matching_cost_bind, m) {
             :type step: NDArray[np.integer]
             :param no_data: no data value in img
             :type no_data: float
+            :param matching_cost_method: correlation method
+            :type matching_cost_method: string
             )mydelimiter");
 
   m.def("compute_cost_volumes_cpp_double", &compute_cost_volumes_cpp<double>, "left"_a, "right"_a,
         "cv_values"_a, "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
         "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a, "no_data"_a,
+        "matching_cost_method"_a,
         R"mydelimiter(
             Computes the cost values in float64
 
@@ -92,5 +96,7 @@ PYBIND11_MODULE(matching_cost_bind, m) {
             :type step: NDArray[np.integer]
             :param no_data: no data value in img
             :type no_data: float
+            :param matching_cost_method: correlation method
+            :type matching_cost_method: string
             )mydelimiter");
 }
