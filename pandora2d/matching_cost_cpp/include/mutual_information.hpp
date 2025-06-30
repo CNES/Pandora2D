@@ -71,6 +71,15 @@ double calculate_entropy2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r)
  * @param img_r right image
  * @return double mutual information value
  */
-double calculate_mutual_information(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r);
+template <typename T>
+T calculate_mutual_information(const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& img_l,
+                               const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& img_r) {
+  double mutual_information =
+      calculate_entropy1D(img_l.template cast<double>()) +
+      calculate_entropy1D(img_r.template cast<double>()) -
+      calculate_entropy2D(img_l.template cast<double>(), img_r.template cast<double>());
+
+  return static_cast<T>(mutual_information);
+}
 
 #endif

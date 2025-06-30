@@ -105,7 +105,7 @@ class MutualInformation(BaseMatchingCost):
         offset_cv_img_col = self.cost_volumes.col.data[0] - img_left.col.data[0]
 
         # Call compute_cost_volumes_cpp
-        matching_cost_bind.compute_cost_volumes_cpp(
+        matching_cost_bind.compute_cost_volumes_cpp_double(
             img_left["im"].data,
             imgs_right,
             cv_values,

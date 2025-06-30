@@ -78,19 +78,3 @@ double calculate_entropy2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r)
 
   return get_entropy<Histogram2D>(nb_pixel, hist_2D);
 };
-
-/**
- * @brief Compute mutual information between two images
- *
- * MutualInformation(img_l,img_r) = Entropy1D(img_l) + Entropy1D(img_r) - Entropy2D(img_l, img_r)
- *
- * @param img_l left image
- * @param img_r right image
- * @return double mutual information value
- */
-double calculate_mutual_information(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r) {
-  double mutual_information =
-      calculate_entropy1D(img_l) + calculate_entropy1D(img_r) - calculate_entropy2D(img_l, img_r);
-
-  return mutual_information;
-}

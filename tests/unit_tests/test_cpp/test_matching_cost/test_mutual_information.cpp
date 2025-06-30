@@ -264,7 +264,7 @@ TEST_CASE("Test MutualInformation") {
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)
     double mutual_information_gt = 0.7219280 + 0.97095059 - 1.3709505;  // 0.32192809489
-    double mutual_information = calculate_mutual_information(img_l, img_r);
+    double mutual_information = calculate_mutual_information<double>(img_l, img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 }
