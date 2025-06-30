@@ -53,6 +53,7 @@ class BaseMatchingCost(ABC):
         )  # _window_size attribute required to compute HalfWindowMargins
         self._subpix = cast(int, self._cfg["subpix"])
         self._spline_order = cast(int, self._cfg["spline_order"])
+        self._float_precision = np.dtype(self._cfg["float_precision"])
 
         self.cost_volumes: Union[xr.Dataset, None] = None
         self.shifted_right_images: List[xr.Dataset] = []
@@ -66,6 +67,7 @@ class BaseMatchingCost(ABC):
             "step": cst_schema.STEP_SCHEMA,
             "spline_order": And(int, lambda y: 1 <= y <= 5),
             "subpix": And(int, lambda sp: sp in [1, 2, 4]),
+            "float_precision": str,
         }
 
     @property
@@ -75,6 +77,7 @@ class BaseMatchingCost(ABC):
             "subpix": 1,
             "step": [1, 1],
             "spline_order": 1,
+            "float_precision": "float32",
         }
 
     def check_conf(self, cfg: Dict) -> Dict[str, str]:
@@ -124,8 +127,8 @@ class BaseMatchingCost(ABC):
         """
         return self._window_size
 
-    @staticmethod
     def allocate_cost_volumes(
+        self,
         cost_volume_attr: dict,
         row: np.ndarray,
         col: np.ndarray,
@@ -154,7 +157,9 @@ class BaseMatchingCost(ABC):
 
         # Create the cost volume
         if np_data is None:
-            np_data = np.zeros((len(row), len(col), len(disp_range_row), len(disp_range_col)), dtype=np.float32)
+            np_data = np.zeros(
+                (len(row), len(col), len(disp_range_row), len(disp_range_col)), dtype=self._float_precision
+            )
 
         cost_volumes = xr.Dataset(
             {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np_data)},

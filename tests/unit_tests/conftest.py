@@ -394,12 +394,18 @@ def subpix():
 
 
 @pytest.fixture()
-def matching_cost_config(matching_cost_method, window_size, step, subpix):
+def float_precision():
+    return "float32"
+
+
+@pytest.fixture()
+def matching_cost_config(matching_cost_method, window_size, step, subpix, float_precision):
     return {
         "matching_cost_method": matching_cost_method,
         "window_size": window_size,
         "step": step,
         "subpix": subpix,
+        "float_precision": float_precision,
     }
 
 

@@ -23,6 +23,7 @@ This module contains functions associated to the matching cost computation step.
 
 import copy
 from typing import Dict, List, Union
+from json_checker import And
 
 import numpy as np
 import xarray as xr
@@ -74,7 +75,20 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
             "window_size": self.window_size,
             "subpix": self._subpix,
             "spline_order": self._spline_order,
+            "float_precision": str(self._float_precision),
         }
+
+    @property
+    def schema(self):
+        schema = super().schema
+
+        schema.update(
+            {
+                "float_precision": And(str, lambda x: np.dtype(x) in [np.float32]),
+            }
+        )
+
+        return schema
 
     @property
     def window_size(self) -> int:
@@ -155,6 +169,8 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         """
         copy_cfg = copy.deepcopy(cfg)
         copy_cfg["step"] = self._step_col
+        if "float_precision" in cfg:
+            del copy_cfg["float_precision"]
         return copy_cfg
 
     def allocate(

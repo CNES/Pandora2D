@@ -29,6 +29,7 @@ import xarray as xr
 from rasterio import Affine
 
 from pandora2d import matching_cost
+from pandora2d.img_tools import create_datasets_from_inputs
 
 
 def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
@@ -512,3 +513,43 @@ class TestShiftedRightImagesAffectation:
         assert len(matching_cost_matcher.shifted_right_images) == subpix**2
         np.testing.assert_array_equal(expected_row, matching_cost_matcher.shifted_right_images[number].row)
         np.testing.assert_array_equal(expected_col, matching_cost_matcher.shifted_right_images[number].col)
+
+
+class TestCvFloatPrecision:
+    """
+    Test that the cost volumes is allocated with the right type
+    """
+
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc"])
+    @pytest.mark.parametrize("float_precision", ["float32", "f", "f4"])
+    def test_cost_volumes_float_precision(self, input_config, matching_cost_config, matching_cost_object):
+        """
+        Test that the cost volumes is allocated in np.float32
+        """
+
+        cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}}
+
+        img_left, img_right = create_datasets_from_inputs(input_config)
+
+        matching_cost_test = matching_cost_object(matching_cost_config)
+
+        matching_cost_test.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
+
+        assert matching_cost_test.cost_volumes["cost_volumes"].dtype == np.float32
+
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information"])
+    @pytest.mark.parametrize("float_precision", ["float64", "d", "f8"])
+    def test_cost_volumes_double_precision(self, input_config, matching_cost_config, matching_cost_object):
+        """
+        Test that the cost volumes is allocated in np.float64
+        """
+
+        cfg = {"input": input_config, "pipeline": {"matching_cost": matching_cost_config}}
+
+        img_left, img_right = create_datasets_from_inputs(input_config)
+
+        matching_cost_test = matching_cost_object(matching_cost_config)
+
+        matching_cost_test.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
+
+        assert matching_cost_test.cost_volumes["cost_volumes"].dtype == np.float64
