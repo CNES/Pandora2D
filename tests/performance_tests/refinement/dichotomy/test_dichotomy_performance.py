@@ -103,7 +103,7 @@ class TestComparisonMedicis:
             },
             "pipeline": {
                 "matching_cost": {
-                    "matching_cost_method": "zncc",
+                    "matching_cost_method": "zncc_python",
                     "window_size": 65,
                     "step": [1, 1],
                     "subpix": subpix,

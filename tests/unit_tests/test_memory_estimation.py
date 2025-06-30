@@ -38,7 +38,7 @@ from pandora2d.img_tools import (
     shift_subpix_img_2d,
 )
 from pandora2d.margins import Margins, NullMargins
-from pandora2d.matching_cost import MutualInformation
+from pandora2d.matching_cost import CorrelationMethods
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -714,7 +714,7 @@ class TestDatasetDispMap:
     def test(self, config, image_datasets, image_size: Tuple[int, int], dtype_argument):
         """Test coherence between estimated memory consumption and actual memory consumption."""
 
-        matching_cost = MutualInformation(config["pipeline"]["matching_cost"])
+        matching_cost = CorrelationMethods(config["pipeline"]["matching_cost"])
         matching_cost.allocate(image_datasets.left, image_datasets.right, config["pipeline"]["matching_cost"])
         cost_volumes = matching_cost.cost_volumes
 

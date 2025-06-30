@@ -525,7 +525,9 @@ def test_step_with_refinement_method(make_left_right_images, row, col, step_row,
 
     # create cost volume dataset
     cfg_mc = {
-        "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": [step_row, step_col]}}
+        "pipeline": {
+            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 3, "step": [step_row, step_col]}
+        }
     }
     dataset_cv = make_cv_dataset(dataset_img, dataset_img_shift, cfg_mc)
 
@@ -555,7 +557,11 @@ def test_window_size_refinement_method(make_left_right_images, row, col, step_ro
     # create cost volume dataset
     cfg_mc = {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": window_size, "step": [step_row, step_col]}
+            "matching_cost": {
+                "matching_cost_method": "zncc_python",
+                "window_size": window_size,
+                "step": [step_row, step_col],
+            }
         }
     }
 

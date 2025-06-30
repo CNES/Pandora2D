@@ -68,7 +68,9 @@ def test_steps(request, data_fixture_name, col_step, row_step):
 
     # sum of squared difference images self.left, self.right, window_size=3
     cfg = {
-        "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": [row_step, col_step]}}
+        "pipeline": {
+            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 3, "step": [row_step, col_step]}
+        }
     }
     # initialise matching cost
     matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
@@ -227,9 +229,9 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     np.testing.assert_allclose(sad["cost_volumes"].data[valid_mask], ad_ground_truth[valid_mask], atol=1e-06)
 
 
-def test_compute_cv_zncc():
+def test_compute_cv_zncc_python():
     """
-    Test the  cost volume product by zncc
+    Test the cost volume product by zncc python
     """
     data = np.array(
         ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
@@ -271,7 +273,7 @@ def test_compute_cv_zncc():
     }
 
     # sum of squared difference images left, right, window_size=3
-    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3}}}
+    cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc_python", "window_size": 3}}}
     # sum of absolute difference ground truth for the images left, right, window_size=1
 
     left = left_zncc["im"].data
@@ -340,7 +342,7 @@ def test_compute_cv_zncc():
     )
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
 @pytest.mark.parametrize(
     ["roi", "step", "col_expected", "row_expected"],
     [
@@ -470,7 +472,7 @@ def test_cost_volume_coordinates_with_roi(
 
     matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
-    if matching_cost_config["matching_cost_method"] == "zncc":
+    if matching_cost_config["matching_cost_method"] == "zncc_python":
         np.testing.assert_array_equal(matching_cost_matcher.grid.attrs["col_to_compute"], col_expected)
 
     # compute cost volumes with roi
@@ -480,7 +482,7 @@ def test_cost_volume_coordinates_with_roi(
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc"])
 @pytest.mark.parametrize(
     ["step", "col_expected", "row_expected"],
     [
@@ -550,7 +552,7 @@ def test_cost_volume_coordinates_without_roi(
 
     matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
-    if matching_cost_config["matching_cost_method"] == "zncc":
+    if matching_cost_config["matching_cost_method"] == "zncc_python":
         np.testing.assert_array_equal(matching_cost_matcher.grid.attrs["col_to_compute"], col_expected)
 
     # compute cost volumes without roi
@@ -1496,7 +1498,7 @@ class TestDisparityMargins:
 
         return left, right
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc", "mutual_information"])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc"])
     @pytest.mark.parametrize(
         ["margins", "subpix", "gt_cv_shape", "gt_disp_col", "gt_disp_row"],
         [

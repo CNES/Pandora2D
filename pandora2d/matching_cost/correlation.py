@@ -40,7 +40,8 @@ from ..matching_cost_cpp import matching_cost_bind
 
 
 @MatchingCostRegistry.add("mutual_information")
-class MutualInformation(BaseMatchingCost):
+@MatchingCostRegistry.add("zncc")
+class CorrelationMethods(BaseMatchingCost):
     """
     Mutual Information class
     """
@@ -56,7 +57,7 @@ class MutualInformation(BaseMatchingCost):
 
         schema.update(
             {
-                "matching_cost_method": And(str, lambda x: x in ["mutual_information"]),
+                "matching_cost_method": And(str, lambda x: x in ["zncc", "mutual_information"]),
                 "float_precision": And(str, lambda x: np.dtype(x) in [np.float32, np.float64]),
             }
         )

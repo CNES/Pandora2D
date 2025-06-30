@@ -61,7 +61,7 @@ def make_cfg(roi, step):
     return {
         "ROI": roi,
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 7, "step": step},
+            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 7, "step": step},
         },
     }
 

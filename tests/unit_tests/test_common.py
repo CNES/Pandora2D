@@ -561,13 +561,13 @@ class TestDatasetDispMaps:
         if roi is not None:
             cfg = {
                 "input": input_cfg,
-                "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": step}},
+                "pipeline": {"matching_cost": {"matching_cost_method": "zncc_python", "window_size": 3, "step": step}},
                 "ROI": roi,
             }
         else:
             cfg = {
                 "input": input_cfg,
-                "pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 3, "step": step}},
+                "pipeline": {"matching_cost": {"matching_cost_method": "zncc_python", "window_size": 3, "step": step}},
             }
 
         matching_cost_matcher = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])

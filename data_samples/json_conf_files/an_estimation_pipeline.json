@@ -17,7 +17,7 @@
       "sample_factor": 100
     },
     "matching_cost": {
-      "matching_cost_method": "zncc",
+      "matching_cost_method": "zncc_python",
       "window_size": 5
     },
     "disparity": {

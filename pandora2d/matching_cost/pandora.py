@@ -171,6 +171,8 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         copy_cfg["step"] = self._step_col
         if "float_precision" in cfg:
             del copy_cfg["float_precision"]
+        if copy_cfg["matching_cost_method"] == "zncc_python":
+            copy_cfg["matching_cost_method"] = "zncc"
         return copy_cfg
 
     def allocate(
