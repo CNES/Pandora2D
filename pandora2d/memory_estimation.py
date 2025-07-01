@@ -24,13 +24,16 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 from numpy.typing import DTypeLike
+
 from pandora.img_tools import rasterio_open
 
 from pandora2d.constants import Criteria
 from pandora2d.img_tools import get_extrema_disparity, get_initial_disparity, get_margins_values
-from pandora2d.margins import Margins
+from pandora2d.margins import Margins, NullMargins
 
 BYTE_TO_MB = 1024 * 1024
+
+RELATIVE_ESTIMATION_MARGIN = 0.4
 
 # Data variables in image datasets
 IMG_DATA_VAR = ["im", "row_disparity_min", "row_disparity_max", "col_disparity_min", "col_disparity_max"]
@@ -52,6 +55,50 @@ DATA_VARS_TYPE_SIZE = {
     "cost_volumes_double": np.float64().nbytes,
     "criteria": np.uint8().nbytes,
 }
+
+
+def estimate_total_consumption(config: Dict, margin_disp: Margins = NullMargins()) -> float:
+    """
+    Estimate the total memory consumption of all objects that will be allocated.
+    :param config: configuration with ROI margins if necessary.
+    :type config: Dict
+    :param margin_disp: Disparity margins.
+    :type margin_disp: Margins
+    :return: Estimated memory consumption in Mbytes.
+    :rtype: float
+    """
+    height, width = get_img_size(config["input"]["left"]["img"])
+    if global_margins := config.get("ROI", {}).get("margins"):
+        roi_margins = get_roi_margins(
+            config["input"]["row_disparity"], config["input"]["col_disparity"], global_margins
+        )
+    else:
+        roi_margins = NullMargins()
+
+    height += roi_margins.up + roi_margins.down
+    width += roi_margins.left + roi_margins.right
+
+    cost_volume_dtype = np.dtype(config["pipeline"]["matching_cost"]["float_precision"])
+    cost_volume_datavars = CV_FLOAT_DATA_VAR if cost_volume_dtype == np.float32 else CV_DOUBLE_DATA_VAR
+
+    # A copy of pandora cost volume is done in calculations so it counts twice:
+    number_of_pandora_cost_volumes = 2
+
+    return (
+        estimate_input_size(height, width, IMG_DATA_VAR)
+        + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
+        + (
+            number_of_pandora_cost_volumes * estimate_pandora_cost_volume_size(config, height, width, margin_disp)
+            if config["pipeline"]["matching_cost"]["matching_cost_method"] != "mutual_information"
+            else 0
+        )
+        + (
+            estimate_shifted_right_images_size(height, width, subpix)  # pylint: disable=used-before-assignment
+            if (subpix := config["pipeline"]["matching_cost"]["subpix"]) > 1
+            else 0
+        )
+        + estimate_dataset_disp_map_size(config, height, width, cost_volume_dtype)
+    )
 
 
 def get_img_size(img_path: str, roi: Dict = None) -> Tuple[int, int]:
