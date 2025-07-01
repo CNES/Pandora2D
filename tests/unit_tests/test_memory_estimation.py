@@ -20,9 +20,8 @@
 This file contains unit tests associated to the pandora2d memory estimation
 """
 
-# pylint: disable=redefined-outer-name,too-few-public-methods
+# pylint: disable=redefined-outer-name,too-few-public-methods,invalid-name
 
-import tracemalloc
 from typing import Tuple
 
 import numpy as np
@@ -56,36 +55,6 @@ def input_config(correct_input_cfg, random_left_image_path, random_right_image_p
 def image_datasets(input_config):
     """Left and right images according to input section of the configuration file."""
     return create_datasets_from_inputs(input_config["input"])
-
-
-class MemoryTracer:
-    """
-    Measure consumed memory in bytes.
-    """
-
-    def __init__(self, unit_factor=1):
-        self.unit_factor = unit_factor
-        self._current = 0
-        self._peak = 0
-
-    def __enter__(self):
-        tracemalloc.start()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._current, self._peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(current: {self.current}, peak: {self.peak})"
-
-    @property
-    def current(self):
-        return self._current / self.unit_factor
-
-    @property
-    def peak(self):
-        return self._peak / self.unit_factor
 
 
 class TestInputSize:
@@ -345,7 +314,7 @@ class TestInputSize:
 
         assert pytest.approx(memory_estimation.estimate_input_size(height, width, data_vars), abs=1e-3) == expected
 
-    def test_memory_input(self, correct_input_cfg):
+    def test_memory_input(self, MemoryTracer, correct_input_cfg):
         """
         Test that the value returned by input_size corresponds to the memory occupied by the image datasets.
         """
@@ -368,7 +337,7 @@ class TestInputSize:
         image_dataset_nbytes = (image_datasets.left.nbytes + image_datasets.right.nbytes) / memory_estimation.BYTE_TO_MB
         assert memory_computed == pytest.approx(image_dataset_nbytes, rel=0.05)
 
-    def test_memory_input_with_roi(self, correct_input_cfg, correct_roi_sensor, correct_pipeline):
+    def test_memory_input_with_roi(self, MemoryTracer, correct_input_cfg, correct_roi_sensor, correct_pipeline):
         """
         Test that the value returned by input_size corresponds to the memory occupied by the image datasets
         with a ROI.
@@ -576,7 +545,7 @@ class TestCostVolumesSize:
 
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [3, 3]])
-    def test_memory_cost_volumes(self, user_cfg_cv_memory, matching_cost_object):
+    def test_memory_cost_volumes(self, MemoryTracer, user_cfg_cv_memory, matching_cost_object):
         """
         Test that the value returned by cost_volumes_size corresponds to the memory occupied by the cost volume dataset.
         """
@@ -640,7 +609,7 @@ class TestPandoraCostVolumesSize:
 
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("margins", [NullMargins(), Margins(1, 2, 3, 4)])
-    def test(self, image_datasets, config, margins):
+    def test(self, MemoryTracer, image_datasets, config, margins):
         """Test that cost volumes size computation works as expected."""
 
         height, width = image_datasets.left.sizes["row"], image_datasets.left.sizes["col"]
@@ -669,7 +638,7 @@ class TestShiftedRightImages:
     """Test memory consumption of shifted right images."""
 
     @pytest.mark.parametrize("subpix", [1, 2, 4])
-    def test(self, image_datasets, subpix):
+    def test(self, MemoryTracer, image_datasets, subpix):
         """Test memory consumption of shifted right images."""
 
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
@@ -711,7 +680,7 @@ class TestDatasetDispMap:
     @pytest.mark.parametrize("dtype_argument", [np.float32, "float32"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 2], [2, 1]])
     @pytest.mark.parametrize("image_size", [(200, 300), (700, 500)])
-    def test(self, config, image_datasets, image_size: Tuple[int, int], dtype_argument):
+    def test(self, MemoryTracer, config, image_datasets, image_size: Tuple[int, int], dtype_argument):
         """Test coherence between estimated memory consumption and actual memory consumption."""
 
         matching_cost = CorrelationMethods(config["pipeline"]["matching_cost"])
