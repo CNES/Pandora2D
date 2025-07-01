@@ -780,4 +780,18 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
     CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<CostSurfaceType>(cost_surface, cost_surface_gt);
   }
-}
+
+  SUBCASE("Incorrect matching cost method") {
+    std::string matching_cost_method = "wrong_matching_cost_method";
+
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/top_left_criteria.bin", cv_size);
+
+    CHECK_THROWS_WITH_AS(compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values,
+                                                  cv_size, disp_range_row, disp_range_col,
+                                                  offset_cv_img_row, offset_cv_img_col, window_size,
+                                                  step, no_data, matching_cost_method),
+                         "Unknown correlation method: wrong_matching_cost_method",
+                         std::invalid_argument);
+  }
+};
