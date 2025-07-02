@@ -680,7 +680,7 @@ class TestDatasetDispMap:
     @pytest.mark.parametrize("dtype_argument", [np.float32, "float32"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 2], [2, 1]])
     @pytest.mark.parametrize("image_size", [(200, 300), (700, 500)])
-    def test(self, MemoryTracer, config, image_datasets, image_size: Tuple[int, int], dtype_argument):
+    def test(self, MemoryTracer, config, step, image_datasets, image_size: Tuple[int, int], dtype_argument):
         """Test coherence between estimated memory consumption and actual memory consumption."""
 
         matching_cost = CorrelationMethods(config["pipeline"]["matching_cost"])
@@ -707,7 +707,7 @@ class TestDatasetDispMap:
                 },
             )
 
-        estimation = memory_estimation.estimate_dataset_disp_map_size(config, *image_size, dtype_argument)
+        estimation = memory_estimation.estimate_dataset_disp_map_size(*image_size, step, dtype_argument)
 
         assert estimation == pytest.approx(dataset_disp_maps.nbytes / memory_estimation.BYTE_TO_MB, rel=0.05)
         assert estimation == pytest.approx(memory_tracer.current, rel=0.05, abs=1e-2)

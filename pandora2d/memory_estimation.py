@@ -97,7 +97,7 @@ def estimate_total_consumption(config: Dict, margin_disp: Margins = NullMargins(
             if (subpix := config["pipeline"]["matching_cost"]["subpix"]) > 1
             else 0
         )
-        + estimate_dataset_disp_map_size(config, height, width, cost_volume_dtype)
+        + estimate_dataset_disp_map_size(height, width, config["pipeline"]["matching_cost"]["step"], cost_volume_dtype)
     )
 
 
@@ -317,22 +317,21 @@ def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, mar
     return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
 
 
-def estimate_dataset_disp_map_size(config: Dict, height: int, width: int, dtype: DTypeLike) -> float:
+def estimate_dataset_disp_map_size(height: int, width: int, step: List, dtype: DTypeLike) -> float:
     """
     Estimate the size in MB of the disparity map dataset.
 
-    :param config: user configuration.
-    :type config: Dict
     :param height: image or ROI number of rows.
     :type height: int
     :param width: image or ROI number of columns.
     :type width: int
+    :param step: step.
+    :type step: List
     :param dtype: dtype of the disparity map (should be same as cost volumes dataset).
     :type dtype: np.typing.DTypeLike
     :return: estimated size in MB.
     :rtype: float
     """
-    step = config["pipeline"]["matching_cost"]["step"]
     image_size = np.ceil(height / step[0]) * np.ceil(width / step[1])
     number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
     # The number of criteria is incremented by one in order to take the validity_mask band into account:
