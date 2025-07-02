@@ -17,7 +17,9 @@
 #  limitations under the License.
 #
 """Memory estimation tests."""
+
 import json
+from typing import List
 
 import pytest
 
@@ -34,7 +36,7 @@ class TestEstimateTotalMemoryConsumption:
     @pytest.fixture(scope="class")
     def result_store(self, request, tmp_path_factory):
         """Yield a list of objects that will be dumped to JSON file."""
-        store = []
+        store: List = []
 
         yield store
 
@@ -50,7 +52,7 @@ class TestEstimateTotalMemoryConsumption:
         """Instantiate a Pandora2D state machine."""
         return Pandora2DMachine()
 
-    @pytest.fixture(autouse=True)  # autouse to apply checkconf on state_machine
+    @pytest.fixture
     def checked_config(self, config, state_machine):
         """Run check_conf on config and return the result."""
         return check_conf(config, state_machine)
@@ -99,6 +101,12 @@ class TestEstimateTotalMemoryConsumption:
             },
         }
 
+    @pytest.fixture
+    def add_roi_to_config(self, config, roi):
+        """Add roi to config."""
+        config["ROI"] = roi
+        return config
+
     # Warning: we must stay in a case where we are not above max memory to measure the same thing that we estimate
     @pytest.fixture
     def measured_consumption(self, config, run_pipeline, MemoryTracer):
@@ -111,6 +119,47 @@ class TestEstimateTotalMemoryConsumption:
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     def test(
+        self, checked_config, state_machine, measured_consumption, result_store, matching_cost_method, step, subpix
+    ):
+        """Test."""
+        estimation = memory_estimation.estimate_total_consumption(
+            checked_config, state_machine.margins_disp.global_margins
+        )
+
+        result_store.append(
+            {
+                "method": matching_cost_method,
+                "step": step,
+                "subpix": subpix,
+                "estimation": float(estimation),  # cast in order to be json serializable
+                "current": measured_consumption.current,
+                "peak": measured_consumption.peak,
+            }
+        )
+        assert estimation == pytest.approx(
+            measured_consumption.current,
+            rel=memory_estimation.RELATIVE_ESTIMATION_MARGIN,
+        )
+
+    @pytest.mark.usefixtures("add_roi_to_config")
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "mutual_information"])
+    @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
+    @pytest.mark.parametrize("subpix", [1, 4])
+    @pytest.mark.parametrize(
+        "roi",
+        [
+            pytest.param(
+                {"row": {"first": 0, "last": 100}, "col": {"first": 60, "last": 110}},
+                id="Small",
+                marks=pytest.mark.skip("Under estimated"),
+            ),
+            pytest.param(
+                {"row": {"first": 0, "last": 200}, "col": {"first": 0, "last": 310}},
+                id="Larger",
+            ),
+        ],
+    )
+    def test_with_roi(
         self, checked_config, state_machine, measured_consumption, result_store, matching_cost_method, step, subpix
     ):
         """Test."""

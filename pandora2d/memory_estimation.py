@@ -67,7 +67,7 @@ def estimate_total_consumption(config: Dict, margin_disp: Margins = NullMargins(
     :return: Estimated memory consumption in Mbytes.
     :rtype: float
     """
-    height, width = get_img_size(config["input"]["left"]["img"])
+    height, width = get_img_size(config["input"]["left"]["img"], config.get("ROI"))
     if global_margins := config.get("ROI", {}).get("margins"):
         roi_margins = get_roi_margins(
             config["input"]["row_disparity"], config["input"]["col_disparity"], global_margins
