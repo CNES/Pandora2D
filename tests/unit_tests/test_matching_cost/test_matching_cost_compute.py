@@ -838,7 +838,6 @@ class TestDisparityGrid:
         assert np.all(result[:, :col_index] == 0)
         assert np.all(result[:, col_index + 1 :] == 0)
 
-    @pytest.mark.xfail(reason="will pass when Criteria.P2D_DISPARITY_UNPROCESSED has been removed")
     @pytest.mark.parametrize("mock_type", ["not used"])
     def test_when_not_taken_into_account(
         self, disparity_maps, disparity_to_alter, mock_set_out_of_disparity_range_to_nan
