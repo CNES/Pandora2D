@@ -767,7 +767,7 @@ class TestDisparityGrid:
         """
         if mock_type == "not used":
             return mocker.patch(
-                "pandora2d.matching_cost.pandora.set_out_of_row_disparity_range_to_other_value",
+                "pandora2d.matching_cost.base.set_out_of_row_disparity_range_to_other_value",
                 side_effect=lambda x, y, z, k, l: x,
             )
         if mock_type != "used":
@@ -842,7 +842,7 @@ class TestDisparityGrid:
     def test_when_not_taken_into_account(
         self, disparity_maps, disparity_to_alter, mock_set_out_of_disparity_range_to_nan
     ):  # pylint: disable=unused-argument
-        """Check best candidate out of disparity range is not chosen by wta.
+        """Check best candidate out of disparity range is chosen by wta.
 
         Note: `col_disparity` is done by Pandora.
         """
