@@ -27,17 +27,15 @@ import json
 from copy import deepcopy
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
+from typing import Callable, Dict, Generic, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import xarray as xr
-from numpy.typing import NDArray
 from pandora.common import write_data_array
 from rasterio import Affine
 from rasterio.crs import CRS
 
 from pandora2d import reporting
-from pandora2d.constants import Criteria
 from pandora2d.img_tools import remove_roi_margins
 
 # mypy: disable-error-code="attr-defined, no-redef"
@@ -324,99 +322,6 @@ def fill_dataset_disp_maps(
     disparity_dataset["row_map"].data = delta_row
     disparity_dataset["col_map"].data = delta_col
     disparity_dataset["correlation_score"].data = correlation_score
-
-
-def set_out_of_row_disparity_range_to_other_value(
-    data: xr.DataArray,
-    min_disp_grid: NDArray[np.floating],
-    max_disp_grid: NDArray[np.floating],
-    value: Union[int, float, Criteria],
-    global_disparity_range: Union[None, List[int]] = None,
-) -> None:
-    """
-    Put special value in data  where the disparity is out of the range defined by disparity grids.
-
-    The operation is done inplace.
-
-    :param data: cost_volumes or criteria_dataarray to modify.
-    :type data: xr.DataArray 4D
-    :param min_disp_grid: grid of min disparity.
-    :type min_disp_grid: NDArray[np.floating]
-    :param max_disp_grid: grid of max disparity.
-    :type max_disp_grid: NDArray[np.floating]
-    :param value: value to set on data.
-    :type value: Union[int, float, Criteria]
-    :param global_disparity_range:
-    :type global_disparity_range:
-    """
-    ndisp_row = data.shape[-2]
-
-    # We want to put special value on points that are not in the global disparity range (row_disparity_source)
-    for disp_row in range(ndisp_row):
-        if global_disparity_range is not None:  # Case we are working with cost volume
-            masking = np.nonzero(
-                np.logical_or(
-                    (data.coords["disp_row"].data[disp_row] < min_disp_grid)
-                    & (data.coords["disp_row"].data[disp_row] >= global_disparity_range[0]),
-                    (data.coords["disp_row"].data[disp_row] > max_disp_grid)
-                    & (data.coords["disp_row"].data[disp_row] <= global_disparity_range[1]),
-                )
-            )
-        else:
-            masking = np.nonzero(
-                np.logical_or(
-                    data.coords["disp_row"].data[disp_row] < min_disp_grid,
-                    data.coords["disp_row"].data[disp_row] > max_disp_grid,
-                )
-            )
-        data.data[masking[0], masking[1], disp_row, :] = value
-
-
-def set_out_of_col_disparity_range_to_other_value(
-    data: xr.DataArray,
-    min_disp_grid: NDArray[np.floating],
-    max_disp_grid: NDArray[np.floating],
-    value: Union[int, float, Criteria],
-    global_disparity_range: Union[None, List[int]] = None,
-) -> None:
-    """
-    Put special value in data (cost_volumes or criteria_dataarray) where the disparity is out of the range defined
-    by disparity grids.
-
-    The operation is done inplace.
-
-    :param data: cost_volumes or criteria_dataarray to modify.
-    :type data: xr.DataArray 4D
-    :param min_disp_grid: grid of min disparity.
-    :type min_disp_grid: NDArray[np.floating]
-    :param max_disp_grid: grid of max disparity.
-    :type max_disp_grid: NDArray[np.floating]
-    :param value: value to set on data.
-    :type value: Union[int, float, Criteria]
-    :param global_disparity_range:
-    :type global_disparity_range:
-    """
-    ndisp_col = data.shape[-1]
-
-    # We want to put special value on points that are not in the global disparity range (col_disparity_source)
-    for disp_col in range(ndisp_col):
-        if global_disparity_range is not None:  # Case we are working with cost volume
-            masking = np.nonzero(
-                np.logical_or(
-                    (data.coords["disp_col"].data[disp_col] < min_disp_grid)
-                    & (data.coords["disp_col"].data[disp_col] >= global_disparity_range[0]),
-                    (data.coords["disp_col"].data[disp_col] > max_disp_grid)
-                    & (data.coords["disp_col"].data[disp_col] <= global_disparity_range[1]),
-                )
-            )
-        else:
-            masking = np.nonzero(
-                np.logical_or(
-                    data.coords["disp_col"].data[disp_col] < min_disp_grid,
-                    data.coords["disp_col"].data[disp_col] > max_disp_grid,
-                )
-            )
-        data.data[masking[0], masking[1], :, disp_col] = value
 
 
 def save_config(config: Dict) -> None:

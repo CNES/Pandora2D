@@ -32,10 +32,6 @@ from pandora.margins import Margins as PandoraMargins
 from pandora2d.margins import Margins
 
 from pandora2d import img_tools
-from pandora2d.common import (
-    set_out_of_col_disparity_range_to_other_value,
-    set_out_of_row_disparity_range_to_other_value,
-)
 
 from .base import BaseMatchingCost
 
@@ -297,23 +293,10 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         # Add type measure to attributes for WTA
         self.cost_volumes.attrs["type_measure"] = cost_volume.attrs["type_measure"]
 
-        # Select correct rows and columns in case of a step different from 1.
-        row_cv = self.cost_volumes.row.values
-        col_cv = self.cost_volumes.col.values
+        # Value to set on cost volumes points where the row or column disparity is out of the range defined
+        # by disparity grids
+        value = -np.inf if self.cost_volumes.attrs["type_measure"] == "max" else np.inf
 
-        set_out_of_row_disparity_range_to_other_value(
-            self.cost_volumes["cost_volumes"],
-            img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data,
-            img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data,
-            np.nan,
-            self.cost_volumes.attrs["row_disparity_source"],
-        )
-        set_out_of_col_disparity_range_to_other_value(
-            self.cost_volumes["cost_volumes"],
-            img_left["col_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data,
-            img_left["col_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data,
-            np.nan,
-            self.cost_volumes.attrs["col_disparity_source"],
-        )
+        self.set_out_of_disparity_range_to_other_value(img_left, value)
 
         return self.cost_volumes
