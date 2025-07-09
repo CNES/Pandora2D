@@ -403,10 +403,15 @@ def window_size():
 
 
 @pytest.fixture()
-def correct_pipeline_without_refinement(window_size):
+def matching_cost_method():
+    return "zncc_python"
+
+
+@pytest.fixture()
+def correct_pipeline_without_refinement(window_size, matching_cost_method):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": window_size},
+            "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": window_size},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         }
     }
