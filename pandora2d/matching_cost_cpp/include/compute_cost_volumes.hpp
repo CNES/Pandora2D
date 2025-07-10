@@ -42,10 +42,10 @@ This module contains functions associated to the computation of cost volumes in 
  * @return P2d::MatrixD or P2d::Matrixf
  */
 template <typename T>
-Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> get_window(const P2d::Matrixf& image,
-                                                            int window_size,
-                                                            int index_row,
-                                                            int index_col) {
+P2d::MatrixX<T> get_window(const P2d::Matrixf& image,
+                           int window_size,
+                           int index_row,
+                           int index_col) {
   int offset = static_cast<int>(window_size / 2);
 
   // Get first row and column of the window
@@ -96,10 +96,9 @@ bool all_non_zero_elements(const P2d::MatrixUI& mat);
  */
 template <typename T>
 T calculate_correlation(const std::string& method,
-                        const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& left_image,
-                        const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& right_image) {
-  std::map<std::string, std::function<T(const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>&,
-                                        const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>&)>>
+                        const P2d::MatrixX<T>& left_image,
+                        const P2d::MatrixX<T>& right_image) {
+  std::map<std::string, std::function<T(const P2d::MatrixX<T>&, const P2d::MatrixX<T>&)>>
       method_map = {{"mutual_information", calculate_mutual_information<T>},
                     {"zncc", calculate_zncc<T>}};
   auto it = method_map.find(method);
@@ -144,8 +143,8 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
                               const Eigen::Vector2i& step,
                               const double no_data,
                               const std::string matching_cost_method) {
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> left_window;
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> right_window;
+  P2d::MatrixX<T> left_window;
+  P2d::MatrixX<T> right_window;
 
   if (matching_cost_method == "zncc") {
     std::cerr << "ZNCC method not yet implemented in C++." << std::endl;

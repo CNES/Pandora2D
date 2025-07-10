@@ -33,8 +33,7 @@ This module contains functions associated to the zncc in cpp.
  * @return double zncc value
  */
 template <typename T>
-T calculate_zncc(const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& left_image,
-                 const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& right_image) {
+T calculate_zncc(const P2d::MatrixX<T>& left_image, const P2d::MatrixX<T>& right_image) {
   return 0;
 }
 

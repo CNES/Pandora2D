@@ -46,6 +46,14 @@ using Matrixf = Eigen::MatrixXf;
 using MatrixUI = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>;
 
 /**
+ * @brief type used for template matrix
+ *
+ * @tparam T
+ */
+template <typename T>
+using MatrixX = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
+
+/**
  * @brief type used for double vectors
  *
  */
