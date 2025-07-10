@@ -23,6 +23,8 @@
 # pylint: disable=redefined-outer-name
 
 from copy import deepcopy
+from typing import Tuple
+
 import numpy as np
 import xarray as xr
 from rasterio import Affine
@@ -183,7 +185,7 @@ def correct_segment_mode():
 
 
 @pytest.fixture()
-def image_size():
+def image_size() -> Tuple[int, int]:
     return 1000, 1000
 
 
