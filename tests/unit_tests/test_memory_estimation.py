@@ -843,13 +843,17 @@ class TestSegmentImageByRows:
         assert len(result) >= 2, "There should be at least 2 segments."
         assert all(check_roi_section({"ROI": cast(Dict, e)}).get("ROI") for e in result)
         assert image_can_be_fully_reconstructed(result, image_size)
-        assert all((estimate_roi_memory_consumption(roi) + dataset_disp_map_size) < memory_per_work for roi in result)
+        assert all(
+            (estimate_roi_memory_consumption(roi) + dataset_disp_map_size)
+            < (1 - memory_estimation.RELATIVE_ESTIMATION_MARGIN) * memory_per_work
+            for roi in result
+        )
 
     @pytest.mark.parametrize(
         ["image_size", "memory_per_work"],
         [
             pytest.param([2500, 4500], 170, id="Dataset disp map too big"),
-            pytest.param([500, 5000], 51, id="Min ROI too big (width too big)"),
+            pytest.param([500, 2100], 51, id="Min ROI too big (width too big)"),
         ],
     )
     def test_raise_error_when_not_enough_memory(

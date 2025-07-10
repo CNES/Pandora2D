@@ -410,7 +410,9 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -
 
     # Estimate total memory required for full image
     whole_image_estimation = estimate_total_consumption(config, disp_margins)
-    memory_per_work = config["segment_mode"].get("memory_per_work")
+    asked_memory_per_work = config["segment_mode"].get("memory_per_work")
+    estimation_margin_factor = 1 - RELATIVE_ESTIMATION_MARGIN
+    memory_per_work = int(estimation_margin_factor * asked_memory_per_work)
 
     # Bypass segmentation if disabled or memory fits full image
     if not config["segment_mode"]["enable"] or whole_image_estimation <= memory_per_work:
@@ -434,8 +436,9 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -
         # memory requirement *with* the margin applied, for proper comparison with the user-defined value.
         # That’s why we apply the margin to `min_required_memory` before formatting.
         raise ValueError(
-            f"estimated minimum `memory_per_work` is {math.ceil(min_required_memory)} MB, "
-            f"but got {memory_per_work} MB. Consider increasing it, reducing image size or working on ROI."
+            f"estimated minimum `memory_per_work` is "
+            f"{math.ceil(min_required_memory / estimation_margin_factor)} MB, "
+            f"but got {asked_memory_per_work} MB. Consider increasing it, reducing image size or working on ROI."
         )
 
     # Compute usable memory per ROI and derive segment size
