@@ -142,8 +142,6 @@ TEST_CASE("Test calculate_histogram1D function") {
     auto bins_width = get_bins_width(m);
     auto dynamic_range = m.maxCoeff() - m.minCoeff();
     auto nb_bins = static_cast<int>(1. + (dynamic_range / bins_width));
-    auto low_bound =
-        m.minCoeff() - (static_cast<double>(nb_bins) * bins_width - dynamic_range) / 2.;
 
     CHECK(hist.nb_bins() == 100);
     // When nb_bins > NB_BINS_MAX,
