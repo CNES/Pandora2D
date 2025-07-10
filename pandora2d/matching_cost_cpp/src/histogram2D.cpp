@@ -47,19 +47,19 @@ Histogram2D::Histogram2D(Histogram1D row_hist, Histogram1D col_hist)
 /**
  * @brief Create and compute Histogram 2D
  *
- * @param img_l: left image
- * @param img_r: right image
+ * @param left_image: left image
+ * @param right_image: right image
  * @return Histogram2D
  */
-Histogram2D calculate_histogram2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r) {
-  auto hist_l = Histogram1D(img_l);
-  auto hist_r = Histogram1D(img_r);
+Histogram2D calculate_histogram2D(const P2d::MatrixD& left_image, const P2d::MatrixD& right_image) {
+  auto hist_l = Histogram1D(left_image);
+  auto hist_r = Histogram1D(right_image);
   P2d::MatrixD values = P2d::MatrixD::Zero(hist_l.nb_bins(), hist_r.nb_bins());
-  auto pixel_l = img_l.data();
-  auto pixel_r = img_r.data();
+  auto pixel_l = left_image.data();
+  auto pixel_r = right_image.data();
   auto nb_bins_l = static_cast<int>(hist_l.nb_bins());
   auto nb_bins_r = static_cast<int>(hist_r.nb_bins());
-  for (; pixel_l != (img_l.data() + img_l.size()); ++pixel_l, ++pixel_r) {
+  for (; pixel_l != (left_image.data() + left_image.size()); ++pixel_l, ++pixel_r) {
     auto index_l = std::max(
         0, std::min(static_cast<int>((*pixel_l - hist_l.low_bound()) / hist_l.bins_width()),
                     nb_bins_l - 1));

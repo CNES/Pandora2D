@@ -35,14 +35,14 @@ This module contains functions associated to the computation of cost volumes in 
 /**
  * @brief Get the matching cost window
  *
- * @param img image
+ * @param image image
  * @param window_size size of the matching cost window
  * @param index_row row index of the center of the window
  * @param index_col col index of the center of the window
- * @return P2d::MatrixD
+ * @return P2d::MatrixD or P2d::Matrixf
  */
 template <typename T>
-Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> get_window(const P2d::Matrixf& img,
+Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> get_window(const P2d::Matrixf& image,
                                                             int window_size,
                                                             int index_row,
                                                             int index_col) {
@@ -53,8 +53,8 @@ Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> get_window(const P2d::Matrixf& 
   int start_col = std::max(0, index_col - offset);
 
   // Get last row and column of the window
-  int nb_rows_img = static_cast<int>(img.rows());
-  int nb_cols_img = static_cast<int>(img.cols());
+  int nb_rows_img = static_cast<int>(image.rows());
+  int nb_cols_img = static_cast<int>(image.cols());
   int end_row = std::min(nb_rows_img - 1, index_row + offset);
   int end_col = std::min(nb_cols_img - 1, index_col + offset);
 
@@ -64,7 +64,7 @@ Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> get_window(const P2d::Matrixf& 
   int nb_rows_window = std::max(0, end_row - start_row + 1);
   int nb_cols_window = std::max(0, end_col - start_col + 1);
 
-  return img.block(start_row, start_col, nb_rows_window, nb_cols_window).template cast<T>();
+  return image.block(start_row, start_col, nb_rows_window, nb_cols_window).template cast<T>();
 }
 
 /**
@@ -124,7 +124,7 @@ T calculate_correlation(const std::string& method,
  * @param offset_cv_img_col col offset between first index of cv and image (ROI case)
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
- * @param no_data no data value in img
+ * @param no_data no data value in image
  * @param matching_cost_method correlation method
  *
  * @throws std::invalid_argument if provided method is not known

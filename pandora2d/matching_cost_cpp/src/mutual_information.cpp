@@ -51,12 +51,12 @@ double get_entropy(const double nb_pixel, const T& hist) {
  * Entropy1D(img) = - sum(bin_value/nb_pixel * log2(bin_value/nb_pixel))
  * for each bin_value in Hist1D(img)
  *
- * @param img
+ * @param image
  * @return double entropy1D
  */
-double calculate_entropy1D(const P2d::MatrixD& img) {
-  auto nb_pixel = static_cast<double>(img.size());
-  auto hist_1D = calculate_histogram1D(img);
+double calculate_entropy1D(const P2d::MatrixD& image) {
+  auto nb_pixel = static_cast<double>(image.size());
+  auto hist_1D = calculate_histogram1D(image);
 
   return get_entropy<Histogram1D>(nb_pixel, hist_1D);
 };
@@ -67,14 +67,14 @@ double calculate_entropy1D(const P2d::MatrixD& img) {
  * Entropy2D(img_l, img_r) = - sum(bin_value/nb_pixel * log2(bin_value/nb_pixel))
  * for each bin_value in Hist2D(img_l, img_r)
  *
- * @param img_l left image
- * @param img_r right image
+ * @param left_image left image
+ * @param right_image right image
  * @return double entropy 2D
  */
-double calculate_entropy2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r) {
+double calculate_entropy2D(const P2d::MatrixD& left_image, const P2d::MatrixD& right_image) {
   // same size for left and right images
-  auto nb_pixel = static_cast<double>(img_l.size());
-  auto hist_2D = calculate_histogram2D(img_l, img_r);
+  auto nb_pixel = static_cast<double>(left_image.size());
+  auto hist_2D = calculate_histogram2D(left_image, right_image);
 
   return get_entropy<Histogram2D>(nb_pixel, hist_2D);
 };
