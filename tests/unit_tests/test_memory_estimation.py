@@ -764,10 +764,10 @@ class TestSegmentImageByRows:
         )
 
     @pytest.fixture
-    def image_can_be_fully_reconstructed(self):
+    def image_can_be_fully_reconstructed(self, image_size: Tuple[int, int]):
         """Helper that checks that the image can be fully reconstructed from an ROI list."""
 
-        def inner(rois, image_size):
+        def inner(rois):
             total_number_of_rows, total_number_of_columns = image_size
             row_sorted = sorted(rois, key=lambda roi: roi["row"]["first"])
             for first_roi, second_roi in zip(row_sorted[:-1], row_sorted[1:]):
@@ -833,7 +833,6 @@ class TestSegmentImageByRows:
         checked_config,
         memory_per_work,
         state_machine,
-        image_size,
         image_can_be_fully_reconstructed,
         estimate_roi_memory_consumption,
         dataset_disp_map_size,
@@ -843,7 +842,7 @@ class TestSegmentImageByRows:
 
         assert len(result) >= 2, "There should be at least 2 segments."
         assert all(check_roi_section({"ROI": cast(Dict, e)}).get("ROI") for e in result)
-        assert image_can_be_fully_reconstructed(result, image_size)
+        assert image_can_be_fully_reconstructed(result)
         assert all(
             (estimate_roi_memory_consumption(roi) + dataset_disp_map_size)
             < (1 - memory_estimation.RELATIVE_ESTIMATION_MARGIN) * memory_per_work
@@ -854,7 +853,7 @@ class TestSegmentImageByRows:
         ["image_size", "memory_per_work"],
         [
             pytest.param([2500, 4500], 170, id="Dataset disp map too big"),
-            pytest.param([500, 2100], 51, id="Min ROI too big (width too big)"),
+            pytest.param([450, 2200], 34, id="Min ROI too big (width too big)"),
         ],
     )
     def test_raise_error_when_not_enough_memory(
@@ -875,25 +874,8 @@ class TestSegmentImageByRows:
             memory_estimation.segment_image_by_rows(checked_config, state_machine.margins_disp.global_margins)
 
 
-class TestGetSegmentsWithROI:
-    """Test the get_segments with ROI in intial config."""
-
-    @pytest.fixture
-    def state_machine(self):
-        """Instantiate a Pandora2D state machine."""
-        return Pandora2DMachine()
-
-    @pytest.fixture
-    def checked_config(self, config, state_machine):
-        """Run check_conf on config and return the result."""
-        return check_conf(config, state_machine)
-
-    @pytest.fixture
-    def segment_mode(self, memory_per_work):
-        return {
-            "enable": True,
-            "memory_per_work": memory_per_work,
-        }
+class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
+    """Test segment_image_by_rows with ROI in initial config."""
 
     @pytest.fixture
     def input_roi(self, image_size):
@@ -904,7 +886,7 @@ class TestGetSegmentsWithROI:
         }
 
     @pytest.fixture
-    def config(self, input_roi, tmp_path, input_config, segment_mode):
+    def config(self, input_roi, tmp_path, input_config, segment_mode):  # pylint: disable=arguments-differ
         return {
             **input_config,
             "ROI": input_roi,
@@ -927,7 +909,7 @@ class TestGetSegmentsWithROI:
         }
 
     @pytest.fixture
-    def dataset_disp_map_size(self, checked_config):
+    def dataset_disp_map_size(self, checked_config):  # pylint: disable=arguments-differ
         return memory_estimation.estimate_dataset_disp_map_size(
             *memory_estimation.compute_effective_image_size(checked_config),
             checked_config["pipeline"]["matching_cost"]["step"],
@@ -935,7 +917,7 @@ class TestGetSegmentsWithROI:
         )
 
     @pytest.fixture
-    def image_can_be_fully_reconstructed(self, input_roi):
+    def image_can_be_fully_reconstructed(self, input_roi):  # pylint: disable=arguments-renamed
         """Helper that checks that the image can be fully reconstructed from an ROI list."""
 
         def inner(rois):
@@ -952,18 +934,7 @@ class TestGetSegmentsWithROI:
 
         return inner
 
-    @pytest.fixture
-    def estimate_roi_memory_consumption(self, checked_config, state_machine):
-        """Helper that estimate the memory consumption of the given ROI."""
-
-        def inner(roi):
-            checked_config["ROI"] = roi
-            return memory_estimation.estimate_total_consumption(
-                checked_config, state_machine.margins_disp.global_margins
-            )
-
-        return inner
-
+    # Add input_roi
     @pytest.mark.parametrize(
         ["image_size", "input_roi", "memory_per_work"],
         [
@@ -997,22 +968,31 @@ class TestGetSegmentsWithROI:
         dataset_disp_map_size,
     ):
         """There is enough memory per work to split image into segments."""
-        result = memory_estimation.get_segments(checked_config, state_machine.margins_disp.global_margins)
-
-        assert len(result) >= 2, "There should be at least 2 segments."
-        assert all(check_roi_section({"ROI": cast(Dict, e)}).get("ROI") for e in result)
-        assert image_can_be_fully_reconstructed(result)
-        assert all(
-            (estimate_roi_memory_consumption(roi) + dataset_disp_map_size)
-            < (1 - memory_estimation.RELATIVE_ESTIMATION_MARGIN) * memory_per_work
-            for roi in result
+        super().test_enough_memory(
+            checked_config,
+            memory_per_work,
+            state_machine,
+            image_can_be_fully_reconstructed,
+            estimate_roi_memory_consumption,
+            dataset_disp_map_size,
         )
 
+    # Add input_roi
     @pytest.mark.parametrize(
-        ["image_size", "memory_per_work"],
+        ["image_size", "input_roi", "memory_per_work"],
         [
-            pytest.param([2500, 4500], 170, id="Dataset disp map too big"),
-            pytest.param([500, 5000], 51, id="Min ROI too big (width too big)"),
+            pytest.param(
+                [5500, 6500],
+                {"row": {"first": 0, "last": 2499}, "col": {"first": 0, "last": 4500}},
+                170,
+                id="Dataset disp map too big",
+            ),
+            pytest.param(
+                [2000, 2301],
+                {"row": {"first": 1000, "last": 1449}, "col": {"first": 100, "last": 2300}},
+                34,
+                id="Min ROI too big (width too big)",
+            ),
         ],
     )
     def test_raise_error_when_not_enough_memory(
@@ -1023,11 +1003,4 @@ class TestGetSegmentsWithROI:
     ):
         """Raise an error when either the initial disparity map size or the minimum ROI (one line) is too large,
         providing an indication of the minimum memory_per_work value required to fit them into memory."""
-        with pytest.raises(
-            ValueError,
-            match=(
-                rf"^estimated minimum `memory_per_work` is \d+ MB, but got {memory_per_work} MB. "
-                "Consider increasing it, reducing image size or working on ROI."
-            ),
-        ):
-            memory_estimation.get_segments(checked_config, state_machine.margins_disp.global_margins)
+        super().test_raise_error_when_not_enough_memory(checked_config, memory_per_work, state_machine)
