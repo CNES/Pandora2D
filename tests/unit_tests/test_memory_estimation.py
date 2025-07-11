@@ -872,4 +872,162 @@ class TestSegmentImageByRows:
                 "Consider increasing it, reducing image size or working on ROI."
             ),
         ):
+            memory_estimation.segment_image_by_rows(checked_config, state_machine.margins_disp.global_margins)
+
+
+class TestGetSegmentsWithROI:
+    """Test the get_segments with ROI in intial config."""
+
+    @pytest.fixture
+    def state_machine(self):
+        """Instantiate a Pandora2D state machine."""
+        return Pandora2DMachine()
+
+    @pytest.fixture
+    def checked_config(self, config, state_machine):
+        """Run check_conf on config and return the result."""
+        return check_conf(config, state_machine)
+
+    @pytest.fixture
+    def segment_mode(self, memory_per_work):
+        return {
+            "enable": True,
+            "memory_per_work": memory_per_work,
+        }
+
+    @pytest.fixture
+    def input_roi(self, image_size):
+        """Default ROI taking full image."""
+        return {
+            "row": {"first": 0, "last": image_size[0] - 1},
+            "col": {"first": 0, "last": image_size[1] - 1},
+        }
+
+    @pytest.fixture
+    def config(self, input_roi, tmp_path, input_config, segment_mode):
+        return {
+            **input_config,
+            "ROI": input_roi,
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": "mutual_information",
+                    "window_size": 5,
+                    "step": [1, 1],
+                    "subpix": 1,
+                },
+                "disparity": {
+                    "disparity_method": "wta",
+                    "invalid_disparity": -9999,
+                },
+            },
+            "segment_mode": segment_mode,
+            "output": {
+                "path": str(tmp_path),
+            },
+        }
+
+    @pytest.fixture
+    def dataset_disp_map_size(self, checked_config):
+        return memory_estimation.estimate_dataset_disp_map_size(
+            *memory_estimation.compute_effective_image_size(checked_config),
+            checked_config["pipeline"]["matching_cost"]["step"],
+            checked_config["pipeline"]["matching_cost"]["float_precision"],
+        )
+
+    @pytest.fixture
+    def image_can_be_fully_reconstructed(self, input_roi):
+        """Helper that checks that the image can be fully reconstructed from an ROI list."""
+
+        def inner(rois):
+            row_sorted = sorted(rois, key=lambda roi: roi["row"]["first"])
+            for first_roi, second_roi in zip(row_sorted[:-1], row_sorted[1:]):
+                assert second_roi["row"]["first"] == first_roi["row"]["last"] + 1, "ROIs should be continuous"
+                assert first_roi["col"] == second_roi["col"], "ROIs should be only on rows."
+            # Following asserts are relevant because we previously checked that all ROIs were contiguous:
+            assert row_sorted[0]["row"]["first"] == input_roi["row"]["first"]
+            assert row_sorted[-1]["row"]["last"] == input_roi["row"]["last"]
+            assert row_sorted[0]["col"]["first"] == input_roi["col"]["first"]
+            assert row_sorted[-1]["col"]["last"] == input_roi["col"]["last"]
+            return True
+
+        return inner
+
+    @pytest.fixture
+    def estimate_roi_memory_consumption(self, checked_config, state_machine):
+        """Helper that estimate the memory consumption of the given ROI."""
+
+        def inner(roi):
+            checked_config["ROI"] = roi
+            return memory_estimation.estimate_total_consumption(
+                checked_config, state_machine.margins_disp.global_margins
+            )
+
+        return inner
+
+    @pytest.mark.parametrize(
+        ["image_size", "input_roi", "memory_per_work"],
+        [
+            pytest.param(
+                [1001, 1455],
+                {
+                    "row": {"first": 100, "last": 999},
+                    "col": {"first": 1000, "last": 1400},
+                },
+                100,
+                id="Small image",
+            ),
+            pytest.param(
+                [4000, 2455],
+                {
+                    "row": {"first": 100, "last": 1500},
+                    "col": {"first": 1000, "last": 1400},
+                },
+                100,
+                id="Bigger image",
+            ),
+        ],
+    )
+    def test_enough_memory(
+        self,
+        checked_config,
+        memory_per_work,
+        state_machine,
+        image_can_be_fully_reconstructed,
+        estimate_roi_memory_consumption,
+        dataset_disp_map_size,
+    ):
+        """There is enough memory per work to split image into segments."""
+        result = memory_estimation.get_segments(checked_config, state_machine.margins_disp.global_margins)
+
+        assert len(result) >= 2, "There should be at least 2 segments."
+        assert all(check_roi_section({"ROI": cast(Dict, e)}).get("ROI") for e in result)
+        assert image_can_be_fully_reconstructed(result)
+        assert all(
+            (estimate_roi_memory_consumption(roi) + dataset_disp_map_size)
+            < (1 - memory_estimation.RELATIVE_ESTIMATION_MARGIN) * memory_per_work
+            for roi in result
+        )
+
+    @pytest.mark.parametrize(
+        ["image_size", "memory_per_work"],
+        [
+            pytest.param([2500, 4500], 170, id="Dataset disp map too big"),
+            pytest.param([500, 5000], 51, id="Min ROI too big (width too big)"),
+        ],
+    )
+    def test_raise_error_when_not_enough_memory(
+        self,
+        checked_config,
+        memory_per_work,
+        state_machine,
+    ):
+        """Raise an error when either the initial disparity map size or the minimum ROI (one line) is too large,
+        providing an indication of the minimum memory_per_work value required to fit them into memory."""
+        with pytest.raises(
+            ValueError,
+            match=(
+                rf"^estimated minimum `memory_per_work` is \d+ MB, but got {memory_per_work} MB. "
+                "Consider increasing it, reducing image size or working on ROI."
+            ),
+        ):
             memory_estimation.get_segments(checked_config, state_machine.margins_disp.global_margins)

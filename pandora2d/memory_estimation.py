@@ -447,8 +447,16 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -
     max_pixels_per_roi = max_roi_memory // memory_per_pixel
     max_rows_per_roi = max_pixels_per_roi // width
 
-    starts = np.arange(0, height, max_rows_per_roi)
-    ends = (starts + max_rows_per_roi - 1).clip(max=height)
-    col_roi: SegmentRange = {"first": 0, "last": width}
+    input_roi = config.get("ROI")
+
+    first_row_coordinate = 0 if input_roi is None else input_roi["row"]["first"]
+    last_row_coordinate = height if input_roi is None else input_roi["row"]["last"] + 1
+    starts = np.arange(first_row_coordinate, last_row_coordinate, max_rows_per_roi)
+    ends = (starts + max_rows_per_roi - 1).clip(max=last_row_coordinate - 1)
+
+    col_roi: RoiRange = {
+        "first": 0 if input_roi is None else input_roi["col"]["first"],
+        "last": width - 1 if input_roi is None else input_roi["col"]["last"],
+    }
     # We need to convert to integer because of json_checker expects Python integer and not numpy integer
     return [{"row": {"first": int(s), "last": int(e)}, "col": col_roi} for s, e in zip(starts, ends)]
