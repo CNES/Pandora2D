@@ -45,10 +45,10 @@ double get_entropy(const double nb_pixel, const T& hist);
  * Entropy1D(img) = - sum(bin_value/nb_pixel * log2(bin_value/nb_pixel))
  * for each bin_value in Hist1D(img)
  *
- * @param img
+ * @param image
  * @return double entropy1D value
  */
-double calculate_entropy1D(const P2d::MatrixD& img);
+double calculate_entropy1D(const P2d::MatrixD& image);
 
 /**
  * @brief Compute entropy 2D of two images
@@ -56,28 +56,28 @@ double calculate_entropy1D(const P2d::MatrixD& img);
  * Entropy2D(img_l, img_r) = - sum(bin_value/nb_pixel * log2(bin_value/nb_pixel))
  * for each bin_value in Hist2D(img_l, img_r)
  *
- * @param img_l left image
- * @param img_r right image
+ * @param left_image left image
+ * @param right_image right image
  * @return double entropy 2D value
  */
-double calculate_entropy2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r);
+double calculate_entropy2D(const P2d::MatrixD& left_image, const P2d::MatrixD& right_image);
 
 /**
  * @brief Compute mutual information between two images
  *
  * MutualInformation(img_l,img_r) = Entropy1D(img_l) + Entropy1D(img_r) - Entropy2D(img_l, img_r)
  *
- * @param img_l left image
- * @param img_r right image
+ * @param left_image left image
+ * @param right_image right image
  * @return double mutual information value
  */
 template <typename T>
-T calculate_mutual_information(const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& img_l,
-                               const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& img_r) {
+T calculate_mutual_information(const P2d::MatrixX<T>& left_image,
+                               const P2d::MatrixX<T>& right_image) {
   double mutual_information =
-      calculate_entropy1D(img_l.template cast<double>()) +
-      calculate_entropy1D(img_r.template cast<double>()) -
-      calculate_entropy2D(img_l.template cast<double>(), img_r.template cast<double>());
+      calculate_entropy1D(left_image.template cast<double>()) +
+      calculate_entropy1D(right_image.template cast<double>()) -
+      calculate_entropy2D(left_image.template cast<double>(), right_image.template cast<double>());
 
   return static_cast<T>(mutual_information);
 }

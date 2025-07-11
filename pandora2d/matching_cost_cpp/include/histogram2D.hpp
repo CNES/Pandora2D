@@ -78,10 +78,10 @@ class Histogram2D {
 /**
  * @brief Compute histogram 2D based on two images
  *
- * @param img_l : left image
- * @param img_r : right image
+ * @param left_image : left image
+ * @param right_image : right image
  * @return Histogram2D
  */
-Histogram2D calculate_histogram2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r);
+Histogram2D calculate_histogram2D(const P2d::MatrixD& left_image, const P2d::MatrixD& right_image);
 
 #endif

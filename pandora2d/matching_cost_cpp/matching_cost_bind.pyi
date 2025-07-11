@@ -37,6 +37,7 @@ def compute_cost_volumes_cpp_float(
     window_size: int,
     step: NDArray[np.integer],
     no_data: float,
+    matching_cost_method: str,
 ):
     """
     Computes the cost values in float32
@@ -65,6 +66,8 @@ def compute_cost_volumes_cpp_float(
     :type step: NDArray[np.integer]
     :param no_data: no data value in img
     :type no_data: float
+    :param matching_cost_method: correlation method
+    :type matching_cost_method: string
     """
 
 def compute_cost_volumes_cpp_double(
@@ -80,6 +83,7 @@ def compute_cost_volumes_cpp_double(
     window_size: int,
     step: NDArray[np.integer],
     no_data: float,
+    matching_cost_method: str,
 ):
     """
     Computes the cost values in float64
@@ -108,4 +112,7 @@ def compute_cost_volumes_cpp_double(
     :type step: NDArray[np.integer]
     :param no_data: no data value in img
     :type no_data: float
+    :param matching_cost_method: correlation method
+    :type matching_cost_method: string
+
     """

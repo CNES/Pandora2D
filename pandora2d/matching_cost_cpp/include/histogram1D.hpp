@@ -52,10 +52,10 @@ class Histogram1D {
 
   /**
    * @brief Construct a new Histogram1D object
-   * @param img : image
+   * @param image : image
    *
    */
-  Histogram1D(const P2d::MatrixD& img);
+  Histogram1D(const P2d::MatrixD& image);
 
   /**
    * @brief Destroy the Histogram1D object
@@ -106,7 +106,7 @@ class Histogram1D {
   void set_values(const P2d::VectorD& values) { m_values = values; };
 
  private:
-  void create(const P2d::MatrixD& img);
+  void create(const P2d::MatrixD& image);
 
   P2d::VectorD m_values;  ///< values on histogram
   std::size_t m_nb_bins;  ///< number of bins
@@ -117,9 +117,9 @@ class Histogram1D {
 /**
  * @brief Calculate histogram 1D based on an image
  *
- * @param img
+ * @param image
  * @return Histogram1D
  */
-Histogram1D calculate_histogram1D(const P2d::MatrixD& img);
+Histogram1D calculate_histogram1D(const P2d::MatrixD& image);
 
 #endif

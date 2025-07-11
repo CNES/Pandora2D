@@ -287,13 +287,16 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
   // img no data value
   double no_data = -9999;
 
+  // correlation method
+  std::string matching_cost_method = "mutual_information";
+
   SUBCASE("Cost surface of top left point") {
     py::array_t<uint8_t> criteria_values =
         load_criteria_dataarray(data_path + "/data/top_left_criteria.bin", cv_size);
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
 
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
         cv_values, position2d_to_index(pixel, cv_size), cv_size);
@@ -318,7 +321,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -344,7 +347,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
     // Get a view on cv values
     auto cv_values_view = cv_values.template unchecked<4>();
 
@@ -379,7 +382,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -412,7 +415,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
 
     pixel = Position2D(1, 1);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -482,7 +485,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -600,7 +603,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -696,7 +699,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -760,7 +763,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
 
     compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
                              disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, no_data);
+                             window_size, step, no_data, matching_cost_method);
 
     pixel = Position2D(1, 0);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -777,4 +780,18 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method",
     CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<CostSurfaceType>(cost_surface, cost_surface_gt);
   }
-}
+
+  SUBCASE("Incorrect matching cost method") {
+    std::string matching_cost_method = "wrong_matching_cost_method";
+
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/top_left_criteria.bin", cv_size);
+
+    CHECK_THROWS_WITH_AS(compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values,
+                                                  cv_size, disp_range_row, disp_range_col,
+                                                  offset_cv_img_row, offset_cv_img_col, window_size,
+                                                  step, no_data, matching_cost_method),
+                         "Unknown correlation method: wrong_matching_cost_method",
+                         std::invalid_argument);
+  }
+};

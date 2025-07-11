@@ -25,24 +25,27 @@ This module contains functions associated to the computation of cost volumes in 
 #define COMPUTE_COST_VOLUMES_HPP
 
 #include <Eigen/Dense>
+#include <map>
 
+#include <iostream>
 #include "cost_volume.hpp"
 #include "mutual_information.hpp"
+#include "zncc.hpp"
 
 /**
  * @brief Get the matching cost window
  *
- * @param img image
+ * @param image image
  * @param window_size size of the matching cost window
  * @param index_row row index of the center of the window
  * @param index_col col index of the center of the window
- * @return P2d::MatrixD
+ * @return P2d::MatrixD or P2d::Matrixf
  */
 template <typename T>
-Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> get_window(const P2d::Matrixf& img,
-                                                            int window_size,
-                                                            int index_row,
-                                                            int index_col) {
+P2d::MatrixX<T> get_window(const P2d::Matrixf& image,
+                           int window_size,
+                           int index_row,
+                           int index_col) {
   int offset = static_cast<int>(window_size / 2);
 
   // Get first row and column of the window
@@ -50,8 +53,8 @@ Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> get_window(const P2d::Matrixf& 
   int start_col = std::max(0, index_col - offset);
 
   // Get last row and column of the window
-  int nb_rows_img = static_cast<int>(img.rows());
-  int nb_cols_img = static_cast<int>(img.cols());
+  int nb_rows_img = static_cast<int>(image.rows());
+  int nb_cols_img = static_cast<int>(image.cols());
   int end_row = std::min(nb_rows_img - 1, index_row + offset);
   int end_col = std::min(nb_cols_img - 1, index_col + offset);
 
@@ -61,7 +64,7 @@ Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> get_window(const P2d::Matrixf& 
   int nb_rows_window = std::max(0, end_row - start_row + 1);
   int nb_cols_window = std::max(0, end_col - start_col + 1);
 
-  return img.block(start_row, start_col, nb_rows_window, nb_cols_window).template cast<T>();
+  return image.block(start_row, start_col, nb_rows_window, nb_cols_window).template cast<T>();
 }
 
 /**
@@ -84,6 +87,29 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
 bool all_non_zero_elements(const P2d::MatrixUI& mat);
 
 /**
+ * @brief
+ *
+ * @param method correlation method
+ * @param left_image left image
+ * @param right_image right image
+ * @return correlation value
+ */
+template <typename T>
+T calculate_correlation(const std::string& method,
+                        const P2d::MatrixX<T>& left_image,
+                        const P2d::MatrixX<T>& right_image) {
+  std::map<std::string, std::function<T(const P2d::MatrixX<T>&, const P2d::MatrixX<T>&)>>
+      method_map = {{"mutual_information", calculate_mutual_information<T>},
+                    {"zncc", calculate_zncc<T>}};
+  auto it = method_map.find(method);
+  if (it != method_map.end()) {
+    return it->second(left_image, right_image);
+  } else {
+    throw std::invalid_argument("Unknown correlation method: " + method);
+  }
+}
+
+/**
  * @brief Compute the cost values
  *
  * @param left image
@@ -97,7 +123,8 @@ bool all_non_zero_elements(const P2d::MatrixUI& mat);
  * @param offset_cv_img_col col offset between first index of cv and image (ROI case)
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
- * @param no_data no data value in img
+ * @param no_data no data value in image
+ * @param matching_cost_method correlation method
  *
  * @throws std::invalid_argument if provided method is not known
  *
@@ -114,9 +141,15 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
                               int offset_cv_img_col,
                               int window_size,
                               const Eigen::Vector2i& step,
-                              const double no_data) {
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> window_left;
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> window_right;
+                              const double no_data,
+                              const std::string matching_cost_method) {
+  P2d::MatrixX<T> left_window;
+  P2d::MatrixX<T> right_window;
+
+  if (matching_cost_method == "zncc") {
+    std::cerr << "ZNCC method not yet implemented in C++." << std::endl;
+    return;
+  }
 
   int subpix = sqrt(right.size());
 
@@ -142,7 +175,7 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
       }
 
       // Window computation for left image for point (row,col)
-      window_left = get_window<T>(left, window_size, offset_cv_img_row + row * step[0],
+      left_window = get_window<T>(left, window_size, offset_cv_img_row + row * step[0],
                                   offset_cv_img_col + col * step[1]);
 
       for (std::size_t d_row = 0; d_row < cv_size.nb_disp_row; ++d_row) {
@@ -161,13 +194,13 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
               interpolated_right_image_index(subpix, disp_range_row[d_row], disp_range_col[d_col]);
 
           // Window computation for right image for point (row+d_row,col+d_col)
-          window_right =
+          right_window =
               get_window<T>(right[index_right], window_size,
                             offset_cv_img_row + row * step[0] + floor(disp_range_row[d_row]),
                             offset_cv_img_col + col * step[1] + floor(disp_range_col[d_col]));
 
           cv_mutable_view(row, col, d_row, d_col) =
-              calculate_mutual_information<T>(window_left, window_right);
+              calculate_correlation<T>(matching_cost_method, left_window, right_window);
         }
       }
     }

@@ -21,29 +21,29 @@
 
 /**
  * @brief Scott method to compute bin width
- * @param img : the Eigen matrix
+ * @param image : the Eigen matrix
  *
  */
-double get_bins_width_scott(const P2d::MatrixD& img) {
-  auto standard_deviation = std_dev(img);
+double get_bins_width_scott(const P2d::MatrixD& image) {
+  auto standard_deviation = std_dev(image);
   if (standard_deviation == 0.)
     return 1.;
 
-  double size = static_cast<double>(img.size());
+  double size = static_cast<double>(image.size());
   return SCOTT_FACTOR * standard_deviation * pow(size, -1. / 3.);
 }
 
 /**
  * Get bin width depending on bin_method
- * @param img : the Eigen matrix
+ * @param image : the Eigen matrix
  * @param method : the bin_method, default is scott
  *
  * @throws std::invalid_argument if provided method is not known
  */
-double get_bins_width(const P2d::MatrixD& img, bin_method method) {
+double get_bins_width(const P2d::MatrixD& image, bin_method method) {
   switch (method) {
     case bin_method::scott:
-      return get_bins_width_scott(img);
+      return get_bins_width_scott(image);
     default:
       throw std::invalid_argument("method to compute bins width does not exist");
   }

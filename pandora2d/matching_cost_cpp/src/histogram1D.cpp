@@ -53,29 +53,29 @@ Histogram1D::Histogram1D(std::size_t nb_bins, double low_bound, double bins_widt
 /**
  * @brief Construct a new Histogram 1D
  *
- * @param img
+ * @param image
  */
-Histogram1D::Histogram1D(const P2d::MatrixD& img) {
-  create(img);
+Histogram1D::Histogram1D(const P2d::MatrixD& image) {
+  create(image);
   m_values = P2d::VectorD::Zero(m_nb_bins);
 }
 
 /**
  * @brief Create Histogram 1D object without compute values
  *
- * @param img
+ * @param image
  */
-void Histogram1D::create(const P2d::MatrixD& img) {
-  m_bins_width = get_bins_width(img);
-  double min_coeff = img.minCoeff();
-  double max_coeff = img.maxCoeff();
+void Histogram1D::create(const P2d::MatrixD& image) {
+  m_bins_width = get_bins_width(image);
+  double min_coeff = image.minCoeff();
+  double max_coeff = image.maxCoeff();
   double dynamic_range = max_coeff - min_coeff;
   m_nb_bins = static_cast<int>(1. + (dynamic_range / m_bins_width));
 
   // check nb_bins > NB_BINS_MAX
   if (m_nb_bins > NB_BINS_MAX) {
     m_nb_bins = NB_BINS_MAX;
-    auto moment = variance(img);
+    auto moment = variance(image);
     max_coeff = std::min(4. * moment, max_coeff);
     min_coeff = std::max(-4. * moment, min_coeff);
     dynamic_range = max_coeff - min_coeff;
@@ -87,16 +87,16 @@ void Histogram1D::create(const P2d::MatrixD& img) {
 /**
  * @brief Create and compute Histogram 1D
  *
- * @param img
+ * @param image
  * @return Histogram1D
  */
-Histogram1D calculate_histogram1D(const P2d::MatrixD& img) {
-  auto hist = Histogram1D(img);
+Histogram1D calculate_histogram1D(const P2d::MatrixD& image) {
+  auto hist = Histogram1D(image);
   P2d::VectorD hist_values = P2d::VectorD::Zero(hist.nb_bins());
   auto low_bound = hist.low_bound();
   auto bin_width = hist.bins_width();
   auto nb_bins = static_cast<int>(hist.nb_bins());
-  for (auto pixel : img.reshaped()) {
+  for (auto pixel : image.reshaped()) {
     // if we are in the NB_BINS_MAX case, some elements may be outside of the low_bound and the
     // up_bound
     auto index =
