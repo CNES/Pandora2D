@@ -789,8 +789,9 @@ class TestSegmentImageByRows:
 
         def inner(roi):
             checked_config["ROI"] = roi
+            height, width = memory_estimation.compute_effective_image_size(checked_config)
             return memory_estimation.estimate_total_consumption(
-                checked_config, state_machine.margins_disp.global_margins
+                checked_config, height, width, state_machine.margins_disp.global_margins
             )
 
         return inner

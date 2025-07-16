@@ -121,9 +121,12 @@ class TestEstimateTotalMemoryConsumption:
     def test(
         self, checked_config, state_machine, measured_consumption, result_store, matching_cost_method, step, subpix
     ):
-        """Test."""
+        """Test estimate_total_consumption without ROI."""
+        height, width = memory_estimation.compute_effective_image_size(
+            checked_config, state_machine.margins_img.global_margins
+        )
         estimation = memory_estimation.estimate_total_consumption(
-            checked_config, state_machine.margins_disp.global_margins
+            checked_config, height, width, state_machine.margins_disp.global_margins
         )
 
         result_store.append(
@@ -162,9 +165,13 @@ class TestEstimateTotalMemoryConsumption:
     def test_with_roi(
         self, checked_config, state_machine, measured_consumption, result_store, matching_cost_method, step, subpix
     ):
-        """Test."""
+        """Test estimate_total_consumption with ROI."""
+
+        height, width = memory_estimation.compute_effective_image_size(
+            checked_config, state_machine.margins_img.global_margins
+        )
         estimation = memory_estimation.estimate_total_consumption(
-            checked_config, state_machine.margins_disp.global_margins
+            checked_config, height, width, state_machine.margins_disp.global_margins
         )
 
         result_store.append(

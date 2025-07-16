@@ -57,19 +57,39 @@ DATA_VARS_TYPE_SIZE = {
 }
 
 
-def estimate_total_consumption(config: Dict, margin_disp: Margins = NullMargins()) -> float:
+def estimate_total_consumption(config: Dict, height: int, width: int, margin_disp: Margins = NullMargins()) -> float:
     """
     Estimate the total memory consumption of all objects that will be allocated.
     :param config: configuration with ROI margins if necessary.
     :type config: Dict
+    :param height: Image height including any ROI adjustments.
+    :type height: int
+    :param width: Image width including any ROI adjustments.
+    :type width: int
     :param margin_disp: Disparity margins.
     :type margin_disp: Margins
-    :return: Estimated memory consumption in Mbytes.
+    :return: Memory consumption estimate in megabytes.
     :rtype: float
     """
-    height, width = compute_effective_image_size(config)
-
-    return _estimate_total_consumption(config, height, width, margin_disp)
+    cost_volume_dtype = np.dtype(config["pipeline"]["matching_cost"]["float_precision"])
+    cost_volume_datavars = CV_FLOAT_DATA_VAR if cost_volume_dtype == np.float32 else CV_DOUBLE_DATA_VAR
+    # A copy of pandora cost volume is done in calculations so it counts twice:
+    number_of_pandora_cost_volumes = 2
+    return (
+        estimate_input_size(height, width, IMG_DATA_VAR)
+        + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
+        + (
+            number_of_pandora_cost_volumes * estimate_pandora_cost_volume_size(config, height, width, margin_disp)
+            if config["pipeline"]["matching_cost"]["matching_cost_method"] != "mutual_information"
+            else 0
+        )
+        + (
+            estimate_shifted_right_images_size(height, width, subpix)  # pylint: disable=used-before-assignment
+            if (subpix := config["pipeline"]["matching_cost"]["subpix"]) > 1
+            else 0
+        )
+        + estimate_dataset_disp_map_size(height, width, config["pipeline"]["matching_cost"]["step"], cost_volume_dtype)
+    )
 
 
 def compute_effective_image_size(config: Dict) -> Tuple[int, int]:
@@ -91,28 +111,6 @@ def compute_effective_image_size(config: Dict) -> Tuple[int, int]:
     height += roi_margins.up + roi_margins.down
     width += roi_margins.left + roi_margins.right
     return height, width
-
-
-def _estimate_total_consumption(config, height, width, margin_disp):
-    cost_volume_dtype = np.dtype(config["pipeline"]["matching_cost"]["float_precision"])
-    cost_volume_datavars = CV_FLOAT_DATA_VAR if cost_volume_dtype == np.float32 else CV_DOUBLE_DATA_VAR
-    # A copy of pandora cost volume is done in calculations so it counts twice:
-    number_of_pandora_cost_volumes = 2
-    return (
-        estimate_input_size(height, width, IMG_DATA_VAR)
-        + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
-        + (
-            number_of_pandora_cost_volumes * estimate_pandora_cost_volume_size(config, height, width, margin_disp)
-            if config["pipeline"]["matching_cost"]["matching_cost_method"] != "mutual_information"
-            else 0
-        )
-        + (
-            estimate_shifted_right_images_size(height, width, subpix)  # pylint: disable=used-before-assignment
-            if (subpix := config["pipeline"]["matching_cost"]["subpix"]) > 1
-            else 0
-        )
-        + estimate_dataset_disp_map_size(height, width, config["pipeline"]["matching_cost"]["step"], cost_volume_dtype)
-    )
 
 
 def get_img_size(img_path: str, roi: Dict = None) -> Tuple[int, int]:
@@ -409,7 +407,8 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -
     """
 
     # Estimate total memory required for full image
-    whole_image_estimation = estimate_total_consumption(config, disp_margins)
+    height, width = compute_effective_image_size(config)
+    whole_image_estimation = estimate_total_consumption(config, height, width, disp_margins)
     asked_memory_per_work = config["segment_mode"].get("memory_per_work")
     estimation_margin_factor = 1 - RELATIVE_ESTIMATION_MARGIN
     memory_per_work = int(estimation_margin_factor * asked_memory_per_work)
@@ -418,7 +417,6 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -
     if not config["segment_mode"]["enable"] or whole_image_estimation <= memory_per_work:
         return []
 
-    height, width = compute_effective_image_size(config)
     cost_volume_dtype = np.dtype(config["pipeline"]["matching_cost"]["float_precision"])
 
     # Estimate fixed memory usage for final disparity map
@@ -427,7 +425,7 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -
     )
 
     # Estimate memory needed for smallest possible ROI (1 row)
-    min_roi_memory = _estimate_total_consumption(config, 1, width, disp_margins)
+    min_roi_memory = estimate_total_consumption(config, 1, width, disp_margins)
     min_required_memory = final_dataset_disp_map_size + min_roi_memory
 
     if min_required_memory > memory_per_work:
