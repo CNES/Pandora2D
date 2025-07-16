@@ -25,7 +25,6 @@ This module contains functions allowing to check the configuration given to Pand
 
 from __future__ import annotations
 
-import logging
 from typing import Dict
 import numpy as np
 import xarray as xr
@@ -236,8 +235,6 @@ def check_segment_mode_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     """
     if not user_cfg:
         return update_conf(default_segment_mode_configuration, user_cfg)
-
-    logging.warning("The segment mode is still under development")
 
     # Add missing roi defaults values in user_cfg
     cfg = update_conf({}, user_cfg)

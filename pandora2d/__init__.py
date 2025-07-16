@@ -23,7 +23,8 @@ This module contains functions to run Pandora pipeline.
 
 from os import PathLike
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Union, cast
+from copy import copy
 
 import xarray as xr
 
@@ -32,9 +33,11 @@ from pandora import read_config_file, setup_logging, import_plugin
 from pandora2d import common
 from pandora2d.check_configuration import check_conf, check_datasets
 from pandora2d.common import string_to_path, resolve_path_in_config
-from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
+from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing, remove_roi_margins
 from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.profiling import generate_summary, expert_mode_config
+from pandora2d.margins import Margins, NullMargins
+from pandora2d.memory_estimation import segment_image_by_rows
 
 
 def run(
@@ -74,6 +77,89 @@ def run(
     return pandora2d_machine.dataset_disp_maps, pandora2d_machine.completed_cfg
 
 
+def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]):
+    """
+    Process ROI, create image datasets and run pandora2d pipeline
+
+    :param pandora2d_machine: instance of Pandora2DMachine
+    :type pandora2d_machine: Pandora2DMachine
+    :param cfg: configuration
+    :type cfg: Dict[str, dict]
+    """
+
+    # check roi in user configuration
+    roi = None
+    if "ROI" in cfg:
+        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+
+        # If disparities are computed with estimation step, ROI margins will be updated later
+        if "estimation" in cfg["pipeline"]:
+            roi = cfg["ROI"]
+        else:
+            roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+
+    # read images
+    image_datasets = create_datasets_from_inputs(
+        input_config=cfg["input"], roi=roi, estimation_cfg=cfg["pipeline"].get("estimation")
+    )
+
+    # check datasets: shape, format and content
+    check_datasets(image_datasets.left, image_datasets.right)
+
+    # run pandora 2D and store disp maps in a dataset
+    dataset_disp_maps, completed_cfg = run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+
+    return dataset_disp_maps, completed_cfg
+
+
+def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]):
+    """
+    Run pandora2d pipeline with segment mode
+
+    :param pandora2d_machine: instance of Pandora2DMachine
+    :type pandora2d_machine: Pandora2DMachine
+    :param cfg: configuration
+    :type cfg: Dict[str, dict]
+    """
+
+    # Get the list of ROIs to iterate on
+    roi_list = segment_image_by_rows(
+        cfg, pandora2d_machine.margins_disp.global_margins, pandora2d_machine.margins_img.global_margins
+    )
+
+    if not roi_list:
+        return run_pandora2d(pandora2d_machine, cfg)
+
+    # Initialisation of output objects
+    completed_cfg = {}
+    final_dataset_disp_maps = xr.Dataset()
+    init_roi = cfg["ROI"] if "ROI" in cfg else None
+
+    # Iteration on the different segments
+    for roi in roi_list:
+
+        cfg["ROI"] = cast(Dict, roi)
+        dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
+        final_dataset_disp_maps = xr.merge([dataset_disp_maps, final_dataset_disp_maps])
+
+    # Add correct ROI in output configuration
+    if init_roi is not None:
+        completed_cfg["ROI"] = init_roi
+        # ROI margins are computed according to disparity and window size
+        # so all roi in roi_list have the same margins
+        completed_cfg["ROI"]["margins"] = cfg["ROI"]["margins"]
+    else:
+        del completed_cfg["ROI"]
+
+    # Update offset attribute according to initial ROI
+    final_dataset_disp_maps.attrs["offset"] = {
+        "row": completed_cfg.get("ROI", {}).get("row", {}).get("first", 0),
+        "col": completed_cfg.get("ROI", {}).get("col", {}).get("first", 0),
+    }
+
+    return final_dataset_disp_maps, completed_cfg
+
+
 def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     """
     Check config file and run pandora 2D framework accordingly
@@ -101,27 +187,10 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
 
     setup_logging(verbose)
 
-    # check roi in user configuration
-    roi = None
-    if "ROI" in cfg:
-        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-
-        # If disparities are computed with estimation step, ROI margins will be updated later
-        if "estimation" in cfg["pipeline"]:
-            roi = cfg["ROI"]
-        else:
-            roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
-
-    # read images
-    image_datasets = create_datasets_from_inputs(
-        input_config=cfg["input"], roi=roi, estimation_cfg=cfg["pipeline"].get("estimation")
-    )
-
-    # check datasets: shape, format and content
-    check_datasets(image_datasets.left, image_datasets.right)
-
-    # run pandora 2D and store disp maps in a dataset
-    dataset_disp_maps, completed_cfg = run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+    if cfg.get("segment_mode", {}).get("enable") is True:
+        dataset_disp_maps, completed_cfg = run_pandora2d_segment_mode(pandora2d_machine, cfg)
+    else:
+        dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
 
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):
