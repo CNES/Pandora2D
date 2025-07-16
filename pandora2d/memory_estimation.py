@@ -30,6 +30,7 @@ from pandora.img_tools import rasterio_open
 from pandora2d.constants import Criteria
 from pandora2d.img_tools import get_extrema_disparity, get_initial_disparity, get_margins_values
 from pandora2d.margins import Margins, NullMargins
+from pandora2d.matching_cost import MatchingCostRegistry
 
 BYTE_TO_MB = 1024 * 1024
 
@@ -80,7 +81,7 @@ def estimate_total_consumption(config: Dict, height: int, width: int, margin_dis
         + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
         + (
             number_of_pandora_cost_volumes * estimate_pandora_cost_volume_size(config, height, width, margin_disp)
-            if config["pipeline"]["matching_cost"]["matching_cost_method"] != "mutual_information"
+            if config["pipeline"]["matching_cost"]["matching_cost_method"] not in MatchingCostRegistry.registered
             else 0
         )
         + (
