@@ -303,6 +303,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         )  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
         self.margins_disp.add_non_cumulative(input_step, refinement_.margins)
+        self.margins_img.add_cumulative(input_step, refinement_.margins)
 
     def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
