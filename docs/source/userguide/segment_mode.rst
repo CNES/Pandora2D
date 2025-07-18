@@ -4,12 +4,13 @@ Segment mode
 ============
 
 Large images can be processed using the segment mode. 
-This mode independently divides the image into sections and processes them sequentially. 
+This mode independently divides the image into segments (depending on the memory allocated by the user to pandora2d) and processes them sequentially. 
 It then reconstructs the result as if the image had been processed conventionally in Pandora2d.
 
 
-.. warning::
-    This mode is still under development. It will be available in the next release : 0.6.0.
+.. note::
+    If the memory allocated to pandora2d by the user is not sufficient to process the smallest possible segment (a single line of the image), 
+    an error message indicating the minimum memory required is returned.
 
 Configuration and parameters
 ****************************
@@ -30,7 +31,7 @@ Configuration and parameters
      - True/False
      - No
    * - **memory_per_work**
-     - Reserved memory for pandora2d calculations (Mb)
+     - Reserved memory for pandora2d calculations (MB)
      - int
      - > 0 
      - No
