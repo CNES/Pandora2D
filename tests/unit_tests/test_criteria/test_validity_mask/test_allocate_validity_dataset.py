@@ -83,7 +83,7 @@ def test_allocate_validity_dataset(make_cost_volumes):
 
     assert allocated_validity_mask.sizes["row"] == criteria_dataarray.sizes["row"]
     assert allocated_validity_mask.sizes["col"] == criteria_dataarray.sizes["col"]
-    # The dimension 'criteria' is the same size as the Enum Criteria -1
-    # because there is a band for each criteria except the 'Valid' and the 'P2D_DISPARITY_UNPROCESSED'
+    # The dimension 'criteria' is the same size as the Enum Criteria
+    # because there is a band for each criteria except the 'Valid'
     # and a band for the global 'validity_mask'.
-    assert allocated_validity_mask.sizes["criteria"] == len(Criteria.__members__) - 1
+    assert allocated_validity_mask.sizes["criteria"] == len(Criteria.__members__)

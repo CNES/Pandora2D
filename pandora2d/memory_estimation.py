@@ -288,9 +288,8 @@ def estimate_dataset_disp_map_size(config: Dict, height: int, width: int, dtype:
     step = config["pipeline"]["matching_cost"]["step"]
     image_size = np.ceil(height / step[0]) * np.ceil(width / step[1])
     number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
-    # Beware: when Criteria.P2D_DISPARITY_UNPROCESSED will be removed the number of criteria will need to be
-    # incremented by one in order to take the validity_mask band into account:
-    number_of_validity_bands = len(Criteria.__members__)
+    # The number of criteria is incremented by one in order to take the validity_mask band into account:
+    number_of_validity_bands = len(Criteria.__members__) + 1
     data_vars_size = (
         number_of_dtyped_datavars * np.dtype(dtype).itemsize
         + number_of_validity_bands * DATA_VARS_TYPE_SIZE["criteria"]

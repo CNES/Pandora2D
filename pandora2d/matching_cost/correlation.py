@@ -137,4 +137,6 @@ class CorrelationMethods(BaseMatchingCost):
             self.cost_volumes.attrs["measure"],
         )
 
+        self.set_out_of_disparity_range_to_other_value(img_left, -np.inf)
+
         return self.cost_volumes
