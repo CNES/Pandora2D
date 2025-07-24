@@ -105,7 +105,7 @@ def compute_effective_image_size(config: Dict) -> Tuple[int, int]:
     height, width = get_img_size(config["input"]["left"]["img"], config.get("ROI"))
     if global_margins := config.get("ROI", {}).get("margins"):
         roi_margins = get_roi_margins(
-            config["input"]["row_disparity"], config["input"]["col_disparity"], global_margins
+            config["input"]["row_disparity"], config["input"]["col_disparity"], Margins(*global_margins)
         )
     else:
         roi_margins = NullMargins()

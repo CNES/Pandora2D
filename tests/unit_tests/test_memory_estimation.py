@@ -20,7 +20,7 @@
 This file contains unit tests associated to the pandora2d memory estimation
 """
 
-# pylint: disable=redefined-outer-name,too-few-public-methods,invalid-name
+# pylint: disable=redefined-outer-name,too-few-public-methods,invalid-name,too-many-lines
 
 from typing import Dict, Tuple, cast
 
@@ -968,6 +968,7 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
         dataset_disp_map_size,
     ):
         """There is enough memory per work to split image into segments."""
+        checked_config["ROI"]["margins"] = state_machine.margins_img.global_margins.astuple()
         super().test_enough_memory(
             checked_config,
             memory_per_work,
@@ -1003,4 +1004,5 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
     ):
         """Raise an error when either the initial disparity map size or the minimum ROI (one line) is too large,
         providing an indication of the minimum memory_per_work value required to fit them into memory."""
+        checked_config["ROI"]["margins"] = state_machine.margins_img.global_margins.astuple()
         super().test_raise_error_when_not_enough_memory(checked_config, memory_per_work, state_machine)
