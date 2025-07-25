@@ -789,7 +789,9 @@ class TestSegmentImageByRows:
 
         def inner(roi):
             checked_config["ROI"] = roi
-            height, width = memory_estimation.compute_effective_image_size(checked_config)
+            height, width = memory_estimation.compute_effective_image_size(
+                checked_config, state_machine.margins_img.global_margins
+            )
             return memory_estimation.estimate_total_consumption(
                 checked_config, height, width, state_machine.margins_disp.global_margins
             )
@@ -815,9 +817,11 @@ class TestSegmentImageByRows:
             ),
         ],
     )
-    def test_no_segments_when_not_needed(self, checked_config):
+    def test_no_segments_when_not_needed(self, checked_config, state_machine):
         """No segment is expected when disabled or with enough memory."""
-        result = memory_estimation.segment_image_by_rows(checked_config)
+        result = memory_estimation.segment_image_by_rows(
+            checked_config, state_machine.margins_disp.global_margins, state_machine.margins_img.global_margins
+        )
 
         assert len(result) == 0
 
@@ -838,7 +842,9 @@ class TestSegmentImageByRows:
         dataset_disp_map_size,
     ):
         """There is enough memory per work to split image into segments."""
-        result = memory_estimation.segment_image_by_rows(checked_config, state_machine.margins_disp.global_margins)
+        result = memory_estimation.segment_image_by_rows(
+            checked_config, state_machine.margins_disp.global_margins, state_machine.margins_img.global_margins
+        )
 
         assert len(result) >= 2, "There should be at least 2 segments."
         assert all(check_roi_section({"ROI": cast(Dict, e)}).get("ROI") for e in result)
@@ -871,7 +877,9 @@ class TestSegmentImageByRows:
                 "Consider increasing it, reducing image size or working on ROI."
             ),
         ):
-            memory_estimation.segment_image_by_rows(checked_config, state_machine.margins_disp.global_margins)
+            memory_estimation.segment_image_by_rows(
+                checked_config, state_machine.margins_disp.global_margins, state_machine.margins_img.global_margins
+            )
 
 
 class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
@@ -909,9 +917,9 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
         }
 
     @pytest.fixture
-    def dataset_disp_map_size(self, checked_config):  # pylint: disable=arguments-differ
+    def dataset_disp_map_size(self, checked_config, state_machine):  # pylint: disable=arguments-renamed
         return memory_estimation.estimate_dataset_disp_map_size(
-            *memory_estimation.compute_effective_image_size(checked_config),
+            *memory_estimation.compute_effective_image_size(checked_config, state_machine.margins_img.global_margins),
             checked_config["pipeline"]["matching_cost"]["step"],
             checked_config["pipeline"]["matching_cost"]["float_precision"],
         )
@@ -968,7 +976,6 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
         dataset_disp_map_size,
     ):
         """There is enough memory per work to split image into segments."""
-        checked_config["ROI"]["margins"] = state_machine.margins_img.global_margins.astuple()
         super().test_enough_memory(
             checked_config,
             memory_per_work,
@@ -1004,5 +1011,4 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
     ):
         """Raise an error when either the initial disparity map size or the minimum ROI (one line) is too large,
         providing an indication of the minimum memory_per_work value required to fit them into memory."""
-        checked_config["ROI"]["margins"] = state_machine.margins_img.global_margins.astuple()
         super().test_raise_error_when_not_enough_memory(checked_config, memory_per_work, state_machine)

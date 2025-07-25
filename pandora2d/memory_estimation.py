@@ -93,19 +93,24 @@ def estimate_total_consumption(config: Dict, height: int, width: int, margin_dis
     )
 
 
-def compute_effective_image_size(config: Dict) -> Tuple[int, int]:
+def compute_effective_image_size(config: Dict, image_margins: Margins) -> Tuple[int, int]:
     """
     Compute the effective image size (height, width), including ROI and global margins.
 
-    :param config: Configuration dictionary containing image path and ROI information.
+    :param config: Configuration dictionary containing the image path and optional ROI information.
     :type config: Dict
-    :return: Effective height and width of the left image including margins.
+    :param image_margins: Margins to apply around the ROI to ensure the full region is processed.
+                          Used only when a ROI is defined. Defaults to None.
+    :type image_margins: Margins or None
+    :return: Image dimensions as (height, width) including margins.
     :rtype: Tuple[int, int]
     """
     height, width = get_img_size(config["input"]["left"]["img"], config.get("ROI"))
-    if global_margins := config.get("ROI", {}).get("margins"):
+    if "ROI" in config:
         roi_margins = get_roi_margins(
-            config["input"]["row_disparity"], config["input"]["col_disparity"], Margins(*global_margins)
+            config["input"]["row_disparity"],
+            config["input"]["col_disparity"],
+            image_margins,
         )
     else:
         roi_margins = NullMargins()
@@ -384,7 +389,7 @@ class Roi(TypedDict):
     col: RoiRange
 
 
-def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -> List[Roi]:
+def segment_image_by_rows(config: Dict, disp_margins: Margins, image_margins: Margins) -> List[Roi]:
     """
     Split an image into multiple horizontal ROI segments that fit within memory constraints.
 
@@ -400,6 +405,9 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -
                          Defaults to NullMargins.
     :type disp_margins: Margins
 
+    :param image_margins: Margins applied to image.
+    :type image_margins: Margins
+
     :return: List of segment dictionaries with row and column bounds.
     :rtype: List[Roi]
 
@@ -408,7 +416,7 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins = NullMargins()) -
     """
 
     # Estimate total memory required for full image
-    height, width = compute_effective_image_size(config)
+    height, width = compute_effective_image_size(config, image_margins)
     whole_image_estimation = estimate_total_consumption(config, height, width, disp_margins)
     asked_memory_per_work = config["segment_mode"].get("memory_per_work")
     estimation_margin_factor = 1 - RELATIVE_ESTIMATION_MARGIN
