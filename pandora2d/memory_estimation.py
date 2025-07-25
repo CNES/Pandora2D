@@ -330,9 +330,10 @@ def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, mar
     :rtype: float
     """
     subpix = config["pipeline"]["matching_cost"]["subpix"]
+    step = config["pipeline"]["matching_cost"]["step"]
     disparity_size = get_nb_disp(config["input"]["col_disparity"], margins.left, margins.right, subpix)
 
-    image_size = height * width
+    image_size = height * np.ceil(width / step[1])
 
     return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
 
