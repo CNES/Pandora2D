@@ -34,7 +34,7 @@ from pandora2d.matching_cost import MatchingCostRegistry
 
 BYTE_TO_MB = 1024 * 1024
 
-RELATIVE_ESTIMATION_MARGIN = 0.4
+RELATIVE_ESTIMATION_MARGIN = 0.25
 
 # Data variables in image datasets
 IMG_DATA_VAR = ["im", "row_disparity_min", "row_disparity_max", "col_disparity_min", "col_disparity_max"]
