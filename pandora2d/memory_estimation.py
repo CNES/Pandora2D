@@ -433,8 +433,17 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins, image_margins: Ma
         height, width, config["pipeline"]["matching_cost"]["step"], cost_volume_dtype
     )
 
+    roi_margins = get_roi_margins(
+        config["input"]["row_disparity"],
+        config["input"]["col_disparity"],
+        image_margins,
+    )
+    height_margins = roi_margins.up + roi_margins.down
+    width_margins = roi_margins.left + roi_margins.right
+    min_roi_width = width + width_margins
+    min_roi_height = 1 + height_margins
     # Estimate memory needed for smallest possible ROI (1 row)
-    min_roi_memory = estimate_total_consumption(config, 1, width, disp_margins)
+    min_roi_memory = estimate_total_consumption(config, min_roi_height, min_roi_width, disp_margins)
     min_required_memory = final_dataset_disp_map_size + min_roi_memory
 
     if min_required_memory > memory_per_work:
@@ -450,11 +459,13 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins, image_margins: Ma
 
     # Compute usable memory per ROI and derive segment size
     max_roi_memory = memory_per_work - final_dataset_disp_map_size
-    number_of_pixels = height * width
+    number_of_pixels = min_roi_width * min_roi_height
 
-    memory_per_pixel = whole_image_estimation / number_of_pixels
+    memory_per_pixel = min_roi_memory / number_of_pixels
     max_pixels_per_roi = max_roi_memory // memory_per_pixel
-    max_rows_per_roi = max_pixels_per_roi // width
+    # Anticipate added vertical margins when opening ROIs:
+    # subtract now to prevent oversizing and ensure the estimated number of rows fits memory constraints.
+    max_rows_per_roi = max(1, (max_pixels_per_roi // min_roi_width) - height_margins)
 
     input_roi = config.get("ROI")
 
