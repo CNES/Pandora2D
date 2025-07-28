@@ -425,7 +425,7 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins, image_margins: Ma
     memory_per_work = int(estimation_margin_factor * asked_memory_per_work)
 
     # Bypass segmentation if disabled or memory fits full image
-    if not config["segment_mode"]["enable"] or whole_image_estimation <= memory_per_work:
+    if whole_image_estimation <= memory_per_work:
         return []
 
     cost_volume_dtype = np.dtype(config["pipeline"]["matching_cost"]["float_precision"])

@@ -803,13 +803,6 @@ class TestSegmentImageByRows:
         [
             pytest.param(
                 {
-                    "enable": False,
-                    "memory_per_work": 1,
-                },
-                id="Disabled",
-            ),
-            pytest.param(
-                {
                     "enable": True,
                     "memory_per_work": 4000,
                 },
