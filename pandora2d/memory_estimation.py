@@ -72,25 +72,27 @@ def estimate_total_consumption(config: Dict, height: int, width: int, margin_dis
     :return: Memory consumption estimate in megabytes.
     :rtype: float
     """
-    cost_volume_dtype = np.dtype(config["pipeline"]["matching_cost"]["float_precision"])
+    matching_cost_config = config["pipeline"]["matching_cost"]
+    cost_volume_dtype = np.dtype(matching_cost_config["float_precision"])
     cost_volume_datavars = CV_FLOAT_DATA_VAR if cost_volume_dtype == np.float32 else CV_DOUBLE_DATA_VAR
+
     # A copy of pandora cost volume is done in calculations so it counts twice:
     number_of_pandora_cost_volumes = 2
-    return (
+
+    result = (
         estimate_input_size(height, width, IMG_DATA_VAR)
         + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
-        + (
-            number_of_pandora_cost_volumes * estimate_pandora_cost_volume_size(config, height, width, margin_disp)
-            if config["pipeline"]["matching_cost"]["matching_cost_method"] not in MatchingCostRegistry.registered
-            else 0
-        )
-        + (
-            estimate_shifted_right_images_size(height, width, subpix)  # pylint: disable=used-before-assignment
-            if (subpix := config["pipeline"]["matching_cost"]["subpix"]) > 1
-            else 0
-        )
-        + estimate_dataset_disp_map_size(height, width, config["pipeline"]["matching_cost"]["step"], cost_volume_dtype)
+        + estimate_dataset_disp_map_size(height, width, matching_cost_config["step"], cost_volume_dtype)
     )
+
+    if matching_cost_config["matching_cost_method"] not in MatchingCostRegistry.registered:
+        result += number_of_pandora_cost_volumes * estimate_pandora_cost_volume_size(config, height, width, margin_disp)
+
+    subpix = matching_cost_config["subpix"]
+    if subpix > 1:
+        result += estimate_shifted_right_images_size(height, width, subpix)
+
+    return result
 
 
 def compute_effective_image_size(config: Dict, image_margins: Margins) -> Tuple[int, int]:
