@@ -20,7 +20,8 @@
 This module contains methods associated to the pandora2d memory estimation
 """
 
-from typing import Dict, List, Tuple
+import math
+from typing import Dict, List, Tuple, TypedDict
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -28,9 +29,12 @@ from pandora.img_tools import rasterio_open
 
 from pandora2d.constants import Criteria
 from pandora2d.img_tools import get_extrema_disparity, get_initial_disparity, get_margins_values
-from pandora2d.margins import Margins
+from pandora2d.margins import Margins, NullMargins
+from pandora2d.matching_cost import MatchingCostRegistry
 
 BYTE_TO_MB = 1024 * 1024
+
+RELATIVE_ESTIMATION_MARGIN = 0.4
 
 # Data variables in image datasets
 IMG_DATA_VAR = ["im", "row_disparity_min", "row_disparity_max", "col_disparity_min", "col_disparity_max"]
@@ -52,6 +56,69 @@ DATA_VARS_TYPE_SIZE = {
     "cost_volumes_double": np.float64().nbytes,
     "criteria": np.uint8().nbytes,
 }
+
+
+def estimate_total_consumption(config: Dict, height: int, width: int, margin_disp: Margins = NullMargins()) -> float:
+    """
+    Estimate the total memory consumption of all objects that will be allocated.
+    :param config: configuration with ROI margins if necessary.
+    :type config: Dict
+    :param height: Image height including any ROI adjustments.
+    :type height: int
+    :param width: Image width including any ROI adjustments.
+    :type width: int
+    :param margin_disp: Disparity margins.
+    :type margin_disp: Margins
+    :return: Memory consumption estimate in megabytes.
+    :rtype: float
+    """
+    matching_cost_config = config["pipeline"]["matching_cost"]
+    cost_volume_dtype = np.dtype(matching_cost_config["float_precision"])
+    cost_volume_datavars = CV_FLOAT_DATA_VAR if cost_volume_dtype == np.float32 else CV_DOUBLE_DATA_VAR
+
+    # A copy of pandora cost volume is done in calculations so it counts twice:
+    number_of_pandora_cost_volumes = 2
+
+    result = (
+        estimate_input_size(height, width, IMG_DATA_VAR)
+        + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
+        + estimate_dataset_disp_map_size(height, width, matching_cost_config["step"], cost_volume_dtype)
+    )
+
+    if matching_cost_config["matching_cost_method"] not in MatchingCostRegistry.registered:
+        result += number_of_pandora_cost_volumes * estimate_pandora_cost_volume_size(config, height, width, margin_disp)
+
+    subpix = matching_cost_config["subpix"]
+    if subpix > 1:
+        result += estimate_shifted_right_images_size(height, width, subpix)
+
+    return result
+
+
+def compute_effective_image_size(config: Dict, image_margins: Margins) -> Tuple[int, int]:
+    """
+    Compute the effective image size (height, width), including ROI and global margins.
+
+    :param config: Configuration dictionary containing the image path and optional ROI information.
+    :type config: Dict
+    :param image_margins: Margins to apply around the ROI to ensure the full region is processed.
+                          Used only when a ROI is defined. Defaults to None.
+    :type image_margins: Margins or None
+    :return: Image dimensions as (height, width) including margins.
+    :rtype: Tuple[int, int]
+    """
+    height, width = get_img_size(config["input"]["left"]["img"], config.get("ROI"))
+    if "ROI" in config:
+        roi_margins = get_roi_margins(
+            config["input"]["row_disparity"],
+            config["input"]["col_disparity"],
+            image_margins,
+        )
+    else:
+        roi_margins = NullMargins()
+    height += roi_margins.up + roi_margins.down
+    width += roi_margins.left + roi_margins.right
+    return height, width
 
 
 def get_img_size(img_path: str, roi: Dict = None) -> Tuple[int, int]:
@@ -270,22 +337,21 @@ def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, mar
     return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
 
 
-def estimate_dataset_disp_map_size(config: Dict, height: int, width: int, dtype: DTypeLike) -> float:
+def estimate_dataset_disp_map_size(height: int, width: int, step: List, dtype: DTypeLike) -> float:
     """
     Estimate the size in MB of the disparity map dataset.
 
-    :param config: user configuration.
-    :type config: Dict
     :param height: image or ROI number of rows.
     :type height: int
     :param width: image or ROI number of columns.
     :type width: int
+    :param step: step.
+    :type step: List
     :param dtype: dtype of the disparity map (should be same as cost volumes dataset).
     :type dtype: np.typing.DTypeLike
     :return: estimated size in MB.
     :rtype: float
     """
-    step = config["pipeline"]["matching_cost"]["step"]
     image_size = np.ceil(height / step[0]) * np.ceil(width / step[1])
     number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
     # The number of criteria is incremented by one in order to take the validity_mask band into account:
@@ -295,3 +361,124 @@ def estimate_dataset_disp_map_size(config: Dict, height: int, width: int, dtype:
         + number_of_validity_bands * DATA_VARS_TYPE_SIZE["criteria"]
     )
     return image_size * data_vars_size / BYTE_TO_MB
+
+
+class RoiRange(TypedDict):
+    """
+    Represents the range of rows or columns in a region of interest (ROI).
+
+    :param first: Index of the first row or column.
+    :type first: int
+    :param last: Index of the last row or column (inclusive).
+    :type last: int
+    """
+
+    first: int
+    last: int
+
+
+class Roi(TypedDict):
+    """
+    Represents a 2D region of interest, defined by row and column bounds.
+
+    :param row: Row range of the ROI.
+    :type row: RoiRange
+    :param col: Column range of the ROI.
+    :type col: RoiRange
+    """
+
+    row: RoiRange
+    col: RoiRange
+
+
+def segment_image_by_rows(config: Dict, disp_margins: Margins, image_margins: Margins) -> List[Roi]:
+    """
+    Split an image into multiple horizontal ROI segments that fit within memory constraints.
+
+    This function estimates the memory required to process the full image with the provided
+    disparity margins. If the memory requirement exceeds the configured `memory_per_work`,
+    the image is split into horizontal segments whose individual memory usage remains within
+    the allowed limit.
+
+    :param config: Configuration dictionary containing keys such as 'segment_mode' and 'pipeline'.
+    :type config: Dict
+
+    :param disp_margins: Margins applied during disparity computation.
+                         Defaults to NullMargins.
+    :type disp_margins: Margins
+
+    :param image_margins: Margins applied to image.
+    :type image_margins: Margins
+
+    :return: List of segment dictionaries with row and column bounds.
+    :rtype: List[Roi]
+
+    :raises ValueError: If the minimum memory required for processing a basic segment
+                        exceeds the configured `memory_per_work`.
+    """
+
+    # Estimate total memory required for full image
+    height, width = compute_effective_image_size(config, image_margins)
+    whole_image_estimation = estimate_total_consumption(config, height, width, disp_margins)
+    asked_memory_per_work = config["segment_mode"].get("memory_per_work")
+    estimation_margin_factor = 1 - RELATIVE_ESTIMATION_MARGIN
+    memory_per_work = int(estimation_margin_factor * asked_memory_per_work)
+
+    # Bypass segmentation if disabled or memory fits full image
+    if not config["segment_mode"]["enable"] or whole_image_estimation <= memory_per_work:
+        return []
+
+    cost_volume_dtype = np.dtype(config["pipeline"]["matching_cost"]["float_precision"])
+
+    # Estimate fixed memory usage for final disparity map
+    final_dataset_disp_map_size = estimate_dataset_disp_map_size(
+        height, width, config["pipeline"]["matching_cost"]["step"], cost_volume_dtype
+    )
+
+    roi_margins = get_roi_margins(
+        config["input"]["row_disparity"],
+        config["input"]["col_disparity"],
+        image_margins,
+    )
+    height_margins = roi_margins.up + roi_margins.down
+    width_margins = roi_margins.left + roi_margins.right
+    min_roi_width = width + width_margins
+    min_roi_height = 1 + height_margins
+    # Estimate memory needed for smallest possible ROI (1 row)
+    min_roi_memory = estimate_total_consumption(config, min_roi_height, min_roi_width, disp_margins)
+    min_required_memory = final_dataset_disp_map_size + min_roi_memory
+
+    if min_required_memory > memory_per_work:
+        # `memory_per_work` already includes RELATIVE_ESTIMATION_MARGIN.
+        # However, in this error message, we want to display the estimated minimum
+        # memory requirement *with* the margin applied, for proper comparison with the user-defined value.
+        # That’s why we apply the margin to `min_required_memory` before formatting.
+        raise ValueError(
+            f"estimated minimum `memory_per_work` is "
+            f"{math.ceil(min_required_memory / estimation_margin_factor)} MB, "
+            f"but got {asked_memory_per_work} MB. Consider increasing it, reducing image size or working on ROI."
+        )
+
+    # Compute usable memory per ROI and derive segment size
+    max_roi_memory = memory_per_work - final_dataset_disp_map_size
+    number_of_pixels = min_roi_width * min_roi_height
+
+    memory_per_pixel = min_roi_memory / number_of_pixels
+    max_pixels_per_roi = max_roi_memory // memory_per_pixel
+    # Anticipate added vertical margins when opening ROIs:
+    # subtract now to prevent oversizing and ensure the estimated number of rows fits memory constraints.
+    max_rows_per_roi = max(1, (max_pixels_per_roi // min_roi_width) - height_margins)
+
+    input_roi = config.get("ROI")
+
+    first_row_coordinate = 0 if input_roi is None else input_roi["row"]["first"]
+    last_row_coordinate = height if input_roi is None else input_roi["row"]["last"] + 1
+    starts = np.arange(first_row_coordinate, last_row_coordinate, max_rows_per_roi)
+    ends = (starts + max_rows_per_roi - 1).clip(max=last_row_coordinate - 1)
+
+    col_roi: RoiRange = {
+        "first": 0 if input_roi is None else input_roi["col"]["first"],
+        "last": width - 1 if input_roi is None else input_roi["col"]["last"],
+    }
+    # We need to convert to integer because of json_checker expects Python integer and not numpy integer
+    return [{"row": {"first": int(s), "last": int(e)}, "col": col_roi} for s, e in zip(starts, ends)]

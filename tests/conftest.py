@@ -25,6 +25,8 @@ import pathlib
 import re
 
 import json
+import tracemalloc
+
 import numpy as np
 import pytest
 import rasterio
@@ -421,3 +423,41 @@ def correct_pipeline_without_refinement(window_size, matching_cost_method):
 def reset_profiling():
     pandora2d.profiling.data.reset()
     pandora2d.profiling.expert_mode_config.enable = False
+
+
+class MemoryTracer:
+    """
+    Measure consumed memory in bytes.
+    """
+
+    def __init__(self, unit_factor=1):
+        self.unit_factor = unit_factor
+        self._current = 0
+        self._peak = 0
+
+    def __enter__(self):
+        tracemalloc.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._current, self._peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(current: {self.current}, peak: {self.peak})"
+
+    @property
+    def current(self):
+        return self._current / self.unit_factor
+
+    @property
+    def peak(self):
+        return self._peak / self.unit_factor
+
+
+@pytest.fixture(name="MemoryTracer")
+def memory_tracer_fixture():
+    """
+    Measure consumed memory in bytes.
+    """
+    return MemoryTracer

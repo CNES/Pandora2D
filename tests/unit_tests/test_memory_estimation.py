@@ -20,17 +20,16 @@
 This file contains unit tests associated to the pandora2d memory estimation
 """
 
-# pylint: disable=redefined-outer-name,too-few-public-methods
+# pylint: disable=redefined-outer-name,too-few-public-methods,invalid-name,too-many-lines
 
-import tracemalloc
-from typing import Tuple
+from typing import Dict, Tuple, cast
 
 import numpy as np
 import pandora
 import pytest
 
 from pandora2d import common, criteria, memory_estimation
-from pandora2d.check_configuration import check_conf
+from pandora2d.check_configuration import check_conf, check_roi_section
 from pandora2d.criteria import get_criteria_dataarray
 from pandora2d.img_tools import (
     create_datasets_from_inputs,
@@ -45,8 +44,8 @@ from pandora2d.state_machine import Pandora2DMachine
 @pytest.fixture()
 def input_config(correct_input_cfg, random_left_image_path, random_right_image_path):
     """Input section of the configuration file with different disparity ranges for rows and columns."""
-    correct_input_cfg["input"]["left"]["img"] = random_left_image_path
-    correct_input_cfg["input"]["right"]["img"] = random_right_image_path
+    correct_input_cfg["input"]["left"]["img"] = str(random_left_image_path)
+    correct_input_cfg["input"]["right"]["img"] = str(random_right_image_path)
     correct_input_cfg["input"]["row_disparity"] = {"init": 1, "range": 3}
     correct_input_cfg["input"]["col_disparity"] = {"init": 1, "range": 2}
     return correct_input_cfg
@@ -56,36 +55,6 @@ def input_config(correct_input_cfg, random_left_image_path, random_right_image_p
 def image_datasets(input_config):
     """Left and right images according to input section of the configuration file."""
     return create_datasets_from_inputs(input_config["input"])
-
-
-class MemoryTracer:
-    """
-    Measure consumed memory in bytes.
-    """
-
-    def __init__(self, unit_factor=1):
-        self.unit_factor = unit_factor
-        self._current = 0
-        self._peak = 0
-
-    def __enter__(self):
-        tracemalloc.start()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._current, self._peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(current: {self.current}, peak: {self.peak})"
-
-    @property
-    def current(self):
-        return self._current / self.unit_factor
-
-    @property
-    def peak(self):
-        return self._peak / self.unit_factor
 
 
 class TestInputSize:
@@ -345,7 +314,7 @@ class TestInputSize:
 
         assert pytest.approx(memory_estimation.estimate_input_size(height, width, data_vars), abs=1e-3) == expected
 
-    def test_memory_input(self, correct_input_cfg):
+    def test_memory_input(self, MemoryTracer, correct_input_cfg):
         """
         Test that the value returned by input_size corresponds to the memory occupied by the image datasets.
         """
@@ -368,7 +337,7 @@ class TestInputSize:
         image_dataset_nbytes = (image_datasets.left.nbytes + image_datasets.right.nbytes) / memory_estimation.BYTE_TO_MB
         assert memory_computed == pytest.approx(image_dataset_nbytes, rel=0.05)
 
-    def test_memory_input_with_roi(self, correct_input_cfg, correct_roi_sensor, correct_pipeline):
+    def test_memory_input_with_roi(self, MemoryTracer, correct_input_cfg, correct_roi_sensor, correct_pipeline):
         """
         Test that the value returned by input_size corresponds to the memory occupied by the image datasets
         with a ROI.
@@ -576,7 +545,7 @@ class TestCostVolumesSize:
 
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [3, 3]])
-    def test_memory_cost_volumes(self, user_cfg_cv_memory, matching_cost_object):
+    def test_memory_cost_volumes(self, MemoryTracer, user_cfg_cv_memory, matching_cost_object):
         """
         Test that the value returned by cost_volumes_size corresponds to the memory occupied by the cost volume dataset.
         """
@@ -640,7 +609,7 @@ class TestPandoraCostVolumesSize:
 
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("margins", [NullMargins(), Margins(1, 2, 3, 4)])
-    def test(self, image_datasets, config, margins):
+    def test(self, MemoryTracer, image_datasets, config, margins):
         """Test that cost volumes size computation works as expected."""
 
         height, width = image_datasets.left.sizes["row"], image_datasets.left.sizes["col"]
@@ -669,7 +638,7 @@ class TestShiftedRightImages:
     """Test memory consumption of shifted right images."""
 
     @pytest.mark.parametrize("subpix", [1, 2, 4])
-    def test(self, image_datasets, subpix):
+    def test(self, MemoryTracer, image_datasets, subpix):
         """Test memory consumption of shifted right images."""
 
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
@@ -711,7 +680,7 @@ class TestDatasetDispMap:
     @pytest.mark.parametrize("dtype_argument", [np.float32, "float32"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 2], [2, 1]])
     @pytest.mark.parametrize("image_size", [(200, 300), (700, 500)])
-    def test(self, config, image_datasets, image_size: Tuple[int, int], dtype_argument):
+    def test(self, MemoryTracer, config, step, image_datasets, image_size: Tuple[int, int], dtype_argument):
         """Test coherence between estimated memory consumption and actual memory consumption."""
 
         matching_cost = CorrelationMethods(config["pipeline"]["matching_cost"])
@@ -738,7 +707,309 @@ class TestDatasetDispMap:
                 },
             )
 
-        estimation = memory_estimation.estimate_dataset_disp_map_size(config, *image_size, dtype_argument)
+        estimation = memory_estimation.estimate_dataset_disp_map_size(*image_size, step, dtype_argument)
 
         assert estimation == pytest.approx(dataset_disp_maps.nbytes / memory_estimation.BYTE_TO_MB, rel=0.05)
         assert estimation == pytest.approx(memory_tracer.current, rel=0.05, abs=1e-2)
+
+
+class TestSegmentImageByRows:
+    """Test segment_image_by_rows."""
+
+    @pytest.fixture
+    def state_machine(self):
+        """Instantiate a Pandora2D state machine."""
+        return Pandora2DMachine()
+
+    @pytest.fixture
+    def checked_config(self, config, state_machine):
+        """Run check_conf on config and return the result."""
+        return check_conf(config, state_machine)
+
+    @pytest.fixture
+    def segment_mode(self, memory_per_work):
+        return {
+            "enable": True,
+            "memory_per_work": memory_per_work,
+        }
+
+    @pytest.fixture
+    def config(self, tmp_path, input_config, segment_mode):
+        return {
+            **input_config,
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": "mutual_information",
+                    "window_size": 5,
+                    "step": [1, 1],
+                    "subpix": 1,
+                },
+                "disparity": {
+                    "disparity_method": "wta",
+                    "invalid_disparity": -9999,
+                },
+            },
+            "segment_mode": segment_mode,
+            "output": {
+                "path": str(tmp_path),
+            },
+        }
+
+    @pytest.fixture
+    def dataset_disp_map_size(self, image_size: Tuple[int, int], checked_config):
+        return memory_estimation.estimate_dataset_disp_map_size(
+            *image_size,
+            checked_config["pipeline"]["matching_cost"]["step"],
+            checked_config["pipeline"]["matching_cost"]["float_precision"],
+        )
+
+    @pytest.fixture
+    def image_can_be_fully_reconstructed(self, image_size: Tuple[int, int]):
+        """Helper that checks that the image can be fully reconstructed from an ROI list."""
+
+        def inner(rois):
+            total_number_of_rows, total_number_of_columns = image_size
+            row_sorted = sorted(rois, key=lambda roi: roi["row"]["first"])
+            for first_roi, second_roi in zip(row_sorted[:-1], row_sorted[1:]):
+                assert second_roi["row"]["first"] == first_roi["row"]["last"] + 1, "ROIs should be continuous"
+                assert first_roi["col"] == second_roi["col"], "ROIs should be only on rows."
+            # Following asserts are relevant because we previously checked that all ROIs were contiguous:
+            assert row_sorted[0]["row"]["first"] == 0, "ROI should start on the first row"
+            assert row_sorted[-1]["row"]["last"] == total_number_of_rows - 1, "ROI should stop on the last row"
+            # We previously checked that all columns ROIs were the same thus we can use the first one:
+            assert row_sorted[0]["col"]["first"] == 0, "ROI should start on the first col"
+            assert row_sorted[0]["col"]["last"] == total_number_of_columns - 1, "ROI should stop on the last col"
+            return True
+
+        return inner
+
+    @pytest.fixture
+    def estimate_roi_memory_consumption(self, checked_config, state_machine):
+        """Helper that estimate the memory consumption of the given ROI."""
+
+        def inner(roi):
+            checked_config["ROI"] = roi
+            height, width = memory_estimation.compute_effective_image_size(
+                checked_config, state_machine.margins_img.global_margins
+            )
+            return memory_estimation.estimate_total_consumption(
+                checked_config, height, width, state_machine.margins_disp.global_margins
+            )
+
+        return inner
+
+    @pytest.mark.parametrize(
+        "segment_mode",
+        [
+            pytest.param(
+                {
+                    "enable": False,
+                    "memory_per_work": 1,
+                },
+                id="Disabled",
+            ),
+            pytest.param(
+                {
+                    "enable": True,
+                    "memory_per_work": 4000,
+                },
+                id="Enough memory",
+            ),
+        ],
+    )
+    def test_no_segments_when_not_needed(self, checked_config, state_machine):
+        """No segment is expected when disabled or with enough memory."""
+        result = memory_estimation.segment_image_by_rows(
+            checked_config, state_machine.margins_disp.global_margins, state_machine.margins_img.global_margins
+        )
+
+        assert len(result) == 0
+
+    @pytest.mark.parametrize(
+        ["image_size", "memory_per_work"],
+        [
+            pytest.param([1001, 1455], 100, id="Small image"),
+            pytest.param([1500, 2340], 150, id="Bigger image"),
+            pytest.param([1010, 1455], 55, id="Maximum rows per ROI is 1"),
+        ],
+    )
+    def test_enough_memory(
+        self,
+        checked_config,
+        memory_per_work,
+        state_machine,
+        image_can_be_fully_reconstructed,
+        estimate_roi_memory_consumption,
+        dataset_disp_map_size,
+    ):
+        """There is enough memory per work to split image into segments."""
+        result = memory_estimation.segment_image_by_rows(
+            checked_config, state_machine.margins_disp.global_margins, state_machine.margins_img.global_margins
+        )
+
+        assert len(result) >= 2, "There should be at least 2 segments."
+        assert all(check_roi_section({"ROI": cast(Dict, e)}).get("ROI") for e in result)
+        assert image_can_be_fully_reconstructed(result)
+        assert all(
+            (estimate_roi_memory_consumption(roi) + dataset_disp_map_size)
+            < (1 - memory_estimation.RELATIVE_ESTIMATION_MARGIN) * memory_per_work
+            for roi in result
+        )
+
+    @pytest.mark.parametrize(
+        ["image_size", "memory_per_work"],
+        [
+            pytest.param([2500, 4500], 170, id="Dataset disp map too big"),
+            pytest.param([450, 2200], 34, id="Min ROI too big (width too big)"),
+        ],
+    )
+    def test_raise_error_when_not_enough_memory(
+        self,
+        checked_config,
+        memory_per_work,
+        state_machine,
+    ):
+        """Raise an error when either the initial disparity map size or the minimum ROI (one line) is too large,
+        providing an indication of the minimum memory_per_work value required to fit them into memory."""
+        with pytest.raises(
+            ValueError,
+            match=(
+                rf"^estimated minimum `memory_per_work` is \d+ MB, but got {memory_per_work} MB. "
+                "Consider increasing it, reducing image size or working on ROI."
+            ),
+        ):
+            memory_estimation.segment_image_by_rows(
+                checked_config, state_machine.margins_disp.global_margins, state_machine.margins_img.global_margins
+            )
+
+
+class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
+    """Test segment_image_by_rows with ROI in initial config."""
+
+    @pytest.fixture
+    def input_roi(self, image_size):
+        """Default ROI taking full image."""
+        return {
+            "row": {"first": 0, "last": image_size[0] - 1},
+            "col": {"first": 0, "last": image_size[1] - 1},
+        }
+
+    @pytest.fixture
+    def config(self, input_roi, tmp_path, input_config, segment_mode):  # pylint: disable=arguments-differ
+        return {
+            **input_config,
+            "ROI": input_roi,
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": "mutual_information",
+                    "window_size": 5,
+                    "step": [1, 1],
+                    "subpix": 1,
+                },
+                "disparity": {
+                    "disparity_method": "wta",
+                    "invalid_disparity": -9999,
+                },
+            },
+            "segment_mode": segment_mode,
+            "output": {
+                "path": str(tmp_path),
+            },
+        }
+
+    @pytest.fixture
+    def dataset_disp_map_size(self, checked_config, state_machine):  # pylint: disable=arguments-renamed
+        return memory_estimation.estimate_dataset_disp_map_size(
+            *memory_estimation.compute_effective_image_size(checked_config, state_machine.margins_img.global_margins),
+            checked_config["pipeline"]["matching_cost"]["step"],
+            checked_config["pipeline"]["matching_cost"]["float_precision"],
+        )
+
+    @pytest.fixture
+    def image_can_be_fully_reconstructed(self, input_roi):  # pylint: disable=arguments-renamed
+        """Helper that checks that the image can be fully reconstructed from an ROI list."""
+
+        def inner(rois):
+            row_sorted = sorted(rois, key=lambda roi: roi["row"]["first"])
+            for first_roi, second_roi in zip(row_sorted[:-1], row_sorted[1:]):
+                assert second_roi["row"]["first"] == first_roi["row"]["last"] + 1, "ROIs should be continuous"
+                assert first_roi["col"] == second_roi["col"], "ROIs should be only on rows."
+            # Following asserts are relevant because we previously checked that all ROIs were contiguous:
+            assert row_sorted[0]["row"]["first"] == input_roi["row"]["first"]
+            assert row_sorted[-1]["row"]["last"] == input_roi["row"]["last"]
+            assert row_sorted[0]["col"]["first"] == input_roi["col"]["first"]
+            assert row_sorted[-1]["col"]["last"] == input_roi["col"]["last"]
+            return True
+
+        return inner
+
+    # Add input_roi
+    @pytest.mark.parametrize(
+        ["image_size", "input_roi", "memory_per_work"],
+        [
+            pytest.param(
+                [1001, 1455],
+                {
+                    "row": {"first": 100, "last": 999},
+                    "col": {"first": 1000, "last": 1400},
+                },
+                100,
+                id="Small image",
+            ),
+            pytest.param(
+                [4000, 2455],
+                {
+                    "row": {"first": 100, "last": 1500},
+                    "col": {"first": 1000, "last": 1400},
+                },
+                100,
+                id="Bigger image",
+            ),
+        ],
+    )
+    def test_enough_memory(
+        self,
+        checked_config,
+        memory_per_work,
+        state_machine,
+        image_can_be_fully_reconstructed,
+        estimate_roi_memory_consumption,
+        dataset_disp_map_size,
+    ):
+        """There is enough memory per work to split image into segments."""
+        super().test_enough_memory(
+            checked_config,
+            memory_per_work,
+            state_machine,
+            image_can_be_fully_reconstructed,
+            estimate_roi_memory_consumption,
+            dataset_disp_map_size,
+        )
+
+    # Add input_roi
+    @pytest.mark.parametrize(
+        ["image_size", "input_roi", "memory_per_work"],
+        [
+            pytest.param(
+                [5500, 6500],
+                {"row": {"first": 0, "last": 2499}, "col": {"first": 0, "last": 4500}},
+                170,
+                id="Dataset disp map too big",
+            ),
+            pytest.param(
+                [2000, 2301],
+                {"row": {"first": 1000, "last": 1449}, "col": {"first": 100, "last": 2300}},
+                34,
+                id="Min ROI too big (width too big)",
+            ),
+        ],
+    )
+    def test_raise_error_when_not_enough_memory(
+        self,
+        checked_config,
+        memory_per_work,
+        state_machine,
+    ):
+        """Raise an error when either the initial disparity map size or the minimum ROI (one line) is too large,
+        providing an indication of the minimum memory_per_work value required to fit them into memory."""
+        super().test_raise_error_when_not_enough_memory(checked_config, memory_per_work, state_machine)
