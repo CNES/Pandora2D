@@ -109,6 +109,10 @@ def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]):
     # run pandora 2D and store disp maps in a dataset
     dataset_disp_maps, completed_cfg = run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
 
+    # remove ROI margins to save only user ROI in tif files
+    if "ROI" in cfg:
+        dataset_disp_maps = remove_roi_margins(dataset_disp_maps, cfg)
+
     return dataset_disp_maps, completed_cfg
 
 

@@ -36,7 +36,6 @@ from rasterio import Affine
 from rasterio.crs import CRS
 
 from pandora2d import reporting
-from pandora2d.img_tools import remove_roi_margins
 
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable=useless-import-alias
@@ -129,9 +128,6 @@ def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
     :return: None
     """
 
-    # remove ROI margins to save only user ROI in tif files
-    if "ROI" in cfg:
-        dataset = remove_roi_margins(dataset, cfg)
     if dataset.attrs["transform"] is not None:
         adjust_georeferencement(dataset, cfg)
     # create output dir
