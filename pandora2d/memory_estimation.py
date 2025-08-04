@@ -76,11 +76,13 @@ def estimate_total_consumption(config: Dict, height: int, width: int, margin_dis
     cost_volume_dtype = np.dtype(matching_cost_config["float_precision"])
     cost_volume_datavars = CV_FLOAT_DATA_VAR if cost_volume_dtype == np.float32 else CV_DOUBLE_DATA_VAR
 
+    # Left and Right images
+    number_of_images = 2
     # A copy of pandora cost volume is done in calculations so it counts twice:
     number_of_pandora_cost_volumes = 2
 
     result = (
-        estimate_input_size(height, width, IMG_DATA_VAR)
+        number_of_images * estimate_input_size(height, width, IMG_DATA_VAR)
         + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
         + estimate_dataset_disp_map_size(height, width, matching_cost_config["step"], cost_volume_dtype)
     )
