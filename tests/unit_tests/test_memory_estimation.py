@@ -829,7 +829,7 @@ class TestSegmentImageByRows:
         [
             pytest.param([1001, 1455], 100, id="Small image"),
             pytest.param([1500, 2340], 150, id="Bigger image"),
-            pytest.param([1010, 1455], 55, id="Maximum rows per ROI is 1"),
+            pytest.param([1010, 1320], 41, id="Maximum rows per ROI is 1"),
         ],
     )
     def test_enough_memory(
