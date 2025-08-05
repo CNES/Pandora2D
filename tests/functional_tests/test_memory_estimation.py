@@ -44,7 +44,8 @@ class TestEstimateTotalMemoryConsumption:
         yield store
 
         tmp_directory = tmp_path_factory.mktemp("test_reports")
-        directory = tmp_directory / request.node.nodeid
+        # Replace ":" by "#" because "::" is not accepted for a Windows path.
+        directory = tmp_directory / request.node.nodeid.replace(":", "#")
         directory.mkdir(parents=True)
         file_path = directory / "memory_report.json"
         with file_path.open("w") as memory_report:
