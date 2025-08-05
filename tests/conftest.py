@@ -410,10 +410,19 @@ def matching_cost_method():
 
 
 @pytest.fixture()
-def correct_pipeline_without_refinement(window_size, matching_cost_method):
+def subpix():
+    return 1
+
+
+@pytest.fixture()
+def correct_pipeline_without_refinement(window_size, matching_cost_method, subpix):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": window_size},
+            "matching_cost": {
+                "matching_cost_method": matching_cost_method,
+                "window_size": window_size,
+                "subpix": subpix,
+            },
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         }
     }
