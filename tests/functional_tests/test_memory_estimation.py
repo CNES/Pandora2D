@@ -155,9 +155,8 @@ class TestEstimateTotalMemoryConsumption:
         "roi",
         [
             pytest.param(
-                {"row": {"first": 0, "last": 100}, "col": {"first": 60, "last": 110}},
+                {"row": {"first": 0, "last": 150}, "col": {"first": 60, "last": 150}},
                 id="Small",
-                marks=pytest.mark.skip("Under estimated"),
             ),
             pytest.param(
                 {"row": {"first": 0, "last": 200}, "col": {"first": 0, "last": 310}},
