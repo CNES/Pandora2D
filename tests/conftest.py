@@ -406,7 +406,7 @@ def window_size():
 
 @pytest.fixture()
 def matching_cost_method():
-    return "zncc_python"
+    return "zncc"
 
 
 @pytest.fixture()

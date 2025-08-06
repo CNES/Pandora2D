@@ -24,6 +24,11 @@ This module contains functions associated to the zncc in cpp.
 #ifndef ZNCC_HPP
 #define ZNCC_HPP
 
+#include "operation.hpp"
+#include "pandora2d_type.hpp"
+
+const double STD_EPSILON = 1e-8;  // is 1e-16 for the variance.
+
 /**
  * @brief Compute zncc between two images
  *
@@ -34,7 +39,14 @@ This module contains functions associated to the zncc in cpp.
  */
 template <typename T>
 T calculate_zncc(const P2d::MatrixX<T>& left_image, const P2d::MatrixX<T>& right_image) {
-  return 0;
+  auto left_std_dev = std_dev(left_image);
+  auto right_std_dev = std_dev(right_image);
+  if (left_std_dev <= STD_EPSILON || right_std_dev <= STD_EPSILON) {
+    return 0;
+  }
+  return ((left_image.array() - left_image.mean()) * (right_image.array() - right_image.mean()))
+             .sum() /
+         (left_std_dev * right_std_dev * left_image.size());
 }
 
 #endif
