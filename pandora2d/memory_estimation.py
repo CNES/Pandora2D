@@ -285,7 +285,7 @@ def estimate_cost_volumes_size(
     nb_disp_col = get_nb_disp(user_cfg["input"]["col_disparity"], margins_disp.left, margins_disp.right, subpix)
 
     # Get cost volumes shape
-    cv_shape = np.ceil(height / step[0]) * np.ceil(width / step[1]) * nb_disp_row * nb_disp_col
+    cv_shape = math.ceil(height / step[0]) * math.ceil(width / step[1]) * nb_disp_row * nb_disp_col
 
     nb_bytes = sum(DATA_VARS_TYPE_SIZE[data_var] for data_var in data_vars)
 
@@ -334,7 +334,7 @@ def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, mar
     step = config["pipeline"]["matching_cost"]["step"]
     disparity_size = get_nb_disp(config["input"]["col_disparity"], margins.left, margins.right, subpix)
 
-    image_size = height * np.ceil(width / step[1])
+    image_size = height * math.ceil(width / step[1])
 
     return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
 
@@ -354,7 +354,7 @@ def estimate_dataset_disp_map_size(height: int, width: int, step: List, dtype: D
     :return: estimated size in MB.
     :rtype: float
     """
-    image_size = np.ceil(height / step[0]) * np.ceil(width / step[1])
+    image_size = math.ceil(height / step[0]) * math.ceil(width / step[1])
     number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
     # The number of criteria is incremented by one in order to take the validity_mask band into account:
     number_of_validity_bands = len(Criteria.__members__) + 1
