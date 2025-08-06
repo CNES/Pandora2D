@@ -78,8 +78,7 @@ def estimate_total_consumption(config: Dict, height: int, width: int, margin_dis
 
     # Left and Right images
     number_of_images = 2
-    # A copy of pandora cost volume is done in calculations so it counts twice:
-    number_of_pandora_cost_volumes = 2
+    number_of_pandora_cost_volumes = 1
 
     result = (
         number_of_images * estimate_input_size(height, width, IMG_DATA_VAR)
