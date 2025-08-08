@@ -23,6 +23,7 @@ This file contains unit tests associated to the pandora2d memory estimation
 # pylint: disable=redefined-outer-name,too-few-public-methods,invalid-name,too-many-lines
 
 from typing import Dict, Tuple, cast
+from copy import deepcopy
 
 import numpy as np
 import pandora
@@ -590,31 +591,36 @@ class TestPandoraCostVolumesSize:
     """
 
     @pytest.fixture()
-    def pandora_matching_cost_config(self, subpix):
+    def matching_cost_config(self, subpix, step):
         """Matching cost section of the configuration file."""
         return {
             "matching_cost_method": "ssd",
             "window_size": 3,
             "subpix": subpix,
-            "step": 1,
+            "step": step,
         }
 
     @pytest.fixture()
-    def config(self, input_config, pandora_matching_cost_config):
+    def config(self, input_config, matching_cost_config):
         """Full configuration."""
         return {
             **input_config,
-            "pipeline": {"matching_cost": pandora_matching_cost_config},
+            "pipeline": {"matching_cost": matching_cost_config},
         }
 
+    @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 4]])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("margins", [NullMargins(), Margins(1, 2, 3, 4)])
     def test(self, MemoryTracer, image_datasets, config, margins):
         """Test that cost volumes size computation works as expected."""
 
         height, width = image_datasets.left.sizes["row"], image_datasets.left.sizes["col"]
+
+        pandora_matching_cost_config = deepcopy(config["pipeline"]["matching_cost"])
+        pandora_matching_cost_config["step"] = config["pipeline"]["matching_cost"]["step"][1]
+
         pandora_matching_cost = pandora.matching_cost.AbstractMatchingCost(  # type: ignore[abstract]
-            **config["pipeline"]["matching_cost"]
+            **pandora_matching_cost_config
         )
 
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
@@ -823,7 +829,7 @@ class TestSegmentImageByRows:
         [
             pytest.param([1001, 1455], 100, id="Small image"),
             pytest.param([1500, 2340], 150, id="Bigger image"),
-            pytest.param([1010, 1455], 55, id="Maximum rows per ROI is 1"),
+            pytest.param([1010, 1320], 41, id="Maximum rows per ROI is 1"),
         ],
     )
     def test_enough_memory(

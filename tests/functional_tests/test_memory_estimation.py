@@ -44,7 +44,8 @@ class TestEstimateTotalMemoryConsumption:
         yield store
 
         tmp_directory = tmp_path_factory.mktemp("test_reports")
-        directory = tmp_directory / request.node.nodeid
+        # Replace ":" by "#" because "::" is not accepted for a Windows path.
+        directory = tmp_directory / request.node.nodeid.replace(":", "#")
         directory.mkdir(parents=True)
         file_path = directory / "memory_report.json"
         with file_path.open("w") as memory_report:
@@ -118,7 +119,7 @@ class TestEstimateTotalMemoryConsumption:
             run_pipeline(config)
         return memory_tracer
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information", "sad"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     def test(
@@ -148,16 +149,15 @@ class TestEstimateTotalMemoryConsumption:
         )
 
     @pytest.mark.usefixtures("add_roi_to_config")
-    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information", "sad"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 4])
     @pytest.mark.parametrize(
         "roi",
         [
             pytest.param(
-                {"row": {"first": 0, "last": 100}, "col": {"first": 60, "last": 110}},
+                {"row": {"first": 0, "last": 150}, "col": {"first": 60, "last": 150}},
                 id="Small",
-                marks=pytest.mark.skip("Under estimated"),
             ),
             pytest.param(
                 {"row": {"first": 0, "last": 200}, "col": {"first": 0, "last": 310}},
@@ -263,47 +263,39 @@ class TestSegmentMode:
         return inner
 
     @pytest.mark.parametrize(
-        ["input_cfg", "pipeline", "memory_per_work", "matching_cost_method", "subpix"],
+        ["input_cfg", "pipeline", "matching_cost_method", "subpix", "memory_per_work"],
         [
             pytest.param(
                 "correct_input_cfg",
                 "correct_pipeline_without_refinement",
-                20,
                 "mutual_information",
                 1,
+                20,
                 id="Pipeline without refinement, mutual information and no enough memory without segment mode",
             ),
             pytest.param(
                 "correct_input_with_left_mask",
                 "correct_pipeline_with_dichotomy_cpp",
-                20,
                 "zncc_python",
                 1,
+                20,
                 id="Pipeline with dichotomy cpp, zncc python, mask and no enough memory without segment mode",
             ),
             pytest.param(
                 "correct_input_with_right_mask",
                 "correct_pipeline_without_refinement",
-                400,
                 "zncc_python",
                 1,
-                id="Pipeline without refinement, zncc_python, mask and enough memory",
-            ),
-            pytest.param(
-                "correct_input_with_left_right_mask",
-                "correct_pipeline_with_dichotomy_cpp",
                 400,
-                "mutual_information",
-                1,
-                id="Pipeline with dichotomy cpp, mask, mutual_information and enough memory",
+                id="Pipeline without refinement, zncc_python, mask and enough memory",
             ),
             pytest.param(
                 "correct_input_cfg",
                 "correct_pipeline_without_refinement",
-                40,
                 "zncc_python",
-                4,
-                id="Pipeline without refinement, subpix=4 and no enough memory without segment mode",
+                2,
+                40,
+                id="Pipeline without refinement, subpix=2 and no enough memory without segment mode",
             ),
         ],
     )
@@ -360,11 +352,11 @@ class TestSegmentMode:
             pytest.param(
                 "correct_input_cfg",
                 "correct_pipeline_without_refinement",
-                {"col": {"first": 10, "last": 300}, "row": {"first": 10, "last": 300}},
+                {"col": {"first": 100, "last": 350}, "row": {"first": 200, "last": 450}},
                 "zncc_python",
                 1,
                 20,
-                id="291x291 ROI, 20 MB memory per work, zncc python, without refinement",
+                id="251x251 ROI, 20 MB memory per work, zncc python, without refinement",
             ),
             pytest.param(
                 "correct_input_with_left_right_mask",
@@ -378,38 +370,47 @@ class TestSegmentMode:
             pytest.param(
                 "correct_input_cfg",
                 "correct_pipeline_without_refinement",
-                {"col": {"first": 200, "last": 450}, "row": {"first": 200, "last": 375}},
+                {"col": {"first": 200, "last": 350}, "row": {"first": 200, "last": 350}},
                 "zncc_python",
                 1,
                 10,
-                id="251x251 ROI, 10 MB memory per work, zncc python without refinement",
+                id="151x151 ROI, 10 MB memory per work, zncc python without refinement",
             ),
             pytest.param(
                 "correct_input_with_left_mask",
                 "correct_pipeline_with_dichotomy_cpp",
-                {"col": {"first": 200, "last": 450}, "row": {"first": 200, "last": 375}},
+                {"col": {"first": 200, "last": 300}, "row": {"first": 100, "last": 200}},
                 "mutual_information",
                 1,
                 15,
-                id="251x251 ROI, 15 MB memory per work, mask, mutual information with refinement",
+                id="101x101 ROI, 15 MB memory per work, mask, mutual information with refinement",
             ),
             pytest.param(
                 "correct_input_cfg",
                 "correct_pipeline_without_refinement",
-                {"col": {"first": 200, "last": 450}, "row": {"first": 200, "last": 375}},
+                {"col": {"first": 200, "last": 350}, "row": {"first": 200, "last": 350}},
                 "mutual_information",
                 2,
                 10,
-                id="251x251 ROI, 10 MB memory per work, subpix=2, mutual information without refinement",
+                id="151x151 ROI, 10 MB memory per work, subpix=2, mutual information without refinement",
             ),
             pytest.param(
                 "correct_input_with_right_mask",
-                "correct_pipeline_with_dichotomy_cpp",
+                "correct_pipeline_without_refinement",
                 {"col": {"first": 0, "last": 50}, "row": {"first": 0, "last": 50}},
                 "zncc_python",
                 4,
                 15,
-                id="51x51 ROI, 15 MB memory per work, mask, subpix=4, zncc python with refinement",
+                id="51x51 ROI, 15 MB memory per work, mask, subpix=4, zncc python without refinement",
+            ),
+            pytest.param(
+                "correct_input_with_left_right_mask",
+                "correct_pipeline_with_dichotomy_cpp",
+                {"col": {"first": 200, "last": 450}, "row": {"first": 200, "last": 375}},
+                "mutual_information",
+                1,
+                200,
+                id="51x51 ROI, mask, mutual_information and enough memory",
             ),
         ],
     )

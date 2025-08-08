@@ -34,7 +34,7 @@ from pandora2d.matching_cost import MatchingCostRegistry
 
 BYTE_TO_MB = 1024 * 1024
 
-RELATIVE_ESTIMATION_MARGIN = 0.4
+RELATIVE_ESTIMATION_MARGIN = 0.25
 
 # Data variables in image datasets
 IMG_DATA_VAR = ["im", "row_disparity_min", "row_disparity_max", "col_disparity_min", "col_disparity_max"]
@@ -76,11 +76,12 @@ def estimate_total_consumption(config: Dict, height: int, width: int, margin_dis
     cost_volume_dtype = np.dtype(matching_cost_config["float_precision"])
     cost_volume_datavars = CV_FLOAT_DATA_VAR if cost_volume_dtype == np.float32 else CV_DOUBLE_DATA_VAR
 
-    # A copy of pandora cost volume is done in calculations so it counts twice:
-    number_of_pandora_cost_volumes = 2
+    # Left and Right images
+    number_of_images = 2
+    number_of_pandora_cost_volumes = 1
 
     result = (
-        estimate_input_size(height, width, IMG_DATA_VAR)
+        number_of_images * estimate_input_size(height, width, IMG_DATA_VAR)
         + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
         + estimate_dataset_disp_map_size(height, width, matching_cost_config["step"], cost_volume_dtype)
     )
@@ -284,7 +285,7 @@ def estimate_cost_volumes_size(
     nb_disp_col = get_nb_disp(user_cfg["input"]["col_disparity"], margins_disp.left, margins_disp.right, subpix)
 
     # Get cost volumes shape
-    cv_shape = np.ceil(height / step[0]) * np.ceil(width / step[1]) * nb_disp_row * nb_disp_col
+    cv_shape = math.ceil(height / step[0]) * math.ceil(width / step[1]) * nb_disp_row * nb_disp_col
 
     nb_bytes = sum(DATA_VARS_TYPE_SIZE[data_var] for data_var in data_vars)
 
@@ -330,9 +331,10 @@ def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, mar
     :rtype: float
     """
     subpix = config["pipeline"]["matching_cost"]["subpix"]
+    step = config["pipeline"]["matching_cost"]["step"]
     disparity_size = get_nb_disp(config["input"]["col_disparity"], margins.left, margins.right, subpix)
 
-    image_size = height * width
+    image_size = height * math.ceil(width / step[1])
 
     return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
 
@@ -352,7 +354,7 @@ def estimate_dataset_disp_map_size(height: int, width: int, step: List, dtype: D
     :return: estimated size in MB.
     :rtype: float
     """
-    image_size = np.ceil(height / step[0]) * np.ceil(width / step[1])
+    image_size = math.ceil(height / step[0]) * math.ceil(width / step[1])
     number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
     # The number of criteria is incremented by one in order to take the validity_mask band into account:
     number_of_validity_bands = len(Criteria.__members__) + 1
