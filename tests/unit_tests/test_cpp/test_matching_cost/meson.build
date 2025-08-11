@@ -64,6 +64,16 @@ test(
 )
 
 test(
+    'ZNCC',
+    executable(
+        'test_zncc',
+        ['test_zncc.cpp', matching_cost_src, common_src],
+        include_directories: [matching_cost_includes, common_includes],
+        dependencies: [python_dep, pybind11_dep, eigen_dep, doctest_dep],
+    ),
+)
+
+test(
     'Compute Cost Volumes',
     executable(
         'test_compute_cost_volumes',

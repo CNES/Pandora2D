@@ -146,11 +146,6 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
   P2d::MatrixX<T> left_window;
   P2d::MatrixX<T> right_window;
 
-  if (matching_cost_method == "zncc") {
-    std::cerr << "ZNCC method not yet implemented in C++." << std::endl;
-    return;
-  }
-
   int subpix = sqrt(right.size());
 
   // ind_cv corresponds to:

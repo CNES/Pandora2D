@@ -257,7 +257,7 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
     assert report["statistics"]["disparity"].keys() == {"row", "col"}
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc_python", "mutual_information"])
 @pytest.mark.parametrize(
     ["make_input_cfg", "pipeline"],
     [

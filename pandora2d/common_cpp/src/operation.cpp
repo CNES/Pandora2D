@@ -20,31 +20,6 @@
 #include "operation.hpp"
 
 /**
- * @brief Standard deviation with Eigen matrix
- * @param m : the Eigen matrix
- *
- */
-double std_dev(const P2d::MatrixD& m) {
-  return sqrt((m.array() - m.mean()).square().sum() / (m.size()));
-}
-
-/**
- * @brief Variance with Eigen matrix
- * Method used to center the histogram
- * Link to Medicis code:
- * https://gitlab.cnes.fr/OutilsCommuns/medicis/-/blob/master/SOURCES/sources/QPEC/Library/sources/
- * random_var_d.c#L588
- *
- * @param m : the Eigen matrix
- *
- */
-double variance(const P2d::MatrixD& m) {
-  double moment1 = (m.array().sum()) / (m.size());
-  double moment2 = (m.array().square().sum()) / (m.size());
-  return moment2 - (moment1 * moment1);
-}
-
-/**
  * @brief Function to find the index of the minimum element, ignoring NaNs
  *
  * @param vec : data in the eigen vector type

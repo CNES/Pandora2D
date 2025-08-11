@@ -117,7 +117,7 @@ def false_input_path_image(right_img_path):
 def correct_pipeline_fixture():
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5},
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
@@ -138,7 +138,7 @@ def false_pipeline_mc():
 def false_pipeline_disp():
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5},
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
             "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
     }
@@ -382,7 +382,7 @@ def wrong_size_grid(left_img_shape, create_disparity_grid_fixture):
 
 @pytest.fixture()
 def matching_cost_method():
-    return "zncc_python"
+    return "zncc"
 
 
 @pytest.fixture()
