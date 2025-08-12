@@ -20,7 +20,7 @@
 #
 
 """
-Tests pandora2d machine execution with mutual information
+Tests pandora2d machine execution with mutual information and zncc cpp methods
 """
 
 # pylint: disable=redefined-outer-name
@@ -40,16 +40,16 @@ def float_precision():
 
 
 @pytest.fixture()
-def cfg_for_mutual_information(correct_input_for_functional_tests, window_size, subpix, step, float_precision):
+def cfg_for_correlation(correct_input_for_functional_tests, method, window_size, subpix, step, float_precision):
     """
-    Return user configuration to test mutual information method
+    Return user configuration to test mutual information and zncc methods
     """
 
     user_cfg = {
         **correct_input_for_functional_tests,
         "pipeline": {
             "matching_cost": {
-                "matching_cost_method": "mutual_information",
+                "matching_cost_method": method,
                 "window_size": window_size,
                 "subpix": subpix,
                 "step": step,
@@ -67,22 +67,23 @@ def cfg_for_mutual_information(correct_input_for_functional_tests, window_size, 
 
 
 @pytest.fixture()
-def cfg_for_mutual_information_with_roi(cfg_for_mutual_information, roi):
+def cfg_for_correlation_with_roi(cfg_for_correlation, roi):
     """
-    Return user configuration to test mutual information method with ROI
+    Return user configuration to test mutual information and zncc cpp methods with ROI
     """
 
-    cfg_for_mutual_information["ROI"] = roi
+    cfg_for_correlation["ROI"] = roi
 
-    return cfg_for_mutual_information
+    return cfg_for_correlation
 
 
-class TestMutualInformation:
+class TestCorrelation:
     """
-    Test that the pandora2d machine runs correctly with the mutual information method
+    Test that the pandora2d machine runs correctly with the mutual information and zncc cpp methods
     for different parameter panels
     """
 
+    @pytest.mark.parametrize("method", ["mutual_information", "zncc"])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
@@ -90,16 +91,16 @@ class TestMutualInformation:
     @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
     @pytest.mark.parametrize("float_precision", ["float64", "float32"])
-    def test_mutual_information_execution(self, float_precision, cfg_for_mutual_information_with_roi):
+    def test_correlation_execution(self, float_precision, cfg_for_correlation_with_roi):
         """
-        Description : Test that execution of Pandora2d with mutual information does not fail.
+        Description : Test that execution of Pandora2d with mutual information and zncc cpp does not fail.
         Data :
             * Left_img : cones/monoband/left.png
             * Right_img : cones/monoband/right.png
         """
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_mutual_information_with_roi, pandora2d_machine)
+        cfg = check_conf(cfg_for_correlation_with_roi, pandora2d_machine)
 
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
@@ -113,15 +114,16 @@ class TestMutualInformation:
         assert not np.all(np.isnan(dataset_disp_maps.col_map.data))
         assert pandora2d_machine.cost_volumes["cost_volumes"].data.dtype == np.dtype(float_precision)
 
+    @pytest.mark.parametrize("method", ["mutual_information", "zncc"])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
     @pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
     @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
-    def test_invalid_points_not_computed(self, cfg_for_mutual_information_with_roi):
+    def test_invalid_points_not_computed(self, cfg_for_correlation_with_roi):
         """
-        Description : Test that when running the matching cost step with mutual information,
+        Description : Test that when running the matching cost step with mutual information and zncc cpp,
         invalid points are not computed.
         Data :
             * Left_img : cones/monoband/left.png
@@ -130,7 +132,7 @@ class TestMutualInformation:
 
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_mutual_information_with_roi, pandora2d_machine)
+        cfg = check_conf(cfg_for_correlation_with_roi, pandora2d_machine)
 
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
@@ -144,13 +146,14 @@ class TestMutualInformation:
         invalid_point = np.where(pandora2d_machine.cost_volumes["criteria"].data != 0)
         assert np.all(pandora2d_machine.cost_volumes["cost_volumes"].data[invalid_point] == 0)
 
+    @pytest.mark.parametrize("method", ["mutual_information"])
     @pytest.mark.parametrize("subpix", [1])
     @pytest.mark.parametrize("window_size", [5])
     @pytest.mark.parametrize("step", [[1, 1]])
     @pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 150}, "row": {"first": 100, "last": 150}}])
     @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
-    def test_computation_time_with_mask(self, cfg_for_mutual_information_with_roi, full_invalid_mask_path):
+    def test_computation_time_with_mask(self, cfg_for_correlation_with_roi, full_invalid_mask_path):
         """
         Description : Test that the matching cost step with mutual information is faster when
         using an input mask. (Some points are not computed in this case)
@@ -163,7 +166,7 @@ class TestMutualInformation:
 
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_mutual_information_with_roi, pandora2d_machine)
+        cfg = check_conf(cfg_for_correlation_with_roi, pandora2d_machine)
 
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
@@ -180,7 +183,7 @@ class TestMutualInformation:
 
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_mutual_information_with_roi, pandora2d_machine)
+        cfg = check_conf(cfg_for_correlation_with_roi, pandora2d_machine)
 
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
@@ -205,6 +208,10 @@ class TestNbBinsMax:
     and images for which nb_bins reaches NB_BINS_MAX
     """
 
+    @pytest.fixture()
+    def method(self):
+        return "mutual_information"
+
     @pytest.fixture(scope="session")
     def left_img_path(self, root_dir):
         return str(root_dir / "tests/functional_tests/matching_cost/data/img_nb_bins_max.tif")
@@ -218,7 +225,7 @@ class TestNbBinsMax:
     @pytest.mark.parametrize("step", [[32, 32]])
     @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 10}])
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 10}])
-    def test_nb_bins_max(self, cfg_for_mutual_information):
+    def test_nb_bins_max(self, cfg_for_correlation):
         """
         Description : Test that execution of Pandora2d with mutual information
         and image with nb_bins=NB_BINS_MAX does not fail.
@@ -228,7 +235,7 @@ class TestNbBinsMax:
         """
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_mutual_information, pandora2d_machine)
+        cfg = check_conf(cfg_for_correlation, pandora2d_machine)
 
         image_datasets = create_datasets_from_inputs(input_config=cfg["input"])
 
