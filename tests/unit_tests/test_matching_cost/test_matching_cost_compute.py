@@ -489,7 +489,7 @@ def right_dataset(make_dataset, right_data):
         ),
     ],
 )
-def test_python_vs_cpp(
+def test_zncc_python_vs_cpp(
     python_matching_cost_config,
     python_matching_cost_instance,
     cpp_matching_cost_config,
@@ -497,7 +497,7 @@ def test_python_vs_cpp(
     left_dataset,
     right_dataset,
 ):
-    """Compare that costvolumes from ZNCC in Python and ZNCC in C++ are similar."""
+    """Compare that cost volumes from ZNCC in Python and ZNCC in C++ are similar."""
 
     python_matching_cost_instance.allocate(
         img_left=left_dataset, img_right=right_dataset, cfg=python_matching_cost_config
