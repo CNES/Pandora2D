@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Test the refinement.dichotomy pipeline.
+Test the correlation methods performance.
 """
 from pathlib import Path
 
@@ -28,11 +28,11 @@ import rasterio
 class TestComparisonMedicis:
     """
     Test that pandora2d disparity maps are equal or close to the medicis ones
-    when matching cost is used with mutual information method.
+    when matching cost is used with mutual information and zncc methods.
     """
 
     @pytest.fixture()
-    def cfg_mutual_information(self, shift_path, subpix, tmp_path):
+    def cfg_correlation(self, shift_path, method, subpix, tmp_path):
         """
         Make user configuration for mutual information computation
         """
@@ -46,7 +46,7 @@ class TestComparisonMedicis:
             },
             "pipeline": {
                 "matching_cost": {
-                    "matching_cost_method": "mutual_information",
+                    "matching_cost_method": method,
                     "window_size": 65,
                     "step": [1, 1],
                     "subpix": subpix,
@@ -61,45 +61,76 @@ class TestComparisonMedicis:
     @pytest.mark.parametrize(
         [
             "img_path",
+            "method",
             "subpix",
             "medicis_method_path",
         ],
         [
             pytest.param(
                 "T19KER/r+0.00c+0.50/",
+                "mutual_information",
                 2,
                 "mi/gri_resultat_",
-                id="T19KER (Calama, Chile) shifted of 0.5 in columns with subpix=2",
+                id="T19KER (Calama, Chile) shifted of 0.5 in columns with subpix=2, mutual_information",
             ),
             pytest.param(
                 "T50JML/r+0.00c+0.50/",
+                "mutual_information",
                 2,
                 "mi/gri_resultat_",
-                id="T50JML (Perth, Australia) shifted of 0.5 in columns with subpix=2",
+                id="T50JML (Perth, Australia) shifted of 0.5 in columns with subpix=2, mutual_information",
             ),
             pytest.param(
                 "T19KER/r+0.00c-0.25/",
+                "mutual_information",
                 4,
                 "mi/gri_resultat_",
-                id="T19KER (Calama, Chile) shifted of -0.25 in columns with subpix=4",
+                id="T19KER (Calama, Chile) shifted of -0.25 in columns with subpix=4, mutual_information",
             ),
             pytest.param(
                 "T50JML/r+0.00c-0.25/",
+                "mutual_information",
                 4,
                 "mi/gri_resultat_",
-                id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4",
+                id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, mutual_information",
+            ),
+            pytest.param(
+                "T19KER/r+0.00c+0.50/",
+                "zncc",
+                2,
+                "zncc/gri_resultat_",
+                id="T19KER (Calama, Chile) shifted of 0.5 in columns with subpix=2, zncc",
+            ),
+            pytest.param(
+                "T50JML/r+0.00c+0.50/",
+                "zncc",
+                2,
+                "zncc/gri_resultat_",
+                id="T50JML (Perth, Australia) shifted of 0.5 in columns with subpix=2, zncc",
+            ),
+            pytest.param(
+                "T19KER/r+0.00c-0.25/",
+                "zncc",
+                4,
+                "zncc/gri_resultat_",
+                id="T19KER (Calama, Chile) shifted of -0.25 in columns with subpix=4, zncc",
+            ),
+            pytest.param(
+                "T50JML/r+0.00c-0.25/",
+                "zncc",
+                4,
+                "zncc/gri_resultat_",
+                id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, zncc",
             ),
         ],
     )
-    def test_pandora2d_medicis_mutual_information(
-        self, run_pipeline, remove_edges, cfg_mutual_information, medicis_maps_path
-    ):
+    def test_comparaison_pandora2d_medicis(self, run_pipeline, remove_edges, cfg_correlation, medicis_maps_path):
         """
-        Compute mean errors of medicis and pandora2d disparity maps
+        Compare medicis and pandora2d disparity maps
         """
-        output_dir = Path(cfg_mutual_information["output"]["path"])
+        output_dir = Path(cfg_correlation["output"]["path"])
         # Run pandora2D pipeline
-        run_pipeline(cfg_mutual_information)
+        run_pipeline(cfg_correlation)
 
         # Get pandora2d disparity maps
         with rasterio.open(output_dir / "disparity_map" / "row_map.tif") as src:
