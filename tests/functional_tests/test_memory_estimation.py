@@ -149,7 +149,7 @@ class TestEstimateTotalMemoryConsumption:
         )
 
     @pytest.mark.usefixtures("add_roi_to_config")
-    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information", "sad"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information", "sad", "zncc"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 4])
     @pytest.mark.parametrize(
@@ -292,10 +292,10 @@ class TestSegmentMode:
             pytest.param(
                 "correct_input_cfg",
                 "correct_pipeline_without_refinement",
-                "zncc_python",
+                "zncc",
                 2,
                 40,
-                id="Pipeline without refinement, subpix=2 and no enough memory without segment mode",
+                id="Pipeline without refinement, zncc cpp, subpix=2 and no enough memory without segment mode",
             ),
         ],
     )
@@ -380,10 +380,10 @@ class TestSegmentMode:
                 "correct_input_with_left_mask",
                 "correct_pipeline_with_dichotomy_cpp",
                 {"col": {"first": 200, "last": 300}, "row": {"first": 100, "last": 200}},
-                "mutual_information",
+                "zncc",
                 1,
                 15,
-                id="101x101 ROI, 15 MB memory per work, mask, mutual information with refinement",
+                id="101x101 ROI, 15 MB memory per work, mask, zncc cpp with refinement",
             ),
             pytest.param(
                 "correct_input_cfg",
@@ -404,9 +404,18 @@ class TestSegmentMode:
                 id="51x51 ROI, 15 MB memory per work, mask, subpix=4, zncc python without refinement",
             ),
             pytest.param(
+                "correct_input_with_right_mask",
+                "correct_pipeline_without_refinement",
+                {"col": {"first": 0, "last": 50}, "row": {"first": 0, "last": 50}},
+                "zncc",
+                4,
+                15,
+                id="51x51 ROI, 15 MB memory per work, mask, subpix=4, zncc cpp without refinement",
+            ),
+            pytest.param(
                 "correct_input_with_left_right_mask",
                 "correct_pipeline_with_dichotomy_cpp",
-                {"col": {"first": 200, "last": 450}, "row": {"first": 200, "last": 375}},
+                {"col": {"first": 0, "last": 50}, "row": {"first": 0, "last": 50}},
                 "mutual_information",
                 1,
                 200,
