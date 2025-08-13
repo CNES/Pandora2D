@@ -207,11 +207,12 @@ void compute_zncc_cv(const P2d::Matrixf& left,
   int subpix = sqrt(right.size());
 
   // Compute left integral images
-  P2d::MatrixX<T> integral_left, integral_left_sq;
-  compute_integral_image<T>(left, integral_left, integral_left_sq);
+  // Computation is done in double type to avoid rounding errors
+  P2d::MatrixX<double> integral_left, integral_left_sq;
+  compute_integral_image<double>(left, integral_left, integral_left_sq);
 
   // Initialize right integral images
-  P2d::MatrixX<T> integral_right, integral_right_sq, integral_cross;
+  P2d::MatrixX<double> integral_right, integral_right_sq, integral_cross;
 
   auto cv_mutable_view = cv_values.template mutable_unchecked<4>();
   auto criteria_value_view = criteria_values.template unchecked<4>();
@@ -228,8 +229,9 @@ void compute_zncc_cv(const P2d::Matrixf& left,
       P2d::Matrixf shifted_right = shift_image(right[index_right], disp_row_value, disp_col_value);
 
       // Computed right and cross integral images
-      compute_right_integrals<T>(left, shifted_right, integral_right, integral_right_sq,
-                                 integral_cross);
+      // Computation is done in double type to avoid rounding errors
+      compute_right_integrals<double>(left, shifted_right, integral_right, integral_right_sq,
+                                      integral_cross);
 
       for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
         for (std::size_t col = 0; col < cv_size.nb_col; ++col) {
@@ -245,6 +247,7 @@ void compute_zncc_cv(const P2d::Matrixf& left,
           int bottom_row = top_row + window_size - 1;
           int right_col = left_col + window_size - 1;
 
+          // Computation is done in double type to avoid rounding errors
           double zncc =
               calculate_zncc(integral_left, integral_left_sq, integral_right, integral_right_sq,
                              integral_cross, top_row, left_col, bottom_row, right_col, window_size);
