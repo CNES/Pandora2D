@@ -719,3 +719,48 @@ class TestEstimation:
         np.testing.assert_array_equal(
             pandora2d_machine.left_img.col_disparity.sel(band_disp="max").data, np.full(img_shape, estimated_d_col[1])
         )
+
+
+class TestCostVolumeConfidence:
+    """
+    Test cost volume confidence execution
+    """
+
+    @pytest.fixture()
+    def pipeline_cfg_with_confidence(self):
+        """
+        Cost volume confidence configuration
+        """
+
+        return {
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": "zncc",
+                    "window_size": 5,
+                },
+                "cost_volume_confidence": {"confidence_method": "ambiguity", "eta_max": 0.7},
+                "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            }
+        }
+
+    @pytest.fixture()
+    def configuration(self, correct_input_cfg, pipeline_cfg_with_confidence, tmp_path):
+        return {
+            **correct_input_cfg,
+            **pipeline_cfg_with_confidence,
+            **{"output": {"path": str(tmp_path)}},
+        }
+
+    def test_cost_volume_confidence_pipeline(self, configuration, run_pipeline, tmp_path):
+        """
+        Test execution of a pipeline with cost volumes confidence
+        """
+
+        run_pipeline(configuration)
+
+        with rasterio.open(tmp_path / "cost_volumes" / "confidence_measure.tif") as src:
+            confidence_map = src.read(1)
+
+        # Checking that resulting confidence map is not full of nans
+        with np.testing.assert_raises(AssertionError):
+            assert np.all(np.isnan(confidence_map))

@@ -230,6 +230,8 @@ class TestCheckPipelineSection:
             ["disparity", "matching_cost", "refinement"],
             ["matching_cost", "refinement", "disparity"],
             ["matching_cost", "estimation", "disparity"],
+            ["matching_cost", "disparity", "cost_volume_confidence"],
+            ["cost_volume_confidence", "matching_cost", "disparity"],
         ],
     )
     def test_wrong_order_should_raise_error(self, pandora2d_machine, step_order):
@@ -241,6 +243,7 @@ class TestCheckPipelineSection:
         steps = {
             "estimation": {"estimated_shifts": [-0.5, 1.3], "error": [1.0], "phase_diff": [1.0]},
             "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5},
+            "cost_volume_confidence": {"confidence_method": "ambiguity"},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
