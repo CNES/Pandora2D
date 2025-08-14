@@ -132,8 +132,43 @@ def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
         adjust_georeferencement(dataset, cfg)
     # create output dir
     output = Path(cfg["output"]["path"]) / "disparity_map"
-    _save_dataset(dataset, output)
+
+    if "confidence_measure" in dataset.data_vars:
+        save_confidence_maps(dataset, cfg)
+        _save_dataset(dataset.drop_vars("confidence_measure"), output)
+    else:
+        _save_dataset(dataset, output)
+
     _save_disparity_maps_report(dataset, output)
+
+
+def save_confidence_maps(dataset: xr.Dataset, cfg: Dict) -> None:
+    """
+    Save confidence maps into directory defined by cfg's `output/path` key,
+    create it with its parents if necessary.
+
+    :param dataset: Dataset which contains:
+
+        - lines : the confidence map for the lines 2D DataArray (row, col)
+        - columns : the confidence map for the columns 2D DataArray (row, col)
+    :type dataset: xr.Dataset
+    :param cfg: user configuration
+    :type cfg: Dict
+    :return: None
+    """
+
+    output = Path(cfg["output"]["path"]) / "cost_volumes"
+
+    output.mkdir(parents=True, exist_ok=True)
+
+    write_data_array(
+        dataset["confidence_measure"],
+        str((output / str("confidence_measure")).with_suffix(".tif")),
+        dtype=dataset["confidence_measure"].dtype,
+        band_names=None,
+        crs=dataset.attrs["crs"],
+        transform=dataset.attrs["transform"],
+    )
 
 
 def _save_disparity_maps_report(dataset: xr.Dataset, output: Path) -> None:

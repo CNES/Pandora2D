@@ -199,6 +199,7 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):
         common.save_disparity_maps(dataset_disp_maps, completed_cfg)
+
     # Update output configuration with detailed margins
     completed_cfg["margins_disp"] = pandora2d_machine.margins_disp.to_dict()
     completed_cfg["margins"] = pandora2d_machine.margins_img.to_dict()

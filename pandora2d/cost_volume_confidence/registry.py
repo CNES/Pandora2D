@@ -1,3 +1,5 @@
+# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+#
 #  This file is part of PANDORA2D
 #
 #      https://github.com/CNES/Pandora2D
