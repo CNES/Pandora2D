@@ -100,7 +100,6 @@ bool all_non_zero_elements(const P2d::MatrixUI& mat);
  * @param offset_cv_img_col col offset between first index of cv and image (ROI case)
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
- * @param no_data no data value in image
  */
 template <typename T>
 void compute_mutual_information_cv(const P2d::Matrixf& left,
@@ -113,8 +112,7 @@ void compute_mutual_information_cv(const P2d::Matrixf& left,
                                    int offset_cv_img_row,
                                    int offset_cv_img_col,
                                    int window_size,
-                                   const Eigen::Vector2i& step,
-                                   const double no_data) {
+                                   const Eigen::Vector2i& step) {
   P2d::MatrixX<T> left_window;
   P2d::MatrixX<T> right_window;
 
@@ -188,7 +186,6 @@ void compute_mutual_information_cv(const P2d::Matrixf& left,
  * @param offset_cv_img_col col offset between first index of cv and image (ROI case)
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
- * @param no_data no data value in image
  */
 template <typename T>
 void compute_zncc_cv(const P2d::Matrixf& left,
@@ -201,8 +198,7 @@ void compute_zncc_cv(const P2d::Matrixf& left,
                      int offset_cv_img_row,
                      int offset_cv_img_col,
                      int window_size,
-                     const Eigen::Vector2i& step,
-                     const double no_data) {
+                     const Eigen::Vector2i& step) {
   const int half_window = floor(window_size / 2);
   int subpix = sqrt(right.size());
 
@@ -284,8 +280,7 @@ using ComputeFunction = std::function<void(const P2d::Matrixf&,
                                            int,
                                            int,
                                            int,
-                                           const Eigen::Vector2i&,
-                                           double)>;
+                                           const Eigen::Vector2i&)>;
 
 template <typename T>
 void compute_cost_volumes_cpp(const P2d::Matrixf& left,
@@ -299,7 +294,6 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
                               int offset_cv_img_col,
                               int window_size,
                               const Eigen::Vector2i& step,
-                              double no_data,
                               const std::string& method) {
   static const std::map<std::string, ComputeFunction<T>> method_map = {
       {"mutual_information", compute_mutual_information_cv<T>}, {"zncc", compute_zncc_cv<T>}};
@@ -307,7 +301,7 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
   auto it = method_map.find(method);
   if (it != method_map.end()) {
     it->second(left, right, cv_values, criteria_values, cv_size, disp_range_row, disp_range_col,
-               offset_cv_img_row, offset_cv_img_col, window_size, step, no_data);
+               offset_cv_img_row, offset_cv_img_col, window_size, step);
   } else {
     throw std::invalid_argument("Unknown correlation method: " + method);
   }
