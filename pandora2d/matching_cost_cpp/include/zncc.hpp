@@ -44,21 +44,24 @@ inline P2d::Matrixf shift_image(const P2d::Matrixf& image, int disp_row, int dis
   const int cols = image.cols();
   P2d::Matrixf shifted_image(rows, cols);
 
+  int src_row;
+  int src_col;
+
   for (int row = 0; row < rows; ++row) {
-    int src_r = row + disp_row;
-    if (src_r < 0)
-      src_r = 0;
-    if (src_r >= rows)
-      src_r = rows - 1;
+    src_row = row + disp_row;
+    if (src_row < 0)
+      src_row = 0;
+    if (src_row >= rows)
+      src_row = rows - 1;
 
     for (int col = 0; col < cols; ++col) {
-      int src_c = col + disp_col;
-      if (src_c < 0)
-        src_c = 0;
-      if (src_c >= cols)
-        src_c = cols - 1;
+      src_col = col + disp_col;
+      if (src_col < 0)
+        src_col = 0;
+      if (src_col >= cols)
+        src_col = cols - 1;
 
-      shifted_image(row, col) = image(src_r, src_c);
+      shifted_image(row, col) = image(src_row, src_col);
     }
   }
   return shifted_image;
@@ -81,12 +84,16 @@ void compute_integral_image(const P2d::Matrixf& image,
   integral_image.setZero(rows + 1, cols + 1);
   integral_image_sq.setZero(rows + 1, cols + 1);
 
+  T sum_row;
+  T sum_row_sq;
+  T val;
+
   for (int row = 1; row <= rows; ++row) {
-    T sum_row = 0.;
-    T sum_row_sq = 0.;
+    sum_row = 0.;
+    sum_row_sq = 0.;
     for (int col = 1; col <= cols; ++col) {
       // Cast to T because image type is float
-      T val = static_cast<T>(image(row - 1, col - 1));
+      val = static_cast<T>(image(row - 1, col - 1));
       sum_row += val;
       sum_row_sq += val * val;
       integral_image(row, col) = integral_image(row - 1, col) + sum_row;
@@ -144,15 +151,22 @@ inline void compute_right_integrals(const P2d::Matrixf& left,
   integral_right_sq.setZero(rows + 1, cols + 1);
   integral_cross.setZero(rows + 1, cols + 1);
 
+  T sum_row_right;
+  T sum_row_right_sq;
+  T sum_row_cross;
+
+  T left_val;
+  T right_val;
+
   for (int row = 1; row <= rows; ++row) {
-    T sum_row_right = 0.0;
-    T sum_row_right_sq = 0.0;
-    T sum_row_cross = 0.0;
+    sum_row_right = 0.0;
+    sum_row_right_sq = 0.0;
+    sum_row_cross = 0.0;
 
     for (int col = 1; col <= cols; ++col) {
       // Cast to T because image type is float
-      T left_val = static_cast<T>(left(row - 1, col - 1));
-      T right_val = static_cast<T>(shifted_right(row - 1, col - 1));
+      left_val = static_cast<T>(left(row - 1, col - 1));
+      right_val = static_cast<T>(shifted_right(row - 1, col - 1));
 
       sum_row_right += right_val;
       sum_row_right_sq += right_val * right_val;

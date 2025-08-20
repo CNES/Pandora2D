@@ -203,7 +203,7 @@ void compute_zncc_cv(const P2d::Matrixf& left,
                      int window_size,
                      const Eigen::Vector2i& step,
                      const double no_data) {
-  const int half_window = window_size / 2;
+  const int half_window = floor(window_size / 2);
   int subpix = sqrt(right.size());
 
   // Compute left integral images
@@ -214,19 +214,33 @@ void compute_zncc_cv(const P2d::Matrixf& left,
   // Initialize right integral images
   P2d::MatrixX<double> integral_right, integral_right_sq, integral_cross;
 
+  // Declaration of variables used in for loop
   auto cv_mutable_view = cv_values.template mutable_unchecked<4>();
   auto criteria_value_view = criteria_values.template unchecked<4>();
+
+  int disp_row_value;
+  int disp_col_value;
+  P2d::Matrixf shifted_right;
+
+  int left_win_row_center;
+  int left_win_col_center;
+  int top_row;
+  int left_col;
+  int bottom_row;
+  int right_col;
+
+  double zncc;
 
   for (std::size_t d_row = 0; d_row < cv_size.nb_disp_row; ++d_row) {
     for (std::size_t d_col = 0; d_col < cv_size.nb_disp_col; ++d_col) {
       int index_right =
           interpolated_right_image_index(subpix, disp_range_row[d_row], disp_range_col[d_col]);
 
-      int disp_row_value = floor(disp_range_row[d_row]);
-      int disp_col_value = floor(disp_range_col[d_col]);
+      disp_row_value = floor(disp_range_row[d_row]);
+      disp_col_value = floor(disp_range_col[d_col]);
 
       // Compute shifted right image according to disparities
-      P2d::Matrixf shifted_right = shift_image(right[index_right], disp_row_value, disp_col_value);
+      shifted_right = shift_image(right[index_right], disp_row_value, disp_col_value);
 
       // Computed right and cross integral images
       // Computation is done in double type to avoid rounding errors
@@ -239,16 +253,16 @@ void compute_zncc_cv(const P2d::Matrixf& left,
             continue;
           }
 
-          int left_win_row_center = offset_cv_img_row + row * step[0];
-          int left_win_col_center = offset_cv_img_col + col * step[1];
+          left_win_row_center = offset_cv_img_row + row * step[0];
+          left_win_col_center = offset_cv_img_col + col * step[1];
 
-          int top_row = left_win_row_center - half_window;
-          int left_col = left_win_col_center - half_window;
-          int bottom_row = top_row + window_size - 1;
-          int right_col = left_col + window_size - 1;
+          top_row = left_win_row_center - half_window;
+          left_col = left_win_col_center - half_window;
+          bottom_row = top_row + window_size - 1;
+          right_col = left_col + window_size - 1;
 
           // Computation is done in double type to avoid rounding errors
-          double zncc =
+          zncc =
               calculate_zncc(integral_left, integral_left_sq, integral_right, integral_right_sq,
                              integral_cross, top_row, left_col, bottom_row, right_col, window_size);
 
