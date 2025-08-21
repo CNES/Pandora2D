@@ -48,6 +48,7 @@ from pandora.margins import GlobalMargins
 
 from pandora2d import common, disparity, estimation, img_tools, refinement, criteria
 from pandora2d.matching_cost import MatchingCostRegistry, BaseMatchingCost
+from pandora2d.cost_volume_confidence import CostVolumeConfidenceRegistry
 from pandora2d.profiling import mem_time_profile
 
 
@@ -79,6 +80,12 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             "prepare": "matching_cost_prepare",
             "before": "matching_cost_run",
         },
+        {
+            "trigger": "cost_volume_confidence",
+            "source": "cost_volumes",
+            "dest": "cost_volumes",
+            "before": "cost_volume_confidence_run",
+        },
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_run"},
         {"trigger": "refinement", "source": "disparity_map", "dest": "disparity_map", "before": "refinement_run"},
     ]
@@ -91,6 +98,12 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             "source": "assumption",
             "dest": "cost_volumes",
             "before": "matching_cost_check_conf",
+        },
+        {
+            "trigger": "cost_volume_confidence",
+            "source": "cost_volumes",
+            "dest": "cost_volumes",
+            "before": "cost_volume_confidence_check_conf",
         },
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_check_conf"},
         {
@@ -254,7 +267,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
     def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
-        Check the disparity computation configuration
+        Check the matching cost computation configuration
 
         :param cfg: configuration
         :type cfg: dict
@@ -271,6 +284,24 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.step = matching_cost.step
         self.window_size = matching_cost.window_size
         self.margins_img.add_cumulative(input_step, matching_cost.margins)
+
+    def cost_volume_confidence_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the cost volume confidence computation configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        CostVolumeConfidence = CostVolumeConfidenceRegistry.get(  # pylint:disable=invalid-name # NOSONAR
+            cfg["pipeline"][input_step]["confidence_method"]
+        )
+
+        cost_volume_confidence = CostVolumeConfidence(cfg["pipeline"][input_step])
+        self.pipeline_cfg["pipeline"][input_step] = cost_volume_confidence.cfg
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -393,6 +424,28 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             self.left_img,
             self.right_img,
             self.margins_disp.get("refinement"),
+        )
+
+    @mem_time_profile(name="Cost volume confidence step")
+    def cost_volume_confidence_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Cost volume confidence computation
+
+        :return: None
+        """
+
+        logging.info("Cost volume confidence computation...")
+
+        CostVolumeConfidence = CostVolumeConfidenceRegistry.get(  # pylint:disable=invalid-name # NOSONAR
+            cfg["pipeline"][input_step]["confidence_method"]
+        )
+        confidence_ = CostVolumeConfidence(cfg["pipeline"][input_step])
+
+        self.cost_volumes, self.dataset_disp_maps = confidence_.confidence_prediction(
+            self.left_img,
+            self.right_img,
+            self.cost_volumes,
+            self.dataset_disp_maps,
         )
 
     @mem_time_profile(name="Disparity step")

@@ -14,6 +14,7 @@ Pandora2D Machine defines 3 possible states:
 and 4 transitions, each one corresponding to a step described in :ref:`step_by_step` chapter:
  - estimation (:ref:`estimation`)
  - matching_cost (:ref:`matching_cost`)
+ - cost_volume_confidence (:ref:`cost_volume_confidence`)
  - disparity (:ref:`disparity`)
  - refinement (:ref:`refinement`)
 
@@ -22,7 +23,7 @@ by specific name. It corresponds to the name of Pandora2D steps you can write in
 
 The following diagram highlights all states and possible transitions.
 
-    .. figure:: ../Images/Pandora2D_pipeline.drawio.svg
+    .. figure:: ../Images/Pandora2D_pipeline.png
         :align: center
 
 If you want to understand in more details how Pandora2D machine works, please consult our `Pandora machine state tutorial notebook <https://github.com/CNES/Pandora2D/tree/master/notebooks/...>`_.

@@ -26,6 +26,7 @@ import logging
 from typing import Dict, Tuple
 from json_checker import And
 
+import numpy as np
 import xarray as xr
 
 from pandora2d.cost_volume_confidence.registry import CostVolumeConfidenceRegistry
@@ -94,4 +95,16 @@ class Ambiguity(CostVolumeConfidence):
 
         logging.warning("The ambiguity method has not yet been implemented")
 
-        return xr.Dataset(), xr.Dataset()
+        # Fill confidence_measure data variables with zeros to test cost volume confidence ouput is correct
+        if len(dataset_disp_maps.data_vars) != 0:
+            confidence = xr.DataArray(
+                np.zeros(
+                    (len(dataset_disp_maps.row), len(dataset_disp_maps.col)),
+                    dtype=dataset_disp_maps["row_map"].data.dtype,
+                ),
+                coords={"row": dataset_disp_maps.row, "col": dataset_disp_maps.col},
+                dims=("row", "col"),
+            )
+            dataset_disp_maps["confidence_measure"] = confidence
+
+        return cost_volumes, dataset_disp_maps
