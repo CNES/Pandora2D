@@ -133,7 +133,6 @@ class CorrelationMethods(BaseMatchingCost):
             offset_cv_img_col,
             self.cost_volumes.attrs["window_size"],
             self.cost_volumes.attrs["step"],
-            self.cost_volumes.attrs["no_data_img"],
             self.cost_volumes.attrs["measure"],
         )
 

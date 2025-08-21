@@ -36,7 +36,6 @@ def compute_cost_volumes_cpp_float(
     offset_cv_img_col: int,
     window_size: int,
     step: NDArray[np.integer],
-    no_data: float,
     matching_cost_method: str,
 ):
     """
@@ -64,8 +63,6 @@ def compute_cost_volumes_cpp_float(
     :type window_size: int
     :param step: [step_row, step_col]
     :type step: NDArray[np.integer]
-    :param no_data: no data value in img
-    :type no_data: float
     :param matching_cost_method: correlation method
     :type matching_cost_method: string
     """
@@ -82,7 +79,6 @@ def compute_cost_volumes_cpp_double(
     offset_cv_img_col: int,
     window_size: int,
     step: NDArray[np.integer],
-    no_data: float,
     matching_cost_method: str,
 ):
     """
@@ -110,8 +106,6 @@ def compute_cost_volumes_cpp_double(
     :type window_size: int
     :param step: [step_row, step_col]
     :type step: NDArray[np.integer]
-    :param no_data: no data value in img
-    :type no_data: float
     :param matching_cost_method: correlation method
     :type matching_cost_method: string
 
