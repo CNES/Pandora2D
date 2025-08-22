@@ -25,8 +25,11 @@ This module contains tests associated to bin for histogram.
 #include <doctest.h>
 #include "bin.hpp"
 
-TEST_CASE("get_bins_width_scott method") {
-  P2d::MatrixD image(2, 4);
+TYPE_TO_STRING_AS("Float", P2d::Matrixf);
+TYPE_TO_STRING_AS("Double", P2d::MatrixD);
+
+TEST_CASE_TEMPLATE("get_bins_width_scott method", MatrixType, P2d::Matrixf, P2d::MatrixD) {
+  MatrixType image(2, 4);
 
   SUBCASE("same cols") {
     image << 0, 1, 2, 3, 0, 1, 2, 3;
@@ -39,7 +42,7 @@ TEST_CASE("get_bins_width_scott method") {
     image << 0, 0, 0, 0, 2, 2, 2, 2;
 
     auto bin_width = get_bins_width_scott(image);
-    CHECK(bin_width == 1.7455);
+    CHECK(bin_width == doctest::Approx(1.7455).epsilon(1e-7));
   }
 
   SUBCASE("null matrix") {

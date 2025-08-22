@@ -25,6 +25,7 @@ This file contains useful function definitions for tests.
 #define CONFTEST_HPP
 
 #include <doctest.h>
+#include <random>
 #include "cost_volume.hpp"
 #include "pandora2d_type.hpp"
 
@@ -45,13 +46,27 @@ void check_inside_eigen_element(const T& data, const T& expected) {
 }
 
 /**
- * @brief Create normal matrix for test
- *
- * @param size: image shape
- * @param mean: image mean
- * @param std: image standard deviation
+ * @brief Create a normal matrix object
  */
-P2d::MatrixD create_normal_matrix(std::size_t size, float mean, float std);
+template <typename T>
+P2d::MatrixX<T> create_normal_matrix(std::size_t size, T mean, T std) {
+  // random device class instance, source of 'true' randomness for initializing random seed
+  std::random_device rd{};
+  // Mersenne twister PRNG, initialized with seed from previous random device instance
+  std::mt19937 gen{rd()};
+  // instance of class std::normal_distribution with specific mean and stddev
+  std::normal_distribution<T> dis{mean, std};
+
+  // Create matrix
+  std::vector<T> X(size * size);
+  auto v_size = static_cast<int>(X.size());
+  for (int i = 0; i < v_size; i++) {
+    X[i] = dis(gen);
+  }
+  Eigen::Map<P2d::MatrixX<T>> img(X.data(), size, size);
+
+  return img;
+}
 
 /**
  * @brief Returns 1D index according to 2D position

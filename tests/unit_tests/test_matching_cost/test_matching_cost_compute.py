@@ -1848,6 +1848,7 @@ class TestDisparityMargins:
 # we want to ignore warnings indicating that our images are “low contrast images”.
 @pytest.mark.filterwarnings("ignore::UserWarning")
 @pytest.mark.parametrize("matching_cost_method", ["mutual_information"])
+@pytest.mark.parametrize("float_precision", ["float32", "float64"])
 class TestMutualInformation:
     """
     Test the cost volumes computation with mutual information method
@@ -1989,7 +1990,7 @@ class TestMutualInformation:
         cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
         np.testing.assert_array_almost_equal(
-            cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=7
+            cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=6
         )
 
     @pytest.mark.parametrize(
@@ -2043,5 +2044,5 @@ class TestMutualInformation:
         cost_volumes = matching_cost_matcher.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
         np.testing.assert_array_almost_equal(
-            cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=7
+            cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=6
         )

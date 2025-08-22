@@ -26,20 +26,43 @@ This file contains useful function definitions for matching_cost tests.
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include "bin.hpp"
 #include "cost_volume.hpp"
+#include "global_conftest.hpp"
 #include "pandora2d_type.hpp"
 
 namespace py = pybind11;
 
 /**
- * @brief Create an image for tests
- *
- * @param size: image shape
- * @param mean: image mean
- * @param std: image standard deviation
- * @param nb_bins: bins number for image histogram
+ * Create image
  */
-P2d::MatrixD create_image(std::size_t size, float mean, float std, double nb_bins = 120);
+template <typename T>
+P2d::MatrixX<T> create_image(std::size_t size, T mean, T std, T nb_bins = 120) {
+  auto matrix = create_normal_matrix<T>(size, mean, std);
+
+  auto check_nb_bins = [](auto& matrix) -> T {
+    auto h0 = get_bins_width(matrix);
+    auto dynamic_range = matrix.maxCoeff() - matrix.minCoeff();
+    return dynamic_range / h0;
+  };
+
+  if (check_nb_bins(matrix) >= nb_bins)
+    return matrix;
+
+  auto h0 = get_bins_width(matrix);
+  auto new_dynamic_range = std::ceil(nb_bins * h0);
+
+  auto elt = 2;
+  for (auto m = matrix.data(); m < matrix.data() + elt; ++m) {
+    *m = static_cast<T>(mean) - new_dynamic_range / 2.;
+  }
+
+  for (auto m = matrix.data() + elt; m < matrix.data() + 2 * elt; ++m) {
+    *m = static_cast<T>(mean) + new_dynamic_range / 2.;
+  }
+
+  return matrix;
+}
 
 /**
  * @brief Load criteria dataarray saved as a binary file containing a 1D numpy array of type uint8
