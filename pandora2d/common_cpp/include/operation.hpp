@@ -47,9 +47,9 @@ double std_dev(const T& m) {
  *
  */
 template <typename T>
-double variance(const T& m) {
-  double moment1 = (m.array().sum()) / (m.size());
-  double moment2 = (m.array().square().sum()) / (m.size());
+T variance(const P2d::MatrixX<T>& m) {
+  T moment1 = (m.array().sum()) / (m.size());
+  T moment2 = (m.array().square().sum()) / (m.size());
   return moment2 - (moment1 * moment1);
 }
 
