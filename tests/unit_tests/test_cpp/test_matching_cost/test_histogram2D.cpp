@@ -28,67 +28,88 @@ This module contains tests associated to histogram 2D.
 #include "histogram1D.hpp"
 #include "histogram2D.hpp"
 
-TEST_CASE("Test constructor") {
-  P2d::MatrixD left(4, 4);
-  P2d::MatrixD right(4, 4);
+template <typename type, typename matrix_type>
+struct TypePair {
+  using Type = type;
+  using MatrixType = matrix_type;
+};
+
+TYPE_TO_STRING_AS("Float", TypePair<float, P2d::Matrixf>);
+TYPE_TO_STRING_AS("Double", TypePair<double, P2d::MatrixD>);
+
+TEST_CASE_TEMPLATE("Test constructor",
+                   T,
+                   TypePair<float, P2d::Matrixf>,
+                   TypePair<double, P2d::MatrixD>) {
+  using Type = typename T::Type;
+  using MatrixType = typename T::MatrixType;
+
+  MatrixType left(4, 4);
+  MatrixType right(4, 4);
 
   left << 1, 1, 2, 2, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1;
 
   right << 1, 1, 2, 3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 3, 3, 3;
 
-  Histogram1D left_hist = Histogram1D(left);
-  Histogram1D right_hist = Histogram1D(right);
+  Histogram1D left_hist = Histogram1D<Type>(left);
+  Histogram1D right_hist = Histogram1D<Type>(right);
 
   SUBCASE("With two histogram1D") {
-    Histogram2D hist = Histogram2D(left_hist, right_hist);
-    check_inside_eigen_element<P2d::MatrixD>(hist.values(), P2d::MatrixD::Zero(2, 2));
+    Histogram2D hist = Histogram2D<Type>(left_hist, right_hist);
+    check_inside_eigen_element<MatrixType>(hist.values(), MatrixType::Zero(2, 2));
   }
 
-  P2d::MatrixD values(2, 2);
+  MatrixType values(2, 2);
   values << 8, 4, 0, 4;
 
   SUBCASE("With values and two histogram1D") {
-    Histogram2D hist = Histogram2D(values, left_hist, right_hist);
-    check_inside_eigen_element<P2d::MatrixD>(hist.values(), values);
+    Histogram2D hist = Histogram2D<Type>(values, left_hist, right_hist);
+    check_inside_eigen_element<MatrixType>(hist.values(), values);
   }
 }
 
-TEST_CASE("Test calculate_histogram2D function") {
-  SUBCASE("With integer matrix") {
-    P2d::MatrixD left(4, 4);
-    P2d::MatrixD right(4, 4);
+TEST_CASE_TEMPLATE("Test calculate_histogram2D function",
+                   T,
+                   TypePair<float, P2d::Matrixf>,
+                   TypePair<double, P2d::MatrixD>) {
+  using Type = typename T::Type;
+  using MatrixType = typename T::MatrixType;
+
+  SUBCASE("First matrix") {
+    MatrixType left(4, 4);
+    MatrixType right(4, 4);
 
     left << 1, 1, 2, 2, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1;
 
     right << 1, 1, 2, 3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 3, 3, 3;
 
-    P2d::MatrixD expected_values(2, 2);
+    MatrixType expected_values(2, 2);
     expected_values << 8, 4, 0, 4;
 
-    Histogram2D hist = calculate_histogram2D(left, right);
-    check_inside_eigen_element<P2d::MatrixD>(hist.values(), expected_values);
+    Histogram2D hist = calculate_histogram2D<Type>(left, right);
+    check_inside_eigen_element<MatrixType>(hist.values(), expected_values);
   }
 
-  SUBCASE("With float matrix") {
-    P2d::MatrixD left(4, 4);
-    P2d::MatrixD right(4, 4);
+  SUBCASE("Second matrix") {
+    MatrixType left(4, 4);
+    MatrixType right(4, 4);
 
     left << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
     right << 1., 2., 3., 4., 2., 2., 2., 2., 4., 3., 2., 1., 1., 3., 3., 3.;
 
-    P2d::MatrixD expected_values(3, 3);
+    MatrixType expected_values(3, 3);
     expected_values << 1, 3, 1, 0, 5, 1, 2, 3, 0;
 
-    Histogram2D hist = calculate_histogram2D(left, right);
-    check_inside_eigen_element<P2d::MatrixD>(hist.values(), expected_values);
+    Histogram2D hist = calculate_histogram2D<Type>(left, right);
+    check_inside_eigen_element<MatrixType>(hist.values(), expected_values);
   }
 
   SUBCASE("With 120 bins images") {
     // Created images img_l and img_r produce histogram1D with 120 bins.
-    auto img_l = create_image(std::size_t(81), 0., 0.5);
-    auto img_r = create_image(std::size_t(81), 0., 0.5);
-    auto hist2d = calculate_histogram2D(img_l, img_r);
+    auto img_l = create_image<Type>(std::size_t(81), 0., 0.5);
+    auto img_r = create_image<Type>(std::size_t(81), 0., 0.5);
+    auto hist2d = calculate_histogram2D<Type>(img_l, img_r);
 
     // As the number of bins of the two histograms 1D is initially greater than NB_BINS_MAX,
     // it is fixed to 100 bins for each histogram 1D.

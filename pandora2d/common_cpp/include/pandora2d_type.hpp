@@ -66,6 +66,14 @@ using VectorD = Eigen::VectorXd;
 using Vectorf = Eigen::VectorXf;
 
 /**
+ * @brief type used for template vector (column vector)
+ *
+ * @tparam T
+ */
+template <typename T>
+using VectorX = Eigen::Matrix<T, Eigen::Dynamic, 1>;
+
+/**
  * @brief type used for double arrays
  *
  */

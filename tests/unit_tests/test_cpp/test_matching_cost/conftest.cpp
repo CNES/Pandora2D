@@ -23,38 +23,6 @@ This file contains useful function definitions for matching_cost tests.
 
 #include "conftest.hpp"
 #include <fstream>
-#include "bin.hpp"
-#include "global_conftest.hpp"
-
-/**
- * Create image
- */
-P2d::MatrixD create_image(std::size_t size, float mean, float std, double nb_bins) {
-  auto matrix = create_normal_matrix(size, mean, std);
-
-  auto check_nb_bins = [](auto& matrix) -> double {
-    auto h0 = get_bins_width(matrix);
-    auto dynamic_range = matrix.maxCoeff() - matrix.minCoeff();
-    return dynamic_range / h0;
-  };
-
-  if (check_nb_bins(matrix) >= nb_bins)
-    return matrix;
-
-  auto h0 = get_bins_width(matrix);
-  auto new_dynamic_range = std::ceil(nb_bins * h0);
-
-  auto elt = 2;
-  for (auto m = matrix.data(); m < matrix.data() + elt; ++m) {
-    *m = static_cast<double>(mean) - new_dynamic_range / 2.;
-  }
-
-  for (auto m = matrix.data() + elt; m < matrix.data() + 2 * elt; ++m) {
-    *m = static_cast<double>(mean) + new_dynamic_range / 2.;
-  }
-
-  return matrix;
-}
 
 /**
  * Load criteria dataarray saved as an 1D numpy array of type uint8

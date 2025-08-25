@@ -19,10 +19,9 @@
 
 """
 This module contains functions associated to the matching cost computation step
-with mutual information method.
+with mutual information  and zncc methods.
 """
 
-import logging
 from json_checker import And
 
 import numpy as np
@@ -108,13 +107,6 @@ class CorrelationMethods(BaseMatchingCost):
 
         if np.issubdtype(self.cost_volumes["cost_volumes"].data.dtype, np.float32):
             compute_cost_volumes_cpp = matching_cost_bind.compute_cost_volumes_cpp_float
-
-            if self.cost_volumes.attrs["measure"] == "mutual_information":
-                logging.warning(
-                    "When the mutual information method is chosen, cost volumes can be returned in float32, "
-                    "but for the moment histograms and entropies are still calculated in float64.",
-                )
-
         elif np.issubdtype(self.cost_volumes["cost_volumes"].data.dtype, np.float64):
             compute_cost_volumes_cpp = matching_cost_bind.compute_cost_volumes_cpp_double
         else:
