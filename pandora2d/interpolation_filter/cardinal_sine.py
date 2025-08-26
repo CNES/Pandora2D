@@ -24,7 +24,7 @@ import numpy as np
 from json_checker import And, OptionalKey
 from numpy.typing import NDArray
 
-from pandora.margins import Margins
+from pandora2d.margins import UniformMargins
 
 from .interpolation_filter import AbstractFilter
 
@@ -59,7 +59,7 @@ class CardinalSinePython(AbstractFilter):
     @property
     def margins(self):
         """Return filter's Margins."""
-        return Margins(self._HALF_SIZE, self._HALF_SIZE, self._HALF_SIZE, self._HALF_SIZE)
+        return UniformMargins(self._HALF_SIZE)
 
     def get_coeffs(self, fractional_shift: float) -> NDArray[np.floating]:
         index = self.fractional_shifts.searchsorted(fractional_shift)

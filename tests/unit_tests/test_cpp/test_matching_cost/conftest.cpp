@@ -22,35 +22,35 @@ This file contains useful function definitions for matching_cost tests.
 */
 
 #include "conftest.hpp"
-#include "bin.hpp"
-#include "global_conftest.hpp"
+#include <fstream>
 
 /**
- * Create image
+ * Load criteria dataarray saved as an 1D numpy array of type uint8
  */
-P2d::MatrixD create_image(std::size_t size, float mean, float std, double nb_bins) {
-  auto matrix = create_normal_matrix(size, mean, std);
+py::array_t<uint8_t> load_criteria_dataarray(const std::string& filename,
+                                             const CostVolumeSize& cv_size) {
+  std::ifstream file(filename, std::ios::binary);
+  // Get size of file
+  file.seekg(0, std::ios::end);
+  std::streampos fileSize = file.tellg();
+  file.seekg(0, std::ios::beg);
 
-  auto check_nb_bins = [](auto& matrix) -> double {
-    auto h0 = get_bins_width(matrix);
-    auto dynamic_range = matrix.maxCoeff() - matrix.minCoeff();
-    return dynamic_range / h0;
-  };
+  // Read numpy array data in
+  std::vector<uint8_t> data(fileSize);
+  file.read(reinterpret_cast<char*>(data.data()), fileSize);
 
-  if (check_nb_bins(matrix) >= nb_bins)
-    return matrix;
+  // Convert in py::array_t<uint8_t>
+  const std::vector<size_t> cv_shape = {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row,
+                                        cv_size.nb_disp_col};
+  py::array_t<uint8_t> criteria_values(cv_shape);
+  std::memcpy(criteria_values.mutable_data(), data.data(), data.size());
 
-  auto h0 = get_bins_width(matrix);
-  auto new_dynamic_range = std::ceil(nb_bins * h0);
-
-  auto elt = 2;
-  for (auto m = matrix.data(); m < matrix.data() + elt; ++m) {
-    *m = static_cast<double>(mean) - new_dynamic_range / 2.;
-  }
-
-  for (auto m = matrix.data() + elt; m < matrix.data() + 2 * elt; ++m) {
-    *m = static_cast<double>(mean) + new_dynamic_range / 2.;
-  }
-
-  return matrix;
+  return criteria_values;
 }
+
+/**
+ * @brief Get data_path for matching cost test data
+ *
+ */
+const char* data_path_env = std::getenv("DATA_PATH");
+const std::string data_path = std::string(data_path_env ? data_path_env : "");

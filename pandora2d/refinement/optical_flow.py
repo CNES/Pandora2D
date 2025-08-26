@@ -29,7 +29,7 @@ import xarray as xr
 from json_checker import And
 from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 import pandora2d.schema as cst_schema
 from . import refinement

@@ -24,10 +24,11 @@ import numpy as np
 from numpy.typing import NDArray
 from ..common_cpp.common_bind import CostVolumeSize
 
-def compute_cost_volumes_cpp(
-    left: NDArray[np.float64],
-    right: List[NDArray[np.float64]],
-    cv_values: NDArray[np.float64],
+def compute_cost_volumes_cpp_float(
+    left: NDArray[np.float32],
+    right: List[NDArray[np.float32]],
+    cv_values: NDArray[np.floating],
+    criteria_values: NDArray[np.uint8],
     cv_size: CostVolumeSize,
     disp_range_row: NDArray[np.float64],
     disp_range_col: NDArray[np.float64],
@@ -35,17 +36,19 @@ def compute_cost_volumes_cpp(
     offset_cv_img_col: int,
     window_size: int,
     step: NDArray[np.integer],
-    no_data: float,
+    matching_cost_method: str,
 ):
     """
-    Computes the cost values
+    Computes the cost values in float32
 
     :param left: left image
-    :type left: NDArray[np.float64]
+    :type left: NDArray[np.float32]
     :param right: list of right images
-    :type right: List[NDArray[np.float64]]
+    :type right: List[NDArray[np.float32]]
     :param cv_values:  cost volumes initialized values
-    :type cv_values: NDArray[np.float64]
+    :type cv_values: NDArray[np.float32]
+    :param criteria_values:  criteria values
+    :type criteria_values: NDArray[np.uint8]
     :param cv_size: cost_volume size [nb_row, nb_col, nb_disp_row, nb_disp_col]
     :type cv_size: CostVolumeSize
     :param disp_range_row:  cost volumes row disparity range
@@ -60,6 +63,50 @@ def compute_cost_volumes_cpp(
     :type window_size: int
     :param step: [step_row, step_col]
     :type step: NDArray[np.integer]
-    :param no_data: no data value in img
-    :type no_data: float
+    :param matching_cost_method: correlation method
+    :type matching_cost_method: string
+    """
+
+def compute_cost_volumes_cpp_double(
+    left: NDArray[np.float32],
+    right: List[NDArray[np.float32]],
+    cv_values: NDArray[np.floating],
+    criteria_values: NDArray[np.uint8],
+    cv_size: CostVolumeSize,
+    disp_range_row: NDArray[np.float64],
+    disp_range_col: NDArray[np.float64],
+    offset_cv_img_row: int,
+    offset_cv_img_col: int,
+    window_size: int,
+    step: NDArray[np.integer],
+    matching_cost_method: str,
+):
+    """
+    Computes the cost values in float64
+
+    :param left: left image
+    :type left: NDArray[np.float32]
+    :param right: list of right images
+    :type right: List[NDArray[np.float32]]
+    :param cv_values:  cost volumes initialized values
+    :type cv_values: NDArray[np.float64]
+    :param criteria_values:  criteria values
+    :type criteria_values: NDArray[np.uint8]
+    :param cv_size: cost_volume size [nb_row, nb_col, nb_disp_row, nb_disp_col]
+    :type cv_size: CostVolumeSize
+    :param disp_range_row:  cost volumes row disparity range
+    :type disp_range_row: NDArray[np.float64]
+    :param disp_range_col:  cost volumes col disparity range
+    :type disp_range_col: NDArray[np.float64]
+    :param offset_cv_img_row: row offset between first index of cv and image (ROI case)
+    :type offset_cv_img_row: int
+    :param offset_cv_img_col: col offset between first index of cv and image (ROI case)
+    :type offset_cv_img_col: int
+    :param window_size: size of the correlation window
+    :type window_size: int
+    :param step: [step_row, step_col]
+    :type step: NDArray[np.integer]
+    :param matching_cost_method: correlation method
+    :type matching_cost_method: string
+
     """

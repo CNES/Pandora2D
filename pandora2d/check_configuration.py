@@ -131,7 +131,6 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
         raise AttributeError("The disparities in rows and columns must be given as 2 dictionaries.")
 
     if isinstance(input_cfg["row_disparity"]["init"], str) and isinstance(input_cfg["col_disparity"]["init"], str):
-
         # Read disparity grids
         disparity_row_reader = rasterio_open(input_cfg["row_disparity"]["init"])
         disparity_col_reader = rasterio_open(input_cfg["col_disparity"]["init"])
@@ -223,6 +222,29 @@ def check_disparity_ranges_are_inside_image(
         raise ValueError("Row disparity range out of image")
     if np.abs(col_disparity["init"]) - col_disparity["range"] > image_metadata.sizes["col"]:
         raise ValueError("Column disparity range out of image")
+
+
+def check_segment_mode_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+    """
+    Complete and check if the segment mode dictionary is correct
+
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :return: cfg: global configuration
+    :rtype: cfg: dict
+    """
+    if not user_cfg:
+        return update_conf(default_segment_mode_configuration, user_cfg)
+
+    # Add missing roi defaults values in user_cfg
+    cfg = update_conf({}, user_cfg)
+
+    # check schema
+    configuration_schema = {"segment_mode": segment_mode_configuration_schema}
+    checker = Checker(configuration_schema)
+    checker.validate(cfg)
+
+    return cfg
 
 
 def check_roi_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
@@ -330,6 +352,9 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     user_cfg_roi = get_roi_config(user_cfg)
     cfg_roi = check_roi_section(user_cfg_roi)
 
+    user_cfg_segment_mode = get_segment_mode_config(user_cfg)
+    cfg_segment_mode = check_segment_mode_section(user_cfg_segment_mode)
+
     # check pipeline
     cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
 
@@ -344,7 +369,7 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     if cfg_expert_mode != {}:
         cfg_expert_mode = check_expert_mode_section(cfg_expert_mode)
 
-    return {**cfg_input, **cfg_roi, **cfg_pipeline, **cfg_expert_mode, "output": output_config}
+    return {**cfg_input, **cfg_segment_mode, **cfg_roi, **cfg_pipeline, **cfg_expert_mode, "output": output_config}
 
 
 def get_output_config(user_cfg: Dict) -> Dict:
@@ -393,6 +418,37 @@ def check_roi_coherence(roi_cfg: dict) -> None:
         raise ValueError('"first" should be lower than "last" in sensor ROI')
 
 
+def get_section_config(user_cfg: Dict[str, dict], key: str) -> Dict[str, dict]:
+    """
+    Get the section configuration from key
+
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :return cfg: partial configuration
+    :rtype cfg: dict
+    """
+
+    cfg = {}
+
+    if key in user_cfg:
+        cfg[key] = user_cfg[key]
+
+    return cfg
+
+
+def get_segment_mode_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
+    """
+    Get the segment_mode configuration
+
+    :param user_cfg: user configuration
+    :type user_cfg: dict
+    :return cfg: partial configuration
+    :rtype cfg: dict
+    """
+
+    return get_section_config(user_cfg, "segment_mode")
+
+
 def get_roi_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     """
     Get the ROI configuration
@@ -403,12 +459,7 @@ def get_roi_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     :rtype cfg: dict
     """
 
-    cfg = {}
-
-    if "ROI" in user_cfg:
-        cfg["ROI"] = user_cfg["ROI"]
-
-    return cfg
+    return get_section_config(user_cfg, "ROI")
 
 
 def check_output_section(config: Dict) -> None:
@@ -454,6 +505,13 @@ default_short_configuration_input = {
             "mask": None,
         },
     }
+}
+
+default_segment_mode_configuration = {"segment_mode": {"enable": False}}
+
+segment_mode_configuration_schema = {
+    "enable": bool,
+    "memory_per_work": And(int, lambda x: x > 0),
 }
 
 roi_configuration_schema = {

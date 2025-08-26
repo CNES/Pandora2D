@@ -31,23 +31,29 @@ This module contains functions associated to the histogram for cpp.
  * @brief Instanciation of Histogram on 2D (two dimension)
  *
  */
+template <typename T>
 class Histogram2D {
  public:
   /**
-   * @brief Construct a new Histogram2D object
+   * @brief Construct a new Histogram 2D
+   *
    * @param values: on histogram
    * @param row_hist: Histogram1D
    * @param col_hist: Histogram1D
    */
-  Histogram2D(P2d::MatrixD& values, Histogram1D row_hist, Histogram1D col_hist);
+  Histogram2D(P2d::MatrixX<T>& values, Histogram1D<T> row_hist, Histogram1D<T> col_hist)
+      : m_values(values), m_row_hist(row_hist), m_col_hist(col_hist) {}
 
   /**
-   * @brief Construct a new Histogram2D object
+   * @brief Construct a new Histogram 2D
+   *
    * @param row_hist: Histogram1D
    * @param col_hist: Histogram1D
-   *
    */
-  Histogram2D(Histogram1D row_hist, Histogram1D col_hist);
+  Histogram2D(Histogram1D<T> row_hist, Histogram1D<T> col_hist)
+      : m_row_hist(row_hist), m_col_hist(col_hist) {
+    m_values.setZero(m_row_hist.nb_bins(), m_col_hist.nb_bins());
+  }
 
   /**
    * @brief Destroy the Histogram2D object
@@ -58,30 +64,50 @@ class Histogram2D {
   /**
    * @brief Get the Values object
    *
-   * @return const P2d::MatrixD&
+   * @return const P2d::MatrixX<T>&
    */
-  const P2d::MatrixD& values() const { return m_values; };
+  const P2d::MatrixX<T>& values() const { return m_values; };
 
   /**
    * @brief Set the Values object
    *
    * @param values
    */
-  void set_values(const P2d::MatrixD& values) { m_values = values; };
+  void set_values(const P2d::MatrixX<T>& values) { m_values = values; };
 
  private:
-  P2d::MatrixD m_values;   ///< values on histogram
-  Histogram1D m_row_hist;  ///< row dimension (number of bins, size of bin, low bound)
-  Histogram1D m_col_hist;  ///< col dimension (number of bins, size of bin, low bound)
+  P2d::MatrixX<T> m_values;   ///< values on histogram
+  Histogram1D<T> m_row_hist;  ///< row dimension (number of bins, size of bin, low bound)
+  Histogram1D<T> m_col_hist;  ///< col dimension (number of bins, size of bin, low bound)
 };
 
 /**
  * @brief Compute histogram 2D based on two images
  *
- * @param img_l : left image
- * @param img_r : right image
+ * @param left_image : left image
+ * @param right_image : right image
  * @return Histogram2D
  */
-Histogram2D calculate_histogram2D(const P2d::MatrixD& img_l, const P2d::MatrixD& img_r);
+template <typename T>
+Histogram2D<T> calculate_histogram2D(const P2d::MatrixX<T>& left_image,
+                                     const P2d::MatrixX<T>& right_image) {
+  auto hist_l = Histogram1D<T>(left_image);
+  auto hist_r = Histogram1D<T>(right_image);
+  P2d::MatrixX<T> values = P2d::MatrixX<T>::Zero(hist_l.nb_bins(), hist_r.nb_bins());
+  auto pixel_l = left_image.data();
+  auto pixel_r = right_image.data();
+  auto nb_bins_l = static_cast<int>(hist_l.nb_bins());
+  auto nb_bins_r = static_cast<int>(hist_r.nb_bins());
+  for (; pixel_l != (left_image.data() + left_image.size()); ++pixel_l, ++pixel_r) {
+    auto index_l = std::max(
+        0, std::min(static_cast<int>((*pixel_l - hist_l.low_bound()) / hist_l.bins_width()),
+                    nb_bins_l - 1));
+    auto index_r = std::max(
+        0, std::min(static_cast<int>((*pixel_r - hist_r.low_bound()) / hist_r.bins_width()),
+                    nb_bins_r - 1));
+    values(index_l, index_r) += 1;
+  }
+  return Histogram2D(values, hist_l, hist_r);
+}
 
 #endif

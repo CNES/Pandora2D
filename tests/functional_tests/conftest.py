@@ -28,10 +28,10 @@ from pandora.common import write_data_array
 
 
 @pytest.fixture()
-def correct_pipeline_with_optical_flow():
+def correct_pipeline_with_optical_flow(matching_cost_method, subpix):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 5, "subpix": subpix},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "optical_flow"},
         }
@@ -39,10 +39,10 @@ def correct_pipeline_with_optical_flow():
 
 
 @pytest.fixture()
-def correct_pipeline_with_dichotomy_python():
+def correct_pipeline_with_dichotomy_python(matching_cost_method, subpix):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 5, "subpix": subpix},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "dichotomy_python", "iterations": 2, "filter": {"method": "bicubic"}},
         }
@@ -50,10 +50,10 @@ def correct_pipeline_with_dichotomy_python():
 
 
 @pytest.fixture()
-def correct_pipeline_with_dichotomy_cpp():
+def correct_pipeline_with_dichotomy_cpp(matching_cost_method, subpix):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 5, "subpix": subpix},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "dichotomy", "iterations": 2, "filter": {"method": "bicubic"}},
         }

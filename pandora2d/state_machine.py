@@ -48,6 +48,7 @@ from pandora.margins import GlobalMargins
 
 from pandora2d import common, disparity, estimation, img_tools, refinement, criteria
 from pandora2d.matching_cost import MatchingCostRegistry, BaseMatchingCost
+from pandora2d.cost_volume_confidence import CostVolumeConfidenceRegistry
 from pandora2d.profiling import mem_time_profile
 
 
@@ -79,6 +80,12 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             "prepare": "matching_cost_prepare",
             "before": "matching_cost_run",
         },
+        {
+            "trigger": "cost_volume_confidence",
+            "source": "cost_volumes",
+            "dest": "cost_volumes",
+            "before": "cost_volume_confidence_run",
+        },
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_run"},
         {"trigger": "refinement", "source": "disparity_map", "dest": "disparity_map", "before": "refinement_run"},
     ]
@@ -91,6 +98,12 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             "source": "assumption",
             "dest": "cost_volumes",
             "before": "matching_cost_check_conf",
+        },
+        {
+            "trigger": "cost_volume_confidence",
+            "source": "cost_volumes",
+            "dest": "cost_volumes",
+            "before": "cost_volume_confidence_check_conf",
         },
         {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_check_conf"},
         {
@@ -254,7 +267,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
     def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
-        Check the disparity computation configuration
+        Check the matching cost computation configuration
 
         :param cfg: configuration
         :type cfg: dict
@@ -271,6 +284,24 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.step = matching_cost.step
         self.window_size = matching_cost.window_size
         self.margins_img.add_cumulative(input_step, matching_cost.margins)
+
+    def cost_volume_confidence_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the cost volume confidence computation configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        CostVolumeConfidence = CostVolumeConfidenceRegistry.get(  # pylint:disable=invalid-name # NOSONAR
+            cfg["pipeline"][input_step]["confidence_method"]
+        )
+
+        cost_volume_confidence = CostVolumeConfidence(cfg["pipeline"][input_step])
+        self.pipeline_cfg["pipeline"][input_step] = cost_volume_confidence.cfg
 
     def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -303,6 +334,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         )  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
         self.margins_disp.add_non_cumulative(input_step, refinement_.margins)
+        self.margins_img.add_cumulative(input_step, refinement_.margins)
 
     def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -320,6 +352,29 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.matching_cost_ = MatchingCost(cfg["pipeline"][input_step])
 
         self.matching_cost_.allocate(self.left_img, self.right_img, cfg, self.margins_disp.get("refinement"))
+
+        # Compute validity dataset
+        dataset_validity = criteria.get_validity_dataset(self.matching_cost_.cost_volumes["criteria"])
+
+        # Allocate disparity maps dataset
+        self.dataset_disp_maps = common.dataset_disp_maps(
+            self.matching_cost_.cost_volumes.coords,
+            dataset_validity,
+            {
+                "offset": {
+                    "row": cfg.get("ROI", {}).get("row", {}).get("first", 0),
+                    "col": cfg.get("ROI", {}).get("col", {}).get("first", 0),
+                },
+                "step": {
+                    "row": cfg["pipeline"]["matching_cost"]["step"][0],
+                    "col": cfg["pipeline"]["matching_cost"]["step"][1],
+                },
+                "invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"],
+                "crs": self.left_img.crs,
+                "transform": self.left_img.transform,
+            },
+            self.matching_cost_.cost_volumes["cost_volumes"].dtype,
+        )
 
     @mem_time_profile(name="Estimation step")
     def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
@@ -371,6 +426,28 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             self.margins_disp.get("refinement"),
         )
 
+    @mem_time_profile(name="Cost volume confidence step")
+    def cost_volume_confidence_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Cost volume confidence computation
+
+        :return: None
+        """
+
+        logging.info("Cost volume confidence computation...")
+
+        CostVolumeConfidence = CostVolumeConfidenceRegistry.get(  # pylint:disable=invalid-name # NOSONAR
+            cfg["pipeline"][input_step]["confidence_method"]
+        )
+        confidence_ = CostVolumeConfidence(cfg["pipeline"][input_step])
+
+        self.cost_volumes, self.dataset_disp_maps = confidence_.confidence_prediction(
+            self.left_img,
+            self.right_img,
+            self.cost_volumes,
+            self.dataset_disp_maps,
+        )
+
     @mem_time_profile(name="Disparity step")
     def disparity_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -388,28 +465,7 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         map_col, map_row, correlation_score = disparity_.compute_disp_maps(self.cost_volumes)
 
-        dataset_validity = criteria.get_validity_dataset(self.cost_volumes["criteria"])
-
-        self.dataset_disp_maps = common.dataset_disp_maps(
-            map_row,
-            map_col,
-            self.cost_volumes.coords,
-            correlation_score,
-            dataset_validity,
-            {
-                "offset": {
-                    "row": cfg.get("ROI", {}).get("row", {}).get("first", 0),
-                    "col": cfg.get("ROI", {}).get("col", {}).get("first", 0),
-                },
-                "step": {
-                    "row": cfg["pipeline"]["matching_cost"]["step"][0],
-                    "col": cfg["pipeline"]["matching_cost"]["step"][1],
-                },
-                "invalid_disp": cfg["pipeline"]["disparity"]["invalid_disparity"],
-                "crs": self.left_img.crs,
-                "transform": self.left_img.transform,
-            },
-        )
+        common.fill_dataset_disp_maps(self.dataset_disp_maps, map_row, map_col, correlation_score)
 
         cv_coords = (self.cost_volumes.row.values, self.cost_volumes.col.values)
 
@@ -446,6 +502,5 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         refine_map_col, refine_map_row, correlation_score = refinement_run.refinement_method(
             self.cost_volumes, self.dataset_disp_maps, self.left_img, self.right_img
         )
-        self.dataset_disp_maps["row_map"].data = refine_map_row
-        self.dataset_disp_maps["col_map"].data = refine_map_col
-        self.dataset_disp_maps["correlation_score"].data = correlation_score
+
+        common.fill_dataset_disp_maps(self.dataset_disp_maps, refine_map_row, refine_map_col, correlation_score)

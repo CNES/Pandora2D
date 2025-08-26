@@ -12,8 +12,8 @@ test(
     'Cost volume struct',
     executable(
         'test_cost_volume',
-        'test_cost_volume.cpp',
-        include_directories: common_includes,
-        dependencies: [eigen_dep, doctest_dep],
+        ['test_cost_volume.cpp', test_src],
+        include_directories: [common_includes, test_includes],
+        dependencies: [python_dep, pybind11_dep, eigen_dep, doctest_dep],
     ),
 )

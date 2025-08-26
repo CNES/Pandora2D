@@ -56,6 +56,7 @@ class TestDisparityMargins:
                 "valid_pixels": 0,
                 "no_data_mask": 1,
                 "crs": None,
+                "transform": None,
             }
         )
 
@@ -70,6 +71,7 @@ class TestDisparityMargins:
             "valid_pixels": 0,
             "no_data_mask": 1,
             "crs": None,
+            "transform": None,
         }
 
         return left, right
@@ -90,7 +92,7 @@ class TestDisparityMargins:
             },
         }
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc", "mutual_information"])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc"])
     @pytest.mark.parametrize(
         ["subpix", "refinement_config", "cv_shape_expected", "disp_col_expected", "disp_row_expected"],
         [

@@ -32,7 +32,7 @@ import xarray as xr
 from rasterio import Affine
 import json_checker
 
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 from pandora2d import matching_cost, disparity
 from pandora2d.img_tools import add_disparity_grid
 from pandora2d.constants import Criteria

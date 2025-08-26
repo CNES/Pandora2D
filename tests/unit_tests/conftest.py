@@ -19,14 +19,19 @@
 #
 """Module with global test fixtures."""
 
+# Make pylint happy with fixtures:
+# pylint: disable=redefined-outer-name
+
 from copy import deepcopy
+from typing import Tuple
+
 import numpy as np
 import xarray as xr
 from rasterio import Affine
 import pytest
 from skimage.io import imsave
 
-from pandora2d import Pandora2DMachine
+from pandora2d import Pandora2DMachine, matching_cost
 from pandora2d.img_tools import add_disparity_grid
 
 
@@ -167,6 +172,45 @@ def false_roi_sensor_first_superior_to_last():
             "row": {"first": 10, "last": 100},
         }
     }
+
+
+@pytest.fixture
+def correct_segment_mode():
+    return {
+        "segment_mode": {
+            "enable": True,
+            "memory_per_work": 4000,
+        }
+    }
+
+
+@pytest.fixture()
+def image_size() -> Tuple[int, int]:
+    return 1000, 1000
+
+
+@pytest.fixture()
+def random_left_image_path(tmp_path, image_size):
+    """
+    Create a fake left image
+    """
+    image_path = tmp_path / "left_img.png"
+    data = np.random.randint(255, size=image_size, dtype=np.uint8)
+    imsave(image_path, data)
+
+    return image_path
+
+
+@pytest.fixture()
+def random_right_image_path(tmp_path, image_size):
+    """
+    Create a fake right image
+    """
+    image_path = tmp_path / "right_img.png"
+    data = np.random.randint(255, size=image_size, dtype=np.uint8)
+    imsave(image_path, data)
+
+    return image_path
 
 
 @pytest.fixture()
@@ -334,3 +378,45 @@ def wrong_size_grid(left_img_shape, create_disparity_grid_fixture):
     init_band = np.random.randint(-3, 4, size=(height - 2, width + 4))
 
     return create_disparity_grid_fixture(init_band, 3, "wrong_size_disparity.tif")
+
+
+@pytest.fixture()
+def matching_cost_method():
+    return "zncc"
+
+
+@pytest.fixture()
+def window_size():
+    return 3
+
+
+@pytest.fixture()
+def subpix():
+    return 1
+
+
+@pytest.fixture()
+def float_precision():
+    return "float32"
+
+
+@pytest.fixture()
+def matching_cost_config(matching_cost_method, window_size, step, subpix, float_precision):
+    return {
+        "matching_cost_method": matching_cost_method,
+        "window_size": window_size,
+        "step": step,
+        "subpix": subpix,
+        "float_precision": float_precision,
+    }
+
+
+@pytest.fixture()
+def matching_cost_object(matching_cost_config):
+    """
+    Return the right matching cost object according to matching cost method
+    """
+
+    matching_cost_object = matching_cost.MatchingCostRegistry.get(matching_cost_config["matching_cost_method"])
+
+    return matching_cost_object

@@ -1,0 +1,32 @@
+{
+    "input": {
+      "left": {
+        "img": "../images/maricopa/left.tif",
+        "nodata": -9999
+      },
+      "right": {
+        "img": "../images/maricopa/right.tif",
+        "nodata": -9999
+      },
+      "col_disparity": {"init": -1, "range": 2},
+      "row_disparity": {"init": 0, "range": 2}
+    },
+    "segment_mode": {
+        "enable": true,
+        "memory_per_work": 25
+    },
+    "pipeline": {
+      "matching_cost": {
+        "matching_cost_method": "zncc_python",
+        "window_size": 5
+      },
+      "disparity": {
+        "disparity_method": "wta",
+        "invalid_disparity": "NaN"
+      }
+    },
+    "output": {
+      "path": "a_segment_mode_pipeline_output"
+    }
+  }
+  

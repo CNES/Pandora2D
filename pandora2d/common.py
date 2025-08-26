@@ -25,20 +25,17 @@ This module contains functions allowing to save the results and the configuratio
 
 import json
 from copy import deepcopy
-from pathlib import Path
-from typing import Callable, Dict, Generic, List, Tuple, Type, TypeVar, Union
 from os import PathLike
+from pathlib import Path
+from typing import Callable, Dict, Generic, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import xarray as xr
-from numpy.typing import NDArray
 from pandora.common import write_data_array
 from rasterio import Affine
 from rasterio.crs import CRS
 
 from pandora2d import reporting
-from pandora2d.constants import Criteria
-from pandora2d.img_tools import remove_roi_margins
 
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable=useless-import-alias
@@ -131,15 +128,47 @@ def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
     :return: None
     """
 
-    # remove ROI margins to save only user ROI in tif files
-    if "ROI" in cfg:
-        dataset = remove_roi_margins(dataset, cfg)
     if dataset.attrs["transform"] is not None:
         adjust_georeferencement(dataset, cfg)
     # create output dir
     output = Path(cfg["output"]["path"]) / "disparity_map"
-    _save_dataset(dataset, output)
+
+    if "confidence_measure" in dataset.data_vars:
+        save_confidence_maps(dataset, cfg)
+        _save_dataset(dataset.drop_vars("confidence_measure"), output)
+    else:
+        _save_dataset(dataset, output)
+
     _save_disparity_maps_report(dataset, output)
+
+
+def save_confidence_maps(dataset: xr.Dataset, cfg: Dict) -> None:
+    """
+    Save confidence maps into directory defined by cfg's `output/path` key,
+    create it with its parents if necessary.
+
+    :param dataset: Dataset which contains:
+
+        - lines : the confidence map for the lines 2D DataArray (row, col)
+        - columns : the confidence map for the columns 2D DataArray (row, col)
+    :type dataset: xr.Dataset
+    :param cfg: user configuration
+    :type cfg: Dict
+    :return: None
+    """
+
+    output = Path(cfg["output"]["path"]) / "cost_volumes"
+
+    output.mkdir(parents=True, exist_ok=True)
+
+    write_data_array(
+        dataset["confidence_measure"],
+        str((output / str("confidence_measure")).with_suffix(".tif")),
+        dtype=dataset["confidence_measure"].dtype,
+        band_names=None,
+        crs=dataset.attrs["crs"],
+        transform=dataset.attrs["transform"],
+    )
 
 
 def _save_disparity_maps_report(dataset: xr.Dataset, output: Path) -> None:
@@ -246,33 +275,27 @@ def set_pixel_size(dataset: xr.Dataset, row_step: int = 1, col_step: int = 1) ->
 
 
 def dataset_disp_maps(
-    delta_row: np.ndarray,
-    delta_col: np.ndarray,
     coords: Coordinates,
-    correlation_score: np.ndarray,
     dataset_validity: xr.Dataset,
     attributes: dict = None,
+    dtype: np.typing.DTypeLike = np.float32,
 ) -> xr.Dataset:
     """
     Create the dataset containing disparity maps and score maps
-
-    :param delta_row: disparity map for row
-    :type delta_row: np.ndarray
-    :param delta_col: disparity map for col
-    :type delta_col: np.ndarray
     :param coords: disparity maps coordinates
     :type coords: xr.Coordinates
-    :param correlation_score: score map
-    :type correlation_score: np.ndarray
     :param dataset_validity: xr.Dataset containing validity informations
     :type dataset_validity: xr.Dataset
     :param attributes: disparity map for col
     :type attributes: dict
-    :return: dataset: Dataset with the disparity maps and score with the data variables :
+    :param dtype: dtype of the dataset
+    :type dtype: np.typing.DTypeLike
+    :return: dataset: Dataset with the empty disparity maps and score with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)
             - col_map 2D xarray.DataArray (row, col)
             - score 2D xarray.DataArray (row, col)
+
     :rtype: xarray.Dataset
     """
 
@@ -289,17 +312,15 @@ def dataset_disp_maps(
     }
 
     dims = ("row", "col")
-
-    dataarray_row = xr.DataArray(delta_row, dims=dims, coords=coords)
-    dataarray_col = xr.DataArray(delta_col, dims=dims, coords=coords)
-    dataarray_score = xr.DataArray(correlation_score, dims=dims, coords=coords)
+    shape = (len(coords.get("row")), len(coords.get("col")))
 
     dataset = xr.Dataset(
         {
-            "row_map": dataarray_row,
-            "col_map": dataarray_col,
-            "correlation_score": dataarray_score,
-        }
+            "row_map": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
+            "col_map": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
+            "correlation_score": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
+        },
+        coords=coords,
     )
 
     dataset = xr.merge([dataset, dataset_validity])
@@ -310,97 +331,28 @@ def dataset_disp_maps(
     return dataset
 
 
-def set_out_of_row_disparity_range_to_other_value(
-    data: xr.DataArray,
-    min_disp_grid: NDArray[np.floating],
-    max_disp_grid: NDArray[np.floating],
-    value: Union[int, float, Criteria],
-    global_disparity_range: Union[None, List[int]] = None,
+def fill_dataset_disp_maps(
+    disparity_dataset: xr.Dataset,
+    delta_row: np.ndarray,
+    delta_col: np.ndarray,
+    correlation_score: np.ndarray,
 ) -> None:
     """
-    Put special value in data  where the disparity is out of the range defined by disparity grids.
+    Fill the dataset with computed disparity maps and score maps
 
-    The operation is done inplace.
-
-    :param data: cost_volumes or criteria_dataarray to modify.
-    :type data: xr.DataArray 4D
-    :param min_disp_grid: grid of min disparity.
-    :type min_disp_grid: NDArray[np.floating]
-    :param max_disp_grid: grid of max disparity.
-    :type max_disp_grid: NDArray[np.floating]
-    :param value: value to set on data.
-    :type value: Union[int, float, Criteria]
-    :param global_disparity_range:
-    :type global_disparity_range:
+    :param disparity_dataset: initialized disparity maps dataset
+    :type disparity_dataset: xr.Dataset
+    :param delta_row: disparity map for row
+    :type delta_row: np.ndarray
+    :param delta_col: disparity map for col
+    :type delta_col: np.ndarray
+    :param correlation_score: score map
+    :type correlation_score: np.ndarray
     """
-    ndisp_row = data.shape[-2]
 
-    # We want to put special value on points that are not in the global disparity range (row_disparity_source)
-    for disp_row in range(ndisp_row):
-        if global_disparity_range is not None:  # Case we are working with cost volume
-            masking = np.nonzero(
-                np.logical_or(
-                    (data.coords["disp_row"].data[disp_row] < min_disp_grid)
-                    & (data.coords["disp_row"].data[disp_row] >= global_disparity_range[0]),
-                    (data.coords["disp_row"].data[disp_row] > max_disp_grid)
-                    & (data.coords["disp_row"].data[disp_row] <= global_disparity_range[1]),
-                )
-            )
-        else:
-            masking = np.nonzero(
-                np.logical_or(
-                    data.coords["disp_row"].data[disp_row] < min_disp_grid,
-                    data.coords["disp_row"].data[disp_row] > max_disp_grid,
-                )
-            )
-        data.data[masking[0], masking[1], disp_row, :] = value
-
-
-def set_out_of_col_disparity_range_to_other_value(
-    data: xr.DataArray,
-    min_disp_grid: NDArray[np.floating],
-    max_disp_grid: NDArray[np.floating],
-    value: Union[int, float, Criteria],
-    global_disparity_range: Union[None, List[int]] = None,
-) -> None:
-    """
-    Put special value in data (cost_volumes or criteria_dataarray) where the disparity is out of the range defined
-    by disparity grids.
-
-    The operation is done inplace.
-
-    :param data: cost_volumes or criteria_dataarray to modify.
-    :type data: xr.DataArray 4D
-    :param min_disp_grid: grid of min disparity.
-    :type min_disp_grid: NDArray[np.floating]
-    :param max_disp_grid: grid of max disparity.
-    :type max_disp_grid: NDArray[np.floating]
-    :param value: value to set on data.
-    :type value: Union[int, float, Criteria]
-    :param global_disparity_range:
-    :type global_disparity_range:
-    """
-    ndisp_col = data.shape[-1]
-
-    # We want to put special value on points that are not in the global disparity range (col_disparity_source)
-    for disp_col in range(ndisp_col):
-        if global_disparity_range is not None:  # Case we are working with cost volume
-            masking = np.nonzero(
-                np.logical_or(
-                    (data.coords["disp_col"].data[disp_col] < min_disp_grid)
-                    & (data.coords["disp_col"].data[disp_col] >= global_disparity_range[0]),
-                    (data.coords["disp_col"].data[disp_col] > max_disp_grid)
-                    & (data.coords["disp_col"].data[disp_col] <= global_disparity_range[1]),
-                )
-            )
-        else:
-            masking = np.nonzero(
-                np.logical_or(
-                    data.coords["disp_col"].data[disp_col] < min_disp_grid,
-                    data.coords["disp_col"].data[disp_col] > max_disp_grid,
-                )
-            )
-        data.data[masking[0], masking[1], :, disp_col] = value
+    disparity_dataset["row_map"].data = delta_row
+    disparity_dataset["col_map"].data = delta_col
+    disparity_dataset["correlation_score"].data = correlation_score
 
 
 def save_config(config: Dict) -> None:

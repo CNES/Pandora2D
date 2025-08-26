@@ -38,6 +38,7 @@ from typing import List, Dict, Union, NamedTuple, Any, Tuple
 from math import floor
 from numpy.typing import NDArray
 from rasterio.windows import Window
+from rasterio.io import DatasetReader
 
 import xarray as xr
 import numpy as np
@@ -257,18 +258,21 @@ def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     row = img_right.get("row")
     col = img_right.get("col")
 
+    # To avoid propagation of nan in shifted data, we use -9999 instead of nan if necessary
+    no_data = convert_no_data(img_right.attrs["no_data_img"])
+
     # shifted image by scipy
-    data = shift(img_right["im"].data, (-dec_row, 0), cval=img_right.attrs["no_data_img"])
+    data = shift(img_right["im"].data, (-dec_row, 0), cval=no_data)
     # create shifted image dataset
     img_right_shift = xr.Dataset({"im": (["row", "col"], data)}, coords={"row": row, "col": col})
     # add attributes to dataset
     img_right_shift.attrs = {
-        "no_data_img": img_right.attrs["no_data_img"],
+        "no_data_img": no_data,
         "valid_pixels": 0,  # arbitrary default value
         "no_data_mask": 1,
     }  # arbitrary default value
     # Pandora replace all nan values by -9999
-    no_data_pixels = np.where(data == img_right.attrs["no_data_img"])
+    no_data_pixels = np.where(data == no_data)
     # add mask to the shifted image in dataset
     img_right_shift["msk"] = xr.DataArray(
         np.full((data.shape[0], data.shape[1]), img_right_shift.attrs["valid_pixels"]).astype(np.int16),
@@ -294,8 +298,7 @@ def get_margins_values(init_value: Union[int, np.ndarray], range_value: int, mar
     :rtype: Tuple[int, int]
     """
 
-    disp_min = int(np.min(init_value)) - range_value
-    disp_max = int(np.max(init_value)) + range_value
+    disp_min, disp_max = get_extrema_disparity(init_value, range_value)
 
     return max(margins[0] - disp_min, 0), max(margins[1] + disp_max, 0)
 
@@ -321,21 +324,14 @@ def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> d
 
     new_roi = copy.deepcopy(roi)
 
-    if isinstance(col_disparity["init"], str) and isinstance(row_disparity["init"], str):
-        disparity_row_init = pandora_img_tools.rasterio_open(row_disparity["init"]).read()
-        disparity_col_init = pandora_img_tools.rasterio_open(col_disparity["init"]).read()
-    else:
-        disparity_row_init = row_disparity["init"]
-        disparity_col_init = col_disparity["init"]
-
-    col_range = col_disparity["range"]
-    row_range = row_disparity["range"]
+    disparity_row_init = get_initial_disparity(row_disparity)
+    disparity_col_init = get_initial_disparity(col_disparity)
 
     # for columns
-    left, right = get_margins_values(disparity_col_init, col_range, [roi["margins"][0], roi["margins"][2]])
+    left, right = get_margins_values(disparity_col_init, col_disparity["range"], [roi["margins"][0], roi["margins"][2]])
 
     # for rows
-    up, down = get_margins_values(disparity_row_init, row_range, [roi["margins"][1], roi["margins"][3]])
+    up, down = get_margins_values(disparity_row_init, row_disparity["range"], [roi["margins"][1], roi["margins"][3]])
 
     new_roi["margins"] = (left, up, right, down)
 
@@ -407,7 +403,7 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
 
 
 def row_zoom_img(
-    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str], order: int = 1
+    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[float, int], order: int = 1
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in row
@@ -425,7 +421,7 @@ def row_zoom_img(
     :param ind: index of range(subpix)
     :type ind: int
     :param no_data: no_data value in img
-    :type no_data: Union[int, str]
+    :type no_data: Union[float, int]
     :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
     :type order: int, optional
     :return: an array that contains the shifted right images in row
@@ -452,7 +448,7 @@ def row_zoom_img(
 
 
 def col_zoom_img(
-    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[int, str], order: int = 1
+    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[float, int], order: int = 1
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in col
@@ -470,7 +466,7 @@ def col_zoom_img(
     :param ind: index of range(subpix)
     :type ind: int
     :param no_data: no_data value in img
-    :type no_data: Union[int, str]
+    :type no_data: Union[float, int]
     :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
     :type order: int, optional
     :return: an array that contains the shifted right images in col
@@ -513,7 +509,11 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
     img_right_shift = [img_right]
 
     if subpix > 1:
-        for ind in np.arange(1, subpix):
+
+        # To avoid propagation of nan in shifted data, we use -9999 instead of nan if necessary
+        no_data = convert_no_data(img_right.attrs["no_data_img"])
+
+        for ind in np.arange(1, subpix, dtype=int):
             if row:
                 img_right_shift.append(
                     row_zoom_img(
@@ -522,7 +522,7 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
                         subpix,
                         img_right.coords,
                         ind,
-                        img_right.attrs["no_data_img"],
+                        no_data,
                         order,
                     ).assign_attrs(img_right.attrs)
                 )
@@ -534,7 +534,7 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
                         subpix,
                         img_right.coords,
                         ind,
-                        img_right.attrs["no_data_img"],
+                        no_data,
                         order,
                     ).assign_attrs(img_right.attrs)
                 )
@@ -567,3 +567,56 @@ def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> L
         img_right_shift_2d += shift_subpix_img(img, subpix, row=False, order=order)
 
     return img_right_shift_2d
+
+
+def get_initial_disparity(disparity: Dict) -> Union[DatasetReader, int]:
+    """
+    Return initial disparity
+
+    :param disparity: init and range for disparities in columns.
+    :type disparity: Dict
+    :return: initial disparity
+    :rtype: Union[DatasetReader, int]
+    """
+
+    if isinstance(disparity["init"], str):
+        disparity_init = pandora_img_tools.rasterio_open(disparity["init"]).read()
+    else:
+        disparity_init = disparity["init"]
+
+    return disparity_init
+
+
+def get_extrema_disparity(init_value: Union[DatasetReader, int], range_value: int) -> Tuple[int, int]:
+    """
+    Returns [min, max] disparity
+
+    :param init: initial disparity
+    :type init: Union[DatasetReader, int]
+    :param range: disparity exploration value
+    :type range: int
+    :return: [min disparity, max disparity]
+    :rtype: Tuple[int, int]
+    """
+
+    disp_min = int(np.min(init_value)) - range_value
+    disp_max = int(np.max(init_value)) + range_value
+
+    return disp_min, disp_max
+
+
+def convert_no_data(no_data: Union[float, int]) -> Union[float, int]:
+    """
+    If no_data is NaN or Inf, return -9999.
+    Otherwise return no_data.
+
+    :param no_data: no data value
+    :type no_data: Union[float, int]
+    :return: updated no data value
+    :rtype: Union[float, int]
+    """
+
+    if np.isnan(no_data) or np.isinf(no_data):
+        return -9999
+
+    return no_data

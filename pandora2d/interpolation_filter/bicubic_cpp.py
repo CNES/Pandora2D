@@ -20,7 +20,7 @@
 
 import numpy as np
 
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 from .interpolation_filter import AbstractFilter
 from ..interpolation_filter_cpp import interpolation_filter_bind

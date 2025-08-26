@@ -49,8 +49,6 @@ class Criteria(IntFlag):
     The pixel is invalid : The correlation peak is at the edge of disparity range.
     The calculations stopped at the pixellic stage.
     """
-    P2D_DISPARITY_UNPROCESSED = auto()
-    """The disparity is not processed because not included in the disparity range of the current point."""
 
     def is_in(self, array: NDArray):
         """Returns a bool array, where True if Criteria value is part of array element."""

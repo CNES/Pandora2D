@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.0.0a1 (August 2025)
+
+### Added
+
+- Added segment mode in configuration. [#294]
+- Added image size heuristic for segment mode. [#295]
+- Added cost volumes size heuristic for segment mode. [#296]
+- Added test for mutual information with the maximum number of bins. [#300]
+- Added shifted right images size heuristic for segment mode. [#298]
+- Added pandora cost volume size heuristic for segment mode. [#297]
+- Added disparity maps dataset size heuristic for segment mode. [#303]
+- Added float_precision key in matching cost configuration. [#320]
+- Added zncc and zncc_python in matching cost configuration. [#314]
+- Added matching_cost_method argument in compute_cost_volumes_cpp method. [#315]
+- Added global method heuristic for segment mode. [#304]
+- Added segment mode in main. [#308]
+- Added CPP implementation of zncc. [#316]
+- Added segment mode notebook. [#329]
+- Added configuration for cost volume confidence. [#291]
+- Added performance tests for zncc CPP. [#318] 
+- Added cost volume confidence in state machine. [#292]
+
+### Fixed
+
+- Fixed mypy error about margins. [#275]
+- Fixed bug in estimation test. [#322]
+- Fixed bug in cost volumes when no_data is NaN for right image. [#310]
+- Fixed histogram bounds for maximum number of bins. [#311] 
+- Fixed errors on memory estimation in segment mode. [#327]
+
+### Changed
+
+- Used criteria in mutual information. [#281]
+- Used P2D_PEAK_ON_EDGE criteria in refinement. [#273]
+- Moved allocation of shifted right images in matching_cost_prepare. [#305] 
+- Moved allocation of disparity maps dataset in matching_cost_prepare. [#307]
+- Templatized compute_cost_volumes_cpp method. [#319]
+- Deleted P2D_DISPARITY_UNPROCESSED criteria. [#302]
+- Templatized mutual information computation. [#321]
+
+
 ## 0.5.0 (May 2025)
 
 ### Added

@@ -41,6 +41,19 @@ using MatrixD = Eigen::MatrixXd;
 using Matrixf = Eigen::MatrixXf;
 
 /**
+ * @brief type used for unsigned int matrix
+ */
+using MatrixUI = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>;
+
+/**
+ * @brief type used for template matrix
+ *
+ * @tparam T
+ */
+template <typename T>
+using MatrixX = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
+
+/**
  * @brief type used for double vectors
  *
  */
@@ -51,6 +64,14 @@ using VectorD = Eigen::VectorXd;
  *
  */
 using Vectorf = Eigen::VectorXf;
+
+/**
+ * @brief type used for template vector (column vector)
+ *
+ * @tparam T
+ */
+template <typename T>
+using VectorX = Eigen::Matrix<T, Eigen::Dynamic, 1>;
 
 /**
  * @brief type used for double arrays

@@ -21,7 +21,7 @@
 from functools import lru_cache
 
 import numpy as np
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 from .interpolation_filter import AbstractFilter
 

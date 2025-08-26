@@ -23,17 +23,15 @@ This module contains functions associated to the matching cost computation step.
 
 import copy
 from typing import Dict, List, Union
+from json_checker import And
 
 import numpy as np
 import xarray as xr
 from pandora import matching_cost
-from pandora.margins import Margins
+from pandora.margins import Margins as PandoraMargins
+from pandora2d.margins import Margins
 
 from pandora2d import img_tools
-from pandora2d.common import (
-    set_out_of_col_disparity_range_to_other_value,
-    set_out_of_row_disparity_range_to_other_value,
-)
 
 from .base import BaseMatchingCost
 
@@ -73,7 +71,20 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
             "window_size": self.window_size,
             "subpix": self._subpix,
             "spline_order": self._spline_order,
+            "float_precision": str(self._float_precision),
         }
+
+    @property
+    def schema(self):
+        schema = super().schema
+
+        schema.update(
+            {
+                "float_precision": And(str, lambda x: np.dtype(x) in [np.float32]),
+            }
+        )
+
+        return schema
 
     @property
     def window_size(self) -> int:
@@ -136,7 +147,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         # Does nothing as we just want to override superclass behavior
 
     @property
-    def margins(self) -> Margins:
+    def margins(self) -> PandoraMargins:
         """
         Get margins from pandora correlation measurement
 
@@ -154,6 +165,10 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         """
         copy_cfg = copy.deepcopy(cfg)
         copy_cfg["step"] = self._step_col
+        if "float_precision" in cfg:
+            del copy_cfg["float_precision"]
+        if copy_cfg["matching_cost_method"] == "zncc_python":
+            copy_cfg["matching_cost_method"] = "zncc"
         return copy_cfg
 
     def allocate(
@@ -201,6 +216,18 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
         super().allocate(img_left, img_right, cfg, margins)
 
+    def set_shifted_right_images(self, img_right: xr.Dataset) -> None:
+        """
+        Compute shifted by subpix right image and assign `shifted_right_images` attribute.
+
+        :param img_right: xarray.Dataset containing :
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xr.Dataset
+        :return: None
+        """
+        self.shifted_right_images = img_tools.shift_subpix_img(img_right, self._subpix, order=self._spline_order)
+
     def compute_cost_volumes(
         self,
         img_left: xr.Dataset,
@@ -237,28 +264,25 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
         row_index = self.cost_volumes.coords["row"] - img_left.coords["row"].data[0]
 
-        # Contains the shifted right images (with subpixel)
-        imgs_right_shift_subpixel = img_tools.shift_subpix_img(img_right, self._subpix, order=self._spline_order)
-
         for idx, disp_row in enumerate(disps_row):
             i_right = int((disp_row % 1) * self._subpix)
 
-            # Images contained in imgs_right_shift_subpixel are already shifted by 1/subpix.
+            # Images contained in self.shifted_right_images are already shifted by 1/subpix.
             # In order for img_right_shift to contain the right image shifted from disp_row,
             # we call img_tools.shift_disp_row_img with np.floor(disp_row).
 
             # For example if subpix=2 and disp_row=1.5
             # i_right=1
-            # imgs_right_shift_subpixel[i_right] is shifted by 0.5
+            # self.shifted_right_images[i_right] is shifted by 0.5
             # In img_tools.shift_disp_row_img we shift it by np.floor(1.5)=1 --> In addition it is shifted by 1.5
 
             # Another example if subpix=4 and disp_row=-1.25
             # i_right=3
-            # imgs_right_shift_subpixel[i_right] is shifted by 0.75
+            # self.shifted_right_images[i_right] is shifted by 0.75
             # In img_tools.shift_disp_row_img we shift it by np.floor(-1.25)=-2 --> In addition it is shifted by -1.25
 
             # Shift image in the y axis
-            img_right_shift = img_tools.shift_disp_row_img(imgs_right_shift_subpixel[i_right], np.floor(disp_row))
+            img_right_shift = img_tools.shift_disp_row_img(self.shifted_right_images[i_right], np.floor(disp_row))
 
             # Compute cost volume
             cost_volume = self.pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, self.grid)
@@ -269,23 +293,10 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         # Add type measure to attributes for WTA
         self.cost_volumes.attrs["type_measure"] = cost_volume.attrs["type_measure"]
 
-        # Select correct rows and columns in case of a step different from 1.
-        row_cv = self.cost_volumes.row.values
-        col_cv = self.cost_volumes.col.values
+        # Value to set on cost volumes points where the row or column disparity is out of the range defined
+        # by disparity grids
+        value = -np.inf if self.cost_volumes.attrs["type_measure"] == "max" else np.inf
 
-        set_out_of_row_disparity_range_to_other_value(
-            self.cost_volumes["cost_volumes"],
-            img_left["row_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data,
-            img_left["row_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data,
-            np.nan,
-            self.cost_volumes.attrs["row_disparity_source"],
-        )
-        set_out_of_col_disparity_range_to_other_value(
-            self.cost_volumes["cost_volumes"],
-            img_left["col_disparity"].sel(band_disp="min", row=row_cv, col=col_cv).data,
-            img_left["col_disparity"].sel(band_disp="max", row=row_cv, col=col_cv).data,
-            np.nan,
-            self.cost_volumes.attrs["col_disparity_source"],
-        )
+        self.set_out_of_disparity_range_to_other_value(img_left, value)
 
         return self.cost_volumes

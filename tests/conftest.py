@@ -25,6 +25,8 @@ import pathlib
 import re
 
 import json
+import tracemalloc
+
 import numpy as np
 import pytest
 import rasterio
@@ -174,6 +176,30 @@ def mask_path(left_img_path, tmp_path):
     mask[0 : int(height / 2), 0 : int(width / 2)] = 1
 
     path = tmp_path / "mask_left.tif"
+
+    write_data_array(
+        data_array=mask,
+        filename=str(path),
+    )
+
+    return path
+
+
+@pytest.fixture
+def full_invalid_mask_path(left_img_path, tmp_path):
+    """Create a mask full of invalid and save it in tmp"""
+
+    with rasterio.open(left_img_path) as src:
+        width = src.width
+        height = src.height
+
+    mask = xr.DataArray(
+        data=np.full((height, width), 2, dtype=np.uint8),
+        dims=["height", "width"],
+        coords={"height": range(height), "width": range(width)},
+    )
+
+    path = tmp_path / "full_invalid_mask_left.tif"
 
     write_data_array(
         data_array=mask,
@@ -379,10 +405,24 @@ def window_size():
 
 
 @pytest.fixture()
-def correct_pipeline_without_refinement(window_size):
+def matching_cost_method():
+    return "zncc"
+
+
+@pytest.fixture()
+def subpix():
+    return 1
+
+
+@pytest.fixture()
+def correct_pipeline_without_refinement(window_size, matching_cost_method, subpix):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": window_size},
+            "matching_cost": {
+                "matching_cost_method": matching_cost_method,
+                "window_size": window_size,
+                "subpix": subpix,
+            },
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         }
     }
@@ -392,3 +432,41 @@ def correct_pipeline_without_refinement(window_size):
 def reset_profiling():
     pandora2d.profiling.data.reset()
     pandora2d.profiling.expert_mode_config.enable = False
+
+
+class MemoryTracer:
+    """
+    Measure consumed memory in bytes.
+    """
+
+    def __init__(self, unit_factor=1):
+        self.unit_factor = unit_factor
+        self._current = 0
+        self._peak = 0
+
+    def __enter__(self):
+        tracemalloc.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._current, self._peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(current: {self.current}, peak: {self.peak})"
+
+    @property
+    def current(self):
+        return self._current / self.unit_factor
+
+    @property
+    def peak(self):
+        return self._peak / self.unit_factor
+
+
+@pytest.fixture(name="MemoryTracer")
+def memory_tracer_fixture():
+    """
+    Measure consumed memory in bytes.
+    """
+    return MemoryTracer

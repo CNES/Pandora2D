@@ -23,26 +23,9 @@ This file contains useful function declarations for tests.
 
 #include "global_conftest.hpp"
 
-#include <random>
-
 /**
- * @brief Create a normal matrix object
+ * @brief Returns 1D index according to 2D position
  */
-P2d::MatrixD create_normal_matrix(std::size_t size, float mean, float std) {
-  // random device class instance, source of 'true' randomness for initializing random seed
-  std::random_device rd{};
-  // Mersenne twister PRNG, initialized with seed from previous random device instance
-  std::mt19937 gen{rd()};
-  // instance of class std::normal_distribution with specific mean and stddev
-  std::normal_distribution<float> dis{mean, std};
-
-  // Create matrix
-  std::vector<double> X(size * size);
-  auto v_size = static_cast<int>(X.size());
-  for (int i = 0; i < v_size; i++) {
-    X[i] = dis(gen);
-  }
-  Eigen::Map<P2d::MatrixD> img(X.data(), size, size);
-
-  return img;
-}
+auto position2d_to_index(Position2D& pixel, CostVolumeSize& cv_size) -> unsigned int {
+  return pixel.row * (cv_size.nb_col * cv_size.nb_disps()) + pixel.col * cv_size.nb_disps();
+};

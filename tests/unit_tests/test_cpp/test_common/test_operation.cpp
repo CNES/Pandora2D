@@ -36,13 +36,28 @@ This module contains tests associated to the operation functions define on opera
  *
  * @param m : the Eigen matrix
  */
-double std_dev_medicis(const P2d::MatrixD& m) {
+template <typename T>
+double std_dev_medicis(const T& m) {
   return sqrt(variance(m));
 }
 
-TEST_CASE("standard deviation") {
+template <typename matrix_type, typename vector_type>
+struct TypePair {
+  using Matrix = matrix_type;
+  using Vector = vector_type;
+};
+
+using FloatPair = TypePair<P2d::Matrixf, P2d::Vectorf>;
+using DoublePair = TypePair<P2d::MatrixD, P2d::VectorD>;
+
+TYPE_TO_STRING_AS("Float", FloatPair);
+TYPE_TO_STRING_AS("Double", DoublePair);
+
+TEST_CASE_TEMPLATE("standard deviation", T, FloatPair, DoublePair) {
+  using Matrix = typename T::Matrix;
+  using Vector = typename T::Vector;
   SUBCASE("standard deviation with null matrix") {
-    P2d::MatrixD image(2, 4);
+    Matrix image(2, 4);
 
     image << 0, 0, 0, 0, 0, 0, 0, 0;
 
@@ -50,8 +65,8 @@ TEST_CASE("standard deviation") {
     CHECK(standard_deviation == 0);
   }
 
-  SUBCASE("standard deviation with VectorXd") {
-    P2d::VectorD image(2, 4);
+  SUBCASE("standard deviation with Vector") {
+    Vector image(2, 4);
 
     image << 1, 2, 3;
 
@@ -59,8 +74,8 @@ TEST_CASE("standard deviation") {
     CHECK(standard_deviation == 0.5);
   }
 
-  SUBCASE("standard deviation with MatrixXd one line") {
-    P2d::MatrixD image(1, 4);
+  SUBCASE("standard deviation with Matrix one line") {
+    Matrix image(1, 4);
 
     image << 1, 2, 3, 4;
 
@@ -69,7 +84,7 @@ TEST_CASE("standard deviation") {
   }
 
   SUBCASE("comparison of standard deviation with that of medicis") {
-    P2d::MatrixD image(1, 4);
+    Matrix image(1, 4);
 
     image << 1, 2, 3, 4;
 

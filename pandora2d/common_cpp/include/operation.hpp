@@ -31,7 +31,10 @@ This module contains functions, struct and other elements associated to the matc
  * @param m : the Eigen matrix
  *
  */
-double std_dev(const P2d::MatrixD& m);
+template <typename T>
+double std_dev(const T& m) {
+  return sqrt((m.array() - m.mean()).square().sum() / (m.size()));
+}
 
 /**
  * @brief Variance with Eigen matrix
@@ -43,7 +46,12 @@ double std_dev(const P2d::MatrixD& m);
  * @param m : the Eigen matrix
  *
  */
-double variance(const P2d::MatrixD& m);
+template <typename T>
+T variance(const P2d::MatrixX<T>& m) {
+  T moment1 = (m.array().sum()) / (m.size());
+  T moment2 = (m.array().square().sum()) / (m.size());
+  return moment2 - (moment1 * moment1);
+}
 
 /**
  * @brief Function to find the index of the minimum element, ignoring NaNs

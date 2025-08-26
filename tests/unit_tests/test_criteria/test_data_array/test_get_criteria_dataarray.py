@@ -109,14 +109,14 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.VALID , Criteria.VALID , Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.VALID , Criteria.VALID , Criteria.P2D_DISPARITY_UNPROCESSED, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.VALID , Criteria.VALID , Criteria.VALID, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.VALID , Criteria.VALID , Criteria.VALID, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
                         # fmt: on
                     ]
                 ),
-                id="Criteria.P2D_DISPARITY_UNPROCESSED overcome other criteria",
+                id="Mix of Criteria.VALID and Criteria.P2D_RIGHT_DISPARITY_OUTSIDE",
             ),
             pytest.param(
                 np.array(  # left msk
@@ -280,14 +280,14 @@ class TestGetCriteriaDataarray:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
-                        [Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
+                        [Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE],
                         # fmt: on
                     ]
                 ),
-                id="Column disparity out of the image or unprocessed for all points",
+                id="Column disparity out of the image for all points",
             ),
             pytest.param(
                 np.full((4, 5), 0),  # left msk
@@ -299,13 +299,13 @@ class TestGetCriteriaDataarray:
                     [
                         # fmt: off
                         [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
-                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
-                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_DISPARITY_UNPROCESSED | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
                         [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
                         # fmt: on
                     ]
                 ),
-                id="Column disparity out of the image or unprocessed for all points and window_size=3",
+                id="Column disparity out of the image for all points and window_size=3",
             ),
             # pylint: enable=line-too-long
         ],

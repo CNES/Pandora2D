@@ -22,7 +22,7 @@
 
 import numpy as np
 import pytest
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 import pandora2d.interpolation_filter
 

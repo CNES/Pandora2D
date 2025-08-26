@@ -25,21 +25,77 @@ Conftest for dichotomy cpp and python versions module.
 
 import numpy as np
 import pytest
-
 import xarray as xr
 
-from pandora2d.matching_cost import PandoraMatchingCostMethods
 from pandora2d import refinement
+from pandora2d.matching_cost import PandoraMatchingCostMethods
 
 
 @pytest.fixture()
-def rows():
-    return np.arange(2)
+def matching_cost_method():
+    return "sad"
 
 
 @pytest.fixture()
-def cols():
-    return np.arange(3)
+def row_step():
+    return 1
+
+
+@pytest.fixture()
+def col_step():
+    return 1
+
+
+@pytest.fixture()
+def step(row_step, col_step):
+    return [row_step, col_step]
+
+
+@pytest.fixture()
+def window_size():
+    return 1
+
+
+@pytest.fixture()
+def min_row():
+    return 0
+
+
+@pytest.fixture()
+def max_row():
+    return 1
+
+
+@pytest.fixture()
+def image_row_coordinates(min_row, max_row):
+    return np.arange(min_row, max_row + 1)
+
+
+@pytest.fixture()
+def row_coordinates_with_step(min_row, max_row, step):
+    """Row coordinates used into disparity map and cost volume"""
+    return np.arange(min_row, max_row + 1, step[0])
+
+
+@pytest.fixture()
+def min_col():
+    return 0
+
+
+@pytest.fixture()
+def max_col():
+    return 2
+
+
+@pytest.fixture()
+def image_col_coordinates(min_col, max_col):
+    return np.arange(min_col, max_col + 1)
+
+
+@pytest.fixture()
+def col_coordinates_with_step(min_col, max_col, step):
+    """Col coordinates used into disparity map and cost volume"""
+    return np.arange(min_col, max_col + 1, step[1])
 
 
 @pytest.fixture()
@@ -67,28 +123,30 @@ def type_measure():
     return "max"
 
 
-@pytest.fixture()
-def subpixel():
-    return 1
-
-
 # Once the criteria for identifying extremas at the edge of disparity ranges has been implemented,
 # this fixture could possibly be removed.
 @pytest.fixture()
-def left_img(rows, cols, min_disparity_row, max_disparity_row, min_disparity_col, max_disparity_col):
+def left_img(
+    image_row_coordinates,
+    image_col_coordinates,
+    min_disparity_row,
+    max_disparity_row,
+    min_disparity_col,
+    max_disparity_col,
+):
     """
     Creates a left image dataset
     """
 
     img = xr.Dataset(
-        {"im": (["row", "col"], np.full((rows.size, cols.size), 0))},
-        coords={"row": rows, "col": cols},
+        {"im": (["row", "col"], np.full((image_row_coordinates.size, image_col_coordinates.size), 0))},
+        coords={"row": image_row_coordinates, "col": image_col_coordinates},
     )
 
-    d_min_col = np.full((rows.size, cols.size), min_disparity_col)
-    d_max_col = np.full((rows.size, cols.size), max_disparity_col)
-    d_min_row = np.full((rows.size, cols.size), min_disparity_row)
-    d_max_row = np.full((rows.size, cols.size), max_disparity_row)
+    d_min_col = np.full((image_row_coordinates.size, image_col_coordinates.size), min_disparity_col)
+    d_max_col = np.full((image_row_coordinates.size, image_col_coordinates.size), max_disparity_col)
+    d_min_row = np.full((image_row_coordinates.size, image_col_coordinates.size), min_disparity_row)
+    d_max_row = np.full((image_row_coordinates.size, image_col_coordinates.size), max_disparity_row)
 
     # Once the variable disparity grids have been introduced into pandora2d,
     # it will be possible to call a method such as add_disparity_grid
@@ -122,39 +180,20 @@ def left_img(rows, cols, min_disparity_row, max_disparity_row, min_disparity_col
 
 
 @pytest.fixture()
-def zeros_cost_volumes(
-    rows,
-    cols,
-    min_disparity_row,
-    max_disparity_row,
-    min_disparity_col,
-    max_disparity_col,
-    type_measure,
-    subpixel,
-):
-    """Create a cost_volumes full of zeros."""
-    number_of_disparity_col = int((max_disparity_col - min_disparity_col) * subpixel + 1)
-    number_of_disparity_row = int((max_disparity_row - min_disparity_row) * subpixel + 1)
-
-    data = np.zeros((rows.size, cols.size, number_of_disparity_col, number_of_disparity_row))
-    attrs = {
-        "col_disparity_source": [min_disparity_col, max_disparity_col],
-        "row_disparity_source": [min_disparity_row, max_disparity_row],
-        "col_to_compute": 1,
-        "sampling_interval": 1,
-        "type_measure": type_measure,
-        "step": [1, 1],
-        "subpixel": subpixel,
-    }
-
-    return PandoraMatchingCostMethods.allocate_cost_volumes(
-        attrs,
-        rows,
-        cols,
-        np.linspace(min_disparity_row, max_disparity_row, number_of_disparity_row),
-        np.linspace(min_disparity_col, max_disparity_col, number_of_disparity_col),
-        data,
+def right_img(left_img):
+    data = np.roll(left_img["im"].data, 2)
+    data[:2] = 0
+    return left_img.copy(
+        deep=True,
+        data={"im": data, "row_disparity": left_img["row_disparity"], "col_disparity": left_img["col_disparity"]},
     )
+
+
+@pytest.fixture()
+def zeros_cost_volumes(matching_cost_config, left_img, right_img):
+    matching_cost = PandoraMatchingCostMethods(matching_cost_config)
+    matching_cost.allocate(left_img, right_img, matching_cost_config)
+    return matching_cost.cost_volumes
 
 
 @pytest.fixture()
@@ -172,20 +211,20 @@ def invalid_disparity():
 
 
 @pytest.fixture()
-def disp_map(invalid_disparity, rows, cols):
+def disp_map(invalid_disparity, row_coordinates_with_step, col_coordinates_with_step):
     """Fake disparity maps with alternating values."""
-    row = np.full(rows.size * cols.size, 4.0)
+    row = np.full(row_coordinates_with_step.size * col_coordinates_with_step.size, 4.0)
     row[::2] = 5
-    col = np.full(rows.size * cols.size, 0.0)
+    col = np.full(row_coordinates_with_step.size * col_coordinates_with_step.size, 0.0)
     col[::2] = 1
     return xr.Dataset(
         {
-            "row_map": (["row", "col"], row.reshape((rows.size, cols.size))),
-            "col_map": (["row", "col"], col.reshape((rows.size, cols.size))),
+            "row_map": (["row", "col"], row.reshape((row_coordinates_with_step.size, col_coordinates_with_step.size))),
+            "col_map": (["row", "col"], col.reshape((row_coordinates_with_step.size, col_coordinates_with_step.size))),
         },
         coords={
-            "row": rows,
-            "col": cols,
+            "row": row_coordinates_with_step,
+            "col": col_coordinates_with_step,
         },
         attrs={"invalid_disp": invalid_disparity},
     )

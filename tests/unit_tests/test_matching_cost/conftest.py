@@ -97,37 +97,6 @@ def input_config(left_image, right_image, col_disparity, row_disparity):
 
 
 @pytest.fixture()
-def matching_cost_method():
-    return "zncc"
-
-
-@pytest.fixture()
-def window_size():
-    return 3
-
-
-@pytest.fixture()
-def subpix():
-    return 1
-
-
-@pytest.fixture()
-def matching_cost_config(step, matching_cost_method, window_size, subpix):
-    return {"matching_cost_method": matching_cost_method, "window_size": window_size, "step": step, "subpix": subpix}
-
-
-@pytest.fixture()
-def matching_cost_object(matching_cost_config):
-    """
-    Return the right matching cost object according to matching cost method
-    """
-
-    matching_cost_object = matching_cost.MatchingCostRegistry.get(matching_cost_config["matching_cost_method"])
-
-    return matching_cost_object
-
-
-@pytest.fixture()
 def left_image_with_shift(tmp_path):
     """
     Create a fake image to test roi configuration

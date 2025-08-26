@@ -24,7 +24,7 @@ import numpy as np
 from json_checker import And, OptionalKey
 from numpy.typing import NDArray
 
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 
 from .interpolation_filter import AbstractFilter
 from ..interpolation_filter_cpp import interpolation_filter_bind
@@ -56,7 +56,7 @@ class CardinalSine(AbstractFilter):
             raise ValueError(f"fractional_shift greater than 0 and lower than 1 expected, got {fractional_shift}")
 
     @property
-    def _SIZE(self):  # pylint: disable=invalid-name
+    def _SIZE(self):  # type: ignore[override] # pylint: disable=invalid-name
         """Return filter's size."""
         return self.cpp_instance.size
 

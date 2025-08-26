@@ -40,18 +40,33 @@ typedef enum bin_method {
 
 /**
  * @brief Scott method to compute bin width
- * @param img : the Eigen matrix
+ * @param image : the Eigen matrix
  *
  */
-double get_bins_width_scott(const P2d::MatrixD& img);
+template <typename T>
+T get_bins_width_scott(const P2d::MatrixX<T>& image) {
+  auto standard_deviation = std_dev(image);
+  if (standard_deviation == 0.)
+    return 1.;
+
+  T size = static_cast<T>(image.size());
+  return static_cast<T>(SCOTT_FACTOR) * standard_deviation * pow(size, -1. / 3.);
+}
 
 /**
- * @brief Get bin width depending on bin_method
- * @param img : the Eigen matrix
+ * Get bin width depending on bin_method
+ * @param image : the Eigen matrix
  * @param method : the bin_method, default is scott
  *
  * @throws std::invalid_argument if provided method is not known
  */
-double get_bins_width(const P2d::MatrixD& img, bin_method method = bin_method::scott);
-
+template <typename T>
+T get_bins_width(const P2d::MatrixX<T>& image, bin_method method = bin_method::scott) {
+  switch (method) {
+    case bin_method::scott:
+      return get_bins_width_scott(image);
+    default:
+      throw std::invalid_argument("method to compute bins width does not exist");
+  }
+}
 #endif

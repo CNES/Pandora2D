@@ -30,7 +30,7 @@ import pytest
 
 from transitions.core import MachineError
 
-from pandora.margins import Margins
+from pandora2d.margins import Margins
 from pandora2d import state_machine
 from pandora2d.img_tools import create_datasets_from_inputs
 
@@ -102,7 +102,7 @@ class TestPandora2D:
 
         pipeline_cfg = {
             "pipeline": {
-                "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+                "matching_cost": {"matching_cost_method": "zncc_python", "window_size": 5},
                 "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
                 "refinement": refinement_config,
             },
@@ -117,7 +117,7 @@ class TestPandora2D:
     @pytest.mark.parametrize(
         ["matching_cost_config", "expected"],
         [
-            pytest.param({"matching_cost_method": "zncc"}, Margins(2, 2, 2, 2), id="zncc"),
+            pytest.param({"matching_cost_method": "zncc_python"}, Margins(2, 2, 2, 2), id="zncc_python"),
         ],
     )
     def test_global_margins_img(self, matching_cost_config, expected) -> None:

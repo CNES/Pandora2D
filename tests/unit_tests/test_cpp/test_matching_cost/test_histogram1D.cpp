@@ -28,117 +28,154 @@ This module contains tests associated to histogram 1D.
 #include "global_conftest.hpp"
 #include "histogram1D.hpp"
 
-TEST_CASE("Test constructor") {
-  SUBCASE("With P2d::VectorD::Zero") {
-    P2d::VectorD m = P2d::VectorD::Zero(3);
-    Histogram1D hist = Histogram1D(m);
+template <typename type, typename vector_type>
+struct VectorTypePair {
+  using Type = type;
+  using VectorType = vector_type;
+};
 
-    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Zero(1));
+TYPE_TO_STRING_AS("Float", VectorTypePair<float, P2d::Vectorf>);
+TYPE_TO_STRING_AS("Double", VectorTypePair<double, P2d::VectorD>);
+
+TEST_CASE_TEMPLATE("Test constructor",
+                   T,
+                   VectorTypePair<float, P2d::Vectorf>,
+                   VectorTypePair<double, P2d::VectorD>) {
+  using Type = typename T::Type;
+  using VectorType = typename T::VectorType;
+
+  SUBCASE("With VectorType::Zero") {
+    VectorType m = VectorType::Zero(3);
+    Histogram1D hist = Histogram1D<Type>(m);
+
+    check_inside_eigen_element<VectorType>(hist.values(), VectorType::Zero(1));
     CHECK(hist.nb_bins() == 1);
     CHECK(hist.low_bound() == -0.5);
     CHECK(hist.bins_width() == 1);
   }
 
-  SUBCASE("With P2d::VectorD {1,2,3,4}") {
-    P2d::VectorD m(4);
+  SUBCASE("With VectorType {1,2,3,4}") {
+    VectorType m(4);
     m << 1, 2, 3, 4;
 
-    Histogram1D hist = Histogram1D(m);
+    Histogram1D hist = Histogram1D<Type>(m);
 
-    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Zero(2));
+    check_inside_eigen_element<VectorType>(hist.values(), VectorType::Zero(2));
     CHECK(hist.nb_bins() == 2);
-    CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-7));
+    CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-6));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
   }
 
   SUBCASE("First constructor") {
-    P2d::VectorD m = P2d::VectorD::Ones(3);
-    Histogram1D hist = Histogram1D(m, 3, 0.1, 1.3);
+    VectorType m = VectorType::Ones(3);
+    Histogram1D hist = Histogram1D<Type>(m, 3, 0.1, 1.3);
 
-    check_inside_eigen_element<P2d::VectorD>(hist.values(), m);
+    check_inside_eigen_element<VectorType>(hist.values(), m);
     CHECK(hist.nb_bins() == 3);
-    CHECK(hist.low_bound() == 0.1);
-    CHECK(hist.bins_width() == 1.3);
+    CHECK(hist.low_bound() == doctest::Approx(0.1).epsilon(1e-7));
+    CHECK(hist.bins_width() == doctest::Approx(1.3).epsilon(1e-7));
   }
 
   SUBCASE("Second constructor") {
-    Histogram1D hist = Histogram1D(2, 0.1, 1.3);
+    Histogram1D hist = Histogram1D<Type>(2, 0.1, 1.3);
 
-    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Zero(2));
+    check_inside_eigen_element<VectorType>(hist.values(), VectorType::Zero(2));
     CHECK(hist.nb_bins() == 2);
-    CHECK(hist.low_bound() == 0.1);
-    CHECK(hist.bins_width() == 1.3);
+    CHECK(hist.low_bound() == doctest::Approx(0.1).epsilon(1e-7));
+    CHECK(hist.bins_width() == doctest::Approx(1.3).epsilon(1e-7));
   }
 }
 
-TEST_CASE("Test calculate_histogram1D function") {
+template <typename type, typename vector_type, typename matrix_type>
+struct TypeStruct {
+  using Type = type;
+  using VectorType = vector_type;
+  using MatrixType = matrix_type;
+};
+
+TYPE_TO_STRING_AS("Float", TypeStruct<float, P2d::Vectorf, P2d::Matrixf>);
+TYPE_TO_STRING_AS("Double", TypeStruct<double, P2d::VectorD, P2d::MatrixD>);
+
+TEST_CASE_TEMPLATE("Test calculate_histogram1D function",
+                   T,
+                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>,
+                   TypeStruct<double, P2d::VectorD, P2d::MatrixD>) {
+  using Type = typename T::Type;
+  using VectorType = typename T::VectorType;
+  using MatrixType = typename T::MatrixType;
+
   SUBCASE("positive low_bound & matrix coefficients") {
-    P2d::MatrixD m(1, 4);
+    MatrixType m(1, 4);
     m << 1, 2, 3, 4;
 
-    auto hist = calculate_histogram1D(m);
+    auto hist = calculate_histogram1D<Type>(m);
 
-    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Ones(2) * 2);
+    check_inside_eigen_element<VectorType>(hist.values(), VectorType::Ones(2) * 2);
     CHECK(hist.nb_bins() == 2);
-    CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-7));
+    CHECK(hist.low_bound() == doctest::Approx(0.0412283).epsilon(1e-6));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
+    CHECK(hist.low_bound() < m.minCoeff());
+    CHECK(hist.up_bound() > m.maxCoeff());
   }
 
   SUBCASE("negative low_bound & positive matrix coefficients") {
-    P2d::MatrixD m(4, 4);
+    MatrixType m(4, 4);
     m << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
-    P2d::MatrixD hist_expected(3, 1);
+    MatrixType hist_expected(3, 1);
     hist_expected << 5, 6, 5;
 
-    auto hist = calculate_histogram1D(m);
+    auto hist = calculate_histogram1D<Type>(m);
 
-    check_inside_eigen_element<P2d::VectorD>(hist.values(), hist_expected);
+    check_inside_eigen_element<VectorType>(hist.values(), hist_expected);
     CHECK(hist.nb_bins() == 3);
-    CHECK(hist.low_bound() == doctest::Approx(-1.0795972).epsilon(1e-7));
+    CHECK(hist.low_bound() == doctest::Approx(-1.0795972).epsilon(1e-6));
     CHECK(hist.bins_width() == doctest::Approx(6.3863981).epsilon(1e-7));
+    CHECK(hist.low_bound() < m.minCoeff());
+    CHECK(hist.up_bound() > m.maxCoeff());
   }
 
   SUBCASE("negative low_bound & matrix coefficients") {
-    P2d::MatrixD m(1, 4);
+    MatrixType m(1, 4);
     m << -11, -12, -13, -14;
 
-    auto hist = calculate_histogram1D(m);
+    auto hist = calculate_histogram1D<Type>(m);
 
-    check_inside_eigen_element<P2d::VectorD>(hist.values(), P2d::VectorD::Ones(2) * 2);
+    check_inside_eigen_element<VectorType>(hist.values(), VectorType::Ones(2) * 2);
     CHECK(hist.nb_bins() == 2);
     CHECK(hist.low_bound() == doctest::Approx(-14.9587716).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(2.4587717).epsilon(1e-7));
+    CHECK(hist.low_bound() < m.minCoeff());
+    CHECK(hist.up_bound() > m.maxCoeff());
   }
 
   SUBCASE("positive & negative matrix coefficients") {
-    P2d::MatrixD m(4, 4);
+    MatrixType m(4, 4);
     m << -0.1, -0.2, 0.30, 0.40, 0.1, 0.3, -0.45, -0.59, 0.99, -0.101, 0.11452, 0.1235, -0.36,
         -0.256, -0.56, -0.1598;
 
-    P2d::MatrixD hist_expected(3, 1);
+    MatrixType hist_expected(3, 1);
     hist_expected << 9, 6, 1;
 
-    auto hist = calculate_histogram1D(m);
+    auto hist = calculate_histogram1D<Type>(m);
 
-    check_inside_eigen_element<P2d::VectorD>(hist.values(), hist_expected);
+    check_inside_eigen_element<VectorType>(hist.values(), hist_expected);
     CHECK(hist.nb_bins() == 3);
     CHECK(hist.low_bound() == doctest::Approx(-0.6199559).epsilon(1e-7));
     CHECK(hist.bins_width() == doctest::Approx(0.5466373).epsilon(1e-7));
+    CHECK(hist.low_bound() < m.minCoeff());
+    CHECK(hist.up_bound() > m.maxCoeff());
   }
 
-  SUBCASE("test with a 120 bins image") {
-    auto m = create_image(std::size_t(81), 0., 0.5);
-    auto hist = calculate_histogram1D(m);
-
-    auto bins_width = get_bins_width(m);
-    auto dynamic_range = m.maxCoeff() - m.minCoeff();
-    auto nb_bins = static_cast<int>(1. + (dynamic_range / bins_width));
-    auto low_bound =
-        m.minCoeff() - (static_cast<double>(nb_bins) * bins_width - dynamic_range) / 2.;
+  SUBCASE("test with a 120 bins image (nb_bins > NB_BINS_MAX)") {
+    auto m = create_image<Type>(std::size_t(81), 0., 0.5);
+    auto hist = calculate_histogram1D<Type>(m);
 
     CHECK(hist.nb_bins() == 100);
-    CHECK(hist.low_bound() <= low_bound);
-    CHECK(hist.bins_width() >= bins_width);
+    // When nb_bins > NB_BINS_MAX,
+    // the histogram lower bound is greater than the image minimum coefficient,
+    // and the histogram upper bound is smaller than the image maximum coefficient.
+    CHECK(hist.low_bound() > m.minCoeff());
+    CHECK(hist.up_bound() < m.maxCoeff());
   }
 }
