@@ -13,7 +13,7 @@
     },
     "segment_mode": {
         "enable": true,
-        "memory_per_work": 4000
+        "memory_per_work": 25
     },
     "pipeline": {
       "matching_cost": {
