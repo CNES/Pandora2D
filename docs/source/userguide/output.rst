@@ -58,11 +58,12 @@ The configuration given in this example will result in the following tree struct
     └── path
         ├── config.json
         └── disparity_map
+            ├── attributes.json
             ├── col_map.tif
             ├── correlation_score.tif
             ├── report.json
-            └── row_map.tif
-
+            ├── row_map.tif
+            └── validity.tif
 
 Saved images
 ************
@@ -77,15 +78,6 @@ Saved images
 .. warning::
         The output correlation_score map with optical flow refinement method contains the disparity
         step correlation score.
-
-.. warning::
-        If a step (in row or column) different from 1 is chosen at the :ref:`matching_cost` step, 
-        the disparity maps stored at the output of the pandora2D machine will be smaller than the image or ROI given by the user in the :ref:`inputs`. 
-
-        An issue has been opened on this subject, and the problem will be solved soon.  
-
-.. warning::
-    The validity.tif file is not yet operational as development is still in progress.
 
 Saved configuration
 *******************

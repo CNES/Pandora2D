@@ -179,6 +179,8 @@ In this case, the P2D_PEAK_ON_EDGE criterion is raised.
 |
 |
 
+.. _validity_dataset_explanation:
+
 Validity dataset
 ----------------
 

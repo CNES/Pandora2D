@@ -6,7 +6,7 @@ FAQ
 How do I use a step parameter in the matching cost computation?
 ****************************************************************
 
-**A notebook showing the use of the step parameter and Region Of Interest (ROI) is available:**
+**A notebook showing the use of the step parameter and Region Of Interest (ROI) is available**
 
 It is possible to add a step parameter in the configuration file. This parameter ensures that not all pixels are calculated during the matching cost computation.
 
@@ -37,17 +37,17 @@ It is possible to add a step parameter in the configuration file. This parameter
             },
             "refinement": {
                 "refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations" : 2},
-            },
+            }
         },
         "output": {
             "path": "step_output"
-        },
+        }
     }
 
 How do I choose to process only a certain part of the image? 
 ****************************************************************
 
-**A notebook showing the use of the step parameter and Region Of Interest (ROI) is available:**
+**A notebook showing the use of the step parameter and Region Of Interest (ROI) is available**
 
 It is possible to work on only one section of the image with an ROI. For this, the user can specify the area he wants in the configuration file. 
 
@@ -81,12 +81,14 @@ It is possible to work on only one section of the image with an ROI. For this, t
                 "invalid_disparity": -9999,
             },
             "refinement": {
-                "refinement_method": "interpolation",
-            },
+                "refinement_method": "dichotomy",
+                "filter": {"method": "bicubic"},
+                "iterations" : 2
+            }
         },
         "output": {
             "path": "roi_output"
-        },
+        }
     }
 
 .. code:: python
@@ -96,8 +98,7 @@ It is possible to work on only one section of the image with an ROI. For this, t
 
 .. code:: python
 
-    img_left = create_dataset_from_inputs(input_config=input_config["left"], roi=roi)
-    img_right = create_dataset_from_inputs(input_config=input_config["right"], roi=roi)
+    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi, estimation_cfg=user_cfg["pipeline"].get("estimation"))
 
 .. note::
     When the usage_step_roi_config.ipynb notebook is run, disparity maps are displayed. 
@@ -112,5 +113,5 @@ However, a number of platforms have been removed from the list, such as :
 
 - 32-bit platforms: SciPy is not available on them, and it is a necessary dependency for subpix input and multiscale.
 - musllinux: The rasterio library is not available on it, and it is a necessary dependency for the execution of pandora.
-- macOs : Wheel construction is impossible at the moment.
+- macOs: Wheel construction is impossible at the moment.
 - pypy : An internal decision was made not to support it.
