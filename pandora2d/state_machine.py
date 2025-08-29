@@ -57,40 +57,22 @@ class MarginsProperties(TypedDict):
     margins: Annotated[List[int], '["left, "up", "right", "down"]']
 
 
-class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
-    """
-    Pandora2DMachine class to create and use a state machine
-    """
+class CheckMachine(Machine):  # pylint:disable=too-many-instance-attributes
+    """State Machine that checks Pandora2d configuration."""
 
-    _transitions_run = [
-        {"trigger": "estimation", "source": "begin", "dest": "assumption", "before": "estimation_run"},
+    _transitions_check = [
+        {
+            "trigger": "estimation",
+            "source": "begin",
+            "dest": "assumption",
+            "before": "estimation_check_conf",
+        },
         {
             "trigger": "matching_cost",
             "source": "begin",
             "dest": "cost_volumes",
-            "prepare": "matching_cost_prepare",
-            "before": "matching_cost_run",
+            "before": "matching_cost_check_conf",
         },
-        {
-            "trigger": "matching_cost",
-            "source": "assumption",
-            "dest": "cost_volumes",
-            "prepare": "matching_cost_prepare",
-            "before": "matching_cost_run",
-        },
-        {
-            "trigger": "cost_volume_confidence",
-            "source": "cost_volumes",
-            "dest": "cost_volumes",
-            "before": "cost_volume_confidence_run",
-        },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_run"},
-        {"trigger": "refinement", "source": "disparity_map", "dest": "disparity_map", "before": "refinement_run"},
-    ]
-
-    _transitions_check = [
-        {"trigger": "estimation", "source": "begin", "dest": "assumption", "before": "estimation_check_conf"},
-        {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "before": "matching_cost_check_conf"},
         {
             "trigger": "matching_cost",
             "source": "assumption",
@@ -103,7 +85,12 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             "dest": "cost_volumes",
             "before": "cost_volume_confidence_check_conf",
         },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_check_conf"},
+        {
+            "trigger": "disparity",
+            "source": "cost_volumes",
+            "dest": "disparity_map",
+            "before": "disparity_check_conf",
+        },
         {
             "trigger": "refinement",
             "source": "disparity_map",
@@ -112,35 +99,14 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         },
     ]
 
-    def __init__(
-        self,
-    ) -> None:
-        """
-        Initialize Pandora2D Machine
-
-        """
-
-        # Left image
-        self.left_img: Optional[xr.Dataset] = None
-        # Right image
-        self.right_img: Optional[xr.Dataset] = None
-
+    def __init__(self) -> None:
+        # Define available states
+        self.step: Union[List, None] = None
+        self.window_size: Union[int, None] = None
         self.pipeline_cfg: Dict = {"pipeline": {}}
-        self.completed_cfg: Dict = {}
-        self.cost_volumes: xr.Dataset = xr.Dataset()
-        self.dataset_disp_maps: xr.Dataset = xr.Dataset()
-
-        # For communication between matching_cost and refinement steps
-        self.step: list = None
-        self.window_size: int = None
         self.margins_img = GlobalMargins()
         self.margins_disp = GlobalMargins()
-
-        # Define available states
         states_ = ["begin", "assumption", "cost_volumes", "disparity_map"]
-
-        # Instance matching_cost
-        self.matching_cost_: Union[BaseMatchingCost, None] = None
 
         # Initialize a machine without any transition
         Machine.__init__(
@@ -151,59 +117,9 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             auto_transitions=False,
         )
 
+        self.add_transitions(self._transitions_check)
+
         logging.getLogger("transitions").setLevel(logging.WARNING)
-
-    def run_prepare(self, img_left: xr.Dataset, img_right: xr.Dataset, cfg: dict) -> None:
-        """
-        Prepare the machine before running
-
-        :param img_left: left Dataset image containing :
-
-                - im : 2D (row, col) xarray.DataArray
-                - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xarray.Dataset
-        :param img_right: left Dataset image containing :
-
-                - im : 2D (row, col) xarray.DataArray
-                - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xarray.Dataset
-        :param cfg: configuration
-        :type cfg: Dict[str, dict]
-        """
-
-        self.left_img = img_left
-        self.right_img = img_right
-        self.completed_cfg = copy.copy(cfg)
-
-        self.add_transitions(self._transitions_run)
-
-    def run(self, input_step: str, cfg: Dict[str, dict]) -> None:
-        """
-        Run pandora 2D step by triggering the corresponding machine transition
-
-        :param input_step: step to trigger
-        :type input_step: str
-        :param cfg: pipeline configuration
-        :type  cfg: dict
-        :return: None
-        """
-        try:
-            if len(input_step.split(".")) != 1:
-                self.trigger(input_step.split(".")[0], cfg, input_step)
-            else:
-                self.trigger(input_step, cfg, input_step)
-        except (MachineError, KeyError, AttributeError):
-            logging.error("Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step)
-            raise
-
-    def run_exit(self) -> None:
-        """
-        Clear transitions and return to state begin
-
-        :return: None
-        """
-        self.remove_transitions(self._transitions_run)  # type: ignore
-        self.set_state("begin")
 
     def check_conf(self, cfg: Dict[str, dict]) -> None:
         """
@@ -213,10 +129,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         :type  cfg: dict
         :return:
         """
-
-        # Add transitions to the empty machine.
-        self.add_transitions(self._transitions_check)
-
         for input_step in list(cfg["pipeline"]):
             try:
                 self.trigger(input_step, cfg, input_step)
@@ -225,29 +137,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
                     "Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step
                 )
                 raise
-
-        # Remove transitions
-        self.remove_transitions(self._transitions_check)  # type: ignore
-
-        # Coming back to the initial state
-        self.set_state("begin")
-
-    def remove_transitions(self, transition_list: Dict[str, dict]) -> None:
-        """
-        Delete all transitions defined in the input list
-
-        :param transition_list: list of transitions
-        :type transition_list: dict
-        :return: None
-        """
-        # Transition is removed using trigger name. But one trigger name can be used by multiple transitions
-        # In this case, the "remove_transition" function removes all transitions using this trigger name
-        # deleted_triggers list is used to avoid multiple call of "remove_transition" with the same trigger name.
-        deleted_triggers = []
-        for trans in transition_list:
-            if trans["trigger"] not in deleted_triggers:  # type: ignore
-                self.remove_transition(trans["trigger"])  # type: ignore
-                deleted_triggers.append(trans["trigger"])  # type: ignore
 
     def estimation_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
@@ -333,6 +222,167 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
         self.margins_disp.add_non_cumulative(input_step, refinement_.margins)
         self.margins_img.add_cumulative(input_step, refinement_.margins)
+
+
+class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
+    """
+    Pandora2DMachine class to create and use a state machine
+    """
+
+    _transitions_run = [
+        {"trigger": "estimation", "source": "begin", "dest": "assumption", "before": "estimation_run"},
+        {
+            "trigger": "matching_cost",
+            "source": "begin",
+            "dest": "cost_volumes",
+            "prepare": "matching_cost_prepare",
+            "before": "matching_cost_run",
+        },
+        {
+            "trigger": "matching_cost",
+            "source": "assumption",
+            "dest": "cost_volumes",
+            "prepare": "matching_cost_prepare",
+            "before": "matching_cost_run",
+        },
+        {
+            "trigger": "cost_volume_confidence",
+            "source": "cost_volumes",
+            "dest": "cost_volumes",
+            "before": "cost_volume_confidence_run",
+        },
+        {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_run"},
+        {"trigger": "refinement", "source": "disparity_map", "dest": "disparity_map", "before": "refinement_run"},
+    ]
+
+    def __init__(
+        self,
+    ) -> None:
+        """
+        Initialize Pandora2D Machine
+
+        """
+
+        # Left image
+        self.left_img: Optional[xr.Dataset] = None
+        # Right image
+        self.right_img: Optional[xr.Dataset] = None
+
+        self.pipeline_cfg: Dict = {"pipeline": {}}
+        self.completed_cfg: Dict = {}
+        self.cost_volumes: xr.Dataset = xr.Dataset()
+        self.dataset_disp_maps: xr.Dataset = xr.Dataset()
+
+        # For communication between matching_cost and refinement steps
+        self.step: list = None
+        self.window_size: int = None
+        self.margins_img = GlobalMargins()
+        self.margins_disp = GlobalMargins()
+
+        # Define available states
+        states_ = ["begin", "assumption", "cost_volumes", "disparity_map"]
+
+        # Instance matching_cost
+        self.matching_cost_: Union[BaseMatchingCost, None] = None
+
+        # Initialize a machine without any transition
+        Machine.__init__(
+            self,
+            states=states_,
+            initial="begin",
+            transitions=None,
+            auto_transitions=False,
+        )
+
+        self.add_transitions(self._transitions_run)
+
+        logging.getLogger("transitions").setLevel(logging.WARNING)
+
+    def run_prepare(self, img_left: xr.Dataset, img_right: xr.Dataset, cfg: dict) -> None:
+        """
+        Prepare the machine before running
+
+        :param img_left: left Dataset image containing :
+
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_left: xarray.Dataset
+        :param img_right: left Dataset image containing :
+
+                - im : 2D (row, col) xarray.DataArray
+                - msk : 2D (row, col) xarray.DataArray
+        :type img_right: xarray.Dataset
+        :param cfg: configuration
+        :type cfg: Dict[str, dict]
+        """
+
+        self.left_img = img_left
+        self.right_img = img_right
+        self.completed_cfg = copy.copy(cfg)
+
+    def run(self, input_step: str, cfg: Dict[str, dict]) -> None:
+        """
+        Run pandora 2D step by triggering the corresponding machine transition
+
+        :param input_step: step to trigger
+        :type input_step: str
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :return: None
+        """
+        try:
+            if len(input_step.split(".")) != 1:
+                self.trigger(input_step.split(".")[0], cfg, input_step)
+            else:
+                self.trigger(input_step, cfg, input_step)
+        except (MachineError, KeyError, AttributeError):
+            logging.error("Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step)
+            raise
+
+    def run_exit(self) -> None:
+        """
+        Clear transitions and return to state begin
+
+        :return: None
+        """
+        self.set_state("begin")
+
+    def check_conf(self, cfg: Dict[str, dict]) -> None:
+        """
+        Check configuration and transitions
+
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :return:
+        """
+
+        check_machine = CheckMachine()
+        check_machine.check_conf(cfg)
+        self.step = copy.deepcopy(check_machine.step)
+        self.window_size = check_machine.window_size
+        self.pipeline_cfg = copy.deepcopy(check_machine.pipeline_cfg)
+        self.margins_img = copy.deepcopy(check_machine.margins_img)
+        self.margins_disp = copy.deepcopy(check_machine.margins_disp)
+
+        # Coming back to the initial state
+        self.set_state("begin")
+
+    def remove_transitions(self, transition_list: Dict[str, dict]) -> None:
+        """
+        Delete all transitions defined in the input list
+
+        :param transition_list: list of transitions
+        :type transition_list: dict
+        :return: None
+        """
+        # Transition is removed using trigger name. But one trigger name can be used by multiple transitions
+        # In this case, the "remove_transition" function removes all transitions using this trigger name
+        # deleted_triggers list is used to avoid multiple call of "remove_transition" with the same trigger name.
+        deleted_triggers = []
+        for trans in transition_list:
+            if trans["trigger"] not in deleted_triggers:  # type: ignore
+                self.remove_transition(trans["trigger"])  # type: ignore
+                deleted_triggers.append(trans["trigger"])  # type: ignore
 
     def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
