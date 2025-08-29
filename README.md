@@ -51,16 +51,16 @@ Download our data sample to start right away !
 
 ```bash
     # Images pairs with a combination of vertical and horizontal stereo
-    wget https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/images/maricopa.zip
+    wget -P data_samples/images https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/images/maricopa.zip
     # Config file
-    wget https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/json_conf_files/a_basic_pipeline.json
+    wget -P data_samples/json_conf_files https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/json_conf_files/a_basic_pipeline.json
     # Uncompress data
-    unzip maricopa.zip
+    unzip data_samples/images/maricopa.zip -d data_samples/images
     # run Pandora2d
-    pandora2d a_basic_pipeline.json output_dir
+    pandora2d data_samples/json_conf_files/a_basic_pipeline.json
 
-    # The columns disparity map is saved in  "./output_dir/columns_disparity.tif"
-    # The row disparity map is saved in  "./output_dir/row_disparity.tif"
+    # The columns disparity map is saved in  "./output_dir/disparity_map/col_map.tif"
+    # The row disparity map is saved in  "./output_dir/disparity_map/row_map.tif"
 ```
 
 ## To go further
