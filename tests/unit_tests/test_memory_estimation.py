@@ -653,7 +653,7 @@ class TestShiftedRightImages:
         images_size = sum(image.nbytes for image in images[1:]) / memory_estimation.BYTE_TO_MB
 
         result = memory_estimation.estimate_shifted_right_images_size(
-            image_datasets.right.dims["row"], image_datasets.right.dims["col"], subpix
+            image_datasets.right.sizes["row"], image_datasets.right.sizes["col"], subpix
         )
 
         assert result == pytest.approx(images_size, rel=0.05)
