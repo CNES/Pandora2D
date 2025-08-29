@@ -18,9 +18,10 @@
 #
 
 # pylint: skip-file
+from typing import overload
+
 import numpy as np
 from numpy.typing import NDArray
-from typing import overload
 
 class CostVolumeSize:
     @overload

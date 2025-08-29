@@ -20,15 +20,14 @@ Test the refinement.dichotomy pipeline.
 """
 
 import copy
-import pytest
 
 import numpy as np
-
+import pytest
 
 import pandora2d
-from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.check_configuration import check_conf
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
+from pandora2d.state_machine import Pandora2DMachine
 
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name

@@ -19,9 +19,11 @@
 
 # pylint: skip-file
 
-from typing import List, Tuple
+from typing import List
+
 import numpy as np
 from numpy.typing import NDArray
+
 from ..common_cpp.common_bind import CostVolumeSize
 
 def compute_cost_volumes_cpp_float(

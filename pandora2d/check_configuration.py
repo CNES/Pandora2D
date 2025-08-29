@@ -26,21 +26,21 @@ This module contains functions allowing to check the configuration given to Pand
 from __future__ import annotations
 
 from typing import Dict
+
 import numpy as np
 import xarray as xr
-from json_checker import And, Checker, Or, MissKeyCheckerError, OptionalKey
-from rasterio.io import DatasetReader
-
-from pandora.img_tools import get_metadata, rasterio_open
+from json_checker import And, Checker, MissKeyCheckerError, OptionalKey, Or
 from pandora.check_configuration import (
     check_dataset,
     check_images,
     get_config_input,
+    rasterio_can_open,
     rasterio_can_open_mandatory,
     update_conf,
 )
+from pandora.img_tools import get_metadata, rasterio_open
+from rasterio.io import DatasetReader
 
-from pandora.check_configuration import rasterio_can_open
 from pandora2d.state_machine import Pandora2DMachine
 
 

@@ -21,14 +21,14 @@ Module for Dichotomy refinement method (python version).
 """
 
 import logging
-from typing import Dict, Tuple, Union, NamedTuple, Callable
+from typing import Callable, Dict, NamedTuple, Tuple, Union
 
 import numpy as np
 import xarray as xr
-
 from json_checker import And
 
 from pandora2d.interpolation_filter import AbstractFilter
+
 from . import refinement
 
 COST_SELECTION_METHOD_MAPPING = {"min": np.nanargmin, "max": np.nanargmax}

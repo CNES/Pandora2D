@@ -22,5 +22,7 @@
 Init file for refinement module
 """
 
-from . import optical_flow, dichotomy, dichotomy_cpp
+from . import dichotomy, dichotomy_cpp, optical_flow
 from .refinement import AbstractRefinement
+
+__all__ = ["AbstractRefinement", "dichotomy", "dichotomy_cpp", "optical_flow"]

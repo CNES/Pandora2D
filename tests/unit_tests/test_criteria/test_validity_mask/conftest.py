@@ -23,8 +23,8 @@ Fixtures.
 
 # pylint: disable=redefined-outer-name
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 
 from pandora2d import matching_cost

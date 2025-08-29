@@ -20,6 +20,7 @@
 # pylint: skip-file
 
 from typing import List
+
 import numpy as np
 
 class Margins:

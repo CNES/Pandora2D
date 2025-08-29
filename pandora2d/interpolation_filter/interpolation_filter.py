@@ -21,11 +21,12 @@ This module contains functions associated to the interpolation filters.
 """
 
 from __future__ import annotations
-import logging
-from typing import Dict, Tuple, List
-from abc import abstractmethod, ABC
 
+import logging
 import math
+from abc import ABC, abstractmethod
+from typing import Dict, List, Tuple
+
 import numpy as np
 from json_checker import Checker
 

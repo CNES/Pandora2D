@@ -21,10 +21,9 @@ Module with global test fixtures.
 """
 
 # pylint: disable=redefined-outer-name
+import json
 import pathlib
 import re
-
-import json
 import tracemalloc
 
 import numpy as np

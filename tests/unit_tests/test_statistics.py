@@ -22,10 +22,11 @@
 # pylint: disable=redefined-outer-name
 
 import warnings
+
 import numpy as np
 import pytest
 
-from pandora2d.statistics import compute_statistics, Statistics, Quantiles
+from pandora2d.statistics import Quantiles, Statistics, compute_statistics
 
 
 class TestStatistics:

@@ -26,10 +26,10 @@ Test create_dataset_from_inputs function.
 # pylint: disable=redefined-outer-name
 
 import numpy as np
-import xarray as xr
-import pytest
-
 import pandora
+import pytest
+import xarray as xr
+
 from pandora2d import img_tools
 
 

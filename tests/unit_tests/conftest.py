@@ -26,9 +26,9 @@ from copy import deepcopy
 from typing import Tuple
 
 import numpy as np
+import pytest
 import xarray as xr
 from rasterio import Affine
-import pytest
 from skimage.io import imsave
 
 from pandora2d import Pandora2DMachine, matching_cost

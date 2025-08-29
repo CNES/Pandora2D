@@ -21,8 +21,8 @@
 Test remove_roi_margins.
 """
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 
 from pandora2d.img_tools import remove_roi_margins

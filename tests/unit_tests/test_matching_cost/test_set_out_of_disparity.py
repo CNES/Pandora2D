@@ -21,8 +21,8 @@
 Test set_out_of_disparity methods from Matching cost
 """
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 
 from pandora2d.matching_cost.base import (

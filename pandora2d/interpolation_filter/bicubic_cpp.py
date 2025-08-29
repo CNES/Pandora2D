@@ -22,8 +22,8 @@ import numpy as np
 
 from pandora2d.margins import Margins
 
-from .interpolation_filter import AbstractFilter
 from ..interpolation_filter_cpp import interpolation_filter_bind
+from .interpolation_filter import AbstractFilter
 
 
 @AbstractFilter.register_subclass("bicubic")

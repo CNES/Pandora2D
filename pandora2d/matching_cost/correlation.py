@@ -22,20 +22,17 @@ This module contains functions associated to the matching cost computation step
 with mutual information  and zncc methods.
 """
 
-from json_checker import And
-
 import numpy as np
 import xarray as xr
-
-from pandora2d.margins import Margins
+from json_checker import And
 
 from pandora2d.img_tools import shift_subpix_img_2d
-from pandora2d.margins import UniformMargins
+from pandora2d.margins import Margins, UniformMargins
 from pandora2d.matching_cost.registry import MatchingCostRegistry
-from .base import BaseMatchingCost
 
 from ..common_cpp import common_bind
 from ..matching_cost_cpp import matching_cost_bind
+from .base import BaseMatchingCost
 
 
 @MatchingCostRegistry.add("mutual_information")

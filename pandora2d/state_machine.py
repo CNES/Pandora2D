@@ -25,14 +25,20 @@ This module contains class associated to the pandora state machine
 
 import copy
 import logging
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Dict, List, Literal, Optional, TypedDict, Union
 
 import xarray as xr
+from pandora.margins import GlobalMargins
+from transitions import MachineError
 from typing_extensions import Annotated
 
-try:
-    import graphviz  # pylint: disable=unused-import
+from pandora2d import common, criteria, disparity, estimation, img_tools, refinement
+from pandora2d.cost_volume_confidence import CostVolumeConfidenceRegistry
+from pandora2d.matching_cost import BaseMatchingCost, MatchingCostRegistry
+from pandora2d.profiling import mem_time_profile
 
+if find_spec("graphviz") is not None:
     # In order de avoid this message from Mypy:
     # Incompatible import of "Machine" \
     # (imported name has type "type[Machine]", local name has type "type[GraphMachine]")
@@ -40,16 +46,8 @@ try:
         from transitions import Machine
     else:  # But we actually do this:
         from transitions.extensions import GraphMachine as Machine
-except ImportError:
+else:
     from transitions import Machine
-
-from transitions import MachineError
-from pandora.margins import GlobalMargins
-
-from pandora2d import common, disparity, estimation, img_tools, refinement, criteria
-from pandora2d.matching_cost import MatchingCostRegistry, BaseMatchingCost
-from pandora2d.cost_volume_confidence import CostVolumeConfidenceRegistry
-from pandora2d.profiling import mem_time_profile
 
 
 class MarginsProperties(TypedDict):

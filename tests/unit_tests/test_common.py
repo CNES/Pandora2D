@@ -32,17 +32,17 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-import xarray as xr
 import rasterio
+import xarray as xr
 from pytest_mock import MockerFixture
-from skimage.io import imsave
 from rasterio import Affine
-from pandora2d import common, run
+from skimage.io import imsave
+
+from pandora2d import common, criteria, disparity, matching_cost, refinement, run
 from pandora2d.check_configuration import check_conf
-from pandora2d.img_tools import create_datasets_from_inputs
-from pandora2d import matching_cost, disparity, refinement, criteria
-from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.constants import Criteria
+from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.state_machine import Pandora2DMachine
 
 
 @pytest.fixture(scope="class")

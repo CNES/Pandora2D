@@ -24,19 +24,20 @@
 Test configuration
 """
 
-from copy import deepcopy
 import random
 import string
+from copy import deepcopy
+
+import numpy as np
 import pytest
 import transitions
-import numpy as np
 import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
+from pandora.img_tools import get_metadata
 from skimage.io import imsave
 
-from pandora.img_tools import get_metadata
-from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 from pandora2d import check_configuration
+from pandora2d.img_tools import add_disparity_grid, create_datasets_from_inputs
 
 
 class TestCheckDatasets:

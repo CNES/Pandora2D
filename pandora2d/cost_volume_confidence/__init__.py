@@ -20,6 +20,12 @@
 Init file for cost volume confidence module
 """
 
-from .registry import CostVolumeConfidenceRegistry
-from .cost_volume_confidence import CostVolumeConfidence
 from .ambiguity import Ambiguity
+from .cost_volume_confidence import CostVolumeConfidence
+from .registry import CostVolumeConfidenceRegistry
+
+__all__ = [
+    "Ambiguity",
+    "CostVolumeConfidence",
+    "CostVolumeConfidenceRegistry",
+]

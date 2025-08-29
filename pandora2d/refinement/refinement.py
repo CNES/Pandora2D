@@ -23,13 +23,14 @@
 This module contains functions associated to the refinement computation step.
 """
 from __future__ import annotations
-import logging
-from typing import Dict, Tuple
-from abc import abstractmethod, ABCMeta
-from json_checker import Checker
 
-import xarray as xr
+import logging
+from abc import ABCMeta, abstractmethod
+from typing import Dict, Tuple
+
 import numpy as np
+import xarray as xr
+from json_checker import Checker
 
 from pandora2d.margins import NullMargins
 

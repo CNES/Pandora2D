@@ -23,9 +23,9 @@
 Tests
 """
 
+import sys
 from contextlib import nullcontext as does_not_raise
 
-import sys
 import pytest
 
 

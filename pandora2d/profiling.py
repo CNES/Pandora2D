@@ -20,6 +20,7 @@
 """
 Contains functions for profiling pandora2d
 """
+import csv
 import datetime
 import logging
 import os
@@ -30,7 +31,7 @@ from functools import wraps
 from multiprocessing import Pipe
 from pathlib import Path
 from threading import Thread
-import csv
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import psutil
