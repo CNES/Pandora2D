@@ -10,7 +10,7 @@ It uses `Pandora <https://github.com/CNES/Pandora>`__ who works with stereo pair
 
 Install
 #######
-Pandora2D is available on Gitlab and can be installed by:
+Pandora2D is available on Github and can be installed by:
 
 .. code-block:: bash
 
@@ -26,13 +26,16 @@ Download our data sample to start right away !
 .. code-block:: bash
 
     # Images pairs with a combination of vertical and horizontal stereo
-    wget https://raw.githubusercontent.com/CNES/Pandora/master/data_samples/images/maricopa.zip
+    wget -P data_samples/images https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/images/maricopa.zip
     # Config file
-    wget https://raw.githubusercontent.com/CNES/Pandora/master/data_samples/json_conf_files/a_basic_pipeline.json
+    wget -P data_samples/json_conf_files https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/json_conf_files/a_basic_pipeline.json
     #uncompress data
-    unzip maricopa.zip
+    unzip data_samples/images/maricopa.zip -d data_samples/images
     #run Pandora2D
-    pandora2d a_basic_pipeline.json
+    pandora2d data_samples/json_conf_files/a_basic_pipeline.json
+
+.. note::
+    With these commands, output files will be stored in data_samples/json_conf_files/a_basic_pipeline_output repository. 
 
 Customize
 #########
@@ -50,7 +53,7 @@ Credits
 
 Pandora2D uses `transitions <https://github.com/pytransitions/transitions>`_ to manage the pipelines one can create.
 Images I/O are provided by `rasterio <https://github.com/mapbox/rasterio>`_ and we use `xarray <https://github.com/pydata/xarray>`_
-to handle 3D Cost Volumes with few `multiprocessing <https://github.com/uqfoundation/multiprocess>`_ optimisations.
+to handle 4D Cost Volumes.
 
 Our data test sample is based on the Peps Sentinel2 website (by CNES).
 

@@ -8,7 +8,7 @@ The following interactive diagram highlights all steps available in Pandora2D.
 
 .. image:: ../Images/img_pipeline/inputs.png
     :align: center
-    :width: 250
+    :width: 400
     :target: input.html
 
 .. image:: ../Images/img_pipeline/arrow.png
@@ -16,7 +16,7 @@ The following interactive diagram highlights all steps available in Pandora2D.
 
 .. image:: ../Images/img_pipeline/estimation_step.png
     :align: center
-    :target: step_by_step/refinement.html
+    :target: step_by_step/estimation.html
 
 .. image:: ../Images/img_pipeline/arrow.png
     :align: center
@@ -24,6 +24,13 @@ The following interactive diagram highlights all steps available in Pandora2D.
 .. image:: ../Images/img_pipeline/mc_step.png
     :align: center
     :target: step_by_step/matching_cost.html
+
+.. image:: ../Images/img_pipeline/arrow.png
+    :align: center
+
+.. image:: ../Images/img_pipeline/cv_confidence_step.png
+    :align: center
+    :target: step_by_step/cost_volume_confidence.html
 
 .. image:: ../Images/img_pipeline/arrow.png
     :align: center
@@ -44,12 +51,16 @@ The following interactive diagram highlights all steps available in Pandora2D.
 
 .. image:: ../Images/img_pipeline/outputs.png
     :align: center
-    :width: 200
+    :width: 800
     :target: output.html
 
 .. raw:: html
 
     <font color="white">forced line break,</font>
+
+.. note::
+    - Pink blocks represent the mandatory steps in the pipeline.
+    - White hatched blocks represent the optional steps in the pipeline.
 
 
 Configuration file
@@ -125,7 +136,7 @@ Example
       },
       "output": {
           "path": "overview_example_output"
-      },
+      }
     }
 
 3. Run Pandora2D

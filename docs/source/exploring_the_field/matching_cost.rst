@@ -27,6 +27,18 @@ Different measures of similarity are available in Pandora2D to compute these coe
 
 Let's see in following sections how they work.
 
+Zero Normalized Cross Correlation
+---------------------------------
+
+Thanks to normalization, Zero Normalized Cross Correlation is a similarity measure that can be used 
+when images brightness vary due to exposure conditions. 
+
+ZNCC between two image patches I, J is: 
+
+.. math::
+    ZNCC(I, J) = \frac{E(IJ) - E(I)E(J)}{\sqrt{V(I) \, V(J)}}
+
+
 Mutual Information
 ------------------
 

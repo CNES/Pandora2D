@@ -72,5 +72,5 @@ Expert mode profiling section is composed of the following keys:
         }
         "output": {
             "path": "expert_mode_output"
-        },
+        }
     }
