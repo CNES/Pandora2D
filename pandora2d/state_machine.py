@@ -25,6 +25,7 @@ This module contains class associated to the pandora state machine
 
 import copy
 import logging
+from abc import ABC, abstractmethod
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Dict, List, Literal, Optional, TypedDict, Union
 
@@ -57,69 +58,143 @@ class MarginsProperties(TypedDict):
     margins: Annotated[List[int], '["left, "up", "right", "down"]']
 
 
-class CheckMachine(Machine):  # pylint:disable=too-many-instance-attributes
-    """State Machine that checks Pandora2d configuration."""
+class BaseMachine(Machine, ABC):
+    """Base model and state machine for pandora2d."""
 
-    _transitions_check = [
-        {
-            "trigger": "estimation",
-            "source": "begin",
-            "dest": "assumption",
-            "before": "estimation_check_conf",
-        },
-        {
-            "trigger": "matching_cost",
-            "source": "begin",
-            "dest": "cost_volumes",
-            "before": "matching_cost_check_conf",
-        },
-        {
-            "trigger": "matching_cost",
-            "source": "assumption",
-            "dest": "cost_volumes",
-            "before": "matching_cost_check_conf",
-        },
-        {
-            "trigger": "cost_volume_confidence",
-            "source": "cost_volumes",
-            "dest": "cost_volumes",
-            "before": "cost_volume_confidence_check_conf",
-        },
-        {
-            "trigger": "disparity",
-            "source": "cost_volumes",
-            "dest": "disparity_map",
-            "before": "disparity_check_conf",
-        },
-        {
-            "trigger": "refinement",
-            "source": "disparity_map",
-            "dest": "disparity_map",
-            "before": "refinement_check_conf",
-        },
-    ]
-
-    def __init__(self) -> None:
-        # Define available states
+    def __init__(self):
+        # For communication between matching_cost and refinement steps
         self.step: Union[List, None] = None
-        self.window_size: Union[int, None] = None
         self.pipeline_cfg: Dict = {"pipeline": {}}
+        self.window_size: Union[int, None] = None
         self.margins_img = GlobalMargins()
         self.margins_disp = GlobalMargins()
-        states_ = ["begin", "assumption", "cost_volumes", "disparity_map"]
 
-        # Initialize a machine without any transition
+        # Define available states
+        states = ["begin", "assumption", "cost_volumes", "disparity_map"]
+
+        transitions = [
+            {
+                "trigger": "estimation",
+                "source": "begin",
+                "dest": "assumption",
+                "before": "estimation_run",
+            },
+            {
+                "trigger": "matching_cost",
+                "source": "begin",
+                "dest": "cost_volumes",
+                "before": "matching_cost_run",
+            },
+            {
+                "trigger": "matching_cost",
+                "source": "assumption",
+                "dest": "cost_volumes",
+                "before": "matching_cost_run",
+            },
+            {
+                "trigger": "cost_volume_confidence",
+                "source": "cost_volumes",
+                "dest": "cost_volumes",
+                "before": "cost_volume_confidence_run",
+            },
+            {
+                "trigger": "disparity",
+                "source": "cost_volumes",
+                "dest": "disparity_map",
+                "before": "disparity_run",
+            },
+            {
+                "trigger": "refinement",
+                "source": "disparity_map",
+                "dest": "disparity_map",
+                "before": "refinement_run",
+            },
+        ]
+
+        # Initialize a machine
         Machine.__init__(
             self,
-            states=states_,
+            states=states,
             initial="begin",
-            transitions=None,
+            transitions=transitions,
             auto_transitions=False,
         )
 
-        self.add_transitions(self._transitions_check)
-
         logging.getLogger("transitions").setLevel(logging.WARNING)
+
+    @abstractmethod
+    def check_conf(self, cfg):
+        """
+        Check configuration and transitions
+
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :return:
+        """
+
+    @abstractmethod
+    def estimation_run(self, cfg, input_step):
+        """
+        Estimation's computation step.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+    @abstractmethod
+    def matching_cost_run(self, cfg, input_step):
+        """
+        Matching cost computation step.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+    @abstractmethod
+    def cost_volume_confidence_run(self, cfg, input_step):
+        """
+        Cost volume confidence's computation.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+    @abstractmethod
+    def disparity_run(self, cfg, input_step):
+        """
+        Disparity's computation.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+    @abstractmethod
+    def refinement_run(self, cfg, input_step):
+        """
+        Refinement's configuration.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+
+class CheckMachine(BaseMachine):
+    """State Machine that checks Pandora2d configuration."""
 
     def check_conf(self, cfg: Dict[str, dict]) -> None:
         """
@@ -133,12 +208,10 @@ class CheckMachine(Machine):  # pylint:disable=too-many-instance-attributes
             try:
                 self.trigger(input_step, cfg, input_step)
             except (MachineError, KeyError, AttributeError):
-                logging.error(
-                    "Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step
-                )
+                logging.error("Problem occurs during %s check. Be sure of your sequencement step", input_step)
                 raise
 
-    def estimation_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the estimation computation configuration
 
@@ -152,7 +225,7 @@ class CheckMachine(Machine):  # pylint:disable=too-many-instance-attributes
         estimation_ = estimation.AbstractEstimation(cfg["pipeline"][input_step])  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = estimation_.cfg
 
-    def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the matching cost computation configuration
 
@@ -172,7 +245,7 @@ class CheckMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.window_size = matching_cost.window_size
         self.margins_img.add_cumulative(input_step, matching_cost.margins)
 
-    def cost_volume_confidence_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def cost_volume_confidence_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the cost volume confidence computation configuration
 
@@ -190,7 +263,7 @@ class CheckMachine(Machine):  # pylint:disable=too-many-instance-attributes
         cost_volume_confidence = CostVolumeConfidence(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = cost_volume_confidence.cfg
 
-    def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def disparity_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the disparity computation configuration
 
@@ -205,7 +278,7 @@ class CheckMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
         self.margins_img.add_cumulative(input_step, disparity_.margins)
 
-    def refinement_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
         """
         Check the refinement configuration
 
@@ -224,36 +297,10 @@ class CheckMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.margins_img.add_cumulative(input_step, refinement_.margins)
 
 
-class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
+class Pandora2DMachine(BaseMachine):
     """
     Pandora2DMachine class to create and use a state machine
     """
-
-    _transitions_run = [
-        {"trigger": "estimation", "source": "begin", "dest": "assumption", "before": "estimation_run"},
-        {
-            "trigger": "matching_cost",
-            "source": "begin",
-            "dest": "cost_volumes",
-            "prepare": "matching_cost_prepare",
-            "before": "matching_cost_run",
-        },
-        {
-            "trigger": "matching_cost",
-            "source": "assumption",
-            "dest": "cost_volumes",
-            "prepare": "matching_cost_prepare",
-            "before": "matching_cost_run",
-        },
-        {
-            "trigger": "cost_volume_confidence",
-            "source": "cost_volumes",
-            "dest": "cost_volumes",
-            "before": "cost_volume_confidence_run",
-        },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_run"},
-        {"trigger": "refinement", "source": "disparity_map", "dest": "disparity_map", "before": "refinement_run"},
-    ]
 
     def __init__(
         self,
@@ -262,41 +309,22 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         Initialize Pandora2D Machine
 
         """
+        super().__init__()
+
+        for transition in self.get_transitions("matching_cost"):
+            transition.add_callback("prepare", self.matching_cost_prepare)
 
         # Left image
         self.left_img: Optional[xr.Dataset] = None
         # Right image
         self.right_img: Optional[xr.Dataset] = None
 
-        self.pipeline_cfg: Dict = {"pipeline": {}}
         self.completed_cfg: Dict = {}
         self.cost_volumes: xr.Dataset = xr.Dataset()
         self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
-        # For communication between matching_cost and refinement steps
-        self.step: list = None
-        self.window_size: int = None
-        self.margins_img = GlobalMargins()
-        self.margins_disp = GlobalMargins()
-
-        # Define available states
-        states_ = ["begin", "assumption", "cost_volumes", "disparity_map"]
-
         # Instance matching_cost
         self.matching_cost_: Union[BaseMatchingCost, None] = None
-
-        # Initialize a machine without any transition
-        Machine.__init__(
-            self,
-            states=states_,
-            initial="begin",
-            transitions=None,
-            auto_transitions=False,
-        )
-
-        self.add_transitions(self._transitions_run)
-
-        logging.getLogger("transitions").setLevel(logging.WARNING)
 
     def run_prepare(self, img_left: xr.Dataset, img_right: xr.Dataset, cfg: dict) -> None:
         """
