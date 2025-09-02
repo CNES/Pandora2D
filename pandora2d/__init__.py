@@ -20,24 +20,21 @@
 """
 This module contains functions to run Pandora pipeline.
 """
-
+from importlib.metadata import version
 from os import PathLike
 from pathlib import Path
 from typing import Dict, Union, cast
-from copy import copy
 
 import xarray as xr
-
-from pandora import read_config_file, setup_logging, import_plugin
+from pandora import import_plugin, read_config_file, setup_logging
 
 from pandora2d import common
 from pandora2d.check_configuration import check_conf, check_datasets
-from pandora2d.common import string_to_path, resolve_path_in_config
+from pandora2d.common import resolve_path_in_config
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing, remove_roi_margins
-from pandora2d.state_machine import Pandora2DMachine
-from pandora2d.profiling import generate_summary, expert_mode_config
-from pandora2d.margins import Margins, NullMargins
 from pandora2d.memory_estimation import segment_image_by_rows
+from pandora2d.profiling import expert_mode_config, generate_summary
+from pandora2d.state_machine import Pandora2DMachine
 
 
 def run(
@@ -203,6 +200,7 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     # Update output configuration with detailed margins
     completed_cfg["margins_disp"] = pandora2d_machine.margins_disp.to_dict()
     completed_cfg["margins"] = pandora2d_machine.margins_img.to_dict()
+    completed_cfg["info"] = {"version": version("pandora2d")}
     # save config
     common.save_config(completed_cfg)
 

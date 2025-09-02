@@ -28,6 +28,7 @@ This module contains the general function to run Pandora 2D pipeline.
 # pylint: disable=invalid-name
 
 import argparse
+from importlib.metadata import version
 from pathlib import Path
 
 import pandora2d
@@ -40,7 +41,11 @@ def get_parser():
     :return parser
     """
 
-    parser = argparse.ArgumentParser(description="Pandora 2D")
+    parser = argparse.ArgumentParser(
+        description="Image Registration framework that computes 2D displacement maps from a pair of images taken over"
+        " the same scene.",
+        epilog=f"%(prog)s {version('pandora2d')}",
+    )
     parser.add_argument(
         "config",
         type=Path,
@@ -48,6 +53,7 @@ def get_parser():
             algorithm parameters",
     )
     parser.add_argument("-v", "--verbose", help="Increase output verbosity", action="store_true")
+    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {version('pandora2d')}")
     return parser
 
 
