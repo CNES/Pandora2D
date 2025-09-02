@@ -30,6 +30,9 @@ import pytest
 from pandora2d import memory_estimation
 
 
+# pylint: disable=too-many-positional-arguments,invalid-name,too-many-arguments
+
+
 class TestSegmentMode:
     """
     Test execution of pandora2d pipelines with segment mode
@@ -38,6 +41,10 @@ class TestSegmentMode:
     @pytest.fixture()
     def step(self):
         return [1, 1]
+
+    @pytest.fixture()
+    def subpix(self):
+        return 2
 
     @pytest.fixture()
     def configuration(self, input_cfg, pipeline, request, tmp_path, step):
@@ -283,6 +290,117 @@ class TestSegmentMode:
 
         configuration["ROI"] = roi
         configuration_segment["ROI"] = roi
+
+        # Run basic configuration
+        path = run_pipeline(configuration)
+
+        row_map, col_map, correlation_score, validity, output_attributes, output_report, output_cfg = open_results(path)
+
+        # Run segment mode configuration
+        with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
+            path_segment = run_pipeline(configuration_segment)
+
+        (
+            row_map_segment,
+            col_map_segment,
+            correlation_score_segment,
+            validity_segment,
+            output_attributes_segment,
+            output_report_segment,
+            output_cfg_segment,
+        ) = open_results(path_segment)
+
+        np.testing.assert_array_equal(row_map, row_map_segment)
+        np.testing.assert_array_equal(col_map, col_map_segment)
+        np.testing.assert_array_equal(correlation_score, correlation_score_segment)
+        np.testing.assert_array_equal(validity, validity_segment)
+
+        # Delete segment_mode part of the configuration because this is the only part that must be
+        # different between the two dictionaries.
+        del output_cfg["segment_mode"]
+        del output_cfg_segment["segment_mode"]
+        assert output_attributes == output_attributes_segment
+        assert output_report == output_report_segment
+        assert output_cfg == output_cfg_segment
+        assert memory_tracer.current <= configuration_segment["segment_mode"]["memory_per_work"]
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc"])
+    @pytest.mark.parametrize("pipeline", ["correct_pipeline_with_step", "correct_pipeline_with_step_and_refinement"])
+    @pytest.mark.parametrize(
+        "input_cfg",
+        [
+            "correct_input_cfg",
+            "correct_input_with_left_mask",
+            "correct_input_with_left_right_mask",
+            "correct_input_with_right_mask",
+        ],
+    )
+    @pytest.mark.parametrize("step", [[2, 1], [390, 1], [6, 1], [1, 3]])
+    def test_segment_mode_with_step(
+        self,
+        open_results,
+        configuration,
+        configuration_segment,
+        MemoryTracer,
+        run_pipeline,
+        subpix,
+        matching_cost_method,
+    ):  # pylint: disable=unused-argument
+        """
+        Description: Check that pandora2d executions with and without segment modes and with a step give the same result
+        """
+
+        # Run basic configuration
+        path = run_pipeline(configuration)
+
+        row_map, col_map, correlation_score, validity, output_attributes, output_report, output_cfg = open_results(path)
+
+        # Run segment mode configuration
+        with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
+            path_segment = run_pipeline(configuration_segment)
+
+        (
+            row_map_segment,
+            col_map_segment,
+            correlation_score_segment,
+            validity_segment,
+            output_attributes_segment,
+            output_report_segment,
+            output_cfg_segment,
+        ) = open_results(path_segment)
+
+        np.testing.assert_array_equal(row_map, row_map_segment)
+        np.testing.assert_array_equal(col_map, col_map_segment)
+        np.testing.assert_array_equal(correlation_score, correlation_score_segment)
+        np.testing.assert_array_equal(validity, validity_segment)
+
+        # Delete segment_mode part of the configuration because this is the only part that must be
+        # different between the two dictionaries.
+        del output_cfg["segment_mode"]
+        del output_cfg_segment["segment_mode"]
+        assert output_attributes == output_attributes_segment
+        assert output_report == output_report_segment
+        assert output_cfg == output_cfg_segment
+        assert memory_tracer.current <= configuration_segment["segment_mode"]["memory_per_work"]
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc"])
+    @pytest.mark.parametrize("pipeline", ["correct_pipeline_with_step_and_refinement"])
+    @pytest.mark.parametrize("input_cfg", ["correct_input_with_left_right_mask"])
+    @pytest.mark.parametrize("step", [[100, 1]])
+    @pytest.mark.parametrize("memory_per_work", [7])
+    def test_segment_mode_with_oneline(
+        self,
+        open_results,
+        configuration,
+        configuration_segment,
+        MemoryTracer,
+        run_pipeline,
+        subpix,
+        matching_cost_method,
+    ):  # pylint: disable=unused-argument
+        """
+        Description: Check that pandora2d executions with and without segment modes and with a step give the same result
+        """
 
         # Run basic configuration
         path = run_pipeline(configuration)

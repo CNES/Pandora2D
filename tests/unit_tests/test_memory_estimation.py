@@ -740,14 +740,18 @@ class TestSegmentImageByRows:
         }
 
     @pytest.fixture
-    def config(self, tmp_path, input_config, segment_mode):
+    def step(self):
+        return [1, 1]
+
+    @pytest.fixture
+    def config(self, tmp_path, input_config, segment_mode, step):
         return {
             **input_config,
             "pipeline": {
                 "matching_cost": {
                     "matching_cost_method": "mutual_information",
                     "window_size": 5,
-                    "step": [1, 1],
+                    "step": step,
                     "subpix": 1,
                 },
                 "disparity": {
@@ -773,12 +777,13 @@ class TestSegmentImageByRows:
     def image_can_be_fully_reconstructed(self, image_size: Tuple[int, int]):
         """Helper that checks that the image can be fully reconstructed from an ROI list."""
 
-        def inner(rois):
+        def inner(rois, step):
             total_number_of_rows, total_number_of_columns = image_size
             row_sorted = sorted(rois, key=lambda roi: roi["row"]["first"])
             for first_roi, second_roi in zip(row_sorted[:-1], row_sorted[1:]):
                 assert second_roi["row"]["first"] == first_roi["row"]["last"] + 1, "ROIs should be continuous"
                 assert first_roi["col"] == second_roi["col"], "ROIs should be only on rows."
+                assert second_roi["row"]["first"] % step[0] == 0, "First row on ROI shoud be a multiple by step value"
             # Following asserts are relevant because we previously checked that all ROIs were contiguous:
             assert row_sorted[0]["row"]["first"] == 0, "ROI should start on the first row"
             assert row_sorted[-1]["row"]["last"] == total_number_of_rows - 1, "ROI should stop on the last row"
@@ -824,6 +829,7 @@ class TestSegmentImageByRows:
 
         assert len(result) == 0
 
+    @pytest.mark.parametrize("step", [[2, 1], [6, 1], [1, 3]])
     @pytest.mark.parametrize(
         ["image_size", "memory_per_work"],
         [
@@ -840,6 +846,7 @@ class TestSegmentImageByRows:
         image_can_be_fully_reconstructed,
         estimate_roi_memory_consumption,
         dataset_disp_map_size,
+        step,
     ):
         """There is enough memory per work to split image into segments."""
         result = memory_estimation.segment_image_by_rows(
@@ -848,7 +855,7 @@ class TestSegmentImageByRows:
 
         assert len(result) >= 2, "There should be at least 2 segments."
         assert all(check_roi_section({"ROI": cast(Dict, e)}).get("ROI") for e in result)
-        assert image_can_be_fully_reconstructed(result)
+        assert image_can_be_fully_reconstructed(result, step)
         assert all(
             (estimate_roi_memory_consumption(roi) + dataset_disp_map_size)
             < (1 - memory_estimation.RELATIVE_ESTIMATION_MARGIN) * memory_per_work
@@ -894,7 +901,7 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
         }
 
     @pytest.fixture
-    def config(self, input_roi, tmp_path, input_config, segment_mode):  # pylint: disable=arguments-differ
+    def config(self, input_roi, tmp_path, input_config, segment_mode, step):  # pylint: disable=arguments-differ
         return {
             **input_config,
             "ROI": input_roi,
@@ -902,7 +909,7 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
                 "matching_cost": {
                     "matching_cost_method": "mutual_information",
                     "window_size": 5,
-                    "step": [1, 1],
+                    "step": step,
                     "subpix": 1,
                 },
                 "disparity": {
@@ -928,11 +935,12 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
     def image_can_be_fully_reconstructed(self, input_roi):  # pylint: disable=arguments-renamed
         """Helper that checks that the image can be fully reconstructed from an ROI list."""
 
-        def inner(rois):
+        def inner(rois, step):
             row_sorted = sorted(rois, key=lambda roi: roi["row"]["first"])
             for first_roi, second_roi in zip(row_sorted[:-1], row_sorted[1:]):
                 assert second_roi["row"]["first"] == first_roi["row"]["last"] + 1, "ROIs should be continuous"
                 assert first_roi["col"] == second_roi["col"], "ROIs should be only on rows."
+                assert second_roi["row"]["first"] % step[0] == 0, "First row on ROI shoud be a multiple by step value"
             # Following asserts are relevant because we previously checked that all ROIs were contiguous:
             assert row_sorted[0]["row"]["first"] == input_roi["row"]["first"]
             assert row_sorted[-1]["row"]["last"] == input_roi["row"]["last"]
@@ -974,6 +982,7 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
         image_can_be_fully_reconstructed,
         estimate_roi_memory_consumption,
         dataset_disp_map_size,
+        step,
     ):
         """There is enough memory per work to split image into segments."""
         super().test_enough_memory(
@@ -983,6 +992,7 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
             image_can_be_fully_reconstructed,
             estimate_roi_memory_consumption,
             dataset_disp_map_size,
+            step,
         )
 
     # Add input_roi
