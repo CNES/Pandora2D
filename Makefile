@@ -115,6 +115,10 @@ test-plugin: install-plugin ## run plugins tests only
 
 ### Format with black
 
+.PHONY: reports_dir
+reports_dir:
+	mkdir -p reports
+
 .PHONY: format
 format: install format/black  ## run black formatting (depends install)
 
@@ -151,8 +155,8 @@ coverage-cpp: install  ## Gcovr (depends on gcovr in venv)
 	. ${PANDORA2D_VENV}/bin/activate; gcovr --sonarqube -r . -f pandora2d/interpolation_filter_cpp > gcovr-report.xml
 
 .PHONY: cppcheck
-cppcheck: ## C++ cppcheck for CI (depends cppcheck)
-	@cppcheck -v --enable=all --xml -Ipandora2d/interpolation_filter_cpp/*.build pandora2d/interpolation_filter_cpp 2> cppcheck-report.xml
+cppcheck: reports_dir ## C++ cppcheck for CI (depends cppcheck)
+	@. ${PANDORA2D_VENV}/bin/activate; meson compile cppcheck -C build/$(shell ls build)/ -v
 
 
 ## Documentation section
@@ -222,6 +226,7 @@ clean-test:
 	@rm -f .pymon
 	@rm -f tests/resource_tests/.pymon
 	@rm -f *-test-report.html
+	@rm -rf reports
 
 .PHONY: clean-doc
 clean-doc:
