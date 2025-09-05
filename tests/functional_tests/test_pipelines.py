@@ -24,11 +24,11 @@ Run pandora2d configurations from end to end.
 
 import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Dict
 
-import pytest
-
 import numpy as np
+import pytest
 import rasterio
 
 from pandora2d import Pandora2DMachine
@@ -120,9 +120,7 @@ class TestRemoveExtrakeys:
         ),
     ],
 )
-def test_monoband_with_nodata_not_nan(
-    run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, roi, tmp_path
-):
+def test_monoband_with_nodata_not_nan(run_pipeline, correct_input_cfg, correct_pipeline_without_refinement, roi):
     """
     Description : Test a configuration with monoband images.
     Data :
@@ -138,18 +136,19 @@ def test_monoband_with_nodata_not_nan(
     }
     configuration["input"]["left"]["nodata"] = -9999
 
-    run_pipeline(configuration)
+    input_config_dir = run_pipeline(configuration)
 
-    with open(tmp_path / "config.json", encoding="utf8") as output_file:
+    with open(input_config_dir / "relative" / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     result = remove_extra_keys(output_config, configuration)
+    result["output"]["path"] = str(Path(result["output"]["path"]).relative_to(input_config_dir))
 
     assert result == configuration
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
     # Test for report
-    with open(tmp_path / "relative" / "disparity_map" / "report.json", encoding="utf8") as report_file:
+    with open(input_config_dir / "relative" / "disparity_map" / "report.json", encoding="utf8") as report_file:
         report = json.load(report_file)
 
     assert report["statistics"]["disparity"].keys() == {"row", "col"}
@@ -164,11 +163,15 @@ def test_monoband_with_nan_nodata(run_pipeline, correct_input_cfg, correct_pipel
     - Right image : cones/monoband/right.png
     Requirement : EX_CONF_00, EX_CONF_06
     """
-    configuration = {**correct_input_cfg, **correct_pipeline_without_refinement, **{"output": {"path": str(tmp_path)}}}
+    configuration = {
+        **correct_input_cfg,
+        **correct_pipeline_without_refinement,
+        **{"output": {"path": str(tmp_path / "output")}},
+    }
 
     run_pipeline(configuration)
 
-    with open(tmp_path / "config.json", encoding="utf8") as output_file:
+    with open(tmp_path / "output" / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     result = remove_extra_keys(output_config, configuration)
@@ -189,12 +192,14 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
     configuration: Dict[str, Dict] = {
         **correct_multiband_input_cfg,
         **correct_pipeline_without_refinement,
-        **{"output": {"path": str(tmp_path)}},
+        **{"output": {"path": str(tmp_path / "output")}},
     }
 
     run_pipeline(configuration)
 
-    with open(tmp_path / "config.json", encoding="utf8") as output_file:
+    input_config_dir = run_pipeline(configuration)
+
+    with open(input_config_dir / "output" / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     result = remove_extra_keys(output_config, configuration)
@@ -214,13 +219,13 @@ def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pip
     configuration: Dict[str, Dict] = {
         **correct_input_cfg,
         **correct_pipeline_with_optical_flow,
-        **{"output": {"path": str(tmp_path)}},
+        **{"output": {"path": str(tmp_path / "output")}},
     }
     configuration["pipeline"]["refinement"]["iterations"] = 1
 
     run_pipeline(configuration)
 
-    with open(tmp_path / "config.json", encoding="utf8") as output_file:
+    with open(tmp_path / "output" / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     matching_cost_cfg = output_config["pipeline"]["matching_cost"]
@@ -238,11 +243,15 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
     """
     input_cfg = request.getfixturevalue(input_cfg)
 
-    configuration = {**input_cfg, **correct_pipeline_without_refinement, **{"output": {"path": str(tmp_path)}}}
+    configuration = {
+        **input_cfg,
+        **correct_pipeline_without_refinement,
+        **{"output": {"path": str(tmp_path / "output")}},
+    }
 
     run_pipeline(configuration)
 
-    with open(tmp_path / "config.json", encoding="utf8") as output_file:
+    with open(tmp_path / "output" / "config.json", encoding="utf8") as output_file:
         output_config = json.load(output_file)
 
     result = remove_extra_keys(output_config, configuration)
@@ -251,7 +260,7 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
     # Test for report
-    with open(tmp_path / "disparity_map" / "report.json", encoding="utf8") as report_file:
+    with open(tmp_path / "output" / "disparity_map" / "report.json", encoding="utf8") as report_file:
         report = json.load(report_file)
 
     assert report["statistics"]["disparity"].keys() == {"row", "col"}
