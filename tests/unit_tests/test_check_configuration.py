@@ -782,7 +782,7 @@ class TestCheckSegmentMode:
         """
         Description : Test if segment_mode section is missing
         """
-        with pytest.raises(MissKeyCheckerError, match="segment_mode"):
+        with pytest.raises(MissKeyCheckerError, match="input"):
             check_configuration.check_segment_mode_section({"input": {}})
 
     def test_nominal_case(self, correct_segment_mode) -> None:
@@ -825,3 +825,13 @@ class TestCheckSegmentMode:
         assert (
             check_configuration.check_segment_mode_section({}) == check_configuration.default_segment_mode_configuration
         )
+
+    @pytest.mark.parametrize("enable", [True, False])
+    def test_segment_mode_section_default(self, enable):
+        """
+        Description : Check that a section is returned specifying that the mode is false if it is not present in the
+        user configuration
+        """
+        result = check_configuration.check_segment_mode_section({"segment_mode": {"enable": enable}})
+
+        assert result["segment_mode"]["memory_per_work"] == 1000
