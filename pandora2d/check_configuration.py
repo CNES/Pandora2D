@@ -233,11 +233,9 @@ def check_segment_mode_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     :return: cfg: global configuration
     :rtype: cfg: dict
     """
-    if not user_cfg:
-        return update_conf(default_segment_mode_configuration, user_cfg)
 
-    # Add missing roi defaults values in user_cfg
-    cfg = update_conf({}, user_cfg)
+    # Add missing defaults values in user_cfg
+    cfg = update_conf(default_segment_mode_configuration, user_cfg)
 
     # check schema
     configuration_schema = {"segment_mode": segment_mode_configuration_schema}
@@ -507,7 +505,12 @@ default_short_configuration_input = {
     }
 }
 
-default_segment_mode_configuration = {"segment_mode": {"enable": False}}
+default_segment_mode_configuration = {
+    "segment_mode": {
+        "enable": False,
+        "memory_per_work": 1000,
+    },
+}
 
 segment_mode_configuration_schema = {
     "enable": bool,
