@@ -478,19 +478,29 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     return dataset
 
 
-def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
+def get_validity_dataset(criteria_dataarray: xr.DataArray, row_disparity: list, col_disparity: list) -> xr.Dataset:
     """
     Fill the validity dataset which contains an additional 'criteria' dimension.
 
     :param criteria_dataarray: criteria_dataarray used to create validity mask
     :type criteria_dataarray: xr.DataArray
+    :param row_disparity: user row disparity
+    :type row_disparity: list
+    :param col_disparity: user col disparity
+    :type col_disparity: list
     :return: validity Dataset
     :rtype: xr.Dataset
     """
 
     validity_dataset = allocate_validity_dataset(criteria_dataarray)
 
-    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(criteria_dataarray)
+    # subset with real user disparities
+    subset = criteria_dataarray.sel(
+        disp_row=slice(row_disparity[0], row_disparity[1]),  # Interval row_disparity for disp_row
+        disp_col=slice(col_disparity[0], col_disparity[1]),  # Interval col_disparity for disp_col
+    )
+
+    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(subset)
 
     # invalidating criteria do not depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities
