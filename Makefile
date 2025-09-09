@@ -34,6 +34,8 @@ ifeq ($(PYTHON_VERSION_OK), 0)
     $(error "Requires python version >= $(PYTHON_VERSION_MIN). Current version is $(PYTHON_VERSION_CUR)")
 endif
 
+# We can not get easily the build-dir that meson-python will use, so we build the name with the same code:
+CPP_BUILD_DIR=$(shell $(PYTHON) -c "import sys; interpreters = {'python': 'py', 'cpython': 'cp', 'pypy': 'pp', 'ironpython': 'ip', 'jython': 'jy'}; version = sys.version_info;name = sys.implementation.name; name = interpreters.get(name, name); print(f'build/{name}{version[0]}{version[1]}')")
 
 ################ MAKE targets by sections ######################
 
@@ -84,7 +86,7 @@ test-unit: install ## run unit tests only (for dev) + coverage (source venv befo
 .PHONY: test-unit-cpp
 test-unit-cpp: install ## run unit cpp tests only for dev
 	@echo "Run unit cpp tests"
-	. ${PANDORA2D_VENV}/bin/activate; meson test -C build/$(shell ls build)/ -v
+	. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
 
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
@@ -156,7 +158,7 @@ coverage-cpp: install  ## Gcovr (depends on gcovr in venv)
 
 .PHONY: cppcheck
 cppcheck: reports_dir ## C++ cppcheck for CI (depends cppcheck)
-	@. ${PANDORA2D_VENV}/bin/activate; meson compile cppcheck -C build/$(shell ls build)/ -v
+	@. ${PANDORA2D_VENV}/bin/activate; meson compile cppcheck -C "${CPP_BUILD_DIR}" -v
 
 
 ## Documentation section
@@ -196,6 +198,7 @@ clean-venv:
 clean-build:
 	@echo "+ $@"
 	@rm -fr build/
+	@rm -fr "${CPP_BUILD_DIR}"
 	@rm -fr .eggs/
 	@find . -name '*.egg-info' -exec rm -fr {} +
 	@find . -name '*.egg' -exec rm -f {} +
