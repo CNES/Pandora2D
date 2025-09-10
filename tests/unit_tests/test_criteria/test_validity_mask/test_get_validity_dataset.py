@@ -35,15 +35,23 @@ class TestGetValidityDataset:
     """Check get_validity_dataset behavior."""
 
     @pytest.fixture()
-    def criteria_dataarray(self):
+    def row_disp(self):
+        return [-1, 1]
+
+    @pytest.fixture()
+    def col_disp(self):
+        return [0, 1]
+
+    @pytest.fixture()
+    def criteria_dataarray(self, row_disp, col_disp):
         """An empty criteria_dataarray."""
         return xr.DataArray(
             data=np.zeros((3, 2, 3, 2), dtype=np.uint8),
             coords={
                 "row": np.arange(0, 3),
                 "col": np.arange(0, 2),
-                "disp_row": np.arange(-1, 2),
-                "disp_col": np.arange(0, 2),
+                "disp_row": np.arange(row_disp[0], row_disp[1] + 1),
+                "disp_col": np.arange(col_disp[0], col_disp[1] + 1),
             },
         )
 
@@ -51,17 +59,19 @@ class TestGetValidityDataset:
     def other_criteria_var(self, criteria_var):
         return choice(list(criteria.DISPARITY_DEPENDENT_CRITERIA - {criteria_var}))
 
-    def test_no_criteria(self, criteria_dataarray, criteria_var):
+    def test_no_criteria(self, criteria_dataarray, criteria_var, row_disp, col_disp):
         """validity_dataset should be full of zeros."""
-        result = criteria.get_validity_dataset(criteria_dataarray)
+        result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
         assert (result["validity"].sel(criteria="validity_mask") == 0).all()
         assert (result["validity"].sel(criteria=criteria_var.name) == 0).all()
 
-    def test_empty_even_with_other_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
+    def test_empty_even_with_other_criteria(
+        self, criteria_dataarray, criteria_var, other_criteria_var, row_disp, col_disp
+    ):
         """A criteria is not affected by presence of another one."""
         criteria_dataarray.loc[{"row": 2, "col": 1, "disp_row": -1, "disp_col": 1}] = np.uint8(other_criteria_var)
-        result = criteria.get_validity_dataset(criteria_dataarray)
+        result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
         assert result["validity"].sel(criteria="validity_mask", row=2, col=1) == 1
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
@@ -70,42 +80,44 @@ class TestGetValidityDataset:
     @pytest.mark.parametrize(
         "other_criteria_var", [pytest.param(c, id=c.name) for c in criteria.DISPARITY_INDEPENDENT_CRITERIA]
     )
-    def test_empty_even_with_invalidating_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
+    def test_empty_even_with_invalidating_criteria(
+        self, criteria_dataarray, criteria_var, other_criteria_var, row_disp, col_disp
+    ):
         """invalidating criteria fills the cost_surface and thus invalidates point."""
         criteria_dataarray.loc[{"row": 2, "col": 1}] = np.uint8(other_criteria_var)
-        result = criteria.get_validity_dataset(criteria_dataarray)
+        result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
         assert result["validity"].sel(criteria="validity_mask", row=2, col=1) == 2
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
         assert (result["validity"].sel(criteria=criteria_var.name) == 0).all()
 
-    def test_only_one_disparity(self, criteria_dataarray, criteria_var):
+    def test_only_one_disparity(self, criteria_dataarray, criteria_var, row_disp, col_disp):
         """Partial invalidity is raised when a Criteria is present for at least one disparity couple."""
         criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": 0, "disp_col": 0}] = np.uint8(criteria_var)
 
-        result = criteria.get_validity_dataset(criteria_dataarray)
+        result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 1
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
         assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
 
-    def test_multiple_disparities(self, criteria_dataarray, criteria_var):
+    def test_multiple_disparities(self, criteria_dataarray, criteria_var, row_disp, col_disp):
         """Having a Criteria on multiple disparities does not change the result."""
         criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": [0, 1], "disp_col": 0}] = np.uint8(criteria_var)
 
-        result = criteria.get_validity_dataset(criteria_dataarray)
+        result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 1
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
         assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
 
-    def test_multiple_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
+    def test_multiple_criteria(self, criteria_dataarray, criteria_var, other_criteria_var, row_disp, col_disp):
         """Having multiple Criteria on multiple disparities does not change the result."""
         criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": [0, 1], "disp_col": 0}] = np.uint8(
             criteria_var | other_criteria_var
         )
 
-        result = criteria.get_validity_dataset(criteria_dataarray)
+        result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 1
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 1) == 1
@@ -115,25 +127,27 @@ class TestGetValidityDataset:
     @pytest.mark.parametrize(
         "other_criteria_var", [pytest.param(c, id=c.name) for c in criteria.DISPARITY_INDEPENDENT_CRITERIA]
     )
-    def test_combined_with_invalidating_criteria(self, criteria_dataarray, criteria_var, other_criteria_var):
+    def test_combined_with_invalidating_criteria(
+        self, criteria_dataarray, criteria_var, other_criteria_var, row_disp, col_disp
+    ):
         """invalidating criteria fills the cost_surface and thus invalidates point."""
         criteria_dataarray.loc[{"row": 1, "col": 0}] = np.uint8(other_criteria_var)
         criteria_dataarray.loc[{"row": 1, "col": 0, "disp_row": [0, 1], "disp_col": 0}] = np.uint8(
             criteria_var | other_criteria_var
         )
 
-        result = criteria.get_validity_dataset(criteria_dataarray)
+        result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 2
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
         assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
         assert result["validity"].sel(criteria=other_criteria_var.name, row=1, col=0) == 1
 
-    def test_invalidating(self, criteria_dataarray, criteria_var):
+    def test_invalidating(self, criteria_dataarray, criteria_var, row_disp, col_disp):
         """When all disparities of a point have a Criteria, the point is invalid."""
         criteria_dataarray.loc[{"row": 1, "col": 0}] = np.uint8(criteria_var)
 
-        result = criteria.get_validity_dataset(criteria_dataarray)
+        result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
         assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 2
         assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1

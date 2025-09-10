@@ -644,7 +644,7 @@ def test_validity_mask(make_cost_volumes, expected):
         - left and right masks
     """
 
-    cost_volumes = make_cost_volumes(Margins(0, 0, 0, 0))
+    cost_volumes = make_cost_volumes()
 
     # subset with real user disparities
     subset = cost_volumes["criteria"].sel(
@@ -823,7 +823,7 @@ def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, re
         - refinement method (margins added to cost_volume)
     """
 
-    cost_volumes_without_margins = make_cost_volumes(Margins(0, 0, 0, 0))
+    cost_volumes_without_margins = make_cost_volumes()
 
     # subset with real user disparities
     row_disparity = cost_volumes_without_margins.attrs["row_disparity_source"]

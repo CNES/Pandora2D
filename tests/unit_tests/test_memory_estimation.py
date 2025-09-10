@@ -694,7 +694,11 @@ class TestDatasetDispMap:
         cost_volumes = matching_cost.cost_volumes
 
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
-            dataset_validity = criteria.get_validity_dataset(cost_volumes["criteria"])
+            dataset_validity = criteria.get_validity_dataset(
+                cost_volumes["criteria"],
+                cost_volumes.attrs["row_disparity_source"],
+                cost_volumes.attrs["col_disparity_source"],
+            )
             dataset_disp_maps = common.dataset_disp_maps(
                 cost_volumes.cost_volumes.coords,
                 dataset_validity,

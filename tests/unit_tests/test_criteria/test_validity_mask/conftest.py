@@ -29,6 +29,7 @@ import xarray as xr
 
 from pandora2d import matching_cost
 from pandora2d.img_tools import add_disparity_grid
+from pandora2d.margins import Margins
 
 
 @pytest.fixture()
@@ -70,7 +71,7 @@ def make_cost_volumes(make_image, request):
     Instantiate a matching_cost and compute cost_volumes
     """
 
-    def _make_cost_volumes(refinement_margins):
+    def _make_cost_volumes(refinement_margins=Margins(0, 0, 0, 0)):
         cfg = {
             "pipeline": {
                 "matching_cost": {
