@@ -25,15 +25,15 @@ from typing import Dict
 
 # pylint: disable=redefined-outer-name, protected-access, unused-argument
 # mypy: disable-error-code=attr-defined
-
 import numpy as np
 import pytest
 import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
-from pandora2d.margins import Margins
-from pandora2d import refinement, common, matching_cost, disparity, criteria
-from pandora2d.refinement.optical_flow import OpticalFlow
+
+from pandora2d import common, criteria, disparity, matching_cost, refinement
 from pandora2d.img_tools import add_disparity_grid
+from pandora2d.margins import Margins
+from pandora2d.refinement.optical_flow import OpticalFlow
 
 
 @pytest.fixture()

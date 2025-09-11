@@ -23,15 +23,15 @@ This module contains functions associated to the matching cost computation step.
 
 import copy
 from typing import Dict, List, Union
-from json_checker import And
 
 import numpy as np
 import xarray as xr
+from json_checker import And
 from pandora import matching_cost
 from pandora.margins import Margins as PandoraMargins
-from pandora2d.margins import Margins
 
 from pandora2d import img_tools
+from pandora2d.margins import Margins
 
 from .base import BaseMatchingCost
 

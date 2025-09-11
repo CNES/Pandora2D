@@ -30,12 +30,11 @@ import json
 from importlib.metadata import version
 
 import pytest
-
 from transitions.core import MachineError
 
-from pandora2d.margins import Margins
 from pandora2d import state_machine
 from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.margins import Margins
 
 
 class TestPandora2D:

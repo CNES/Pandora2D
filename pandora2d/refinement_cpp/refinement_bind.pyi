@@ -20,6 +20,7 @@
 # pylint: skip-file
 import numpy as np
 from numpy.typing import NDArray
+
 from ..interpolation_filter_cpp.interpolation_filter_bind import AbstractFilter
 
 def compute_dichotomy_float(

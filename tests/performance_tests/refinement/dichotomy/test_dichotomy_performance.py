@@ -24,9 +24,8 @@ Test the refinement.dichotomy pipeline.
 from pathlib import Path
 from typing import Tuple
 
-import pytest
-
 import numpy as np
+import pytest
 import rasterio
 
 

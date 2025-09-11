@@ -22,8 +22,8 @@ This file contains unit tests associated to the pandora2d memory estimation
 
 # pylint: disable=redefined-outer-name,too-few-public-methods,invalid-name,too-many-lines
 
-from typing import Dict, Tuple, cast
 from copy import deepcopy
+from typing import Dict, Tuple, cast
 
 import numpy as np
 import pandora

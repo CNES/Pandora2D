@@ -20,10 +20,10 @@
 
 # pylint: disable=redefined-outer-name
 
-import rasterio
-import xarray as xr
 import numpy as np
 import pytest
+import rasterio
+import xarray as xr
 from pandora.common import write_data_array
 
 

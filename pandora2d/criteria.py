@@ -21,9 +21,10 @@ This module contains functions associated to the validity mask and criteria data
 """
 import itertools
 from enum import IntFlag
-from typing import Union, Type, Tuple
-import xarray as xr
+from typing import Tuple, Type, Union
+
 import numpy as np
+import xarray as xr
 from numpy.typing import ArrayLike, DTypeLike, NDArray
 from scipy.ndimage import binary_dilation
 

@@ -19,12 +19,12 @@
 """Memory estimation tests."""
 
 import json
-from typing import List
 from copy import deepcopy
+from typing import List
 
 import numpy as np
-import rasterio
 import pytest
+import rasterio
 
 from pandora2d import Pandora2DMachine, memory_estimation
 from pandora2d.check_configuration import check_conf

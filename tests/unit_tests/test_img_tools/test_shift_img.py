@@ -24,10 +24,9 @@ Test image shift methods
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 
+import numpy as np
 import pytest
 import xarray as xr
-import numpy as np
-
 
 from pandora2d import img_tools
 

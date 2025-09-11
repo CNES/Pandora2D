@@ -23,12 +23,13 @@ Test check_conf method from Matching cost
 """
 
 import importlib.util
+
 import json_checker
 import pytest
 from pandora.matching_cost import AbstractMatchingCost
-from pandora2d.margins import Margins
 
 from pandora2d import matching_cost
+from pandora2d.margins import Margins
 
 # pylint: disable=redefined-outer-name
 

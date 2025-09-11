@@ -23,11 +23,8 @@ from pathlib import Path
 
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
-
 import pytest
 import rasterio
-
-from pandora.common import write_data_array
 
 
 @pytest.mark.parametrize(

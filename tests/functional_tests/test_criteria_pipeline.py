@@ -22,15 +22,15 @@ Test that criteria datarray and validity mask are correct on different pandora2d
 # pylint: disable=too-many-lines
 # pylint: disable=redefined-outer-name
 
-import pytest
 import numpy as np
+import pytest
 import rasterio
 
+from pandora2d import run
+from pandora2d.check_configuration import check_conf
 from pandora2d.constants import Criteria
 from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d.state_machine import Pandora2DMachine
-from pandora2d import run
-from pandora2d.check_configuration import check_conf
 
 
 @pytest.fixture()

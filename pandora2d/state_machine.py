@@ -25,14 +25,21 @@ This module contains class associated to the pandora state machine
 
 import copy
 import logging
+from abc import ABC, abstractmethod
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Dict, List, Literal, Optional, TypedDict, Union
 
 import xarray as xr
+from pandora.margins import GlobalMargins
+from transitions import MachineError
 from typing_extensions import Annotated
 
-try:
-    import graphviz  # pylint: disable=unused-import
+from pandora2d import common, criteria, disparity, estimation, img_tools, refinement
+from pandora2d.cost_volume_confidence import CostVolumeConfidenceRegistry
+from pandora2d.matching_cost import BaseMatchingCost, MatchingCostRegistry
+from pandora2d.profiling import mem_time_profile
 
+if find_spec("graphviz") is not None:
     # In order de avoid this message from Mypy:
     # Incompatible import of "Machine" \
     # (imported name has type "type[Machine]", local name has type "type[GraphMachine]")
@@ -40,16 +47,8 @@ try:
         from transitions import Machine
     else:  # But we actually do this:
         from transitions.extensions import GraphMachine as Machine
-except ImportError:
+else:
     from transitions import Machine
-
-from transitions import MachineError
-from pandora.margins import GlobalMargins
-
-from pandora2d import common, disparity, estimation, img_tools, refinement, criteria
-from pandora2d.matching_cost import MatchingCostRegistry, BaseMatchingCost
-from pandora2d.cost_volume_confidence import CostVolumeConfidenceRegistry
-from pandora2d.profiling import mem_time_profile
 
 
 class MarginsProperties(TypedDict):
@@ -59,60 +58,249 @@ class MarginsProperties(TypedDict):
     margins: Annotated[List[int], '["left, "up", "right", "down"]']
 
 
-class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
+class BaseMachine(Machine, ABC):
+    """Base model and state machine for pandora2d."""
+
+    def __init__(self):
+        # For communication between matching_cost and refinement steps
+        self.step: Union[List, None] = None
+        self.pipeline_cfg: Dict = {"pipeline": {}}
+        self.window_size: Union[int, None] = None
+        self.margins_img = GlobalMargins()
+        self.margins_disp = GlobalMargins()
+
+        # Define available states
+        states = ["begin", "assumption", "cost_volumes", "disparity_map"]
+
+        transitions = [
+            {
+                "trigger": "estimation",
+                "source": "begin",
+                "dest": "assumption",
+                "before": "estimation_run",
+            },
+            {
+                "trigger": "matching_cost",
+                "source": "begin",
+                "dest": "cost_volumes",
+                "before": "matching_cost_run",
+            },
+            {
+                "trigger": "matching_cost",
+                "source": "assumption",
+                "dest": "cost_volumes",
+                "before": "matching_cost_run",
+            },
+            {
+                "trigger": "cost_volume_confidence",
+                "source": "cost_volumes",
+                "dest": "cost_volumes",
+                "before": "cost_volume_confidence_run",
+            },
+            {
+                "trigger": "disparity",
+                "source": "cost_volumes",
+                "dest": "disparity_map",
+                "before": "disparity_run",
+            },
+            {
+                "trigger": "refinement",
+                "source": "disparity_map",
+                "dest": "disparity_map",
+                "before": "refinement_run",
+            },
+        ]
+
+        # Initialize a machine
+        Machine.__init__(
+            self,
+            states=states,
+            initial="begin",
+            transitions=transitions,
+            auto_transitions=False,
+        )
+
+        logging.getLogger("transitions").setLevel(logging.WARNING)
+
+    @abstractmethod
+    def check_conf(self, cfg):
+        """
+        Check configuration and transitions
+
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :return:
+        """
+
+    @abstractmethod
+    def estimation_run(self, cfg, input_step):
+        """
+        Estimation's computation step.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+    @abstractmethod
+    def matching_cost_run(self, cfg, input_step):
+        """
+        Matching cost computation step.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+    @abstractmethod
+    def cost_volume_confidence_run(self, cfg, input_step):
+        """
+        Cost volume confidence's computation.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+    @abstractmethod
+    def disparity_run(self, cfg, input_step):
+        """
+        Disparity's computation.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+    @abstractmethod
+    def refinement_run(self, cfg, input_step):
+        """
+        Refinement's configuration.
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+
+class CheckMachine(BaseMachine):
+    """State Machine that checks Pandora2d configuration."""
+
+    def check_conf(self, cfg: Dict[str, dict]) -> None:
+        """
+        Check configuration and transitions
+
+        :param cfg: pipeline configuration
+        :type  cfg: dict
+        :return:
+        """
+        for input_step in list(cfg["pipeline"]):
+            try:
+                self.trigger(input_step, cfg, input_step)
+            except (MachineError, KeyError, AttributeError):
+                logging.error("Problem occurs during %s check. Be sure of your sequencement step", input_step)
+                raise
+
+    def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the estimation computation configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        estimation_ = estimation.AbstractEstimation(cfg["pipeline"][input_step])  # type: ignore[abstract]
+        self.pipeline_cfg["pipeline"][input_step] = estimation_.cfg
+
+    def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the matching cost computation configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        MatchingCost = MatchingCostRegistry.get(  # pylint:disable=invalid-name # NOSONAR
+            cfg["pipeline"][input_step]["matching_cost_method"]
+        )
+        matching_cost = MatchingCost(cfg["pipeline"][input_step])
+        self.pipeline_cfg["pipeline"][input_step] = matching_cost.cfg
+        self.step = matching_cost.step
+        self.window_size = matching_cost.window_size
+        self.margins_img.add_cumulative(input_step, matching_cost.margins)
+
+    def cost_volume_confidence_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the cost volume confidence computation configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        CostVolumeConfidence = CostVolumeConfidenceRegistry.get(  # pylint:disable=invalid-name # NOSONAR
+            cfg["pipeline"][input_step]["confidence_method"]
+        )
+
+        cost_volume_confidence = CostVolumeConfidence(cfg["pipeline"][input_step])
+        self.pipeline_cfg["pipeline"][input_step] = cost_volume_confidence.cfg
+
+    def disparity_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the disparity computation configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        disparity_ = disparity.Disparity(cfg["pipeline"][input_step])
+        self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
+        self.margins_img.add_cumulative(input_step, disparity_.margins)
+
+    def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+        """
+        Check the refinement configuration
+
+        :param cfg: configuration
+        :type cfg: dict
+        :param input_step: current step
+        :type input_step: string
+        :return: None
+        """
+
+        refinement_ = refinement.AbstractRefinement(
+            cfg["pipeline"][input_step], self.step, self.window_size
+        )  # type: ignore[abstract]
+        self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
+        self.margins_disp.add_non_cumulative(input_step, refinement_.margins)
+        self.margins_img.add_cumulative(input_step, refinement_.margins)
+
+
+class Pandora2DMachine(BaseMachine):
     """
     Pandora2DMachine class to create and use a state machine
     """
-
-    _transitions_run = [
-        {"trigger": "estimation", "source": "begin", "dest": "assumption", "before": "estimation_run"},
-        {
-            "trigger": "matching_cost",
-            "source": "begin",
-            "dest": "cost_volumes",
-            "prepare": "matching_cost_prepare",
-            "before": "matching_cost_run",
-        },
-        {
-            "trigger": "matching_cost",
-            "source": "assumption",
-            "dest": "cost_volumes",
-            "prepare": "matching_cost_prepare",
-            "before": "matching_cost_run",
-        },
-        {
-            "trigger": "cost_volume_confidence",
-            "source": "cost_volumes",
-            "dest": "cost_volumes",
-            "before": "cost_volume_confidence_run",
-        },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_run"},
-        {"trigger": "refinement", "source": "disparity_map", "dest": "disparity_map", "before": "refinement_run"},
-    ]
-
-    _transitions_check = [
-        {"trigger": "estimation", "source": "begin", "dest": "assumption", "before": "estimation_check_conf"},
-        {"trigger": "matching_cost", "source": "begin", "dest": "cost_volumes", "before": "matching_cost_check_conf"},
-        {
-            "trigger": "matching_cost",
-            "source": "assumption",
-            "dest": "cost_volumes",
-            "before": "matching_cost_check_conf",
-        },
-        {
-            "trigger": "cost_volume_confidence",
-            "source": "cost_volumes",
-            "dest": "cost_volumes",
-            "before": "cost_volume_confidence_check_conf",
-        },
-        {"trigger": "disparity", "source": "cost_volumes", "dest": "disparity_map", "before": "disparity_check_conf"},
-        {
-            "trigger": "refinement",
-            "source": "disparity_map",
-            "dest": "disparity_map",
-            "before": "refinement_check_conf",
-        },
-    ]
 
     def __init__(
         self,
@@ -121,39 +309,22 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         Initialize Pandora2D Machine
 
         """
+        super().__init__()
+
+        for transition in self.get_transitions("matching_cost"):
+            transition.add_callback("prepare", self.matching_cost_prepare)
 
         # Left image
         self.left_img: Optional[xr.Dataset] = None
         # Right image
         self.right_img: Optional[xr.Dataset] = None
 
-        self.pipeline_cfg: Dict = {"pipeline": {}}
         self.completed_cfg: Dict = {}
         self.cost_volumes: xr.Dataset = xr.Dataset()
         self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
-        # For communication between matching_cost and refinement steps
-        self.step: list = None
-        self.window_size: int = None
-        self.margins_img = GlobalMargins()
-        self.margins_disp = GlobalMargins()
-
-        # Define available states
-        states_ = ["begin", "assumption", "cost_volumes", "disparity_map"]
-
         # Instance matching_cost
         self.matching_cost_: Union[BaseMatchingCost, None] = None
-
-        # Initialize a machine without any transition
-        Machine.__init__(
-            self,
-            states=states_,
-            initial="begin",
-            transitions=None,
-            auto_transitions=False,
-        )
-
-        logging.getLogger("transitions").setLevel(logging.WARNING)
 
     def run_prepare(self, img_left: xr.Dataset, img_right: xr.Dataset, cfg: dict) -> None:
         """
@@ -176,8 +347,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         self.left_img = img_left
         self.right_img = img_right
         self.completed_cfg = copy.copy(cfg)
-
-        self.add_transitions(self._transitions_run)
 
     def run(self, input_step: str, cfg: Dict[str, dict]) -> None:
         """
@@ -204,7 +373,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
 
         :return: None
         """
-        self.remove_transitions(self._transitions_run)  # type: ignore
         self.set_state("begin")
 
     def check_conf(self, cfg: Dict[str, dict]) -> None:
@@ -216,20 +384,13 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
         :return:
         """
 
-        # Add transitions to the empty machine.
-        self.add_transitions(self._transitions_check)
-
-        for input_step in list(cfg["pipeline"]):
-            try:
-                self.trigger(input_step, cfg, input_step)
-            except (MachineError, KeyError, AttributeError):
-                logging.error(
-                    "Problem occurs during Pandora2D running %s. Be sure of your sequencement step", input_step
-                )
-                raise
-
-        # Remove transitions
-        self.remove_transitions(self._transitions_check)  # type: ignore
+        check_machine = CheckMachine()
+        check_machine.check_conf(cfg)
+        self.step = copy.deepcopy(check_machine.step)
+        self.window_size = check_machine.window_size
+        self.pipeline_cfg = copy.deepcopy(check_machine.pipeline_cfg)
+        self.margins_img = copy.deepcopy(check_machine.margins_img)
+        self.margins_disp = copy.deepcopy(check_machine.margins_disp)
 
         # Coming back to the initial state
         self.set_state("begin")
@@ -250,91 +411,6 @@ class Pandora2DMachine(Machine):  # pylint:disable=too-many-instance-attributes
             if trans["trigger"] not in deleted_triggers:  # type: ignore
                 self.remove_transition(trans["trigger"])  # type: ignore
                 deleted_triggers.append(trans["trigger"])  # type: ignore
-
-    def estimation_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
-        """
-        Check the estimation computation configuration
-
-        :param cfg: configuration
-        :type cfg: dict
-        :param input_step: current step
-        :type input_step: string
-        :return: None
-        """
-
-        estimation_ = estimation.AbstractEstimation(cfg["pipeline"][input_step])  # type: ignore[abstract]
-        self.pipeline_cfg["pipeline"][input_step] = estimation_.cfg
-
-    def matching_cost_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
-        """
-        Check the matching cost computation configuration
-
-        :param cfg: configuration
-        :type cfg: dict
-        :param input_step: current step
-        :type input_step: string
-        :return: None
-        """
-
-        MatchingCost = MatchingCostRegistry.get(  # pylint:disable=invalid-name # NOSONAR
-            cfg["pipeline"][input_step]["matching_cost_method"]
-        )
-        matching_cost = MatchingCost(cfg["pipeline"][input_step])
-        self.pipeline_cfg["pipeline"][input_step] = matching_cost.cfg
-        self.step = matching_cost.step
-        self.window_size = matching_cost.window_size
-        self.margins_img.add_cumulative(input_step, matching_cost.margins)
-
-    def cost_volume_confidence_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
-        """
-        Check the cost volume confidence computation configuration
-
-        :param cfg: configuration
-        :type cfg: dict
-        :param input_step: current step
-        :type input_step: string
-        :return: None
-        """
-
-        CostVolumeConfidence = CostVolumeConfidenceRegistry.get(  # pylint:disable=invalid-name # NOSONAR
-            cfg["pipeline"][input_step]["confidence_method"]
-        )
-
-        cost_volume_confidence = CostVolumeConfidence(cfg["pipeline"][input_step])
-        self.pipeline_cfg["pipeline"][input_step] = cost_volume_confidence.cfg
-
-    def disparity_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
-        """
-        Check the disparity computation configuration
-
-        :param cfg: configuration
-        :type cfg: dict
-        :param input_step: current step
-        :type input_step: string
-        :return: None
-        """
-
-        disparity_ = disparity.Disparity(cfg["pipeline"][input_step])
-        self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
-        self.margins_img.add_cumulative(input_step, disparity_.margins)
-
-    def refinement_check_conf(self, cfg: Dict[str, dict], input_step: str) -> None:
-        """
-        Check the refinement configuration
-
-        :param cfg: configuration
-        :type cfg: dict
-        :param input_step: current step
-        :type input_step: string
-        :return: None
-        """
-
-        refinement_ = refinement.AbstractRefinement(
-            cfg["pipeline"][input_step], self.step, self.window_size
-        )  # type: ignore[abstract]
-        self.pipeline_cfg["pipeline"][input_step] = refinement_.cfg
-        self.margins_disp.add_non_cumulative(input_step, refinement_.margins)
-        self.margins_img.add_cumulative(input_step, refinement_.margins)
 
     def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
         """

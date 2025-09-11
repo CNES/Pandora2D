@@ -25,9 +25,10 @@ Test Matching cost class
 
 # pylint: disable=redefined-outer-name
 
+import json_checker
 import numpy as np
 import pytest
-import json_checker
+
 from pandora2d import estimation
 
 

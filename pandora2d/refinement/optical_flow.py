@@ -22,16 +22,17 @@
 This module contains functions associated to the optical flow method used in the refinement step.
 """
 
-from typing import Dict, Tuple, List
+from typing import Dict, List, Tuple
 
 import numpy as np
 import xarray as xr
 from json_checker import And
 from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
-from pandora2d.margins import Margins
 
 import pandora2d.schema as cst_schema
+from pandora2d.margins import Margins
+
 from . import refinement
 
 

@@ -24,8 +24,8 @@ import json
 from copy import deepcopy
 from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 import rasterio
 
 import pandora2d
