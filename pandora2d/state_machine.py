@@ -39,16 +39,20 @@ from pandora2d.cost_volume_confidence import CostVolumeConfidenceRegistry
 from pandora2d.matching_cost import BaseMatchingCost, MatchingCostRegistry
 from pandora2d.profiling import mem_time_profile
 
-if find_spec("graphviz") is not None:
-    # In order de avoid this message from Mypy:
+if find_spec("graphviz") is None or TYPE_CHECKING:
+    # Condition on TYPE_CHECKING is here to make Mypy believe we always import Machine in order de avoid this message
+    # from Mypy:
     # Incompatible import of "Machine" \
     # (imported name has type "type[Machine]", local name has type "type[GraphMachine]")
-    if TYPE_CHECKING:  # Mypy sees this:
-        from transitions import Machine
-    else:  # But we actually do this:
-        from transitions.extensions import GraphMachine as Machine
+    from transitions import Machine  # pylint: disable=ungrouped-imports
 else:
-    from transitions import Machine
+    from transitions.extensions import GraphMachine
+
+    class Machine(GraphMachine):
+        """A GraphMachine which defaults to graphviz engine."""
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs, graph_engine="graphviz")
 
 
 class MarginsProperties(TypedDict):
