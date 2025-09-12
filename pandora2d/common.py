@@ -411,7 +411,13 @@ def resolve_path_in_config(config: Dict, config_path: Path) -> Dict:
     relative_to = config_path.parent
     result["input"]["left"]["img"] = str(string_to_path(config["input"]["left"]["img"], relative_to))
     result["input"]["right"]["img"] = str(string_to_path(config["input"]["right"]["img"], relative_to))
-    if not "estimation" in result["pipeline"]:
+
+    if left_mask := config["input"]["left"].get("mask"):
+        result["input"]["left"]["mask"] = str(string_to_path(left_mask, relative_to))
+    if right_mask := config["input"]["right"].get("mask"):
+        result["input"]["right"]["mask"] = str(string_to_path(right_mask, relative_to))
+
+    if "estimation" not in result["pipeline"]:
         col_disparity_init = config["input"]["col_disparity"]["init"]
         if isinstance(col_disparity_init, str):
             result["input"]["col_disparity"]["init"] = str(string_to_path(col_disparity_init, relative_to))

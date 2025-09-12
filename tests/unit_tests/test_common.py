@@ -669,9 +669,11 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
         "input": {
             "left": {
                 "img": "./data/left.tif",
+                "mask": "./left_mask.tif",
             },
             "right": {
                 "img": "./right.tif",
+                "mask": "./data/right_mask.tif",
             },
             "col_disparity": {
                 "init": col_disparity,
@@ -692,9 +694,11 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
         "input": {
             "left": {
                 "img": str(Path("/home/dir/data/left.tif").resolve()),
+                "mask": str(Path("/home/dir/left_mask.tif").resolve()),
             },
             "right": {
                 "img": str(Path("/home/dir/right.tif").resolve()),
+                "mask": str(Path("/home/dir/data/right_mask.tif").resolve()),
             },
             "col_disparity": {
                 "init": (
