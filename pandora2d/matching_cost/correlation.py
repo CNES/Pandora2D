@@ -70,7 +70,7 @@ class CorrelationMethods(BaseMatchingCost):
         :type img_right: xr.Dataset
         :return: None
         """
-        self.shifted_right_images = shift_subpix_img_2d(img_right, self._subpix)
+        self.shifted_right_images = shift_subpix_img_2d(img_right, self._subpix, order=self._spline_order)
 
     def compute_cost_volumes(
         self,
