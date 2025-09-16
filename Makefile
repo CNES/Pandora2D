@@ -86,7 +86,7 @@ test-unit: install ## run unit tests only (for dev) + coverage (source venv befo
 .PHONY: test-unit-cpp
 test-unit-cpp: install ## run unit cpp tests only for dev
 	@echo "Run unit cpp tests"
-	. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
+	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
 
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
@@ -153,8 +153,18 @@ lint/pylint: ## check linting with pylint
 ## Check cpp code quality
 
 .PHONY: coverage-cpp 
-coverage-cpp: install  ## Gcovr (depends on gcovr in venv)
-	. ${PANDORA2D_VENV}/bin/activate; gcovr --sonarqube -r . -f pandora2d/interpolation_filter_cpp > gcovr-report.xml
+coverage-cpp: reports_dir ## Gcovr (depends on gcovr in venv)
+	@# We need to configure with coverage in order to make the ninja coverage
+	@# target available and execute tests compiled with coverage info needed by
+	@# gcovr.
+	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=true > /dev/null
+	@# Before running coverage, we need to run tests:
+	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
+	@# We call ninja direclty because the meson wrapper arround ninja does not detect the target:
+	@. ${PANDORA2D_VENV}/bin/activate; ninja coverage-xml -C "${CPP_BUILD_DIR}"
+	@cp "${CPP_BUILD_DIR}/meson-logs/coverage.xml" reports/gcovr-report.xml
+	@# Coverage makes execution slow so we unset this option
+	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=false > /dev/null
 
 .PHONY: cppcheck
 cppcheck: reports_dir ## C++ cppcheck for CI (depends cppcheck)
