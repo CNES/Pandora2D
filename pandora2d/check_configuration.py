@@ -25,6 +25,7 @@ This module contains functions allowing to check the configuration given to Pand
 
 from __future__ import annotations
 
+import logging
 from typing import Dict
 
 import numpy as np
@@ -304,7 +305,31 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
 
     checker.validate(pipeline_cfg)
 
+    if "refinement" in pipeline_cfg["pipeline"]:
+        check_subpix_value_with_dichotomy(
+            pipeline_cfg["pipeline"]["refinement"]["refinement_method"],
+            pipeline_cfg["pipeline"]["matching_cost"]["subpix"],
+        )
+
     return pipeline_cfg
+
+
+def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> None:
+    """
+    Check if we have a subpix value of 1 with a dichotomy refinement method,
+    in which case we return a warning to prevent aliasing.
+
+    :param refinement_method: refinement method in user configuration
+    :type refinement_method: str
+    :param subpix: subpix value in user configuration
+    :type subpix: int
+    """
+
+    if (refinement_method in ("dichotomy", "dichotomy_python")) and (subpix == 1):
+        logging.warning(
+            "To avoid aliasing, it is strongly recommended to set the subpix parameter of the matching cost step"
+            " to a value greater than 1 when using dichotomy."
+        )
 
 
 def check_expert_mode_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
