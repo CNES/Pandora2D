@@ -19,7 +19,7 @@
 Test the refinement.dichotomy pipeline.
 """
 # Make pylint happy with fixtures:
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 
 from pathlib import Path
 from typing import Tuple
@@ -88,7 +88,7 @@ class TestComparisonMedicis:
         return mean_error_pandora2d_row, mean_error_pandora2d_col, mean_error_medicis_row, mean_error_medicis_col
 
     @pytest.fixture()
-    def cfg_dichotomy(self, shift_path, subpix, dicho_method, filter_method, tmp_path):
+    def cfg_dichotomy(self, shift_path, subpix, mc_method, precision, dicho_method, filter_method, tmp_path):
         """
         Make user configuration for dichotomy loop
         """
@@ -102,11 +102,12 @@ class TestComparisonMedicis:
             },
             "pipeline": {
                 "matching_cost": {
-                    "matching_cost_method": "zncc_python",
+                    "matching_cost_method": mc_method,
                     "window_size": 65,
                     "step": [1, 1],
                     "subpix": subpix,
                     "spline_order": 3,
+                    "float_precision": precision,
                 },  # we use spline_order=3 to get better results when subpix is different from 1
                 "disparity": {"disparity_method": "wta", "invalid_disparity": np.nan},
                 "refinement": {
@@ -118,6 +119,7 @@ class TestComparisonMedicis:
             "output": {"path": str(tmp_path)},
         }
 
+    @pytest.mark.parametrize(("mc_method", "precision"), [("zncc", "float64"), ("zncc_python", "float32")])
     @pytest.mark.parametrize(
         ("dicho_method", "filter_method"),
         [
@@ -383,6 +385,7 @@ class TestComparisonMedicis:
             ("dichotomy", "sinc"),
         ],
     )
+    @pytest.mark.parametrize(("mc_method", "precision"), [("zncc", "float64"), ("zncc_python", "float32")])
     def test_pandora2d_medicis_dichotomy_sinc(
         self,
         run_pipeline,
