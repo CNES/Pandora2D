@@ -1276,8 +1276,8 @@ class TestExtremaOnEdges:
 )
 class TestInvalidDisparity:
     """
-    Test that points for which best cost value is on the edge of disparity range
-    are not processed by dichotomy loop.
+    Test that points for which best cost value is on invalid disparity and
+    are not processed by dichotomy loop using uniform disparity grids
     """
 
     @pytest.fixture()
@@ -1355,6 +1355,9 @@ class TestInvalidDisparity:
 
 
 class TestChangeDisparityToIndex:
+    """
+    Test the transformation of a disparity map to index map.
+    """
 
     @pytest.mark.parametrize(
         ["map", "shift", "subpix", "expected"],
