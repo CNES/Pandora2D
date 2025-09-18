@@ -434,7 +434,11 @@ class Pandora2DMachine(BaseMachine):
         self.matching_cost_.allocate(self.left_img, self.right_img, cfg, self.margins_disp.get("refinement"))
 
         # Compute validity dataset
-        dataset_validity = criteria.get_validity_dataset(self.matching_cost_.cost_volumes["criteria"])
+        dataset_validity = criteria.get_validity_dataset(
+            self.matching_cost_.cost_volumes["criteria"],
+            self.matching_cost_.cost_volumes.attrs["row_disparity_source"],
+            self.matching_cost_.cost_volumes.attrs["col_disparity_source"],
+        )
 
         # Allocate disparity maps dataset
         self.dataset_disp_maps = common.dataset_disp_maps(

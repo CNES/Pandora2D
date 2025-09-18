@@ -469,7 +469,8 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins, image_margins: Ma
     max_pixels_per_roi = max_roi_memory // memory_per_pixel
     # Anticipate added vertical margins when opening ROIs:
     # subtract now to prevent oversizing and ensure the estimated number of rows fits memory constraints.
-    max_rows_per_roi = max(1, (max_pixels_per_roi // min_roi_width) - height_margins)
+    step = config.get("pipeline").get("matching_cost").get("step")
+    max_rows_per_roi = max(1 * step[0], (((max_pixels_per_roi // min_roi_width) - height_margins) // step[0]) * step[0])
 
     input_roi = config.get("ROI")
 

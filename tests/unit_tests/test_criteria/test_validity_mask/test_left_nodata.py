@@ -187,9 +187,15 @@ def test_left_mask(make_cost_volumes, criteria_name, expected):
     Test that the produced P2D_LEFT_NODATA band is correct according to the left mask.
     """
 
-    cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes()
+    row_disp = cost_volumes.attrs["row_disparity_source"]
+    col_disp = cost_volumes.attrs["col_disparity_source"]
 
-    result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+    result = (
+        criteria.get_validity_dataset(cost_volumes.criteria, row_disp, col_disp)
+        .sel(criteria=criteria_name)["validity"]
+        .data
+    )
 
     np.testing.assert_array_equal(result, expected)
 
@@ -347,9 +353,15 @@ def test_roi(make_cost_volumes, criteria_name, expected):
     Test that the produced P2D_LEFT_NODATA band is correct according to ROI.
     """
 
-    cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes()
+    row_disp = cost_volumes.attrs["row_disparity_source"]
+    col_disp = cost_volumes.attrs["col_disparity_source"]
 
-    result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+    result = (
+        criteria.get_validity_dataset(cost_volumes.criteria, row_disp, col_disp)
+        .sel(criteria=criteria_name)["validity"]
+        .data
+    )
 
     np.testing.assert_array_equal(result, expected)
 
@@ -429,9 +441,15 @@ def test_subpix(make_cost_volumes, criteria_name, expected):
     Test that the produced P2D_LEFT_NODATA band is correct according to subpix.
     """
 
-    cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes()
+    row_disp = cost_volumes.attrs["row_disparity_source"]
+    col_disp = cost_volumes.attrs["col_disparity_source"]
 
-    result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+    result = (
+        criteria.get_validity_dataset(cost_volumes.criteria, row_disp, col_disp)
+        .sel(criteria=criteria_name)["validity"]
+        .data
+    )
 
     np.testing.assert_array_equal(result, expected)
 
@@ -562,8 +580,14 @@ def test_step(make_cost_volumes, criteria_name, expected):
     Test that the produced P2D_LEFT_NODATA band is correct according to the step.
     """
 
-    cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes()
+    row_disp = cost_volumes.attrs["row_disparity_source"]
+    col_disp = cost_volumes.attrs["col_disparity_source"]
 
-    result = criteria.get_validity_dataset(cost_volumes.criteria).sel(criteria=criteria_name)["validity"].data
+    result = (
+        criteria.get_validity_dataset(cost_volumes.criteria, row_disp, col_disp)
+        .sel(criteria=criteria_name)["validity"]
+        .data
+    )
 
     np.testing.assert_array_equal(result, expected)

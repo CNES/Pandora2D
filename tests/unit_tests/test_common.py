@@ -578,7 +578,11 @@ class TestDatasetDispMaps:
         )
 
         # Create validity dataset
-        dataset_validity = criteria.get_validity_dataset(matching_cost_matcher.cost_volumes["criteria"])
+        dataset_validity = criteria.get_validity_dataset(
+            matching_cost_matcher.cost_volumes["criteria"],
+            matching_cost_matcher.cost_volumes.attrs["row_disparity_source"],
+            matching_cost_matcher.cost_volumes.attrs["col_disparity_source"],
+        )
 
         # create dataset with dataset_disp_maps function
         disparity_maps = common.dataset_disp_maps(

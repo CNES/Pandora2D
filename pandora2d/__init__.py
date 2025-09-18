@@ -24,6 +24,7 @@ from importlib.metadata import version
 from os import PathLike
 from pathlib import Path
 from typing import Dict, Union, cast
+import logging
 
 import xarray as xr
 from pandora import import_plugin, read_config_file, setup_logging
@@ -35,6 +36,19 @@ from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing,
 from pandora2d.memory_estimation import segment_image_by_rows
 from pandora2d.profiling import expert_mode_config, generate_summary
 from pandora2d.state_machine import Pandora2DMachine
+
+
+def log_list_elements(list_to_log: list, log_level: int):
+    """
+    Display each element of a list line by line
+
+    :param list_lot_log: elements
+    :type list_to_log: list
+    :param log_level: logging level define by user
+    :type log_level: int
+    """
+    for i, item in enumerate(list_to_log):
+        logging.log(log_level, "%s : %s", i, item)
 
 
 def run(
@@ -127,6 +141,8 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[st
     roi_list = segment_image_by_rows(
         cfg, pandora2d_machine.margins_disp.global_margins, pandora2d_machine.margins_img.global_margins
     )
+    logging.info("number of segments : %s", len(roi_list))
+    log_list_elements(roi_list, logging.INFO)
 
     if not roi_list:
         return run_pandora2d(pandora2d_machine, cfg)

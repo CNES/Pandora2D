@@ -61,6 +61,37 @@ def correct_pipeline_with_dichotomy_cpp(matching_cost_method, subpix):
 
 
 @pytest.fixture()
+def correct_pipeline_with_step_and_refinement(matching_cost_method, subpix, step):
+    return {
+        "pipeline": {
+            "matching_cost": {
+                "matching_cost_method": matching_cost_method,
+                "window_size": 5,
+                "subpix": subpix,
+                "step": step,
+            },
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "refinement": {"refinement_method": "dichotomy", "iterations": 2, "filter": {"method": "bicubic"}},
+        }
+    }
+
+
+@pytest.fixture()
+def correct_pipeline_with_step(matching_cost_method, subpix, step):
+    return {
+        "pipeline": {
+            "matching_cost": {
+                "matching_cost_method": matching_cost_method,
+                "window_size": 5,
+                "subpix": subpix,
+                "step": step,
+            },
+            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+        }
+    }
+
+
+@pytest.fixture()
 def row_disparity():
     return {"init": 0, "range": 2}
 
