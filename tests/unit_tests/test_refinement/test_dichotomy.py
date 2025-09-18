@@ -670,7 +670,7 @@ class TestCostSurfaces:
         """Test we are able to get a dichotomy windows from cost_volumes at given index."""
 
         cost_surfaces = refinement.dichotomy.CostSurfaces(cost_volumes)
-        result = cost_surfaces[row_index, col_index]
+        result = cost_surfaces[row_index, col_index].cost_volumes
 
         assert result.equals(expected)
 
@@ -678,7 +678,7 @@ class TestCostSurfaces:
         """This test is here to show that disp_row is along rows numpy array and disp_col along numpy array columns ."""
 
         cost_surfaces = refinement.dichotomy.CostSurfaces(cost_volumes)
-        result = cost_surfaces[0, 0]
+        result = cost_surfaces[0, 0].cost_volumes
 
         # Result is:
         # xr.DataArray(
@@ -711,7 +711,7 @@ class TestCostSurfaces:
         result = list(cost_surfaces)
 
         assert len(result) == disp_map.sizes["row"] * disp_map.sizes["col"]
-        assert result[0].equals(
+        assert result[0].cost_volumes.equals(
             xr.DataArray(
                 [
                     [0, 1, 2, 3, 4, 5],
@@ -730,7 +730,7 @@ class TestCostSurfaces:
                 dims=["disp_row", "disp_col"],
             ),
         )
-        assert result[-2].equals(
+        assert result[-2].cost_volumes.equals(
             xr.DataArray(
                 [
                     [144, 145, 146, 147, 148, 149],
@@ -1142,6 +1142,10 @@ class TestExtremaOnEdges:
         # [[0., 0., 0.],
         #  [0., -2., -2.]]
 
+        # Update criteria_dataarray
+        # This test is not intended to test the criteria_dataarray.
+        sparse_cost_volumes["criteria"].data[...] = Criteria.VALID
+
         result = xr.Dataset(
             {
                 "row_map": (
@@ -1281,7 +1285,9 @@ class TestInvalidDisparity:
     """
 
     @pytest.fixture()
-    def dataset_disp_maps(self, invalid_disparity, row_coordinates_with_step, col_coordinates_with_step):
+    def dataset_disp_maps(
+        self, invalid_disparity, row_coordinates_with_step, col_coordinates_with_step, sparse_cost_volumes
+    ):
         """Fake disparity maps containing extrema on edges of disparity range."""
 
         row_criteria = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
@@ -1299,6 +1305,10 @@ class TestInvalidDisparity:
         col_criteria[0, 0, 0] = 2  # Invalid
         col[1, -2:] = invalid_disparity
         col_criteria[1, -2:, 0] = 2  # Invalid
+
+        # Update criteria_dataarray
+        # This test is not intended to test the criteria_dataarray.
+        sparse_cost_volumes["criteria"].data[...] = Criteria.VALID
 
         return xr.Dataset(
             {
@@ -1350,6 +1360,159 @@ class TestInvalidDisparity:
 
         # point [0,0] is invalid --> col map is invalid
         assert result_disp_col[0, 0] == invalid_disparity or np.isnan(dataset_disp_maps["col_map"][0, 0])
+        # point [1,0] is valid --> changed col map value after dichotomy loop
+        assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
+
+
+@pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python"])
+@pytest.mark.parametrize("invalid_disparity", [-9999, np.nan])
+@pytest.mark.parametrize(
+    "dichotomy_instance_name",
+    [
+        pytest.param("dichotomy_python_instance", id="Dichotomy Python"),
+        pytest.param("dichotomy_cpp_instance", id="Dichotomy C++"),
+    ],
+)
+class TestInvalidElementOnFilterArea:
+    """
+    Tests for the presence of elements not calculated by matching_cost present in cost_surface,
+    specifically in the points used by the filter.
+    """
+
+    @pytest.fixture()
+    def tested_pt(self):
+        "Tested point on cost_volume, by default row = 0, col = 2"
+        return [0, 2]
+
+    @pytest.fixture()
+    def dichotomy_instance(self, dichotomy_instance_name, request):
+        return request.getfixturevalue(dichotomy_instance_name)
+
+    @pytest.fixture()
+    def invalid_element_position(self, dichotomy_instance):
+        "Position of the invalid element. By default, at the bottom right of the window."
+        margin = dichotomy_instance.margins
+        return [margin.down, margin.right]
+
+    @pytest.fixture()
+    def fake_cost_volumes(
+        self, sparse_cost_volumes, tested_pt, invalid_element_position, invalid_disparity, min_disparity_row
+    ):
+        "Create a cost_volume with fake element on filter area"
+
+        # For point [0,2], the best cost value is 9.
+        # The invalid disparity is defined by the letter I:
+
+        # [[0., 0., 0.,  0., 0., 0.],
+        #  [0., 0., 10., 8., 0., 0.],
+        #  [0., 0., 8.,  9., 0., 0.],
+        #  [0., 0., 0.,  0., 0., 0.],
+        #  [0., 0., 0.,  0., 0., I.],
+        #  [0., 0., 0.,  0., 0., 0.]]
+
+        row = tested_pt[0]
+        col = tested_pt[1]
+        disp_row = 2 + invalid_element_position[0]  # row index 2 is for the best cost value
+        disp_col = 3 + invalid_element_position[1]  # col index 3 is for the best cost value
+
+        # Reset and rewriting the cost surface for the point [0,2]
+        # min_disparity_row = 2
+        # min_disparity_col = -2
+        sparse_cost_volumes["cost_volumes"].data[row, col, :, :] = 0
+        sparse_cost_volumes["cost_volumes"].isel({"row": row, "col": col}).loc[
+            {"disp_col": [0, 1], "disp_row": min_disparity_row + 2}
+        ] = [
+            8,
+            9,
+        ]  # is located on the third line (min_disparity_row + 2)
+        sparse_cost_volumes["cost_volumes"].isel({"row": row, "col": col}).loc[
+            {"disp_col": [0, 1], "disp_row": min_disparity_row + 1}
+        ] = [
+            10,
+            8,
+        ]  # is located on the second line (min_disparity_row + 1)
+
+        # Add invalid element
+        sparse_cost_volumes["cost_volumes"].data[row, col, disp_row, disp_col] = invalid_disparity
+
+        # Update criteria_dataarray for point [0,2]
+        sparse_cost_volumes["criteria"].data[:, :, :, :] = Criteria.VALID
+        # Adding a criteria arbitrarily
+        sparse_cost_volumes["criteria"].data[row, col, disp_row, disp_col] = Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+
+        return sparse_cost_volumes
+
+    @pytest.fixture()
+    def dataset_disp_maps(
+        self,
+        invalid_disparity,
+        sparse_cost_volumes,
+        left_img,
+        row_coordinates_with_step,
+        col_coordinates_with_step,
+        min_disparity_row,
+        max_disparity_row,
+        min_disparity_col,
+    ):
+        """Fake disparity maps containing extrema on edges of disparity range."""
+
+        # Build empty criteria with only `validity_mask` and P2D_PEAK_ON_EDGE
+        criteria_data = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
+        criteria_data[0, 2, 0] = 1
+
+        row = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 4.0)
+        row[1, 2] = min_disparity_row
+        row[1, 1] = max_disparity_row
+
+        # row map is equal to:
+        # [[4., 4., 4.],
+        #  [4., 7., 2.]]
+
+        col = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 0.0)
+        col[1, -2:] = min_disparity_col
+        col[0, 2] = 1
+
+        # col map is equal to:
+        # [[0., 0., 1.],
+        #  [0., -2., -2.]]
+
+        result = xr.Dataset(
+            {
+                "row_map": (["row", "col"], row),
+                "col_map": (["row", "col"], col),
+                "validity": (["row", "col", "criteria"], criteria_data),
+            },
+            coords={
+                "row": row_coordinates_with_step,
+                "col": col_coordinates_with_step,
+                "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
+            },
+            attrs={"invalid_disp": invalid_disparity},
+        )
+        coords = (sparse_cost_volumes.coords["row"], sparse_cost_volumes.coords["col"])
+        criteria.apply_peak_on_edge(result["validity"], left_img, coords, row, col)
+        return result
+
+    def test_invalid_element_on_filter_area(
+        self,
+        fake_cost_volumes,
+        dichotomy_instance,
+        left_img,
+        dataset_disp_maps,
+        mocker: MockerFixture,
+    ):
+        "Test fake element in filter area"
+
+        copy_disp_map = copy.deepcopy(dataset_disp_maps)
+        result_disp_col, result_disp_row, _ = dichotomy_instance.refinement_method(
+            fake_cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
+        )
+
+        # point [0,2] is unchanged --> invalid element on filter area
+        assert result_disp_row[0, 2] == dataset_disp_maps["row_map"][0, 2]
+        assert result_disp_col[0, 2] == dataset_disp_maps["col_map"][0, 2]
+        # point [0,1] is valid --> changed row map value after dichotomy loop
+        assert result_disp_row[0, 1] == dataset_disp_maps["row_map"][0, 1] - 0.25
         # point [1,0] is valid --> changed col map value after dichotomy loop
         assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
 
