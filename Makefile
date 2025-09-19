@@ -34,6 +34,8 @@ ifeq ($(PYTHON_VERSION_OK), 0)
     $(error "Requires python version >= $(PYTHON_VERSION_MIN). Current version is $(PYTHON_VERSION_CUR)")
 endif
 
+# We can not get easily the build-dir that meson-python will use, so we build the name with the same code:
+CPP_BUILD_DIR=$(shell $(PYTHON) -c "import sys; interpreters = {'python': 'py', 'cpython': 'cp', 'pypy': 'pp', 'ironpython': 'ip', 'jython': 'jy'}; version = sys.version_info;name = sys.implementation.name; name = interpreters.get(name, name); print(f'build/{name}{version[0]}{version[1]}')")
 
 ################ MAKE targets by sections ######################
 
@@ -47,7 +49,7 @@ help: ## this help
 .PHONY: venv
 venv: ## create virtualenv in PANDORA2D_VENV directory if not exists
 	@test -d ${PANDORA2D_VENV} || python3 -m venv ${PANDORA2D_VENV}
-	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip meson-python meson ninja pybind11 "setuptools-scm>=8" "setuptools>=61" # no check to upgrade each time
+	@${PANDORA2D_VENV}/bin/python -m pip install --upgrade pip meson-python meson ninja pybind11 "setuptools-scm>=8" "setuptools>=61" cppcheck # no check to upgrade each time
 
 .PHONY: cpp_deps
 cpp_deps: ## retrieve cpp dependencies
@@ -55,7 +57,7 @@ cpp_deps: ## retrieve cpp dependencies
 
 .PHONY: install
 install: venv ## install pandora2D (pip editable mode) without plugins
-	@test -f ${PANDORA2D_VENV}/bin/pandora2d || . ${PANDORA2D_VENV}/bin/activate; ${PANDORA2D_VENV}/bin/pip install --no-build-isolation --config-settings=editable-verbose=true --editable .[dev,docs,notebook] --config-settings=setup-args=-Dbuild_cpp_tests=enabled 
+	@test -f ${PANDORA2D_VENV}/bin/pandora2d || { . ${PANDORA2D_VENV}/bin/activate; ${PANDORA2D_VENV}/bin/pip install --no-build-isolation --config-settings=editable-verbose=true --editable .[dev,docs,notebook] --config-settings=setup-args=-Dbuild_cpp_tests=enabled ; }
 	@test -f .git/hooks/pre-commit || echo "  Install pre-commit hook"
 	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
 	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
@@ -84,7 +86,7 @@ test-unit: install ## run unit tests only (for dev) + coverage (source venv befo
 .PHONY: test-unit-cpp
 test-unit-cpp: install ## run unit cpp tests only for dev
 	@echo "Run unit cpp tests"
-	. ${PANDORA2D_VENV}/bin/activate; meson test -C build/$(shell ls build)/ -v
+	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
 
 .PHONY: test-functional
 test-functional: install ## run functional tests only (for dev and validation plan)
@@ -114,6 +116,10 @@ test-plugin: install-plugin ## run plugins tests only
 ## Code quality, linting section
 
 ### Format with black
+
+.PHONY: reports_dir
+reports_dir:
+	mkdir -p reports
 
 .PHONY: format
 format: install format/black  ## run black formatting (depends install)
@@ -147,12 +153,22 @@ lint/pylint: ## check linting with pylint
 ## Check cpp code quality
 
 .PHONY: coverage-cpp 
-coverage-cpp: install  ## Gcovr (depends on gcovr in venv)
-	. ${PANDORA2D_VENV}/bin/activate; gcovr --sonarqube -r . -f pandora2d/interpolation_filter_cpp > gcovr-report.xml
+coverage-cpp: reports_dir ## Gcovr (depends on gcovr in venv)
+	@# We need to configure with coverage in order to make the ninja coverage
+	@# target available and execute tests compiled with coverage info needed by
+	@# gcovr.
+	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=true > /dev/null
+	@# Before running coverage, we need to run tests:
+	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
+	@# We call ninja direclty because the meson wrapper arround ninja does not detect the target:
+	@. ${PANDORA2D_VENV}/bin/activate; ninja coverage-xml -C "${CPP_BUILD_DIR}"
+	@cp "${CPP_BUILD_DIR}/meson-logs/coverage.xml" reports/gcovr-report.xml
+	@# Coverage makes execution slow so we unset this option
+	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=false > /dev/null
 
 .PHONY: cppcheck
-cppcheck: ## C++ cppcheck for CI (depends cppcheck)
-	@cppcheck -v --enable=all --xml -Ipandora2d/interpolation_filter_cpp/*.build pandora2d/interpolation_filter_cpp 2> cppcheck-report.xml
+cppcheck: reports_dir ## C++ cppcheck for CI (depends cppcheck)
+	@. ${PANDORA2D_VENV}/bin/activate; meson compile cppcheck -C "${CPP_BUILD_DIR}" -v
 
 
 ## Documentation section
@@ -192,6 +208,7 @@ clean-venv:
 clean-build:
 	@echo "+ $@"
 	@rm -fr build/
+	@rm -fr "${CPP_BUILD_DIR}"
 	@rm -fr .eggs/
 	@find . -name '*.egg-info' -exec rm -fr {} +
 	@find . -name '*.egg' -exec rm -f {} +
@@ -222,6 +239,7 @@ clean-test:
 	@rm -f .pymon
 	@rm -f tests/resource_tests/.pymon
 	@rm -f *-test-report.html
+	@rm -rf reports
 
 .PHONY: clean-doc
 clean-doc:

@@ -29,3 +29,24 @@ subdir('pandora2d/refinement_cpp')
 if get_option('build_cpp_tests').enabled()
     subdir('tests/unit_tests/test_cpp')
 endif
+
+cppcheck = find_program('cppcheck', required: false)
+if cppcheck.found()
+    cppcheck_project_option = '--project=' + join_paths(
+        meson.project_build_root(),
+        'compile_commands.json',
+    )
+    run_target(
+        'cppcheck',
+        command: [
+            'cppcheck',
+            '--enable=all',
+            '--suppress=missingIncludeSystem',
+            '--suppress=*:*/subprojects/*',
+            '--suppress=*:/usr/include/*',
+            '--output-format=xml',
+            '--output-file=@SOURCE_ROOT@/reports/cppcheck-report.xml',
+            cppcheck_project_option,
+        ],
+    )
+endif

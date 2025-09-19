@@ -1,5 +1,5 @@
 [build-system]
-requires = ["meson-python", "pybind11", "setuptools-scm>=8", "meson >= 1.1.0",]
+requires = ["meson-python", "pybind11", "setuptools-scm>=8", "meson >= 1.1.0"]
 build-backend = "mesonpy"
 
 [tool.meson-python.args]
@@ -55,6 +55,7 @@ dependencies = [
 dev = [
     "pandora2d[test]",
     "black>=21.5b0",  # PEP8 format code
+    "cppcheck",
     "isort>=5.8.0",   # Check imports
     "mypy",           # static type checker
     "pandas-stubs",
