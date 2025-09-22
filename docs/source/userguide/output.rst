@@ -57,6 +57,8 @@ The configuration given in this example will result in the following tree struct
     output
     └── path
         ├── config.json
+        └── cost_volumes
+            ├── confidence_measure.tif
         └── disparity_map
             ├── attributes.json
             ├── col_map.tif
@@ -67,6 +69,17 @@ The configuration given in this example will result in the following tree struct
 
 Saved images
 ************
+
+cost_volumes repository
+-----------------------
+
+- *confidence_measure.tif*: confidence measure map (this file is present only if a cost_volume_confidence step is specified in the user pipeline). 
+
+.. warning::
+        Pending implementation of ambiguity (:ref:`cost_volume_confidence`), the confidence_measure.tif file currently contains a single band filled with zeros. 
+
+disparity_map repository
+------------------------
 
 - *row_map.tif*, *col_map.tif* : disparity maps for row and columns.
 - *correlation_score.tif* : correlation score map.

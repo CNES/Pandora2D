@@ -15,7 +15,7 @@
       "matching_cost": {
         "matching_cost_method": "zncc_python",
         "window_size": 5,
-        "subpix": 1
+        "subpix": 2
       },
       "disparity": {
         "disparity_method": "wta",

@@ -281,6 +281,25 @@ class TestCheckPipelineSection:
 
         check_configuration.check_conf(cfg, pandora2d_machine)
 
+    @pytest.mark.parametrize(
+        ["pipeline_cfg"],
+        [
+            pytest.param("correct_pipeline_with_dichotomy_cpp", id="Dichotomy cpp with subpix=1"),
+            pytest.param("correct_pipeline_with_dichotomy_python", id="Dichotomy python with subpix=1"),
+        ],
+    )
+    def test_check_subpix_value_with_dichotomy(self, pipeline_cfg, pandora2d_machine, caplog, request):
+        """
+        Check a warning is raised when using dichotomy with a subpix equal to 1.
+        """
+
+        check_configuration.check_pipeline_section(request.getfixturevalue(pipeline_cfg), pandora2d_machine)
+
+        assert (
+            "To avoid aliasing, it is strongly recommended to set the subpix parameter of the matching cost step"
+            " to a value greater than 1 when using dichotomy." in caplog.messages
+        )
+
 
 class TestCheckOutputSection:
     """Test check_output_section"""

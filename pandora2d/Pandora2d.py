@@ -52,7 +52,13 @@ def get_parser():
         help="path to a json file containing the input/output files paths and \
             algorithm parameters",
     )
-    parser.add_argument("-v", "--verbose", help="Increase output verbosity", action="store_true")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="Increase output verbosity (-v displays logs at info level and -vv displays logs at debug level)",
+        action="count",
+        default=0,
+    )
     parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {version('pandora2d')}")
     return parser
 

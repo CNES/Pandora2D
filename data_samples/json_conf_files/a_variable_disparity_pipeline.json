@@ -14,7 +14,8 @@
     "pipeline": {
       "matching_cost": {
         "matching_cost_method": "zncc",
-        "window_size": 5
+        "window_size": 5,
+        "subpix":2
       },
       "disparity": {
         "disparity_method": "wta",

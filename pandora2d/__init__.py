@@ -20,6 +20,7 @@
 """
 This module contains functions to run Pandora pipeline.
 """
+
 from importlib.metadata import version
 from os import PathLike
 from pathlib import Path
@@ -27,7 +28,7 @@ from typing import Dict, Union, cast
 import logging
 
 import xarray as xr
-from pandora import import_plugin, read_config_file, setup_logging
+from pandora import import_plugin, read_config_file
 
 from pandora2d import common
 from pandora2d.check_configuration import check_conf, check_datasets
@@ -49,6 +50,27 @@ def log_list_elements(list_to_log: list, log_level: int):
     """
     for i, item in enumerate(list_to_log):
         logging.log(log_level, "%s : %s", i, item)
+
+
+def setup_logging(verbose: int) -> None:
+    """
+    Setup the logging configuration
+
+    :param verbose: verbose mode
+    :type verbose: int
+    :return: None
+    """
+
+    if verbose == 0:
+        logging.basicConfig(format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.WARNING)
+    elif verbose == 1:
+        logging.basicConfig(format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.INFO)
+    else:
+        logging.basicConfig(format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.DEBUG)
+        # Deactivate DEBUG and INFO logs from from other libraries
+        for name in logging.root.manager.loggerDict:
+            if not name.startswith(__name__):
+                logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def run(
@@ -191,6 +213,9 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     # Import pandora plugins
     import_plugin()
 
+    # Setup logger
+    setup_logging(verbose)
+
     cfg_path = Path(cfg_path)
 
     # read the user input's configuration
@@ -201,8 +226,6 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
 
     cfg = check_conf(user_cfg, pandora2d_machine)
     expert_mode_config.enable = "expert_mode" in cfg
-
-    setup_logging(verbose)
 
     if cfg.get("segment_mode", {}).get("enable") is True:
         dataset_disp_maps, completed_cfg = run_pandora2d_segment_mode(pandora2d_machine, cfg)
