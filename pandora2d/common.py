@@ -24,6 +24,7 @@ This module contains functions allowing to save the results and the configuratio
 """
 
 import json
+import warnings
 from copy import deepcopy
 from os import PathLike
 from pathlib import Path
@@ -35,6 +36,7 @@ import xarray as xr
 from pandora.common import write_data_array
 from rasterio import Affine
 from rasterio.crs import CRS
+from rasterio.errors import NotGeoreferencedWarning
 
 from pandora2d import reporting
 
@@ -48,6 +50,9 @@ try:
     from xarray import Coordinates as Coordinates
 except ImportError:
     from xarray import Coordinate as Coordinates
+
+# Filter Warning when writing not georeferenced image with Rasterio
+warnings.filterwarnings("ignore", category=NotGeoreferencedWarning)
 
 T = TypeVar("T")
 
