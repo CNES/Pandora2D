@@ -288,7 +288,7 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
     :param criteria_dataarray:
     :type criteria_dataarray:
     """
-    mask_criteria_right = xr.full_like(img_right["msk"], Criteria.VALID, dtype=np.uint8)
+    mask_criteria_right = xr.full_like(img_right["msk"], np.uint8(Criteria.VALID), dtype=np.uint8)
 
     right_binary_mask = binary_dilation_dataarray(img_right, window_size)
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
@@ -328,7 +328,7 @@ def mask_right_invalid(img_right: xr.Dataset, criteria_dataarray: xr.DataArray) 
     :type criteria_dataaray: xr.DataArray
     """
 
-    mask_criteria_right = xr.full_like(img_right["msk"], Criteria.VALID, dtype=np.uint8)
+    mask_criteria_right = xr.full_like(img_right["msk"], np.uint8(Criteria.VALID), dtype=np.uint8)
 
     invalid_right_mask = get_invalid_mask(img_right)
 
