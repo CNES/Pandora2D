@@ -112,9 +112,12 @@ class Dichotomy(refinement.AbstractRefinement):
         # Get score map
         cost_values = create_cost_values_map(cost_volumes, disp_map)
 
+        mask_invalid_on_filter_area = self.find_invalid_on_filter_area(cost_volumes, disp_map)
+
         criteria_map = (
             (disp_map["validity"].sel(criteria="validity_mask") == 2).astype(int)  # select invalids
             | disp_map["validity"].sel(criteria=Criteria.P2D_PEAK_ON_EDGE.name)
+            | mask_invalid_on_filter_area
         ).data
 
         subpixel = cost_volumes.attrs["subpixel"]
@@ -154,6 +157,75 @@ class Dichotomy(refinement.AbstractRefinement):
         logging.info("Dichotomy precision reached: %s", precision)
 
         return col_map, row_map, cost_values
+
+    def find_invalid_on_filter_area(  # pylint: disable=too-many-locals
+        self, cost_volumes: xr.Dataset, disp_map: xr.Dataset
+    ) -> np.ndarray:
+        """
+        Returns a binary mask indicating the presence of criteria other than Criteria.VALID
+        in the cost surface used by the filter.
+
+        The mask values have the following meanings:
+            - 1: A criterion other than VALID is present in the cost surface.
+            - 0: All criteria in the cost surface are VALID.
+
+        :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
+        :type cost_volumes: xarray.Dataset
+        :param disp_map: pixel disparity maps
+        :type disp_map: xarray.Dataset
+        :return: a binary mask
+        :rtype: np.ndarray
+        """
+        margins = self.filter.margins
+        invalid_disp = disp_map.attrs["invalid_disp"]
+        expected_criteria = Criteria.VALID.value
+
+        rows, cols = disp_map.sizes["row"], disp_map.sizes["col"]
+        row_map = disp_map["row_map"].values
+        col_map = disp_map["col_map"].values
+
+        mask = np.zeros((rows, cols), dtype=np.uint8)
+        invalid_mask = (row_map == invalid_disp) | (col_map == invalid_disp)
+        mask[invalid_mask] = 1
+
+        criteria = cost_volumes["criteria"].values
+        disp_row_coords = cost_volumes.coords["disp_row"].values
+        disp_col_coords = cost_volumes.coords["disp_col"].values
+
+        # Create fast lookup dictionaries to convert disparity values to indices
+        disp_r_to_idx = {val: idx for idx, val in enumerate(disp_row_coords)}
+        disp_c_to_idx = {val: idx for idx, val in enumerate(disp_col_coords)}
+
+        dr_max_idx = criteria.shape[2]
+        dc_max_idx = criteria.shape[3]
+
+        # Extract coordinates of all valid pixels
+        valid_rows, valid_cols = np.where(~invalid_mask)
+
+        for i, r in enumerate(valid_rows):
+            c = valid_cols[i]
+            disp_r, disp_c = row_map[r, c], col_map[r, c]
+
+            # Skip if disparity values are not in the valid coordinate range
+            if disp_r not in disp_r_to_idx or disp_c not in disp_c_to_idx:
+                mask[r, c] = 1
+                continue
+
+            dr = disp_r_to_idx[disp_r]
+            dc = disp_c_to_idx[disp_c]
+
+            # Define the local window boundaries using margins
+            dr_start = max(dr - margins.up, 0)
+            dr_end = min(dr + margins.down + 1, dr_max_idx)
+            dc_start = max(dc - margins.left, 0)
+            dc_end = min(dc + margins.right + 1, dc_max_idx)
+
+            patch = criteria[r, c, dr_start:dr_end, dc_start:dc_end]
+
+            if np.any(patch != expected_criteria):
+                mask[r, c] = 1
+
+        return mask
 
 
 def disparity_to_index(disparity_map: xr.DataArray, shift: int, subpixel: int) -> np.ndarray:
