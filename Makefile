@@ -153,7 +153,7 @@ lint/pylint: ## check linting with pylint
 ## Check cpp code quality
 
 .PHONY: coverage-cpp 
-coverage-cpp: reports_dir ## Gcovr (depends on gcovr in venv)
+coverage-cpp: install reports_dir ## Gcovr (depends on gcovr in venv)
 	@# We need to configure with coverage in order to make the ninja coverage
 	@# target available and execute tests compiled with coverage info needed by
 	@# gcovr.
@@ -167,7 +167,7 @@ coverage-cpp: reports_dir ## Gcovr (depends on gcovr in venv)
 	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=false > /dev/null
 
 .PHONY: cppcheck
-cppcheck: reports_dir ## C++ cppcheck for CI (depends cppcheck)
+cppcheck: install reports_dir ## C++ cppcheck for CI (depends cppcheck)
 	@. ${PANDORA2D_VENV}/bin/activate; meson compile cppcheck -C "${CPP_BUILD_DIR}" -v
 
 
