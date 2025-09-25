@@ -20,12 +20,11 @@
 """
 This module contains functions to run Pandora pipeline.
 """
-
+import logging
 from importlib.metadata import version
 from os import PathLike
 from pathlib import Path
 from typing import Dict, Union, cast
-import logging
 
 import xarray as xr
 from pandora import import_plugin, read_config_file
