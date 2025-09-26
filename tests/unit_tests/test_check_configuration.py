@@ -24,19 +24,20 @@
 Test configuration
 """
 
-from copy import deepcopy
 import random
 import string
+from copy import deepcopy
+
+import numpy as np
 import pytest
 import transitions
-import numpy as np
 import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
+from pandora.img_tools import get_metadata
 from skimage.io import imsave
 
-from pandora.img_tools import get_metadata
-from pandora2d.img_tools import create_datasets_from_inputs, add_disparity_grid
 from pandora2d import check_configuration
+from pandora2d.img_tools import add_disparity_grid, create_datasets_from_inputs
 
 
 class TestCheckDatasets:
@@ -279,6 +280,25 @@ class TestCheckPipelineSection:
         }
 
         check_configuration.check_conf(cfg, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        ["pipeline_cfg"],
+        [
+            pytest.param("correct_pipeline_with_dichotomy_cpp", id="Dichotomy cpp with subpix=1"),
+            pytest.param("correct_pipeline_with_dichotomy_python", id="Dichotomy python with subpix=1"),
+        ],
+    )
+    def test_check_subpix_value_with_dichotomy(self, pipeline_cfg, pandora2d_machine, caplog, request):
+        """
+        Check a warning is raised when using dichotomy with a subpix equal to 1.
+        """
+
+        check_configuration.check_pipeline_section(request.getfixturevalue(pipeline_cfg), pandora2d_machine)
+
+        assert (
+            "To avoid aliasing, it is strongly recommended to set the subpix parameter of the matching cost step"
+            " to a value greater than 1 when using dichotomy." in caplog.messages
+        )
 
 
 class TestCheckOutputSection:
@@ -782,7 +802,7 @@ class TestCheckSegmentMode:
         """
         Description : Test if segment_mode section is missing
         """
-        with pytest.raises(MissKeyCheckerError, match="segment_mode"):
+        with pytest.raises(MissKeyCheckerError, match="input"):
             check_configuration.check_segment_mode_section({"input": {}})
 
     def test_nominal_case(self, correct_segment_mode) -> None:
@@ -825,3 +845,13 @@ class TestCheckSegmentMode:
         assert (
             check_configuration.check_segment_mode_section({}) == check_configuration.default_segment_mode_configuration
         )
+
+    @pytest.mark.parametrize("enable", [True, False])
+    def test_segment_mode_section_default(self, enable):
+        """
+        Description : Check that a section is returned specifying that the mode is false if it is not present in the
+        user configuration
+        """
+        result = check_configuration.check_segment_mode_section({"segment_mode": {"enable": enable}})
+
+        assert result["segment_mode"]["memory_per_work"] == 1000

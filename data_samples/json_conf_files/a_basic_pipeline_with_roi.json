@@ -7,31 +7,26 @@
     "right": {
       "img": "../images/maricopa/right.tif",
       "nodata": -9999
-    }
+    },
+    "col_disparity": {"init": 0, "range": 2},
+    "row_disparity": {"init": 0, "range": 2}
+  },
+  "ROI":
+  {
+      "col": {"first": 10, "last": 100},
+      "row": {"first": 100, "last": 150}
   },
   "pipeline": {
-    "estimation": {
-      "estimation_method": "phase_cross_correlation",
-      "range_row": 5,
-      "range_col": 5,
-      "sample_factor": 100
-    },
     "matching_cost": {
       "matching_cost_method": "zncc",
-      "window_size": 5,
-      "subpix": 2
+      "window_size": 5
     },
     "disparity": {
       "disparity_method": "wta",
       "invalid_disparity": "NaN"
-    },
-    "refinement": {
-        "refinement_method": "dichotomy",
-        "iterations": 2,
-        "filter": { "method": "bicubic"}
     }
   },
   "output": {
-    "path": "an_estimation_pipeline_output"
+    "path": "a_basic_pipeline_with_roi_output"
   }
 }

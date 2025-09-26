@@ -21,8 +21,8 @@ Test methods from criteria.py file
 """
 # pylint: disable=redefined-outer-name
 
-import pytest
 import numpy as np
+import pytest
 
 from pandora2d import criteria
 from pandora2d.constants import Criteria

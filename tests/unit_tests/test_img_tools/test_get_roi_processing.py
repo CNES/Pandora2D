@@ -24,8 +24,8 @@ Test get_roi_processing.
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 
-import pytest
 import numpy as np
+import pytest
 
 from pandora2d import img_tools
 

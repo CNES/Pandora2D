@@ -52,31 +52,24 @@ Pandora2D provides a full python API which can be used to compute disparity maps
         },
         "output": {
             "path": "as_an_api_output"
-        },
+        }
     }
-
-    # read images
-    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], estimation_cfg=user_cfg["pipeline"].get("estimation"))
 
     # instantiate Pandora2D Machine
     pandora2d_machine = Pandora2DMachine()
 
     # check the configurations and sequences steps
-    pipeline_cfg = check_configuration.check_pipeline_section(user_cfg, pandora2d_machine)
+    checked_cfg = check_conf(user_cfg, pandora2d_machine)
 
-    # prepare the machine
-    pandora2d_machine.run_prepare(
-        image_datasets.left,
-        image_datasets.right,
-        user_cfg
-        )
+    # read images
+    image_datasets = create_datasets_from_inputs(input_config=checked_cfg["input"], estimation_cfg=checked_cfg["pipeline"].get("estimation"))
 
     # trigger all the steps of the machine at ones
     dataset, completed_cfg = pandora2d.run(
         pandora2d_machine,
         image_datasets.left,
         image_datasets.right,
-        pipeline_cfg
+        checked_cfg
         )
 
     # save dataset
@@ -134,8 +127,8 @@ Example of an image dataset
 
 Cost volumes
 ############
-Pandora2D will then store all the cost volumes together in a 4D (dims: row, col, disp_col, disp_row)
-xarray.DataArray named cost_volumes. When matching is impossible, the matching cost is set to np.nan.
+Pandora2D will then store all the cost volumes together in a 4D (dims: row, col, disp_row, disp_col)
+xarray.DataArray named cost_volumes. 
 
 ::
 
@@ -159,7 +152,6 @@ xarray.DataArray named cost_volumes. When matching is impossible, the matching c
         offset_row_col:        0
         measure:               sad
         type_measure:          min
-        cmax:                  10004
         disparity_margins:     None
         step:                  [1, 1]
 
@@ -167,7 +159,7 @@ Disparity map
 #############
 
 The *Disparity computation* step generates two disparity maps in cost volume geometry. One named **row_map** for the
-vertical disparity and one named **col_map** for the horizontal disparity. These maps are float32 type 2D xarray.DataArray,
+vertical disparity and one named **col_map** for the horizontal disparity. These maps are 2D xarray.DataArray of the same type as cost volumes,
 stored in a xarray.Dataset. 
 
 This xr.Dataset also contains the **validity maps** stored in uint8: 
@@ -195,8 +187,6 @@ This xr.Dataset also contains the **validity maps** stored in uint8:
         crs:          None
         transform:    | 1.00, 0.00, 0.00|| 0.00, 1.00, 0.00|| 0.00, 0.00, 1.00|
 
-.. warning::
-    The validity maps are not yet operational as development is still in progress.
 
 Border management
 #################
@@ -205,8 +195,7 @@ Border management
 Left image
 ----------
 
-Pixels of the left image for which the measurement thumbnail protrudes from the left image are set to :math:`nan`
-on the cost volume.
+Pixels of the left image for which the measurement thumbnail protrudes from the left image are not computed.
 For a similarity measurement with a 5x5 window, these incalculable pixels in the left image correspond
 to a 2-pixel crown at the top, bottom, right and left, and are represented by the offset_row_col attribute in
 the xarray.Dataset.
@@ -215,8 +204,8 @@ Right image
 -----------
 
 Because of the disparity range choice, it is possible that there is no available point to scan on the right image.
-In this case, matching cost cannot be computed for this pixel and the value will be set to :math:`nan` .
-Then bit 1 will be set : *The point is invalid: the disparity interval to explore is
+In this case, matching cost value will not be computed for this pixel.
+Then this pixel will be set to 2 in the validity mask (:ref:`validity_dataset_explanation`): *The point is invalid: the disparity interval to explore is
 absent in the right image* and the point disparity will be set to *invalid_disparity*.
 Moreover, everytime Pandora2D shifts the right image it introduces a new line set at *nodata_right* value. The matching
-cost cannot be computed for this line to.
+cost cannot be computed for this line too.

@@ -24,12 +24,13 @@ with ambiguity method.
 
 import logging
 from typing import Dict, Tuple
-from json_checker import And
 
 import numpy as np
 import xarray as xr
+from json_checker import And
 
 from pandora2d.cost_volume_confidence.registry import CostVolumeConfidenceRegistry
+
 from .cost_volume_confidence import CostVolumeConfidence
 
 

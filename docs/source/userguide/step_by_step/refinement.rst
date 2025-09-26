@@ -95,6 +95,9 @@ Available filters are described in :ref:`interpolation_filters`.
     Two dichotomy implementations are available in Pandora2d: one in C++ and one in Python. 
     By default, the C++ dichotomy is used when using the “dichotomy” refinement method. 
     To use the Python version, enter “dichotomy_python” as the refinement method in the configuration file. 
+
+.. warning::
+    To avoid aliasing, it is strongly recommended to set the subpix parameter of the :ref:`matching_cost` step to a value greater than 1 when using dichotomy. 
  
 
 Configuration and parameters
@@ -144,7 +147,7 @@ Configuration and parameters
                     {
                       "refinement_method": "optical_flow",
                       "iterations" : 7
-                    },
+                    }
                     // ...
                 },
                 "output":
@@ -209,7 +212,7 @@ Configuration and parameters
                               "refinement_method": "dichotomy",
                               "filter": {"method": "bicubic"},
                               "iterations" : 7
-                            },
+                            }
                             // ...
                         },
                         "output":
@@ -235,7 +238,7 @@ Configuration and parameters
                               "refinement_method": "dichotomy_python",
                               "filter": {"method": "bicubic_python"},
                               "iterations" : 7
-                            },
+                            }
                             // ...
                         }
                     }
@@ -299,7 +302,7 @@ Configuration and parameters
                                 "size": 9
                               },
                               "iterations" : 7
-                            },
+                            }
                             // ...
                         },
                         "output":
@@ -328,7 +331,7 @@ Configuration and parameters
                                 "size": 9
                               },
                               "iterations" : 7
-                            },
+                            }
                             // ...
                         }
                     }

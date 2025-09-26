@@ -26,13 +26,15 @@ Test state_machine
 """
 
 import copy
-import pytest
+import json
+from importlib.metadata import version
 
+import pytest
 from transitions.core import MachineError
 
-from pandora2d.margins import Margins
 from pandora2d import state_machine
 from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.margins import Margins
 
 
 class TestPandora2D:
@@ -137,3 +139,20 @@ class TestPandora2D:
         pandora2d_machine.check_conf(pipeline_cfg)
 
         assert pandora2d_machine.margins_img.global_margins == expected
+
+    def test_version_in_output_config(
+        self, run_pipeline, correct_input_cfg, correct_pipeline_without_refinement
+    ) -> None:
+        """Test that version in output config is correct."""
+        configuration = {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            **{"output": {"path": "relative"}},
+        }
+
+        run_dir = run_pipeline(configuration)
+
+        with open(run_dir / "relative" / "config.json", encoding="utf8") as output_file:
+            result = json.load(output_file)
+
+        assert result["info"] == {"version": version("pandora2d")}

@@ -20,8 +20,8 @@
 
 # pylint: disable=redefined-outer-name
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 
 from pandora2d import matching_cost
@@ -89,7 +89,10 @@ def image(img_size, disparity_cfg, valid_pixels, no_data_mask, start_point):
             "im": (["row", "col"], data),
             "msk": (["row", "col"], np.zeros_like(data)),
         },
-        coords={"row": np.arange(start_point[0], data.shape[0]), "col": np.arange(start_point[1], data.shape[1])},
+        coords={
+            "row": np.arange(start_point[0], start_point[0] + row),
+            "col": np.arange(start_point[1], start_point[1] + col),
+        },
         attrs={
             "no_data_img": -9999,
             "valid_pixels": valid_pixels,

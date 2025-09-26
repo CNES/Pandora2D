@@ -28,21 +28,37 @@ Test common
 # pylint: disable=redefined-outer-name
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
 import pytest
-import xarray as xr
 import rasterio
+import xarray as xr
 from pytest_mock import MockerFixture
+from rasterio import Affine, DatasetReader
 from skimage.io import imsave
-from rasterio import Affine
-from pandora2d import common, run
+
+from pandora2d import common, criteria, disparity, matching_cost, refinement, run
 from pandora2d.check_configuration import check_conf
-from pandora2d.img_tools import create_datasets_from_inputs
-from pandora2d import matching_cost, disparity, refinement, criteria
-from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.constants import Criteria
+from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.state_machine import Pandora2DMachine
+
+
+def assert_equal_or_isnan(actual, expected):
+    """
+    Assert that `actual` equals `expected` or that both are NaNs.
+
+    :param actual:
+    :type actual:
+    :param expected:
+    :type expected:
+    """
+    if np.isnan(expected):
+        assert np.isnan(actual), f"expected np.nan, got {actual}"
+    else:
+        assert actual == expected
 
 
 @pytest.fixture(scope="class")
@@ -168,12 +184,14 @@ def test_string_to_path(relative_to, path_string, expected):
             "step": {"row": 1, "col": 2},
             "crs": "EPSG:32632",
             "transform": Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03),
+            "invalid_disp": -666,
         },
         {
             "offset": {"row": 1, "col": 1},
             "step": {"row": 1, "col": 1},
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            "invalid_disp": np.nan,
         },
     ],
     scope="class",
@@ -186,7 +204,9 @@ class TestSaveDisparityMaps:
         """
         Create a test dataset
         """
-        row, col, score = np.full((2, 2), 1), np.full((2, 2), 1), np.full((2, 2), 1)
+        row = np.full((2, 2), 1, dtype=np.float64)
+        col = np.full((2, 2), 1, dtype=np.float64)
+        score = np.full((2, 2), 1, dtype=np.float64)
 
         coords = {
             "row": np.arange(row.shape[0]),
@@ -200,10 +220,10 @@ class TestSaveDisparityMaps:
 
         dataset = xr.Dataset(
             {
-                "kill_map": xr.DataArray(row, dims=dims, coords=coords),
-                "power_map": xr.DataArray(col, dims=dims, coords=coords),
-                "super_score": xr.DataArray(score, dims=dims, coords=coords),
-                "fake_validity": xr.DataArray(
+                "row_map": xr.DataArray(row, dims=dims, coords=coords),
+                "col_map": xr.DataArray(col, dims=dims, coords=coords),
+                "correlation_score": xr.DataArray(score, dims=dims, coords=coords),
+                "validity": xr.DataArray(
                     validity, dims=("row", "col", "criteria"), coords={**coords, "criteria": criteria_values}
                 ),
             },
@@ -236,13 +256,34 @@ class TestSaveDisparityMaps:
 
     @pytest.mark.parametrize(
         "file_name",
-        ["power_map.tif", "kill_map.tif", "super_score.tif"],
+        ["row_map.tif", "col_map.tif", "correlation_score.tif"],
     )
     def test_save_disparities(self, save_disparity_maps, attributes, file_name):
         """
         Function for testing the save_disparities function
         """
 
+        data = self._test_saved_attributes_and_properties(attributes, file_name, save_disparity_maps)
+        assert_equal_or_isnan(data.nodata, attributes["invalid_disp"])
+        assert list(data.descriptions) == [file_name.removesuffix(".tif")]
+
+    @pytest.mark.parametrize(
+        "file_name",
+        ["validity.tif"],
+    )
+    def test_save_validity(self, save_disparity_maps, attributes, file_name):
+        """
+        Function for testing the save_disparities function
+        """
+
+        data = self._test_saved_attributes_and_properties(attributes, file_name, save_disparity_maps)
+        assert data.nodata is None
+        assert list(data.descriptions) == ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+
+    def _test_saved_attributes_and_properties(
+        self, attributes, file_name: str, save_disparity_maps: Path
+    ) -> DatasetReader:
+        """Shared test logic for save_disparity_maps"""
         file = save_disparity_maps / file_name
         file_attributes = save_disparity_maps / "attributes.json"
 
@@ -259,7 +300,16 @@ class TestSaveDisparityMaps:
             attrs_json = json.load(attrs_file)
             attrs_json["transform"] = Affine(*attrs_json["transform"])
 
-        assert attrs_json == attributes
+        # Do a copy because attributes scope is class, and we do not want to make changes for other tests:
+        attributes_copy = deepcopy(attributes)
+        # We pop keys that might be Nans to avoid Nan comparison:
+        original_invalid_disp = attributes_copy.pop("invalid_disp")
+        saved_invalid_disp = attrs_json.pop("invalid_disp")
+
+        assert attrs_json == attributes_copy
+
+        assert_equal_or_isnan(saved_invalid_disp, original_invalid_disp)
+        return data
 
     def test_save_report(self, save_disparity_maps, fake_report_data):
         """Check report is generated by save_disparity_maps."""
@@ -270,17 +320,6 @@ class TestSaveDisparityMaps:
             result = json.load(fd)
 
         assert result == {"statistics": {"disparity": fake_report_data}}
-
-    def test_save_attributes(self, save_disparity_maps, attributes):
-        """Check attributes file is generated by save_attributes."""
-        file = save_disparity_maps / "attributes.json"
-        assert save_disparity_maps.exists()
-
-        with file.open() as fd:
-            result = json.load(fd)
-            result["transform"] = rasterio.Affine(*result["transform"])
-
-        assert result == attributes
 
 
 def create_dataset_coords(data_row, data_col, data_score, data_validity, row, col):
@@ -578,7 +617,11 @@ class TestDatasetDispMaps:
         )
 
         # Create validity dataset
-        dataset_validity = criteria.get_validity_dataset(matching_cost_matcher.cost_volumes["criteria"])
+        dataset_validity = criteria.get_validity_dataset(
+            matching_cost_matcher.cost_volumes["criteria"],
+            matching_cost_matcher.cost_volumes.attrs["row_disparity_source"],
+            matching_cost_matcher.cost_volumes.attrs["col_disparity_source"],
+        )
 
         # create dataset with dataset_disp_maps function
         disparity_maps = common.dataset_disp_maps(
@@ -669,9 +712,11 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
         "input": {
             "left": {
                 "img": "./data/left.tif",
+                "mask": "./left_mask.tif",
             },
             "right": {
                 "img": "./right.tif",
+                "mask": "./data/right_mask.tif",
             },
             "col_disparity": {
                 "init": col_disparity,
@@ -692,9 +737,11 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
         "input": {
             "left": {
                 "img": str(Path("/home/dir/data/left.tif").resolve()),
+                "mask": str(Path("/home/dir/left_mask.tif").resolve()),
             },
             "right": {
                 "img": str(Path("/home/dir/right.tif").resolve()),
+                "mask": str(Path("/home/dir/data/right_mask.tif").resolve()),
             },
             "col_disparity": {
                 "init": (

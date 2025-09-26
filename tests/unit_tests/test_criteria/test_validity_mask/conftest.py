@@ -23,12 +23,13 @@ Fixtures.
 
 # pylint: disable=redefined-outer-name
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 
 from pandora2d import matching_cost
 from pandora2d.img_tools import add_disparity_grid
+from pandora2d.margins import Margins
 
 
 @pytest.fixture()
@@ -70,30 +71,33 @@ def make_cost_volumes(make_image, request):
     Instantiate a matching_cost and compute cost_volumes
     """
 
-    cfg = {
-        "pipeline": {
-            "matching_cost": {
-                "matching_cost_method": "zncc_python",
-                "window_size": request.param["window_size"],
-                "step": request.param["step"],
-                "subpix": request.param["subpix"],
+    def _make_cost_volumes(refinement_margins=Margins(0, 0, 0, 0)):
+        cfg = {
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": "zncc_python",
+                    "window_size": request.param["window_size"],
+                    "step": request.param["step"],
+                    "subpix": request.param["subpix"],
+                }
             }
         }
-    }
 
-    disp_row = request.param["row_disparity"]
-    disp_col = request.param["col_disparity"]
+        disp_row = request.param["row_disparity"]
+        disp_col = request.param["col_disparity"]
 
-    img_left = make_image(disp_row, disp_col, request.param["msk_left"], request.param.get("roi"))
-    img_right = make_image(disp_row, disp_col, request.param["msk_right"], request.param.get("roi"))
+        img_left = make_image(disp_row, disp_col, request.param["msk_left"], request.param.get("roi"))
+        img_right = make_image(disp_row, disp_col, request.param["msk_right"], request.param.get("roi"))
 
-    matching_cost_object = matching_cost.MatchingCostRegistry.get(
-        cfg["pipeline"]["matching_cost"]["matching_cost_method"]
-    )
-    matching_cost_ = matching_cost_object(cfg["pipeline"]["matching_cost"])
+        matching_cost_object = matching_cost.MatchingCostRegistry.get(
+            cfg["pipeline"]["matching_cost"]["matching_cost_method"]
+        )
+        matching_cost_ = matching_cost_object(cfg["pipeline"]["matching_cost"])
 
-    matching_cost_.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
+        matching_cost_.allocate(img_left=img_left, img_right=img_right, cfg=cfg, margins=refinement_margins)
 
-    cost_volumes = matching_cost_.compute_cost_volumes(img_left=img_left, img_right=img_right)
+        cost_volumes = matching_cost_.compute_cost_volumes(img_left=img_left, img_right=img_right)
 
-    return cost_volumes
+        return cost_volumes
+
+    return _make_cost_volumes

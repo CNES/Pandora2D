@@ -23,10 +23,8 @@
 
 from typing import Tuple
 
-import pytest
-
 import numpy as np
-
+import pytest
 from numpy.typing import NDArray
 
 

@@ -25,15 +25,15 @@ from typing import Dict
 
 # pylint: disable=redefined-outer-name, protected-access, unused-argument
 # mypy: disable-error-code=attr-defined
-
 import numpy as np
 import pytest
 import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
-from pandora2d.margins import Margins
-from pandora2d import refinement, common, matching_cost, disparity, criteria
-from pandora2d.refinement.optical_flow import OpticalFlow
+
+from pandora2d import common, criteria, disparity, matching_cost, refinement
 from pandora2d.img_tools import add_disparity_grid
+from pandora2d.margins import Margins
+from pandora2d.refinement.optical_flow import OpticalFlow
 
 
 @pytest.fixture()
@@ -492,7 +492,9 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
     Instantiate a disparity dataset
     """
 
-    dataset_validity = criteria.get_validity_dataset(dataset_cv["criteria"])
+    row_disp = dataset_cv.attrs["row_disparity_source"]
+    col_disp = dataset_cv.attrs["col_disparity_source"]
+    dataset_validity = criteria.get_validity_dataset(dataset_cv["criteria"], row_disp, col_disp)
     dataset_disp_map = common.dataset_disp_maps(dataset_cv.coords, dataset_validity, {"invalid_disp": np.nan})
 
     disparity_matcher = disparity.Disparity(cfg_disp)
@@ -698,7 +700,9 @@ class TestDisparityGrids:
             cfg=cfg,
         )
 
-        dataset_validity = criteria.get_validity_dataset(matching_cost_.cost_volumes["criteria"])
+        row_disp = matching_cost_.cost_volumes.attrs["row_disparity_source"]
+        col_disp = matching_cost_.cost_volumes.attrs["col_disparity_source"]
+        dataset_validity = criteria.get_validity_dataset(matching_cost_.cost_volumes["criteria"], row_disp, col_disp)
         dataset_disp_map = common.dataset_disp_maps(
             matching_cost_.cost_volumes.coords, dataset_validity, {"invalid_disp": invalid_value}
         )

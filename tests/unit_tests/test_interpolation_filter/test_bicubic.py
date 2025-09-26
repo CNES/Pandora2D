@@ -22,9 +22,9 @@
 
 import numpy as np
 import pytest
-from pandora2d.margins import Margins
 
 import pandora2d.interpolation_filter
+from pandora2d.margins import Margins
 
 
 @pytest.fixture()

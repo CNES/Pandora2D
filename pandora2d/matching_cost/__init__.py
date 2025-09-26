@@ -20,7 +20,9 @@
 Init file for matching cost module
 """
 
-from .registry import MatchingCostRegistry
 from .base import BaseMatchingCost
-from .pandora import PandoraMatchingCostMethods
 from .correlation import CorrelationMethods
+from .pandora import PandoraMatchingCostMethods
+from .registry import MatchingCostRegistry
+
+__all__ = ["BaseMatchingCost", "CorrelationMethods", "PandoraMatchingCostMethods", "MatchingCostRegistry"]

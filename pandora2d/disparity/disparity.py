@@ -23,15 +23,14 @@
 This module contains functions associated to the disparity map computation step.
 """
 
-from typing import Dict, Tuple, Callable
-from json_checker import Or, And, Checker
+from typing import Callable, Dict, Tuple
+
 import numpy as np
 import xarray as xr
-
-from pandora2d.margins import NullMargins
-from pandora2d.margins import Margins
+from json_checker import And, Checker, Or
 
 from pandora2d.constants import Criteria
+from pandora2d.margins import Margins, NullMargins
 
 
 class Disparity:

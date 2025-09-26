@@ -21,5 +21,7 @@
 Init file for interpolation filter module
 """
 
+from . import bicubic, bicubic_cpp, cardinal_sine, cardinal_sine_cpp
 from .interpolation_filter import AbstractFilter
-from . import bicubic, cardinal_sine, cardinal_sine_cpp, bicubic_cpp
+
+__all__ = ["AbstractFilter", "bicubic", "bicubic_cpp", "cardinal_sine", "cardinal_sine_cpp"]

@@ -24,16 +24,19 @@ This module contains functions allowing to save the results and the configuratio
 """
 
 import json
+import warnings
 from copy import deepcopy
 from os import PathLike
 from pathlib import Path
 from typing import Callable, Dict, Generic, Tuple, Type, TypeVar, Union
 
 import numpy as np
+import rasterio
 import xarray as xr
 from pandora.common import write_data_array
 from rasterio import Affine
 from rasterio.crs import CRS
+from rasterio.errors import NotGeoreferencedWarning
 
 from pandora2d import reporting
 
@@ -47,6 +50,9 @@ try:
     from xarray import Coordinates as Coordinates
 except ImportError:
     from xarray import Coordinate as Coordinates
+
+# Filter Warning when writing not georeferenced image with Rasterio
+warnings.filterwarnings("ignore", category=NotGeoreferencedWarning)
 
 T = TypeVar("T")
 
@@ -196,18 +202,30 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
     """
     output.mkdir(parents=True, exist_ok=True)
 
-    # dataset["validity"] is the only item to have several bands,
-    # so the band_names list will only be used for it.
-    for name, data in dataset.items():
-        write_data_array(
-            data,
-            str((output / str(name)).with_suffix(".tif")),
+    for name, data_array in dataset.items():
+        # Rasterio expects a 3D array with bands on the first axis, while in the dataset
+        # bands are on the third axis (when present). We therefore move the third axis
+        # to the first position. If data_array was 2D, we add a singleton axis first.
+        data = np.moveaxis(np.atleast_3d(data_array.data), -1, 0)
+        count, row, col = data.shape
+
+        band_descriptions = list(dataset.criteria.values) if name == "validity" else [name]
+        nodata = dataset.attrs["invalid_disp"] if name in ("row_map", "col_map", "correlation_score") else None
+
+        with rasterio.open(
+            (output / str(name)).with_suffix(".tif"),
+            mode="w+",
+            driver="GTiff",
+            width=col,
+            height=row,
+            count=count,
             dtype=data.dtype,
-            band_names=list(dataset.criteria.values) if name == "validity" else None,
             crs=dataset.attrs["crs"],
             transform=dataset.attrs["transform"],
-        )
-
+            nodata=nodata,
+        ) as source_ds:
+            source_ds.write(data)
+            source_ds.descriptions = band_descriptions
     save_attributes(dataset, output)
 
 
@@ -411,7 +429,13 @@ def resolve_path_in_config(config: Dict, config_path: Path) -> Dict:
     relative_to = config_path.parent
     result["input"]["left"]["img"] = str(string_to_path(config["input"]["left"]["img"], relative_to))
     result["input"]["right"]["img"] = str(string_to_path(config["input"]["right"]["img"], relative_to))
-    if not "estimation" in result["pipeline"]:
+
+    if left_mask := config["input"]["left"].get("mask"):
+        result["input"]["left"]["mask"] = str(string_to_path(left_mask, relative_to))
+    if right_mask := config["input"]["right"].get("mask"):
+        result["input"]["right"]["mask"] = str(string_to_path(right_mask, relative_to))
+
+    if "estimation" not in result["pipeline"]:
         col_disparity_init = config["input"]["col_disparity"]["init"]
         if isinstance(col_disparity_init, str):
             result["input"]["col_disparity"]["init"] = str(string_to_path(col_disparity_init, relative_to))

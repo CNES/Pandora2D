@@ -20,24 +20,56 @@
 """
 This module contains functions to run Pandora pipeline.
 """
-
+import logging
+from importlib.metadata import version
 from os import PathLike
 from pathlib import Path
 from typing import Dict, Union, cast
-from copy import copy
 
 import xarray as xr
-
-from pandora import read_config_file, setup_logging, import_plugin
+from pandora import import_plugin, read_config_file
 
 from pandora2d import common
 from pandora2d.check_configuration import check_conf, check_datasets
-from pandora2d.common import string_to_path, resolve_path_in_config
+from pandora2d.common import resolve_path_in_config
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing, remove_roi_margins
-from pandora2d.state_machine import Pandora2DMachine
-from pandora2d.profiling import generate_summary, expert_mode_config
-from pandora2d.margins import Margins, NullMargins
 from pandora2d.memory_estimation import segment_image_by_rows
+from pandora2d.profiling import expert_mode_config, generate_summary
+from pandora2d.state_machine import Pandora2DMachine
+
+
+def log_list_elements(list_to_log: list, log_level: int):
+    """
+    Display each element of a list line by line
+
+    :param list_lot_log: elements
+    :type list_to_log: list
+    :param log_level: logging level define by user
+    :type log_level: int
+    """
+    for i, item in enumerate(list_to_log):
+        logging.log(log_level, "%s : %s", i, item)
+
+
+def setup_logging(verbose: int) -> None:
+    """
+    Setup the logging configuration
+
+    :param verbose: verbose mode
+    :type verbose: int
+    :return: None
+    """
+
+    if verbose == 0:
+        logging.basicConfig(format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.WARNING)
+    elif verbose == 1:
+        logging.basicConfig(format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.INFO)
+    else:
+        logging.basicConfig(format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.DEBUG)
+        # Deactivate DEBUG and INFO logs from from other libraries
+        for name in logging.root.manager.loggerDict:
+            if not name.startswith(__name__):
+                logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def run(
@@ -130,6 +162,8 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[st
     roi_list = segment_image_by_rows(
         cfg, pandora2d_machine.margins_disp.global_margins, pandora2d_machine.margins_img.global_margins
     )
+    logging.info("number of segments : %s", len(roi_list))
+    log_list_elements(roi_list, logging.INFO)
 
     if not roi_list:
         return run_pandora2d(pandora2d_machine, cfg)
@@ -178,6 +212,9 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     # Import pandora plugins
     import_plugin()
 
+    # Setup logger
+    setup_logging(verbose)
+
     cfg_path = Path(cfg_path)
 
     # read the user input's configuration
@@ -188,8 +225,6 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
 
     cfg = check_conf(user_cfg, pandora2d_machine)
     expert_mode_config.enable = "expert_mode" in cfg
-
-    setup_logging(verbose)
 
     if cfg.get("segment_mode", {}).get("enable") is True:
         dataset_disp_maps, completed_cfg = run_pandora2d_segment_mode(pandora2d_machine, cfg)
@@ -203,6 +238,7 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     # Update output configuration with detailed margins
     completed_cfg["margins_disp"] = pandora2d_machine.margins_disp.to_dict()
     completed_cfg["margins"] = pandora2d_machine.margins_img.to_dict()
+    completed_cfg["info"] = {"version": version("pandora2d")}
     # save config
     common.save_config(completed_cfg)
 

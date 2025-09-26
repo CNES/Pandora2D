@@ -269,7 +269,9 @@ class TestRefinementMethod:
         cost_volumes["criteria"].data[Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.is_in(cost_volumes["criteria"])] -= np.uint8(
             Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
         )
-        disp_map["validity"] = criteria.get_validity_dataset(cost_volumes["criteria"])["validity"]
+        row_disp = cost_volumes.attrs["row_disparity_source"]
+        col_disp = cost_volumes.attrs["col_disparity_source"]
+        disp_map["validity"] = criteria.get_validity_dataset(cost_volumes["criteria"], row_disp, col_disp)["validity"]
         return disp_map
 
     @pytest.fixture()

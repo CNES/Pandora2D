@@ -28,12 +28,14 @@ Configuration and parameters
    * - **enable**
      - Activate mode
      - bool
-     - True/False
+     - | true/false
+       | (default: false)
      - No
    * - **memory_per_work**
      - Reserved memory for pandora2d calculations (MB)
      - int
-     - > 0 
+     - | > 0
+       | (default: 1000)
      - No
 
 **Example**

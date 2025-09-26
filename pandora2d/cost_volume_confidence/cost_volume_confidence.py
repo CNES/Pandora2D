@@ -20,10 +20,10 @@ Module for common base of all cost volume confidence methods.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Mapping, Union, Tuple
-from json_checker import Checker
+from typing import Dict, List, Mapping, Tuple, Union
 
 import xarray as xr
+from json_checker import Checker
 
 
 class CostVolumeConfidence(ABC):

@@ -23,9 +23,10 @@
 Tests subpix parameter in matching cost step
 """
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
+
 from pandora2d.img_tools import add_disparity_grid
 from pandora2d.state_machine import Pandora2DMachine
 

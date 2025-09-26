@@ -21,9 +21,10 @@ This module contains functions associated to the validity mask and criteria data
 """
 import itertools
 from enum import IntFlag
-from typing import Union, Type, Tuple
-import xarray as xr
+from typing import Tuple, Type, Union
+
 import numpy as np
+import xarray as xr
 from numpy.typing import ArrayLike, DTypeLike, NDArray
 from scipy.ndimage import binary_dilation
 
@@ -287,13 +288,13 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
     :param criteria_dataarray:
     :type criteria_dataarray:
     """
-    right_criteria_mask = np.full_like(img_right["msk"], Criteria.VALID, dtype=np.uint8)
+    mask_criteria_right = xr.full_like(img_right["msk"], np.uint8(Criteria.VALID), dtype=np.uint8)
 
     right_binary_mask = binary_dilation_dataarray(img_right, window_size)
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    right_criteria_mask[right_binary_mask] |= np.uint8(Criteria.P2D_RIGHT_NODATA)
+    mask_criteria_right.data[right_binary_mask] |= np.uint8(Criteria.P2D_RIGHT_NODATA)
 
-    apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
+    apply_right_criteria_mask(criteria_dataarray, mask_criteria_right)
 
 
 def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
@@ -314,27 +315,27 @@ def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) 
     criteria_dataarray.data[invalid_left_mask.data, ...] |= np.uint8(Criteria.P2D_INVALID_MASK_LEFT)
 
 
-def mask_right_invalid(right_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
+def mask_right_invalid(img_right: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
     """
     This method raises P2D_INVALID_MASK_RIGHT criteria for points having
     an invalid point in the right image mask shift by its disparity.
     A point is considered invalid if when we shift it by its disparity, the obtained value
     is different from the values of the valid_pixels and no_data_mask attributes.
 
-    :param right_image: right image with `msk` data var.
-    :type right_image: xr.Dataset
+    :param img_right: right image with `msk` data var.
+    :type img_right: xr.Dataset
     :param criteria_dataaray: criteria dataarray to update
     :type criteria_dataaray: xr.DataArray
     """
 
-    right_criteria_mask = np.full_like(right_image["msk"], Criteria.VALID, dtype=np.uint8)
+    mask_criteria_right = xr.full_like(img_right["msk"], np.uint8(Criteria.VALID), dtype=np.uint8)
 
-    invalid_right_mask = get_invalid_mask(right_image)
+    invalid_right_mask = get_invalid_mask(img_right)
 
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
-    right_criteria_mask[invalid_right_mask.data] |= np.uint8(Criteria.P2D_INVALID_MASK_RIGHT)
+    mask_criteria_right.data[invalid_right_mask.data] |= np.uint8(Criteria.P2D_INVALID_MASK_RIGHT)
 
-    apply_right_criteria_mask(criteria_dataarray, right_criteria_mask)
+    apply_right_criteria_mask(criteria_dataarray, mask_criteria_right)
 
 
 def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
@@ -353,19 +354,19 @@ def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
     return invalid_mask
 
 
-def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_mask: NDArray):
+def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray):
     """
-    This method apply right_criteria_mask array on criteria_dataarray according
+    This method apply mask_criteria_right array on criteria_dataarray according
     to row and column disparities.
 
     :param criteria_dataaray: criteria dataarray to update
     :type criteria_dataaray: xr.DataArray
-    :param right_criteria_mask: mask to apply to criteria dataarray
-    :type right_criteria_mask: np.NDArray
+    :param mask_criteria_right: mask to apply to criteria dataarray
+    :type mask_criteria_right: xr.DataArray
     """
 
     # We use a temporary mask of the same size as the image to correctly handle cases where the step is different from 1
-    mask_img_shape = np.zeros_like(right_criteria_mask, dtype=np.uint8)
+    mask_img_shape = np.zeros_like(mask_criteria_right, dtype=np.uint8)
 
     for row_disp, col_disp in itertools.product(
         criteria_dataarray.coords["disp_row"], criteria_dataarray.coords["disp_col"]
@@ -390,7 +391,7 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_m
         criteria_col_slice = np.s_[-col_dsp_int:] if col_dsp_int <= 0 else np.s_[:-col_dsp_int]  # type: ignore[index]
 
         mask_img_shape[:] = 0
-        mask_img_shape[criteria_row_slice, criteria_col_slice] |= right_criteria_mask[msk_row_slice, msk_col_slice]
+        mask_img_shape[criteria_row_slice, criteria_col_slice] |= mask_criteria_right[msk_row_slice, msk_col_slice]
 
         # We subtract the first row and col coordinates to keep the correct indexes when processing a ROI.
         criteria_dataarray.loc[
@@ -399,8 +400,8 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, right_criteria_m
                 "disp_col": col_disp,
             }
         ] |= mask_img_shape[
-            criteria_dataarray.coords["row"].data[:, None] - criteria_dataarray.coords["row"].data[0],
-            criteria_dataarray.coords["col"].data[None, :] - criteria_dataarray.coords["col"].data[0],
+            criteria_dataarray.coords["row"].data[:, None] - mask_criteria_right.coords["row"].data[0],
+            criteria_dataarray.coords["col"].data[None, :] - mask_criteria_right.coords["col"].data[0],
         ]
 
 
@@ -477,19 +478,29 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     return dataset
 
 
-def get_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
+def get_validity_dataset(criteria_dataarray: xr.DataArray, row_disparity: list, col_disparity: list) -> xr.Dataset:
     """
     Fill the validity dataset which contains an additional 'criteria' dimension.
 
     :param criteria_dataarray: criteria_dataarray used to create validity mask
     :type criteria_dataarray: xr.DataArray
+    :param row_disparity: user row disparity
+    :type row_disparity: list
+    :param col_disparity: user col disparity
+    :type col_disparity: list
     :return: validity Dataset
     :rtype: xr.Dataset
     """
 
     validity_dataset = allocate_validity_dataset(criteria_dataarray)
 
-    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(criteria_dataarray)
+    # subset with real user disparities
+    subset = criteria_dataarray.sel(
+        disp_row=slice(row_disparity[0], row_disparity[1]),  # Interval row_disparity for disp_row
+        disp_col=slice(col_disparity[0], col_disparity[1]),  # Interval col_disparity for disp_col
+    )
+
+    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(subset)
 
     # invalidating criteria do not depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities

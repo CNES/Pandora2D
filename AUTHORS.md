@@ -11,7 +11,6 @@ This file keeps track of authors contributions.
 ## Development Lead
 
 * Alexandre Constantin <alexandre.constantin@cnes.fr>
-* Alice de Bardonnèche-Richard <alice.de-bardonneche-richard@cs-soprasteria.com>
 * Marie Leconte <marie.leconte@cs-soprasteria.com>
 * Elisa Duz <elisa.duz@cs-soprasteria.com>
 * Philippe Mallet-Ladeira <philippe.mallet-ladeira@cs-soprasteria.com>

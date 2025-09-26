@@ -21,8 +21,8 @@
 Test that the validity xr.Dataset is correctly allocated.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from pandora2d import criteria
 from pandora2d.constants import Criteria
@@ -75,7 +75,7 @@ def test_allocate_validity_dataset(make_cost_volumes):
     Test the allocate_validity_dataset method
     """
 
-    cost_volumes = make_cost_volumes
+    cost_volumes = make_cost_volumes()
 
     criteria_dataarray = cost_volumes.criteria
 

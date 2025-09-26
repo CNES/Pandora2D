@@ -23,7 +23,6 @@ Test ambiguity cost volume confidence method
 
 import json_checker
 import pytest
-
 import xarray as xr
 
 from pandora2d import cost_volume_confidence

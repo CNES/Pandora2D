@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.0.0 (September 2025)
+
+### Added
+
+- Added Pandora2d version to config.json output file and on CLI. [#324]
+- Added example configuration files. [#341]
+- Added nodata value to disparity map output. [#289]
+
+### Fixed
+
+- Removed warning when using Dataset.dims. [#328]
+- Fixed segment mode configuration. [#339]
+- Filtered out warnings from the state machine. [#335]
+- Fixed spline_order parameters in matching_cost. [#343]
+- Fixed segment mode when used with mask and step. [#342]
+- Fixed Makefile. [#338]
+- Fixed GitHub CI. [#350]
+- Fixed ambiguity documentation. [#344]
+- Fixed missing target dependency. [#349]
+
+### Changed
+
+- Updated ZNCC documentation. [#317]
+- Upated README file. [#337]
+- Updated notebooks. [#340]
+
+
 ## 1.0.0a1 (August 2025)
 
 ### Added

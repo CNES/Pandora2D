@@ -20,7 +20,7 @@
 This module contains all the parameters related to the criteria dataset, defining each bit.
 """
 
-from enum import auto, IntFlag
+from enum import IntFlag, auto
 
 from numpy.typing import NDArray
 

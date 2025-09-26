@@ -26,16 +26,16 @@ Test Disparity class
 
 # pylint: disable=redefined-outer-name
 
-import pytest
+import json_checker
 import numpy as np
+import pytest
 import xarray as xr
 from rasterio import Affine
-import json_checker
 
-from pandora2d.margins import Margins
-from pandora2d import matching_cost, disparity
-from pandora2d.img_tools import add_disparity_grid
+from pandora2d import disparity, matching_cost
 from pandora2d.constants import Criteria
+from pandora2d.img_tools import add_disparity_grid
+from pandora2d.margins import Margins
 
 
 class TestCheckConf:

@@ -2,11 +2,13 @@
   "input": {
     "left": {
       "img": "../images/maricopa/left.tif",
-      "nodata": -9999
+      "nodata": -9999,
+      "mask": "../images/maricopa/left_mask.tif"
     },
     "right": {
       "img": "../images/maricopa/right.tif",
-      "nodata": -9999
+      "nodata": -9999,
+      "mask": "../images/maricopa/right_mask.tif"
     },
     "col_disparity": {"init": 0, "range": 2},
     "row_disparity": {"init": 0, "range": 2}
@@ -22,6 +24,6 @@
     }
   },
   "output": {
-    "path": "a_basic_pipeline_output"
+    "path": "a_basic_pipeline_with_masks_output"
   }
 }
