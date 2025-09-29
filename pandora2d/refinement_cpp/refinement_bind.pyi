@@ -28,6 +28,7 @@ def compute_dichotomy_float(
     disparity_map_col: NDArray[np.floating],
     disparity_map_row: NDArray[np.floating],
     score_map: NDArray[np.floating],
+    invalid_map: NDArray[np.floating],
     criteria_map: NDArray[np.floating],
     subpixel: int,
     nb_iterations: int,
@@ -45,6 +46,8 @@ def compute_dichotomy_float(
     :type disparity_map_row: NDArray[np.floating]
     :param score_map: score map data
     :type score_map: NDArray[np.floating]
+    :param invalid_map: invalid map data
+    :type invalid_map: NDArray[np.floating]
     :param criteria_map: criteria map data
     :type criteria_map: NDArray[np.floating]
     :param subpixel: sub-sampling of cost_volume
@@ -62,6 +65,7 @@ def compute_dichotomy_double(
     disparity_map_col: NDArray[np.floating],
     disparity_map_row: NDArray[np.floating],
     score_map: NDArray[np.floating],
+    invalid_map: NDArray[np.floating],
     criteria_map: NDArray[np.floating],
     subpixel: int,
     nb_iterations: int,
@@ -79,6 +83,8 @@ def compute_dichotomy_double(
     :type disparity_map_row: NDArray[np.floating]
     :param score_map: score map data
     :type score_map: NDArray[np.floating]
+    :param invalid_map: invalid map data
+    :type invalid_map: NDArray[np.floating]
     :param criteria_map: criteria map data
     :type criteria_map: NDArray[np.floating]
     :param subpixel: sub-sampling of cost_volume

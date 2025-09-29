@@ -27,7 +27,8 @@ import numpy as np
 import xarray as xr
 from json_checker import And
 
-from pandora2d.interpolation_filter import AbstractFilter
+from ..constants import Criteria
+from ..interpolation_filter import AbstractFilter
 
 from . import refinement
 
@@ -179,7 +180,7 @@ class DichotomyPython(refinement.AbstractRefinement):
                 ["readonly"],
             ],
         ) as iterators:
-            for cost_surface, (
+            for cost_volume_surface, (
                 cost_value,
                 disp_row_init,
                 disp_col_init,
@@ -188,6 +189,10 @@ class DichotomyPython(refinement.AbstractRefinement):
                 d_col_min,
                 d_col_max,
             ) in zip(cost_surfaces, iterators):
+
+                # Get disparity area & criteria area
+                cost_surface = cost_volume_surface.cost_volumes
+                criteria_surface = cost_volume_surface.criteria
 
                 # Invalid value
                 if np.isnan(cost_value):
@@ -201,6 +206,18 @@ class DichotomyPython(refinement.AbstractRefinement):
                 # If the best candidate found at the disparity step is at the edge of the col disparity range
                 # we do no enter the dichotomy loop
                 if disp_col_init in (d_col_min, d_col_max):
+                    continue
+
+                # Verification of the cost_surface used by the filter to ensure that there are no criteria in it.
+                check_filter_area = criteria_surface.sel(
+                    disp_row=slice(
+                        disp_row_init - self.filter.margins.up, disp_row_init + self.filter.margins.down
+                    ),  # Interval row_disparity for disp_row
+                    disp_col=slice(
+                        disp_col_init - self.filter.margins.left, disp_col_init + self.filter.margins.right
+                    ),  # Interval col_disparity for disp_col
+                ).data
+                if np.any(check_filter_area != Criteria.VALID):
                     continue
 
                 # pos_disp_col_init corresponds to the position in the cost surface
@@ -277,9 +294,9 @@ class CostSurfaces:
         self.cost_volumes["cost_volumes"].attrs.update({"subpixel": cost_volumes.attrs["subpixel"]})
 
     def __getitem__(self, item):
-        """Get cost surface of coordinates item where item is (row, col)."""
+        """Get cost surface (cost_volume & criteria) of coordinates item where item is (row, col)."""
         row, col = item
-        return self.cost_volumes["cost_volumes"].sel(row=row, col=col)
+        return self.cost_volumes.sel(row=row, col=col)
 
     def __iter__(self):
         """Iter over cost surfaces, row first then columns."""

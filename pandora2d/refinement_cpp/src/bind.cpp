@@ -31,8 +31,8 @@ using namespace pybind11::literals;
 
 PYBIND11_MODULE(refinement_bind, m) {
   m.def("compute_dichotomy_float", &compute_dichotomy<float, P2d::Vectorf>, "cost_volume"_a,
-        "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "subpixel"_a,
-        "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
+        "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "invalid_map"_a,
+        "criteria_map"_a, "subpixel"_a, "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
         R"mydelimiter(
             Dichotomy calculation with float data
 
@@ -44,6 +44,8 @@ PYBIND11_MODULE(refinement_bind, m) {
             :type disparity_map_row: NDArray[np.floating]
             :param score_map: score map data
             :type score_map: NDArray[np.floating]
+            :param invalid_map: invalid map data
+            :type invalid_map: NDArray[np.floating]
             :param criteria_map: criteria map data
             :type criteria_map: NDArray[np.floating]
             :param subpixel: sub-sampling of cost_volume
@@ -57,8 +59,8 @@ PYBIND11_MODULE(refinement_bind, m) {
             )mydelimiter");
 
   m.def("compute_dichotomy_double", &compute_dichotomy<double, P2d::VectorD>, "cost_volume"_a,
-        "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "criteria_map"_a, "subpixel"_a,
-        "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
+        "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "invalid_map"_a,
+        "criteria_map"_a, "subpixel"_a, "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
         R"mydelimiter(
             Dichotomy calculation with double data
 
@@ -70,6 +72,8 @@ PYBIND11_MODULE(refinement_bind, m) {
             :type disparity_map_row: NDArray[np.floating]
             :param score_map: score map data
             :type score_map: NDArray[np.floating]
+            :param invalid_map: invalid map data
+            :type invalid_map: NDArray[np.floating]
             :param criteria_map: criteria map data
             :type criteria_map: NDArray[np.floating]
             :param subpixel: sub-sampling of cost_volume
