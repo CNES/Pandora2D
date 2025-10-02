@@ -23,6 +23,7 @@ import itertools
 from enum import IntFlag
 from typing import Tuple, Type, Union
 
+from functools import partial
 import numpy as np
 import xarray as xr
 from numpy.typing import ArrayLike, DTypeLike, NDArray
@@ -335,7 +336,7 @@ def mask_right_invalid(img_right: xr.Dataset, criteria_dataarray: xr.DataArray) 
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
     mask_criteria_right.data[invalid_right_mask.data] |= np.uint8(Criteria.P2D_INVALID_MASK_RIGHT)
 
-    apply_right_criteria_mask(criteria_dataarray, mask_criteria_right)
+    apply_invalid_right_criteria_mask(criteria_dataarray, mask_criteria_right)
 
 
 def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
@@ -352,6 +353,50 @@ def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
     invalid_mask = (image.msk != image.attrs["no_data_mask"]) & (image.msk != image.attrs["valid_pixels"])
 
     return invalid_mask
+
+
+def apply_invalid_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray):
+    """
+    This method apply mask_criteria_right array on criteria_dataarray according
+    to row and column disparities.
+    Ignore invalid pixels from the input mask used in interpolation to raise the P2D_INVALID_MASK_RIGHT criterion
+
+    :param criteria_dataaray: criteria dataarray to update
+    :type criteria_dataaray: xr.DataArray
+    :param mask_criteria_right: mask to apply to criteria dataarray
+    :type mask_criteria_right: xr.DataArray
+    """
+
+    # We use a temporary mask of the same size as the image to correctly handle cases where the step is different from 1
+    mask_img_shape = np.zeros_like(mask_criteria_right, dtype=np.uint8)
+
+    p = partial(filter, lambda x: x.is_integer())
+
+    for row_disp, col_disp in itertools.product(
+        p(criteria_dataarray.coords["disp_row"].data), p(criteria_dataarray.coords["disp_col"].data)
+    ):
+
+        row_dsp_int, col_dsp_int = int(row_disp), int(col_disp)
+        # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
+        msk_row_slice = np.s_[:row_dsp_int] if row_dsp_int < 0 else np.s_[row_dsp_int:]  # type: ignore[index]
+        msk_col_slice = np.s_[:col_dsp_int] if col_dsp_int < 0 else np.s_[col_dsp_int:]  # type: ignore[index]
+
+        criteria_row_slice = np.s_[-row_dsp_int:] if row_dsp_int <= 0 else np.s_[:-row_dsp_int]  # type: ignore[index]
+        criteria_col_slice = np.s_[-col_dsp_int:] if col_dsp_int <= 0 else np.s_[:-col_dsp_int]  # type: ignore[index]
+
+        mask_img_shape[:] = 0
+        mask_img_shape[criteria_row_slice, criteria_col_slice] |= mask_criteria_right[msk_row_slice, msk_col_slice]
+
+        # We subtract the first row and col coordinates to keep the correct indexes when processing a ROI.
+        criteria_dataarray.loc[
+            {
+                "disp_row": row_disp,
+                "disp_col": col_disp,
+            }
+        ] |= mask_img_shape[
+            criteria_dataarray.coords["row"].data[:, None] - mask_criteria_right.coords["row"].data[0],
+            criteria_dataarray.coords["col"].data[None, :] - mask_criteria_right.coords["col"].data[0],
+        ]
 
 
 def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray):
