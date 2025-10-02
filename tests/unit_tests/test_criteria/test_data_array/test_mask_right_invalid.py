@@ -23,6 +23,7 @@ Test mask_right_invalid function.
 
 import numpy as np
 import pytest
+import xarray as xr
 
 from pandora2d import criteria
 from pandora2d.constants import Criteria
@@ -38,8 +39,8 @@ class TestMaskRightInvalid:
         [
             # pylint: disable=line-too-long
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -64,8 +65,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -90,8 +91,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with disp_row=2 and disp_col=1",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -116,8 +117,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at right bottom corner of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -142,8 +143,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=-1",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -168,8 +169,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with disp_row=-1 and disp_col=0",
             ),
             pytest.param(
-                3,
-                4,
+                3,  # valid_pixels
+                4,  # no_data_mask
                 np.array(  # msk
                     [
                         [3, 3, 3, 3, 3],
@@ -194,8 +195,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with no_data_mask=4, valid_pixels=3, disp_row=-1 and disp_col=0",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -209,7 +210,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -220,8 +221,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with subpix=2, disp_row=-0.5 and disp_col=1.5",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -246,8 +247,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with subpix=2, disp_row=0 and disp_col=0",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -261,7 +262,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -272,8 +273,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with subpix=2, disp_row=0.5 and disp_col=0.5",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -285,7 +286,7 @@ class TestMaskRightInvalid:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
@@ -298,34 +299,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with subpix=2, disp_row=2.5 and disp_col=3",
             ),
             pytest.param(
-                0,
-                1,
-                np.array(  # msk
-                    [
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 3],
-                    ]
-                ),
-                np.array(
-                    [
-                        # fmt: off
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        # fmt: on
-                    ]
-                ),
-                -1.5,  # disp_col
-                -1,  # disp_row
-                2,  # subpix
-                id="Invalid point at right bottom corner of right mask with subpix=2, disp_row=-1 and disp_col=-1.5",
-            ),
-            pytest.param(
-                3,
-                4,
+                3,  # valid_pixels
+                4,  # no_data_mask
                 np.array(  # msk
                     [
                         [3, 3, 3, 3, 3],
@@ -339,7 +314,7 @@ class TestMaskRightInvalid:
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
@@ -350,8 +325,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with subpix=2, no_data_mask=4, valid_pixels=3, disp_row=-1 and disp_col=0.5",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -366,7 +341,7 @@ class TestMaskRightInvalid:
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
@@ -376,8 +351,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with supix=4, disp_row=-0.75 and disp_col=1.25",
             ),
             pytest.param(
-                0,
-                1,
+                0,  # valid_pixels
+                1,  # no_data_mask
                 np.array(  # msk
                     [
                         [0, 0, 0, 0, 0],
@@ -389,7 +364,7 @@ class TestMaskRightInvalid:
                 np.array(
                     [
                         # fmt: off
-                        [Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
@@ -402,8 +377,8 @@ class TestMaskRightInvalid:
                 id="Invalid point at center of right mask with supix=4, disp_row=2.75 and disp_col=1.5",
             ),
             pytest.param(
-                3,
-                4,
+                3,  # valid_pixels
+                4,  # no_data_mask
                 np.array(  # msk
                     [
                         [3, 3, 3, 3, 3],
@@ -416,16 +391,16 @@ class TestMaskRightInvalid:
                     [
                         # fmt: off
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
-                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
                         # fmt: on
                     ]
                 ),
-                1,  # disp_col
-                -0.25,  # disp_row
+                2,  # disp_col
+                -1,  # disp_row
                 4,  # subpix
-                id="Invalid point at center of right mask with subpix=4, no_data_mask=4, valid_pixels=3, disp_row=-0.25 and disp_col=1",
+                id="Invalid point at center of right mask with subpix=4, no_data_mask=4, valid_pixels=3, disp_row=-1 and disp_col=2",
             ),
             # pylint: enable=line-too-long
         ],
@@ -489,3 +464,138 @@ class TestMaskRightInvalid:
             criteria_dataarray.sel(row=2, col=3, disp_row=disp_row, disp_col=disp_col).data
             == Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_INVALID_MASK_RIGHT
         )
+
+    @pytest.fixture()
+    def start_point_image(self):
+        return [0, 0]
+
+    @pytest.fixture()
+    def mask_criteria_right(self, image, start_point_image):
+        """Create a right mask with P2D_INVALID_MASK_RIGHT"""
+        mask_criteria_right = xr.DataArray(
+            np.full_like(image["msk"], Criteria.VALID, dtype=np.uint8),
+            dims=["row", "col"],
+            coords={
+                "row": np.arange(start_point_image[0], start_point_image[0] + image["msk"].shape[0]),
+                "col": np.arange(start_point_image[1], start_point_image[1] + image["msk"].shape[1]),
+            },
+        )
+
+        invalid_right_mask = (image.msk != image.attrs["no_data_mask"]) & (image.msk != image.attrs["valid_pixels"])
+
+        # Adding a criterion different from Criteria.VALID
+        mask_criteria_right.data[invalid_right_mask.data] |= np.uint8(Criteria.P2D_INVALID_MASK_RIGHT)
+        return mask_criteria_right
+
+    @pytest.mark.usefixtures("mask_image")
+    @pytest.mark.parametrize(
+        ["msk", "expected_criteria", "disp_col", "disp_row", "start_point_image", "start_point", "step"],
+        [
+            # pylint: disable=line-too-long
+            pytest.param(
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 3, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0,
+                0,
+                [2, 1],
+                [2, 1],
+                [1, 1],
+                id="ROI simulation with step=[1,1]",
+            ),
+            pytest.param(
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 3, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0,
+                0,
+                [1, 1],
+                [0, 0],
+                [2, 1],
+                id="ROI simulation and margins not modulo step",
+            ),
+            pytest.param(
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 3, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                -2,
+                -1,
+                [2, 1],
+                [0, 0],
+                [2, 1],
+                id="ROI simulation and margins modulo step",
+            ),
+            pytest.param(
+                np.array(  # msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 3, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.P2D_INVALID_MASK_RIGHT, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                0,
+                0,
+                [3, 1],
+                [0, 0],
+                [2, 1],
+                id="ROI simulation and margins greater than step",
+            ),
+        ],
+    )
+    def test_combination_step_and_ROI(
+        self, criteria_dataarray, mask_criteria_right, expected_criteria, disp_col, disp_row
+    ):
+        """
+        Test apply_invalid_right_criteria_mask with step and ROI
+        """
+        criteria.apply_invalid_right_criteria_mask(criteria_dataarray, mask_criteria_right)
+
+        np.testing.assert_array_equal(criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col), expected_criteria)
