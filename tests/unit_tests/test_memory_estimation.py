@@ -703,7 +703,7 @@ class TestDatasetDispMap:
                 cost_volumes.cost_volumes.coords,
                 dataset_validity,
                 {
-                    "offset": {
+                    "origin_coordinates": {
                         "row": config.get("ROI", {}).get("row", {}).get("first", 0),
                         "col": config.get("ROI", {}).get("col", {}).get("first", 0),
                     },

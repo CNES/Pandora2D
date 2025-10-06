@@ -421,8 +421,8 @@ class TestAttributes:
             attrs = json.load(attrs_file)
             attrs["transform"] = rasterio.Affine(*attrs["transform"])
 
-        assert attrs["offset"]["row"] == 0
-        assert attrs["offset"]["col"] == 0
+        assert attrs["origin_coordinates"]["row"] == 0
+        assert attrs["origin_coordinates"]["col"] == 0
         assert attrs["step"]["row"] == step[0]
         assert attrs["step"]["col"] == step[1]
         assert attrs["crs"] == left_crs
@@ -469,8 +469,8 @@ class TestAttributes:
             attrs = json.load(attrs_file)
             attrs["transform"] = rasterio.Affine(*attrs["transform"])
 
-        assert attrs["offset"]["row"] == roi["row"]["first"]
-        assert attrs["offset"]["col"] == roi["col"]["first"]
+        assert attrs["origin_coordinates"]["row"] == roi["row"]["first"]
+        assert attrs["origin_coordinates"]["col"] == roi["col"]["first"]
         assert attrs["step"]["row"] == step[0]
         assert attrs["step"]["col"] == step[1]
         assert attrs["crs"] == left_crs
@@ -504,8 +504,8 @@ class TestAttributes:
         with open(tmp_path / "disparity_map" / "attributes.json", encoding="utf8") as attrs_file:
             attrs = json.load(attrs_file)
 
-        assert attrs["offset"]["row"] == 0
-        assert attrs["offset"]["col"] == 0
+        assert attrs["origin_coordinates"]["row"] == 0
+        assert attrs["origin_coordinates"]["col"] == 0
         assert attrs["step"]["row"] == 1
         assert attrs["step"]["col"] == 1
         assert attrs["crs"] is None
