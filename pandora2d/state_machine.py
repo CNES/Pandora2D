@@ -445,7 +445,7 @@ class Pandora2DMachine(BaseMachine):
             self.matching_cost_.cost_volumes.coords,
             dataset_validity,
             {
-                "offset": {
+                "origin_coordinates": {
                     "row": cfg.get("ROI", {}).get("row", {}).get("first", 0),
                     "col": cfg.get("ROI", {}).get("col", {}).get("first", 0),
                 },
