@@ -86,9 +86,9 @@ class TestApplyRightCriteriaMask:
     )
     def test_simple_case(self, criteria_dataarray, mask_criteria_right, expected_criteria, disp_col, disp_row):
         """
-        Test apply_right_criteria_mask with a simple case (without step or ROI)
+        Test apply_invalid_right_criteria_mask with a simple case (without step or ROI)
         """
-        criteria.apply_right_criteria_mask(criteria_dataarray, mask_criteria_right)
+        criteria.apply_invalid_right_criteria_mask(criteria_dataarray, mask_criteria_right)
 
         np.testing.assert_array_equal(criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col), expected_criteria)
 
@@ -198,8 +198,8 @@ class TestApplyRightCriteriaMask:
     )
     def test_combination(self, criteria_dataarray, mask_criteria_right, expected_criteria, disp_col, disp_row):
         """
-        Test apply_right_criteria_mask with step and ROI
+        Test apply_invalid_right_criteria_mask with step and ROI
         """
-        criteria.apply_right_criteria_mask(criteria_dataarray, mask_criteria_right)
+        criteria.apply_invalid_right_criteria_mask(criteria_dataarray, mask_criteria_right)
 
         np.testing.assert_array_equal(criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col), expected_criteria)

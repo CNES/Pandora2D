@@ -441,8 +441,6 @@ from pandora2d.margins import Margins
                     )
                 ),
                 "step": [1, 1],
-                # Temporarily, the criteria for subpixel disparities
-                # are raised by following a nearest neighbor strategy.
                 "subpix": 2,
                 "window_size": 3,
             },
@@ -451,9 +449,9 @@ from pandora2d.margins import Margins
                     [
                         [2, 2, 2, 2, 2, 2, 2, 2],
                         [2, 2, 1, 1, 1, 1, 1, 2],
-                        [2, 1, 1, 1, 1, 1, 1, 2],
-                        [2, 1, 1, 1, 1, 1, 1, 2],
-                        [2, 1, 1, 1, 1, 1, 1, 2],
+                        [2, 2, 1, 1, 1, 1, 1, 2],
+                        [2, 2, 2, 1, 1, 1, 1, 2],
+                        [2, 2, 2, 1, 1, 1, 1, 2],
                         [2, 2, 2, 2, 2, 2, 2, 2],
                     ]
                 )
@@ -478,8 +476,6 @@ from pandora2d.margins import Margins
                     )
                 ),
                 "step": [1, 1],
-                # Temporarily, the criteria for subpixel disparities
-                # are raised by following a nearest neighbor strategy.
                 "subpix": 4,
                 "window_size": 3,
             },
@@ -488,9 +484,9 @@ from pandora2d.margins import Margins
                     [
                         [2, 2, 2, 2, 2, 2, 2, 2],
                         [2, 2, 1, 1, 1, 1, 1, 2],
-                        [2, 1, 1, 1, 1, 1, 1, 2],
-                        [2, 1, 1, 1, 1, 1, 1, 2],
-                        [2, 1, 1, 1, 1, 1, 1, 2],
+                        [2, 2, 1, 1, 1, 1, 1, 2],
+                        [2, 2, 2, 1, 1, 1, 1, 2],
+                        [2, 2, 2, 1, 1, 1, 1, 2],
                         [2, 2, 2, 2, 2, 2, 2, 2],
                     ]
                 )
@@ -570,8 +566,6 @@ from pandora2d.margins import Margins
                     )
                 ),
                 "step": [1, 1],
-                # Temporarily, the criteria for subpixel disparities
-                # are raised by following a nearest neighbor strategy.
                 "subpix": 2,
                 "window_size": 3,
             },
@@ -580,8 +574,8 @@ from pandora2d.margins import Margins
                     [2, 2, 2, 2, 2, 2, 2, 2],
                     [2, 2, 2, 2, 1, 2, 1, 2],
                     [2, 2, 2, 2, 1, 1, 1, 2],
-                    [2, 1, 2, 2, 2, 1, 2, 2],
-                    [2, 1, 2, 2, 2, 2, 2, 2],
+                    [2, 2, 2, 2, 2, 1, 2, 2],
+                    [2, 2, 2, 2, 2, 2, 2, 2],
                     [2, 2, 2, 2, 2, 2, 2, 2],
                 ]
             ),
@@ -616,8 +610,6 @@ from pandora2d.margins import Margins
                     )
                 ),
                 "step": [1, 1],
-                # Temporarily, the criteria for subpixel disparities
-                # are raised by following a nearest neighbor strategy.
                 "subpix": 4,
                 "window_size": 3,
             },
@@ -626,8 +618,8 @@ from pandora2d.margins import Margins
                     [2, 2, 2, 2, 2, 2, 2, 2],
                     [2, 2, 2, 2, 1, 2, 1, 2],
                     [2, 2, 2, 2, 1, 1, 1, 2],
-                    [2, 1, 2, 2, 2, 1, 2, 2],
-                    [2, 1, 2, 2, 2, 2, 2, 2],
+                    [2, 2, 2, 2, 2, 1, 2, 2],
+                    [2, 2, 2, 2, 2, 2, 2, 2],
                     [2, 2, 2, 2, 2, 2, 2, 2],
                 ]
             ),
