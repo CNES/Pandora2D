@@ -68,7 +68,8 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
  * @param disparity_map_col : 1D col disparity data of size nb_row * nb_col
  * @param disparity_map_row : 1D row disparity data of size nb_row * nb_col
  * @param score_map : 1D score data of size nb_row * nb_col
- * @param criteria_map : 1D criteria data of size nb_row * nb_col
+ * @param invalid_map : 1D invalid (peak on edge and invalid) data of size nb_row * nb_col
+ * @param criteria_map : 1D criteria data of nb_row * nb_col * nb_disp_row * nb_disp_col
  * @param subpixel : sub-sampling of cost_volume
  * @param nb_iterations : number of iterations of the dichotomy
  * @param filter : interpolation filter
@@ -79,7 +80,8 @@ void compute_dichotomy(py::array_t<T> cost_volume,
                        Eigen::Ref<U> disparity_map_col,
                        Eigen::Ref<U> disparity_map_row,
                        Eigen::Ref<U> score_map,
-                       U& criteria_map,
+                       U& invalid_map,
+                       py::array_t<T> criteria_map,
                        int subpixel,
                        int nb_iterations,
                        abstractfilter::AbstractFilter& filter,
@@ -89,27 +91,39 @@ void compute_dichotomy(py::array_t<T> cost_volume,
   auto pos_disp_col_it = disparity_map_col.begin();
   auto pos_disp_row_it = disparity_map_row.begin();
   auto score_it = score_map.begin();
-  auto crit_it = criteria_map.begin();
+  auto invalid_it = invalid_map.begin();
   CostVolumeSize cv_size = CostVolumeSize(cost_volume.shape(0), cost_volume.shape(1),
                                           cost_volume.shape(2), cost_volume.shape(3));
   auto nb_disps = cv_size.nb_disps();
 
   unsigned int index = -nb_disps;  //< Index on disparity_map less the first occurance
   P2d::MatrixD cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
+  P2d::MatrixUI criteria_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
   double precision = 0.;
+  auto margins = filter.get_margins();
+  auto filter_size = filter.get_size();
 
   // Loop on each image point calculated
   for (; pos_disp_col_it != disparity_map_col.end();
-       ++pos_disp_col_it, ++pos_disp_row_it, ++score_it, ++crit_it) {
+       ++pos_disp_col_it, ++pos_disp_row_it, ++score_it, ++invalid_it) {
     // update index
     index += nb_disps;
 
     // taking into account the peak at the edge & invalid disparities (== 1 in the array)
-    if (*crit_it == 1.)
+    if (*invalid_it == 1.)
       continue;
 
     // Check initial disparity is not nan
     if (std::isnan(*pos_disp_row_it) or std::isnan(*pos_disp_col_it))
+      continue;
+
+    // Check filter area
+    criteria_surface = get_cost_surface<T, uint8_t>(criteria_map, index, cv_size);
+    int top_left_area_row = *pos_disp_row_it - margins.left;
+    int top_left_area_col = *pos_disp_col_it - margins.up;
+    P2d::MatrixUI filter_area =
+        criteria_surface.block(top_left_area_row, top_left_area_col, filter_size, filter_size);
+    if (not filter_area.isZero())
       continue;
 
     // get cost_surface

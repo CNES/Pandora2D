@@ -138,6 +138,7 @@ class Dichotomy(refinement.AbstractRefinement):
             row_map.ravel(),
             cost_values.ravel(),
             criteria_map.ravel(),
+            cost_volumes.criteria.data,
             subpixel,
             self.cfg["iterations"],
             self.filter.cpp_instance,
