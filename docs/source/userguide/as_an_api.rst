@@ -181,7 +181,7 @@ This xr.Dataset also contains the **validity maps** stored in uint8:
         correlation_score  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         validity  (row, col, criteria) uint8 0 1 0 0 2 0 ... 0 1 0 0 0
     Attributes:
-        offset:       {'row': 0, 'col': 0}
+        origin_coordinates:       {'row': 0, 'col': 0}
         step:         {'row': 1, 'col': 1}
         invalid_disp: -9999
         crs:          None

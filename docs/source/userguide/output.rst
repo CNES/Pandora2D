@@ -102,7 +102,7 @@ Saved attributes
 
 - `output/path/disparity_map/attributes.json` : the disparity maps dataset attributes saved in a json file. These attributes include: 
 
-    - offset (row/col) to find the first point of the user ROI when one is used 
+    - origin_coordinates (row/col) to find the first point of the user ROI when one is used 
     - step (row/col) corresponding to the matching cost step value
     - crs and transform 
     - invalid disparity value
