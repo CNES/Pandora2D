@@ -180,14 +180,14 @@ def test_string_to_path(relative_to, path_string, expected):
     "attributes",
     [
         {
-            "offset": {"row": 2, "col": 3},
+            "origin_coordinates": {"row": 2, "col": 3},
             "step": {"row": 1, "col": 2},
             "crs": "EPSG:32632",
             "transform": Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03),
             "invalid_disp": -666,
         },
         {
-            "offset": {"row": 1, "col": 1},
+            "origin_coordinates": {"row": 1, "col": 1},
             "step": {"row": 1, "col": 1},
             "crs": None,
             "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),

@@ -189,8 +189,8 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[st
     else:
         del completed_cfg["ROI"]
 
-    # Update offset attribute according to initial ROI
-    final_dataset_disp_maps.attrs["offset"] = {
+    # Update origin_coordinates attribute according to initial ROI
+    final_dataset_disp_maps.attrs["origin_coordinates"] = {
         "row": completed_cfg.get("ROI", {}).get("row", {}).get("first", 0),
         "col": completed_cfg.get("ROI", {}).get("col", {}).get("first", 0),
     }
