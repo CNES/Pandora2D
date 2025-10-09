@@ -91,9 +91,9 @@ bool all_non_zero_elements(const P2d::MatrixUI& mat);
  *
  * @param left image
  * @param right list of right images
- * @param cv_values initialized cost values
- * @param criteria_values criteria values
- * @param cv_size : cost volume size information
+ * @param cv_values 1D initialized cost values
+ * @param criteria_values 1D criteria values
+ * @param cv_size cost volume size information
  * @param disp_range_row cost volumes row disparity range
  * @param disp_range_col cost volumes col disparity range
  * @param offset_cv_img_row row offset between first index of cv and image (ROI case)
@@ -177,9 +177,9 @@ void compute_mutual_information_cv(const P2d::Matrixf& left,
  *
  * @param left image
  * @param right list of right images
- * @param cv_values initialized cost values
- * @param criteria_values criteria values
- * @param cv_size : cost volume size information
+ * @param cv_values 1D initialized cost values
+ * @param criteria_values 1D criteria values
+ * @param cv_size cost volume size information
  * @param disp_range_row cost volumes row disparity range
  * @param disp_range_col cost volumes col disparity range
  * @param offset_cv_img_row row offset between first index of cv and image (ROI case)
@@ -269,6 +269,9 @@ void compute_zncc_cv(const P2d::Matrixf& left,
   }
 }
 
+/**
+ * @brief Methods used to compute the cost values
+ */
 template <typename T>
 using ComputeFunction = std::function<void(const P2d::Matrixf&,
                                            const std::vector<P2d::Matrixf>&,
@@ -282,6 +285,22 @@ using ComputeFunction = std::function<void(const P2d::Matrixf&,
                                            int,
                                            const Eigen::Vector2i&)>;
 
+/**
+ * @brief Compute the cost values with method given as parameter
+ *
+ * @param left image
+ * @param right list of right images
+ * @param cv_values 1D initialized cost values
+ * @param criteria_values 1D criteria values
+ * @param cv_size cost volume size information
+ * @param disp_range_row cost volumes row disparity range
+ * @param disp_range_col cost volumes col disparity range
+ * @param offset_cv_img_row row offset between first index of cv and image (ROI case)
+ * @param offset_cv_img_col col offset between first index of cv and image (ROI case)
+ * @param window_size size of the correlation window
+ * @param step [step_row, step_col]
+ * @param method method used to compute cost values
+ */
 template <typename T>
 void compute_cost_volumes_cpp(const P2d::Matrixf& left,
                               const std::vector<P2d::Matrixf>& right,

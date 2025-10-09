@@ -27,7 +27,7 @@ This module contains functions associated to the zncc in cpp.
 #include "operation.hpp"
 #include "pandora2d_type.hpp"
 
-const double STD_EPSILON = 1e-8;  // is 1e-16 for the variance.
+const double STD_EPSILON = 1e-8;  ///< is 1e-16 for the variance.
 
 /**
  * @brief Shift image according to row and columns disparities.
