@@ -1,0 +1,227 @@
+# Organization of the different stages and jobs:
+# build:
+#  |_ py-pytest (Python unit tests)
+#  |_ functional-test (functional tests)
+#  |_ performance-test (performance tests)
+#  |_ notebook-test (notebook tests)
+#  |_ unit-cpp-test (C++ unit tests)
+#  |_ plugin-mccnn-test (MCCNN plugin tests)
+#  |_ py-black (Python code formatting)
+#  |_ py-lint (static analysis with Pylint)
+#  |_ py-mypy (static type checking with Mypy)
+#  |_ cppcheck (C++ static analysis & coverage)
+#  |_ sphinx-build (documentation)
+#
+# test:
+#  |_ py-trivy (dependency scanning)
+#  |_ sonar (SonarQube analysis)
+
+
+spec:
+  # Define input parameters for the TBC pipeline.
+  inputs:
+    # Test stage definition.
+    # The python stage (py-pytest) is implicit and included by default.
+    test-cpp:
+      type: boolean
+      default: true
+    test-performance:
+      type: boolean
+      default: false
+    test-functional:
+      type: boolean
+      default: true
+    test-mccnn:
+      type: boolean
+      default: false
+    test-notebook:
+      type: boolean
+      default: false
+---
+include:
+  - component: $CI_SERVER_FQDN/to-be-continuous/python/gitlab-ci-python@8.1.3  # TBC Python component version
+    # Default stage for jobs is build.
+    # Below is the list of items to contains.
+    inputs:
+      image: ${UL_ARTIFACTORY_HOST}/publicremotes-docker/python:3.9
+      pytest-enabled: true
+      pylint-enabled: true
+      black-enabled: true
+      mypy-enabled: true
+      build-system: setuptools
+      # Install pandora2d test dependencies (see pyproject.toml file)
+      extra-deps: test
+  - component: $CI_SERVER_FQDN/to-be-continuous/sonar/gitlab-ci-sonar@5.0.1
+    inputs:
+      host-url: "${UL_SONARQUBE_URL}"
+      quality-gate-enabled: true
+  - component: $CI_SERVER_FQDN/to-be-continuous/sphinx/gitlab-ci-sphinx@1.5.0
+    inputs:
+      image: ${UL_ARTIFACTORY_HOST}/ghcr.io/sphinx-doc/sphinx-ci:latest
+      project-dir: docs
+    
+variables:
+  # default production ref name (pattern)
+  PROD_REF: /^(master|main)$/
+  # default integration ref name (pattern)
+  INTEG_REF: /^(develop|release)$/
+
+  # Python
+  PIP_INDEX_URL: "https://${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}@${UL_ARTIFACTORY_HOST}/artifactory/api/pypi/pypi/simple"
+  # Hack: Use extraneous parentesis to avoid spaces in expression due to over-tokenization of GitLab
+  # Command line executed for Python unit tests, excluding notebook and plugin tests
+  PYTEST_ARGS: -m (unit_tests)and(not(notebook_tests))and(not(plugin_tests))
+  # Runs Pylint only on the following directories
+  PYLINT_FILES: pandora2d tests
+  # HACK: Override MYPY_FILES without files definition in order to reuse the config from mypy.ini
+  MYPY_FILES: '--exclude "(.cache|.venv)"'
+
+  # Tests
+  TEST_CPP: $[[ inputs.test-cpp ]]
+  TEST_FUNCTIONAL: $[[ inputs.test-functional ]]
+  TEST_PERFORMANCE: $[[ inputs.test-performance ]]
+  TEST_MCCNN: $[[ inputs.test-mccnn ]]
+  TEST_NOTEBOOK: $[[ inputs.test-notebook ]]
+
+# Default configuration for all jobs
+default:
+  tags:
+    - Usine_Logicielle
+
+# Override to restrict scope of PIP_OPT redefinition
+# Cf issue https://gitlab.com/to-be-continuous/sphinx/-/issues/4
+.sphinx-base:
+  variables:
+    # The image follow PEP 668
+    PIP_OPTS: "--break-system-packages"
+
+# Override to use the Makefile rules
+py-pytest:
+  script:
+    # ${TRACE+-d} define the log level
+    # Install in editable mode to compute coverage
+    - make ${TRACE+-d} test-unit
+
+# C++ unit Test
+unit-cpp-test:
+  extends: .python-test
+  coverage: /^lines:\s+(\d+\.*\d*\%)\s/  # Linear regression for the items to be verified
+  variables:
+  script:
+    - install_requirements
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} coverage-cpp
+  artifacts:
+    reports:
+      junit:
+        - build/*/meson-logs/testlog.junit.xml
+      coverage_report:
+        coverage_format: cobertura  # Format used by SonarQube
+        path: reports/gcovr-report.xml
+    paths:
+      # Path to the report file
+      - reports/gcovr-report.xml
+  rules:
+    # exclude if $TEST_CPP not set
+    - if: '$TEST_CPP != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Functional tests
+functional-test:
+  extends: py-pytest
+  script:
+    # ${TRACE+-d} define the log level
+    # Install in editable mode to compute coverage
+    - make ${TRACE+-d} test-functional
+  artifacts:
+    paths:
+      - reports/py-coverage-functional.cobertura.xml
+  rules:
+    # exclude if $TEST_FUNCTIONAL not set
+    - if: '$TEST_FUNCTIONAL != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Performance Test
+performance-test:
+  extends: py-pytest
+  variables:
+    # Run performance tests without computing coverage
+    PYTEST_ARGS: -m performance_tests --html=reports/performance-test-report.html --no-cov
+  rules:
+    # exclude if $TEST_PERFORMANCE not set
+    - if: '$TEST_PERFORMANCE != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# MCCNN unit Test
+plugin-mccnn-test:
+  extends: py-pytest
+  variables:
+    PYTHON_EXTRA_DEPS: test,mccnn
+    # Run plugin tests without computing coverage
+    PYTEST_ARGS: -m plugin_tests --html=reports/plugin-test-report.html --no-cov
+  rules:
+    # exclude if $TEST_MCCNN not set
+    - if: '$TEST_MCCNN != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Notebook Test
+notebook-test:
+  extends: py-pytest
+  variables:
+    PYTHON_EXTRA_DEPS: test,notebook
+    # Run notebook tests without computing coverage
+    PYTEST_ARGS: -m notebook_tests --html=reports/notebook-test-report.html --no-cov
+  rules:
+    # exclude if $TEST_NOTEBOOK not set
+    - if: '$TEST_NOTEBOOK != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Mypy check
+py-mypy:
+  variables:
+    PYTHON_EXTRA_DEPS: dev
+
+# CppCheck
+cppcheck:
+  extends: .python-test
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} cppcheck
+  artifacts:
+    name: "$CI_JOB_NAME artifacts from $CI_PROJECT_NAME on $CI_COMMIT_REF_SLUG"
+    expire_in: 1 day
+    paths:
+      - reports/cppcheck-report.xml
+  rules:
+    - !reference [.test-policy, rules]
+
+# GitHub push
+github-sync:
+  stage: .post
+  image:
+    name: ${UL_ARTIFACTORY_HOST}/publicremotes-docker/alpine/git
+    entrypoint: [""]
+  variables:
+    # Ensure we fetch enough history before pushing it
+    GIT_DEPTH: 100
+  before_script:
+    # Add Cnes certificates
+    - mkdir /usr/local/share/ca-certificates/
+    - cat ${CNES_CERTIFICATE} > /usr/local/share/ca-certificates/my-cert.crt
+    - cat /usr/local/share/ca-certificates/my-cert.crt >> /etc/ssl/certs/ca-certificates.crt
+  script:
+    - git remote add github https://${CARS_CNES_GITHUB_TOKEN_USERNAME}:${CARS_CNES_GITHUB_TOKEN_PASSWORD}@${GITHUB_URL}
+    - git push github ${CI_COMMIT_REF_NAME}
+  rules:
+    # run on production and integration branches + release pipelines
+    - !reference [.delivery-policy, rules]

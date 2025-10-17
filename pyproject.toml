@@ -4,7 +4,7 @@ build-backend = "mesonpy"
 
 [tool.meson-python.args]
 setup = ["-Dbuild_cpp_tests=disabled"]
-compile = ['-j0']
+compile = ['-j4']
 install = ['--skip-subprojects=eigen']
 
 [tool.setuptools_scm]
@@ -56,7 +56,6 @@ dev = [
     "pandora2d[test]",
     "black>=21.5b0",  # PEP8 format code
     "cppcheck",
-    "isort>=5.8.0",   # Check imports
     "mypy",           # static type checker
     "pandas-stubs",
     "pre-commit",
@@ -94,7 +93,7 @@ pandora2d = "pandora2d.Pandora2d:main"
 [tool.black]
 # https://github.com/psf/black
 line-length = 120
-exclude = "(.eggs|.git|.mypy_cache|.nox|.tox|_build|build|dist|venv)"
+exclude = "(.eggs|.git|.mypy_cache|.nox|.tox|_build|build|dist|venv|subprojects|docs)"
 
 [tool.cibuildwheel]
 archs = "auto64"

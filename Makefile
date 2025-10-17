@@ -79,9 +79,9 @@ test: install test-unit test-functional ## run unit tests and functional tests
 test-all: install test-unit test-functional test-resource test-performance test-notebook test-plugin ## run all tests
 
 .PHONY: test-unit
-test-unit: install ## run unit tests only (for dev) + coverage (source venv before)
+test-unit: install reports_dir ## run unit tests only (for dev) + coverage (source venv before)
 	@echo "Run unit tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
+	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage.cobertura.xml --cov-report term --cov
 
 .PHONY: test-unit-cpp
 test-unit-cpp: install ## run unit cpp tests only for dev
@@ -89,9 +89,9 @@ test-unit-cpp: install ## run unit cpp tests only for dev
 	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
 
 .PHONY: test-functional
-test-functional: install ## run functional tests only (for dev and validation plan)
+test-functional: install reports_dir ## run functional tests only (for dev and validation plan)
 	@echo "Run functional tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html
+	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage-functional.cobertura.xml --cov-report term --cov
 
 .PHONY: test-resource
 test-resource: install ## run resource tests only (for validation plan)
@@ -142,7 +142,7 @@ lint/black: ## check global style with black
 .PHONY: lint/mypy
 lint/mypy: ## check linting with mypy
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/mypy pandora2d tests
+	@${PANDORA2D_VENV}/bin/mypy
 
 .PHONY: lint/pylint
 lint/pylint: ## check linting with pylint
@@ -157,14 +157,14 @@ coverage-cpp: install reports_dir ## Gcovr (depends on gcovr in venv)
 	@# We need to configure with coverage in order to make the ninja coverage
 	@# target available and execute tests compiled with coverage info needed by
 	@# gcovr.
-	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=true > /dev/null
+	@. ${PANDORA2D_VENV}/bin/activate; meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=true > /dev/null
 	@# Before running coverage, we need to run tests:
 	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
 	@# We call ninja direclty because the meson wrapper arround ninja does not detect the target:
 	@. ${PANDORA2D_VENV}/bin/activate; ninja coverage-xml -C "${CPP_BUILD_DIR}"
 	@cp "${CPP_BUILD_DIR}/meson-logs/coverage.xml" reports/gcovr-report.xml
 	@# Coverage makes execution slow so we unset this option
-	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=false > /dev/null
+	@. ${PANDORA2D_VENV}/bin/activate; meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=false > /dev/null
 
 .PHONY: cppcheck
 cppcheck: install reports_dir ## C++ cppcheck for CI (depends cppcheck)
