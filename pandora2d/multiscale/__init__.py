@@ -22,3 +22,4 @@ Init file for multiscale module
 """
 
 from . import check_configuration
+from . import model_estimation
