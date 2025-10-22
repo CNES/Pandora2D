@@ -125,14 +125,14 @@ def estimate_model_cholesky(
 
     If a value is specified for lamba_ridge, Ridge regularization is used.
 
-    :param degree: polynomial degree
-    :type degree: int
     :param dataset_disp_maps: disparity maps dataset
     :type dataset_disp_maps: xr.Dataset
+    :param degree: polynomial degree
+    :type degree: int
     :param lambda_ridge: Ridge regularization factor
     :type lambda_ridge: Union[int,None], None by default
     :return: least square solution and sum of residuals for rows and columns
-    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
+    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray, List]
     """
 
     row_init_coords, col_init_coords, row_final_coords, col_final_coords = make_positions_matrix(dataset_disp_maps)
@@ -157,3 +157,45 @@ def estimate_model_cholesky(
     sum_sq_residuals_col = np.sum((col_final_coords.ravel() - np.dot(design_matrix, coefficients_col)) ** 2)
 
     return coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, exponent_pairs
+
+
+def estimate_init_disparity_grids(
+    dataset_disp_maps: xr.Dataset, coefficients_row: NDArray, coefficients_col: NDArray, scale_factor: int, degree: int
+) -> Tuple[NDArray, NDArray]:
+    """
+    Estimate initial disparity grids (row and columns) according to scale factor
+    and coefficients of least squares resolution.
+
+    :param dataset_disp_maps: disparity maps dataset
+    :type dataset_disp_maps: xr.Dataset
+    :param coefficients_row: row coefficients computed by least squares resolution
+    :type_coefficients_row: NDArray
+    :param coefficients_col: col coefficients computed by least squares resolution
+    :type_coefficients_col: NDArray
+    :param degree: polynomial degree
+    :type degree: int
+    :return: initial disparity grids for rows and columns
+    :rtype: Tuple[NDArray, NDArray]
+    """
+
+    scaled_row = np.arange(
+        dataset_disp_maps.coords["row"].values[0], dataset_disp_maps.coords["row"].values[-1] + 1, 1 / scale_factor
+    )
+    scaled_col = np.arange(
+        dataset_disp_maps.coords["col"].values[0], dataset_disp_maps.coords["col"].values[-1] + 1, 1 / scale_factor
+    )
+
+    scaled_col_2d, scaled_row_2d = np.meshgrid(scaled_col, scaled_row)
+
+    design_matrix, _ = make_polynomial_design_matrix(scaled_row_2d, scaled_col_2d, degree)
+
+    estimated_final_row = np.dot(design_matrix, coefficients_row)
+    estimated_final_col = np.dot(design_matrix, coefficients_col)
+
+    estimated_final_row_grid = estimated_final_row.reshape(scaled_row_2d.shape)
+    estimated_final_col_grid = estimated_final_col.reshape(scaled_col_2d.shape)
+
+    estimated_init_row_grid = estimated_final_row_grid - scaled_row_2d
+    estimated_init_col_grid = estimated_final_col_grid - scaled_col_2d
+
+    return estimated_init_row_grid, estimated_init_col_grid
