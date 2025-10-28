@@ -57,6 +57,8 @@ def dataset_disp_maps(row_coords, col_coords, invalid_disp, data_row_map, data_c
         coords=coords,
     )
 
+    dataset.attrs = {"invalid_disp": invalid_disp}
+
     return dataset
 
 
@@ -68,8 +70,8 @@ def dataset_disp_maps(row_coords, col_coords, invalid_disp, data_row_map, data_c
             np.arange(5),
             np.zeros((3, 5)),
             np.zeros((3, 5)),
-            np.array([[0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2]]),
-            np.array([[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]]),
+            np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),
+            np.array([0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4]),
             id="Classic case",
         ),
         pytest.param(
@@ -77,8 +79,8 @@ def dataset_disp_maps(row_coords, col_coords, invalid_disp, data_row_map, data_c
             np.arange(5),
             np.array([[0, 2, 4, 3, 1], [7, 1, 3, 9, 2], [1, 6, 5, 5, 8]]),
             np.array([[0, 0, 2, 7, 4], [0, 4, 2, 3, 4], [0, 1, 9, 3, 8]]),
-            np.array([[0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2]]),
-            np.array([[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]]),
+            np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),
+            np.array([0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4]),
             id="Filled disparity maps",
         ),
         pytest.param(
@@ -86,33 +88,51 @@ def dataset_disp_maps(row_coords, col_coords, invalid_disp, data_row_map, data_c
             np.arange(10, 15),
             np.array([[0, 2, 4, 3, 1], [7, 1, 3, 9, 2], [1, 6, 5, 5, 8]]),
             np.array([[0, 0, 2, 7, 4], [0, 4, 2, 3, 4], [0, 1, 9, 3, 8]]),
-            np.array([[2, 2, 2, 2, 2], [3, 3, 3, 3, 3], [4, 4, 4, 4, 4]]),
-            np.array([[10, 11, 12, 13, 14], [10, 11, 12, 13, 14], [10, 11, 12, 13, 14]]),
+            np.array([2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4]),
+            np.array([10, 11, 12, 13, 14, 10, 11, 12, 13, 14, 10, 11, 12, 13, 14]),
             id="ROI disparity maps",
+        ),
+        pytest.param(
+            np.arange(3),
+            np.arange(5),
+            np.array([[0, 2, -9999, 3, 1], [7, 1, 3, 9, 2], [-9999, 6, 5, 5, 8]]),
+            np.array([[0, 0, 2, 7, 4], [0, 4, 2, -9999, 4], [0, 1, 9, 3, 8]]),
+            np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]),
+            np.array([0, 1, 3, 4, 0, 1, 2, 4, 1, 2, 3, 4]),
+            id="Invalid disparities in disparity maps",
         ),
     ],
 )
-def test_make_positions_matrix(dataset_disp_maps, gt_row_pos, gt_col_pos):
+def test_make_position_vectors(dataset_disp_maps, gt_row_pos, gt_col_pos):
     """
-    Test make_positions_matrix method
+    Test make_position_vectors method
     """
 
-    row_coords_2d, col_coords_2d, final_row_coords, final_col_coords = model_estimation.make_positions_matrix(
+    row_coords_2d, col_coords_2d, final_row_coords, final_col_coords = model_estimation.make_position_vectors(
         dataset_disp_maps
+    )
+
+    # We only want to compare valid points.
+    mask_invalid = model_estimation.get_invalid_disp_mask(
+        dataset_disp_maps["row_map"].data, dataset_disp_maps["col_map"].data, dataset_disp_maps.attrs["invalid_disp"]
     )
 
     np.testing.assert_array_equal(row_coords_2d, gt_row_pos)
     np.testing.assert_array_equal(col_coords_2d, gt_col_pos)
-    np.testing.assert_array_equal(final_row_coords, row_coords_2d + dataset_disp_maps["row_map"].data)
-    np.testing.assert_array_equal(final_col_coords, col_coords_2d + dataset_disp_maps["col_map"].data)
+    np.testing.assert_array_equal(
+        final_row_coords, row_coords_2d + dataset_disp_maps["row_map"].data[~mask_invalid].ravel()
+    )
+    np.testing.assert_array_equal(
+        final_col_coords, col_coords_2d + dataset_disp_maps["col_map"].data[~mask_invalid].ravel()
+    )
 
 
 @pytest.mark.parametrize(
     ["init_row_pos", "init_col_pos", "degree", "design_matrix_gt", "exponent_pairs_gt"],
     [
         pytest.param(
-            np.array([[0, 0], [1, 1], [2, 2]]),
-            np.array([[0, 1], [0, 1], [0, 1]]),
+            np.array([0, 0, 1, 1, 2, 2]),
+            np.array([0, 1, 0, 1, 0, 1]),
             1,
             np.array([[1, 0, 0], [1, 1, 0], [1, 0, 1], [1, 1, 1], [1, 0, 2], [1, 1, 2]]),
             # The columns of the matrix above correspond
@@ -123,8 +143,8 @@ def test_make_positions_matrix(dataset_disp_maps, gt_row_pos, gt_col_pos):
             id="Degree=1",
         ),
         pytest.param(
-            np.array([[2, 2], [3, 3], [4, 4]]),
-            np.array([[10, 11], [10, 11], [10, 11]]),
+            np.array([2, 2, 3, 3, 4, 4]),
+            np.array([10, 11, 10, 11, 10, 11]),
             2,
             np.array(
                 [

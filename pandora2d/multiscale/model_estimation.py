@@ -28,7 +28,32 @@ import xarray as xr
 from numpy.typing import NDArray
 
 
-def make_positions_matrix(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
+def get_invalid_disp_mask(row_map: NDArray, col_map: NDArray, invalid_disp: Union[int, float]) -> NDArray:
+    """
+    Compute mask for points equal to invalid_disp in row_map or col_map.
+    This mask is then used to remove invalid points from position matrix.
+
+    :param row_map: row disparity map
+    :type row_map: NDArray
+    :param col_map: col disparity map
+    :type col_map: NDArray
+    :param invalid_disp: invalid disparity value
+    :type invalid_disp: Union[int, float]
+    :return: invalid mask for position matrix
+    :rtype: NDArray
+    """
+
+    if np.isnan(invalid_disp):
+        mask_invalid = np.isnan(row_map) | np.isnan(col_map)
+    elif np.isinf(invalid_disp):
+        mask_invalid = np.isinf(row_map) | np.isinf(col_map)
+    else:
+        mask_invalid = (row_map == invalid_disp) | (col_map == invalid_disp)
+
+    return mask_invalid
+
+
+def make_position_vectors(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Construct initial et final positions maps using dataset_disp_maps coordinates
     and disparity maps.
@@ -46,6 +71,15 @@ def make_positions_matrix(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArr
 
     final_col_coords = col_coords_2d + dataset_disp_maps["col_map"].data
     final_row_coords = row_coords_2d + dataset_disp_maps["row_map"].data
+
+    mask_invalid = get_invalid_disp_mask(
+        dataset_disp_maps["row_map"].data, dataset_disp_maps["col_map"].data, dataset_disp_maps.attrs["invalid_disp"]
+    )
+
+    row_coords_2d = row_coords_2d[~mask_invalid]
+    col_coords_2d = col_coords_2d[~mask_invalid]
+    final_row_coords = final_row_coords[~mask_invalid]
+    final_col_coords = final_col_coords[~mask_invalid]
 
     return row_coords_2d, col_coords_2d, final_row_coords, final_col_coords
 
@@ -68,9 +102,6 @@ def make_polynomial_design_matrix(
     :return: polynomial design matrix and exponent pairs list
     :rtype: Tuple[NDArray, List]
     """
-
-    col_init_coords = col_init_coords.ravel()
-    row_init_coords = row_init_coords.ravel()
 
     exponent_pairs = [(a, b) for a in range(degree + 1) for b in range(degree + 1 - a)]
 
@@ -104,8 +135,9 @@ def estimate_model(dataset_disp_maps: xr.Dataset, degree: int) -> Tuple[NDArray,
     :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
-    row_init_coords, col_init_coords, row_final_coords, col_final_coords = make_positions_matrix(dataset_disp_maps)
-
+    # Get initial and final position vectors
+    row_init_coords, col_init_coords, row_final_coords, col_final_coords = make_position_vectors(dataset_disp_maps)
+    # Get design matrix X
     design_matrix, exponent_pairs = make_polynomial_design_matrix(row_init_coords, col_init_coords, degree)
 
     check_nb_observations(design_matrix)
@@ -135,8 +167,9 @@ def estimate_model_cholesky(
     :rtype: Tuple[NDArray, NDArray, NDArray, NDArray, List]
     """
 
-    row_init_coords, col_init_coords, row_final_coords, col_final_coords = make_positions_matrix(dataset_disp_maps)
-
+    # Get initial and final position vectors
+    row_init_coords, col_init_coords, row_final_coords, col_final_coords = make_position_vectors(dataset_disp_maps)
+    # Get design matrix X
     design_matrix, exponent_pairs = make_polynomial_design_matrix(row_init_coords, col_init_coords, degree)
 
     check_nb_observations(design_matrix)
@@ -187,7 +220,7 @@ def estimate_init_disparity_grids(
 
     scaled_col_2d, scaled_row_2d = np.meshgrid(scaled_col, scaled_row)
 
-    design_matrix, _ = make_polynomial_design_matrix(scaled_row_2d, scaled_col_2d, degree)
+    design_matrix, _ = make_polynomial_design_matrix(scaled_row_2d.ravel(), scaled_col_2d.ravel(), degree)
 
     estimated_final_row = np.dot(design_matrix, coefficients_row)
     estimated_final_col = np.dot(design_matrix, coefficients_col)
