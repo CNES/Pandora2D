@@ -220,7 +220,7 @@ github-sync:
     - cat ${CNES_CERTIFICATE} > /usr/local/share/ca-certificates/my-cert.crt
     - cat /usr/local/share/ca-certificates/my-cert.crt >> /etc/ssl/certs/ca-certificates.crt
   script:
-    - git remote add github https://${CARS_CNES_GITHUB_TOKEN_USERNAME}:${CARS_CNES_GITHUB_TOKEN_PASSWORD}@${GITHUB_URL}
+    - git remote add github https://${PANDORA_CNES_GITHUB_TOKEN_USERNAME}:${PANDORA_CNES_GITHUB_TOKEN_PASSWORD}@${GITHUB_URL}
     - git push github ${CI_COMMIT_REF_NAME}
   rules:
     # run on production and integration branches + release pipelines
