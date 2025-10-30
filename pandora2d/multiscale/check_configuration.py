@@ -23,9 +23,62 @@ This module contains functions allowing to check the configuration given to MVP 
 
 from os import PathLike
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Union, List, Tuple
+
+import rasterio
+
 from json_checker import Checker, And, Or
 from pandora.check_configuration import update_conf, rasterio_can_open
+
+
+def tiff_area(file_path: Union[Path, str]) -> int:
+    """
+    Return tiff area for a given tif file_path
+
+    :param file_path: path to tif file
+    :type file_path: Union[Path, str]
+    :return: tif area width*height
+    :rtype: int
+    """
+    with rasterio.open(file_path) as src:
+        width = src.width
+        height = src.height
+        return width * height
+
+
+def get_tif_files_list(path: Path) -> List[Path]:
+    """
+    Return list of tif files in pyramid repository
+    sorted by file area
+
+    :param path_left: path to pyramid repository
+    :type path_left: Path
+    :return: list of tif files sorted by size (width*height)
+    :rtype: List[Path]
+    """
+
+    return sorted(path.glob("*.tif"), key=tiff_area)
+
+
+def get_tif_shape_list(tif_files_list: List[Path]) -> List[Tuple]:
+    """
+    Return list of tif files shape (height, width)
+
+    :param tif_files_list: list of path to tif files
+    :type tif_files_list: List[Path]
+    :return: list of shape (height, width) for each tif file in tif_files_list
+    :rtype: List[Tuple]
+    """
+
+    tif_files_shapes = []
+
+    for path in tif_files_list:
+        with rasterio.open(path) as src:
+            height = src.height
+            width = src.width
+            tif_files_shapes.append((height, width))
+
+    return tif_files_shapes
 
 
 def is_repository_with_tif_file(path: Union[PathLike, str]) -> bool:
@@ -42,7 +95,7 @@ def is_repository_with_tif_file(path: Union[PathLike, str]) -> bool:
     if not user_path.is_dir():
         return False
 
-    tif_files = list(user_path.glob("*.tif"))
+    tif_files = sorted(user_path.glob("*.tif"))
 
     return len(tif_files) > 0 and all(rasterio_can_open(str(f)) for f in tif_files)
 
@@ -62,6 +115,35 @@ def is_json_file(path: Union[str, Path]) -> bool:
         return False
 
     return True
+
+
+def check_pyramid_repositories(path_left: Union[str, Path], path_right: Union[str, Path], scale_factors: List[int]):
+    """
+    Check if left and right repositories contain the same number of tif files.
+    Check if tif files have correct suffix.
+
+    :param path_left: path to left pyramid repository
+    :type path_left: Union[str, Path]
+    :param path_right: path to right pyramid repository
+    :type path_right: Union[str, Path]
+    :param scale_factors: list of scale factors
+    :type scale_factors: List[int]
+    """
+
+    path_left = Path(path_left)
+    path_right = Path(path_right)
+
+    tif_files_path_left = get_tif_files_list(path_left)
+    tif_files_path_right = get_tif_files_list(path_right)
+
+    nb_tif_left = len(tif_files_path_left)
+    nb_tif_right = len(tif_files_path_right)
+
+    if nb_tif_left != nb_tif_right:
+        raise ValueError("Left and right pyramid repositories must contain the same number of tif files.")
+
+    if nb_tif_left != len(scale_factors):
+        raise ValueError("There should be as many images in the pyramid repositories as there are scale factors.")
 
 
 def get_multiscale_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
@@ -104,6 +186,10 @@ def check_multiscale_section(user_cfg) -> Dict[str, dict]:
     # check schema
     checker = Checker(configuration_schema)
     checker.validate(cfg)
+
+    check_pyramid_repositories(
+        cfg["multiscale"]["left"]["pyramid"], cfg["multiscale"]["right"]["pyramid"], cfg["multiscale"]["scale_factors"]
+    )
 
     return cfg
 
@@ -173,6 +259,7 @@ multiscale_configuration_schema = {
         "mask": Or(None, And(str, is_repository_with_tif_file)),
     },
     "model": {"type": And(str, lambda s: s == "pol"), "degree": And(int, lambda d: d >= 0)},
+    "scale_factors": And(list, lambda l: all(isinstance(x, int) for x in l)),
     "output": str,
 }
 
