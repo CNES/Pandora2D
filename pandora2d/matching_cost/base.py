@@ -349,6 +349,7 @@ class BaseMatchingCost(ABC):
                 "type_measure": "max",
                 "disparity_margins": margins,
                 "step": self.step,
+                "spline_order_filter": self._spline_order,
             }
         )
 

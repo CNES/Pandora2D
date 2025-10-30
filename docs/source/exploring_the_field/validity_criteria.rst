@@ -106,6 +106,10 @@ P2D_RIGHT_NODATA
 This criterion is raised when a pixel within the matching cost window of the
 explored pixel in the right image is marked as ``NO DATA`` in the right mask.
 
+.. note:: 
+    The criterion is raised for sub-pixel disparities if a no-data value from 
+    the input mask was used to interpolate the corresponding point.
+
 .. container:: html-image
 
     .. raw:: html
@@ -150,6 +154,9 @@ P2D_INVALID_MASK_RIGHT
 ^^^^^^^^^^^^^^^^^^^^^^
 
 This criterion is raised when the explored pixel in the right image is marked as INVALID in the right mask.
+
+.. note:: 
+    Ignore invalid pixels from the input mask used in interpolation to raise the criterion.
 
 .. container:: html-image
 

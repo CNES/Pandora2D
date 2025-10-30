@@ -23,6 +23,7 @@ import itertools
 from enum import IntFlag
 from typing import Tuple, Type, Union
 
+from functools import partial
 import numpy as np
 import xarray as xr
 from numpy.typing import ArrayLike, DTypeLike, NDArray
@@ -180,7 +181,7 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
 
         # Raise criteria P2D_RIGHT_NODATA
         # for points having no data in right mask according to disparity value
-        mask_right_no_data(right_image, cv.attrs["window_size"], criteria_dataarray)
+        mask_right_no_data(right_image, cv.attrs["window_size"], criteria_dataarray, cv.attrs["spline_order_filter"])
         # Raise criteria P2D_INVALID_MASK_RIGHT
         # for points having invalid in right mask according to disparity value
         mask_right_invalid(right_image, criteria_dataarray)
@@ -276,7 +277,9 @@ def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataarr
     criteria_dataarray.data[dilated_mask, ...] |= np.uint8(Criteria.P2D_LEFT_NODATA)
 
 
-def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarray: xr.DataArray) -> None:
+def mask_right_no_data(
+    img_right: xr.Dataset, window_size: int, criteria_dataarray: xr.DataArray, spline_order_filter: int
+) -> None:
     """
     Set Criteria.P2D_RIGHT_NODATA on pixels where a no_data is present in the window around its
     position in the mask shift by its disparity.
@@ -285,8 +288,10 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
     :type img_right: xr.Dataset
     :param window_size: window size
     :type window_size: int
-    :param criteria_dataarray:
-    :type criteria_dataarray:
+    :param criteria_dataaray: criteria dataarray to update
+    :type criteria_dataaray: xr.DataArray
+    :param spline_order_filter: order of the scipy filter
+    :type spline_order: int
     """
     mask_criteria_right = xr.full_like(img_right["msk"], np.uint8(Criteria.VALID), dtype=np.uint8)
 
@@ -294,7 +299,7 @@ def mask_right_no_data(img_right: xr.Dataset, window_size: int, criteria_dataarr
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
     mask_criteria_right.data[right_binary_mask] |= np.uint8(Criteria.P2D_RIGHT_NODATA)
 
-    apply_right_criteria_mask(criteria_dataarray, mask_criteria_right)
+    apply_nodata_right_criteria_mask(criteria_dataarray, mask_criteria_right, spline_order_filter)
 
 
 def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) -> None:
@@ -335,7 +340,7 @@ def mask_right_invalid(img_right: xr.Dataset, criteria_dataarray: xr.DataArray) 
     # With in place operation we need to cast Criteria (seen as int64). Seems to be related to unsigned.
     mask_criteria_right.data[invalid_right_mask.data] |= np.uint8(Criteria.P2D_INVALID_MASK_RIGHT)
 
-    apply_right_criteria_mask(criteria_dataarray, mask_criteria_right)
+    apply_invalid_right_criteria_mask(criteria_dataarray, mask_criteria_right)
 
 
 def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
@@ -354,10 +359,11 @@ def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
     return invalid_mask
 
 
-def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray):
+def apply_invalid_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray):
     """
     This method apply mask_criteria_right array on criteria_dataarray according
     to row and column disparities.
+    Ignore invalid pixels from the input mask used in interpolation to raise the P2D_INVALID_MASK_RIGHT criterion
 
     :param criteria_dataaray: criteria dataarray to update
     :type criteria_dataaray: xr.DataArray
@@ -368,21 +374,13 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_ri
     # We use a temporary mask of the same size as the image to correctly handle cases where the step is different from 1
     mask_img_shape = np.zeros_like(mask_criteria_right, dtype=np.uint8)
 
+    p = partial(filter, lambda x: x.is_integer())
+
     for row_disp, col_disp in itertools.product(
-        criteria_dataarray.coords["disp_row"], criteria_dataarray.coords["disp_col"]
+        p(criteria_dataarray.coords["disp_row"].data), p(criteria_dataarray.coords["disp_col"].data)
     ):
 
-        row_disp, col_disp = row_disp.data, col_disp.data
-
-        # If the subpix is different from 1 in the matching cost step, we have float disparities.
-        # For the moment, to decide whether to apply the P2D_RIGHT_NODATA
-        # and P2D_INVALID_MASK_RIGHT criteria to subpixel disparities,
-        # we use the nearest neighbor method, i.e. we apply the same criteria as to the nearest integer disparity.
-
-        # In a future issue, we will change this method to raise these criteria if one of the points used
-        # to interpolate the subpixel point has a no_data or invalid in the right mask.
-        row_dsp_int, col_dsp_int = int(np.round(row_disp)), int(np.round(col_disp))
-
+        row_dsp_int, col_dsp_int = int(row_disp), int(col_disp)
         # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
         msk_row_slice = np.s_[:row_dsp_int] if row_dsp_int < 0 else np.s_[row_dsp_int:]  # type: ignore[index]
         msk_col_slice = np.s_[:col_dsp_int] if col_dsp_int < 0 else np.s_[col_dsp_int:]  # type: ignore[index]
@@ -392,6 +390,92 @@ def apply_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_ri
 
         mask_img_shape[:] = 0
         mask_img_shape[criteria_row_slice, criteria_col_slice] |= mask_criteria_right[msk_row_slice, msk_col_slice]
+
+        # We subtract the first row and col coordinates to keep the correct indexes when processing a ROI.
+        criteria_dataarray.loc[
+            {
+                "disp_row": row_disp,
+                "disp_col": col_disp,
+            }
+        ] |= mask_img_shape[
+            criteria_dataarray.coords["row"].data[:, None] - mask_criteria_right.coords["row"].data[0],
+            criteria_dataarray.coords["col"].data[None, :] - mask_criteria_right.coords["col"].data[0],
+        ]
+
+
+def apply_nodata_right_criteria_mask(
+    criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray, spline_order_filter: int
+):  # pylint: disable=too-many-branches
+    """
+    This method apply mask_criteria_right array on criteria_dataarray according
+    to row and column disparities.
+    The P2D_RIGHT_NODATA criterion is raised for sub-pixel disparities if a no-data value from the
+    input mask was used to interpolate the corresponding point.
+
+    :param criteria_dataaray: criteria dataarray to update
+    :type criteria_dataaray: xr.DataArray
+    :param mask_criteria_right: mask to apply to criteria dataarray
+    :type mask_criteria_right: xr.DataArray
+    :param spline_order_filter: order of the scipy filter
+    :type spline_order: int
+    """
+
+    # We use a temporary mask of the same size as the image to correctly handle cases where the step is different from 1
+    mask_img_shape = np.zeros_like(mask_criteria_right, dtype=np.uint8)
+
+    # Create a temporary mask to store the mask dilation using the scipy filter for these disparities
+    # Dilation is applied only to floating-point disparities (when subpix > 1)
+    # Margins used for filters based on the order (here, the spline_order_filter parameter):
+    #     * order = 1 -> Margins(0,0,1,1)
+    #     * order = 2 -> Margins(1,1,1,1)
+    #     * order = 3 -> Margins(1,1,2,2)
+    #     * order = 4 -> Margins(2,2,2,2)
+    #     * order = 5 -> Margins(2,2,3,3)
+    dilated_mask = np.uint8(Criteria.P2D_RIGHT_NODATA) * binary_dilation(
+        mask_criteria_right == np.uint8(Criteria.P2D_RIGHT_NODATA),
+        structure=np.ones((spline_order_filter + 1, spline_order_filter + 1)),
+        iterations=1,
+    )
+
+    def get_mask_slice(disp: np.floating, disp_int: int) -> slice:
+        """Returns the consistent slices"""
+        if disp >= 0:
+            start = disp_int
+            # floor(-disp) + floor(disp); this is due to how scipy handles floating-point values
+            #  |_ integer values -> 0
+            #  |_ floating-point values -> -1
+            stop = None if disp.is_integer() else -1
+        else:
+            # -floor(disp) + floor(disp) = 0 # NOSONAR
+            start = None
+            stop = disp_int
+        return np.s_[start:stop]
+
+    for row_disp, col_disp in itertools.product(
+        criteria_dataarray.coords["disp_row"].data, criteria_dataarray.coords["disp_col"].data
+    ):
+        # np.floor rounds values down to the nearest integer (used in scipy filter)
+        # For more information, see the following page:
+        # https://docs.scipy.org/doc/scipy/tutorial/ndimage.html#interpolation-boundary-handling
+        row_dsp_int, col_dsp_int = int(np.floor(row_disp)), int(np.floor(col_disp))
+
+        # reset temporary mask
+        mask_img_shape[:] = 0
+
+        if not row_disp.is_integer() or not col_disp.is_integer():
+            mask_criteria = dilated_mask
+        else:
+            mask_criteria = mask_criteria_right.data
+
+        mask_row_slice = get_mask_slice(row_disp, row_dsp_int)
+        mask_col_slice = get_mask_slice(col_disp, col_dsp_int)
+
+        # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
+        inv_row_dsp_int, inv_col_dsp_int = int(np.floor(-row_disp)), int(np.floor(-col_disp))
+        criteria_row_slice = np.s_[-row_dsp_int:] if row_disp <= 0 else np.s_[:inv_row_dsp_int]  # type: ignore[index]
+        criteria_col_slice = np.s_[-col_dsp_int:] if col_disp <= 0 else np.s_[:inv_col_dsp_int]  # type: ignore[index]
+
+        mask_img_shape[criteria_row_slice, criteria_col_slice] |= mask_criteria[mask_row_slice, mask_col_slice]
 
         # We subtract the first row and col coordinates to keep the correct indexes when processing a ROI.
         criteria_dataarray.loc[
