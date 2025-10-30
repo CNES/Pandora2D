@@ -214,7 +214,12 @@ def estimate_model_cholesky(
 
 
 def estimate_init_disparity_grids(
-    dataset_disp_maps: xr.Dataset, coefficients_row: NDArray, coefficients_col: NDArray, scale_factor: int, degree: int
+    dataset_disp_maps: xr.Dataset,
+    coefficients_row: NDArray,
+    coefficients_col: NDArray,
+    scale_factor: int,  # pylint: disable=unused-argument
+    degree: int,
+    next_resolution_shape: Tuple,
 ) -> Tuple[NDArray, NDArray]:
     """
     Estimate initial disparity grids (rows and columns) according to scale factor
@@ -228,16 +233,24 @@ def estimate_init_disparity_grids(
     :type_coefficients_col: NDArray
     :param degree: polynomial degree
     :type degree: int
+    :param next_resolution_shape: shape of image for next resolution
+    :type next_resolution_shape: Tuple (height, width)
     :return: initial disparity grids for rows and columns
     :rtype: Tuple[NDArray, NDArray]
     """
 
     # Get resampled coordinates according to scale factor
-    scaled_row = np.arange(
-        dataset_disp_maps.coords["row"].values[0], dataset_disp_maps.coords["row"].values[-1] + 1, 1 / scale_factor
+    scaled_row = np.linspace(
+        dataset_disp_maps.coords["row"].values[0],
+        dataset_disp_maps.coords["row"].values[-1] + 1,
+        next_resolution_shape[0],
+        endpoint=False,
     )
-    scaled_col = np.arange(
-        dataset_disp_maps.coords["col"].values[0], dataset_disp_maps.coords["col"].values[-1] + 1, 1 / scale_factor
+    scaled_col = np.linspace(
+        dataset_disp_maps.coords["col"].values[0],
+        dataset_disp_maps.coords["col"].values[-1] + 1,
+        next_resolution_shape[1],
+        endpoint=False,
     )
 
     # Get initial positions for resampled coordinates
@@ -253,7 +266,7 @@ def estimate_init_disparity_grids(
     estimated_final_col_grid = estimated_final_col.reshape(scaled_col_2d.shape)
     # Compute estimated initial disparity grid for next resolution
     # by subtracting the resampled initial position
-    estimated_init_row_grid = estimated_final_row_grid - scaled_row_2d
-    estimated_init_col_grid = estimated_final_col_grid - scaled_col_2d
+    estimated_init_row_grid = np.round(estimated_final_row_grid - scaled_row_2d)
+    estimated_init_col_grid = np.round(estimated_final_col_grid - scaled_col_2d)
 
     return estimated_init_row_grid, estimated_init_col_grid
