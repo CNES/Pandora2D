@@ -127,7 +127,7 @@ format: install format/black  ## run black formatting (depends install)
 .PHONY: format/black
 format/black: install  ## run black formatting (depends install) (source venv before)
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/black pandora2d tests notebooks/snippets/*.py
+	@${PANDORA2D_VENV}/bin/black src/pandora2d tests notebooks/snippets/*.py
 
 ### Check code quality and linting : black, mypy, pylint
 
@@ -137,7 +137,7 @@ lint: install lint/black lint/mypy lint/pylint ## check code quality and linting
 .PHONY: lint/black
 lint/black: ## check global style with black
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/black --check pandora2d tests notebooks/snippets/*.py
+	@${PANDORA2D_VENV}/bin/black --check src/pandora2d tests notebooks/snippets/*.py
 
 .PHONY: lint/mypy
 lint/mypy: ## check linting with mypy
@@ -147,7 +147,7 @@ lint/mypy: ## check linting with mypy
 .PHONY: lint/pylint
 lint/pylint: ## check linting with pylint
 	@echo "+ $@"
-	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests --recursive=true --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
+	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint src/pandora2d tests --recursive=true --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
 
 
 ## Check cpp code quality
