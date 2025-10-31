@@ -26,6 +26,7 @@ This module contains functions allowing to check the configuration given to Pand
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Dict
 
 import numpy as np
@@ -131,10 +132,20 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
     if not (isinstance(input_cfg["row_disparity"], dict) and isinstance(input_cfg["col_disparity"], dict)):
         raise AttributeError("The disparities in rows and columns must be given as 2 dictionaries.")
 
-    if isinstance(input_cfg["row_disparity"]["init"], str) and isinstance(input_cfg["col_disparity"]["init"], str):
+    row_init = input_cfg["row_disparity"]["init"]
+    col_init = input_cfg["col_disparity"]["init"]
+
+    if isinstance(row_init, str) and isinstance(col_init, str):
+        given_row_path = Path(row_init)
+        given_col_path = Path(col_init)
+
+        if (given_row_path.is_dir() and given_col_path.is_file()) or (
+            given_row_path.is_file() and given_col_path.is_dir()
+        ):
+            raise ValueError("Directory must not be mixed with file.")
         # Read disparity grids
-        disparity_row_reader = rasterio_open(input_cfg["row_disparity"]["init"])
-        disparity_col_reader = rasterio_open(input_cfg["col_disparity"]["init"])
+        disparity_row_reader = rasterio_open(row_init)
+        disparity_col_reader = rasterio_open(col_init)
 
         # Check disparity grids size and number of bands
         check_disparity_grids(image_metadata, disparity_row_reader)
@@ -145,7 +156,7 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
         row_disp_dict = get_dictionary_from_init_grid(disparity_row_reader, input_cfg["row_disparity"]["range"])
         col_disp_dict = get_dictionary_from_init_grid(disparity_col_reader, input_cfg["col_disparity"]["range"])
 
-    elif isinstance(input_cfg["row_disparity"]["init"], int) and isinstance(input_cfg["col_disparity"]["init"], int):
+    elif isinstance(row_init, int) and isinstance(col_init, int):
         row_disp_dict = input_cfg["row_disparity"]
         col_disp_dict = input_cfg["col_disparity"]
 

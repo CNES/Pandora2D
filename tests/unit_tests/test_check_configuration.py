@@ -24,12 +24,16 @@
 Test configuration
 """
 
+# pylint: disable=unused-argument
+
 import random
 import string
 from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 import pytest
+import rasterio
 import transitions
 import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
@@ -733,6 +737,107 @@ class TestCheckDisparity:
         image_metadata = get_metadata(left_img_path)
 
         with pytest.raises(error_type, match=error_message):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+
+class TestCheckDirectoryDisparity:
+    """Test check_disparity method when the disparity path is a directory."""
+
+    @pytest.fixture
+    def image_metadata(self, left_img_path):
+        return get_metadata(left_img_path)
+
+    @pytest.fixture
+    def disparity_map_directory(self, tmp_path):
+        """Disparity map directory with files inside."""
+        destination = tmp_path / "destination"
+        destination.mkdir()
+        return destination
+
+    @pytest.fixture
+    def image_shape(self, left_img_path):
+        """image shape"""
+        with rasterio.open(left_img_path) as src:
+            width = src.width
+            height = src.height
+        return height, width
+
+    @pytest.fixture
+    def row_disparity_grid_shape(self, image_shape):
+        return image_shape
+
+    @pytest.fixture
+    def row_disparity_grid(self, disparity_map_directory, create_disparity_grid_fixture, row_disparity_grid_shape):
+        """row disparity grid"""
+        data = np.ones(image_shape)
+        file_path = disparity_map_directory / "row_map.tif"
+        # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
+        # instead of being prefixed:
+        return create_disparity_grid_fixture(data, 3, file_path)
+
+    @pytest.fixture
+    def row_disparity_directory(self, row_disparity_grid):
+        """row disparity directory"""
+        disparity_file_path = Path(row_disparity_grid["init"])
+        row_disparity_grid.update({"init": str(disparity_file_path.parent)})
+        return row_disparity_grid
+
+    @pytest.fixture
+    def row_disparity_value(self):
+        return {"init": 0, "range": 3}
+
+    @pytest.fixture
+    def col_disparity_grid_shape(self, image_shape):
+        return image_shape
+
+    @pytest.fixture
+    def col_disparity_grid(self, disparity_map_directory, create_disparity_grid_fixture, col_disparity_grid_shape):
+        """col disparity grid"""
+        data = np.ones(image_shape)
+        file_path = disparity_map_directory / "col_map.tif"
+        # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
+        # instead of being prefixed:
+        return create_disparity_grid_fixture(data, 3, file_path)
+
+    @pytest.fixture
+    def col_disparity_directory(self, col_disparity_grid):
+        disparity_file_path = Path(col_disparity_grid["init"])
+        col_disparity_grid.update({"init": str(disparity_file_path.parent)})
+        return col_disparity_grid
+
+    @pytest.fixture
+    def col_disparity_value(self):
+        return {"init": 0, "range": 3}
+
+    @pytest.fixture
+    def attributes_file(self, disparity_map_directory):
+        file_path = disparity_map_directory / "attributes.json"
+        file_path.touch()
+        return file_path
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "row_disparity_directory",
+                    "col_disparity": "col_disparity_grid",
+                },
+                id="Row: directory; Col: file",
+            ),
+            pytest.param(
+                {
+                    "row_disparity": "row_disparity_grid",
+                    "col_disparity": "col_disparity_directory",
+                },
+                id="Row: file; Col: directory",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_when_directory_is_mixed_with_file(self, make_input_cfg, image_metadata):
+        """Both disparities must be directories"""
+        with pytest.raises(ValueError, match="Directory must not be mixed with file."):
             check_configuration.check_disparity(image_metadata, make_input_cfg)
 
 
