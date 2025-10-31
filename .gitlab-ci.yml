@@ -69,7 +69,7 @@ variables:
   INTEG_REF: /^(develop|release)$/
 
   # Python
-  PIP_INDEX_URL: "https://${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}@${UL_ARTIFACTORY_HOST}/artifactory/api/pypi/pypi/simple"
+  PIP_INDEX_URL: "https://${PANDORA_ARTIFACTORY_USERNAME}:${PANDORA_ARTIFACTORY_KEY}@${UL_ARTIFACTORY_HOST}/artifactory/api/pypi/pypi/simple"
   # Hack: Use extraneous parentesis to avoid spaces in expression due to over-tokenization of GitLab
   # Command line executed for Python unit tests, excluding notebook and plugin tests
   PYTEST_ARGS: -m (unit_tests)and(not(notebook_tests))and(not(plugin_tests))
