@@ -20,7 +20,8 @@
 This module contains methods associated to the pandora2d multiscale mode
 """
 
-import sys
+import argparse
+import logging
 from os import PathLike
 from pathlib import Path
 from typing import Union, Dict
@@ -37,6 +38,70 @@ from pandora2d import run_pandora2d, run_pandora2d_segment_mode
 from pandora2d.state_machine import Pandora2DMachine
 from .check_configuration import check_conf, get_tif_files_list, get_tif_shape_list
 from .model_estimation import estimate_model, estimate_init_disparity_grids
+
+
+# Multiscale pipeline logger
+logger = logging.getLogger(__name__)
+
+
+def get_parser():
+    """
+    ArgumentParser for multiscale pipeline
+
+    :return parser
+    """
+
+    parser = argparse.ArgumentParser(
+        description="Run Pandora2D multiscale pipeline",
+    )
+
+    parser.add_argument(
+        "config_path",
+        type=Path,
+        help="path to a json file containing the input/output files paths and \
+            algorithm parameters for multiscale pipeline",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="Increase output verbosity",
+        action="count",
+        default=0,
+    )
+
+    return parser
+
+
+def setup_logging(verbose: bool) -> None:
+    """
+    Setup the logging configuration
+
+    if -v option is given, multiscale pipeline informations are logged
+    if -vv option is given, pandora2d pipeline informations are added
+
+    :param verbose: verbose mode
+    :type verbose: bool
+    :return: None
+    """
+
+    # Only warnings are logged
+    if verbose == 0:
+        logging.basicConfig(format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.WARNING)
+
+    # Multiscale pipeline informations are logged
+    elif verbose == 1:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(fmt="[%(asctime)s][%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+    # Multiscale pipeline and pandora2d pipeline informations are logged
+    else:
+        logging.basicConfig(format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.INFO)
+        for name in logging.root.manager.loggerDict:
+            if not name.startswith(__name__):
+                logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def resolve_path_in_config_multiscale(config: Dict, config_path: Path) -> Dict:
@@ -126,14 +191,19 @@ def write_initial_disparity_grid(
         dst.write(data, 1)
 
 
-def main(config_path: Union[PathLike, str]) -> None:
+def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
     """
     Check config file and run multiscale pipeline accordingly
 
     :param cfg_path: path to the json configuration file
     :type cfg_path: PathLike|str
+    :param verbose: verbose mode
+    :type verbose: bool
     :return: None
     """
+
+    # Setup logger
+    setup_logging(verbose)
 
     config_path = Path(config_path)
 
@@ -148,9 +218,15 @@ def main(config_path: Union[PathLike, str]) -> None:
     tif_files_path_right = get_tif_files_list(Path(checked_cfg["multiscale"]["right"]["pyramid"]))
     tif_files_shape = get_tif_shape_list(tif_files_path_left)
 
-    output_path = checked_cfg["multiscale"]["output"] + "/" + "resolution_"
+    output_path = checked_cfg["multiscale"]["output"] + "/" + "iteration_"
 
     for resolution in range(1, len(tif_files_path_left) + 1):
+
+        logger.info("--- Computation for iteration %d ---", resolution)
+        logger.info(
+            " scale factor = %d between this image and full resolution image",
+            tif_files_shape[-1][0] / tif_files_shape[resolution - 1][0],
+        )
 
         pandora2d_cfg = get_pandora2d_cfg(
             checked_cfg, tif_files_path_left[resolution - 1], tif_files_path_right[resolution - 1]
@@ -179,14 +255,8 @@ def main(config_path: Union[PathLike, str]) -> None:
             )
 
             # Estimate initial disparity grids for next resolution
-            estimated_init_row_grid, estimated_init_col_grid = estimate_init_disparity_grids(
-                dataset_disp_maps,
-                coefficients_row,
-                coefficients_col,
-                checked_cfg["multiscale"]["scale_factors"][resolution]
-                / checked_cfg["multiscale"]["scale_factors"][resolution - 1],
-                checked_cfg["multiscale"]["model"]["degree"],
-                tif_files_shape[resolution],
+            estimated_init_row_grid, estimated_init_col_grid, sum_sq_residuals_row, sum_sq_residuals_col = (
+                get_init_disparity_grids(dataset_disp_maps, checked_cfg["multiscale"], tif_files_shape[resolution])
             )
 
             # Save initial disparity grids for next resolution
@@ -198,12 +268,32 @@ def main(config_path: Union[PathLike, str]) -> None:
                 output_path_next_res, "init_grid_col", estimated_init_col_grid, dataset_disp_maps
             )
 
+            logger.info("Sum of squared residuals for row disparities is: %f", sum_sq_residuals_row)
+            logger.info("Sum of squared residuals for col disparities is: %f", sum_sq_residuals_col)
+
         # Save disparity maps
         multiscale_completed_cfg = deepcopy(completed_cfg)
         multiscale_completed_cfg["output"]["path"] = output_path + str(resolution)
         pandora2d.common.save_disparity_maps(dataset_disp_maps, multiscale_completed_cfg)
+        logger.info(
+            "Disparity maps for iteration %d are saved in %s", resolution, multiscale_completed_cfg["output"]["path"]
+        )
+        # Save pandora2d configuration
+        pandora2d.common.save_config(multiscale_completed_cfg)
+
+
+def main():
+    """
+    Call Pandora2D multiscale main
+    """
+
+    # Get parser
+    parser = get_parser()
+    args = parser.parse_args()
+
+    # Run the Pandora 2D pipeline
+    run_multiscale(args.config_path, args.verbose)
 
 
 if __name__ == "__main__":
-    cfg_path = sys.argv[1]
-    main(cfg_path)
+    main()
