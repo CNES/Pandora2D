@@ -20,7 +20,7 @@
 This module contains methods associated to the estimation model for the MVP
 """
 
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Dict
 
 import numpy as np
 import xarray as xr
@@ -217,7 +217,6 @@ def estimate_init_disparity_grids(
     dataset_disp_maps: xr.Dataset,
     coefficients_row: NDArray,
     coefficients_col: NDArray,
-    scale_factor: int,  # pylint: disable=unused-argument
     degree: int,
     next_resolution_shape: Tuple,
 ) -> Tuple[NDArray, NDArray]:
@@ -268,5 +267,38 @@ def estimate_init_disparity_grids(
     # by subtracting the resampled initial position
     estimated_init_row_grid = np.round(estimated_final_row_grid - scaled_row_2d)
     estimated_init_col_grid = np.round(estimated_final_col_grid - scaled_col_2d)
+
+    return estimated_init_row_grid, estimated_init_col_grid
+
+
+def get_init_disparity_grids(
+    dataset_disp_maps: xr.Dataset, multiscale_cfg: Dict, next_resolution_shape: Tuple
+) -> Tuple[NDArray, NDArray]:
+    """
+    Return initial disparity grid after computing least square coefficients
+
+    :param dataset_disp_maps: disparity maps dataset
+    :type dataset_disp_maps: xr.Dataset
+    :param multiscale_cfg: multiscale pipeline configuration
+    :type multiscale_cfg: Dict
+    :param next_resolution_shape: shape of image for next resolution
+    :type next_resolution_shape: Tuple (height, width)
+    :return: initial disparity grids for rows and columns
+    :rtype: Tuple[NDArray, NDArray]
+    """
+
+    # Estimate model
+    coefficients_row, coefficients_col, _, __, ___ = estimate_model(
+        dataset_disp_maps, multiscale_cfg["model"]["degree"]
+    )
+
+    # Estimate initial disparity grids for next resolution
+    estimated_init_row_grid, estimated_init_col_grid = estimate_init_disparity_grids(
+        dataset_disp_maps,
+        coefficients_row,
+        coefficients_col,
+        multiscale_cfg["model"]["degree"],
+        next_resolution_shape,
+    )
 
     return estimated_init_row_grid, estimated_init_col_grid

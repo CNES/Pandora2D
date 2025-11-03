@@ -37,7 +37,7 @@ from pandora2d.common import string_to_path, resolve_path_in_config
 from pandora2d import run_pandora2d, run_pandora2d_segment_mode
 from pandora2d.state_machine import Pandora2DMachine
 from .check_configuration import check_conf, get_tif_files_list, get_tif_shape_list
-from .model_estimation import estimate_model, estimate_init_disparity_grids
+from .model_estimation import get_init_disparity_grids
 
 
 # Multiscale pipeline logger
@@ -248,11 +248,6 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
 
         # We estimate initial disparity grids for next resolution
         if resolution != len(tif_files_path_left):
-
-            # Estimate model
-            coefficients_row, coefficients_col, _, __, ___ = estimate_model(
-                dataset_disp_maps, checked_cfg["multiscale"]["model"]["degree"]
-            )
 
             # Estimate initial disparity grids for next resolution
             estimated_init_row_grid, estimated_init_col_grid, sum_sq_residuals_row, sum_sq_residuals_col = (

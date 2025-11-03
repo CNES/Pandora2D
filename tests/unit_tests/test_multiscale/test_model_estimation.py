@@ -295,7 +295,6 @@ def test_fails_estimate_model(dataset_disp_maps, degree, method):
         "data_row_map",
         "data_col_map",
         "degree",
-        "scale_factor",
         "next_resolution_shape",
         "gt_row_grid",
         "gt_col_grid",
@@ -307,7 +306,6 @@ def test_fails_estimate_model(dataset_disp_maps, degree, method):
             np.array([[0, 1], [1, 2], [3, 4]]),
             np.array([[1, 1], [2, 0], [1, 2]]),
             1,
-            2,
             (6, 4),
             np.array(
                 [
@@ -337,7 +335,6 @@ def test_fails_estimate_model(dataset_disp_maps, degree, method):
             np.array([[0, 2, 4, 3, 1], [7, 1, 3, 9, 2], [1, 6, 5, 5, 8]]),
             np.array([[0, 0, 2, 7, 4], [0, 4, 2, 3, 4], [0, 1, 9, 3, 8]]),
             2,
-            2,
             (6, 10),
             np.array(
                 [
@@ -363,9 +360,7 @@ def test_fails_estimate_model(dataset_disp_maps, degree, method):
         ),
     ],
 )
-def test_estimate_init_disparity_grids(
-    dataset_disp_maps, degree, scale_factor, next_resolution_shape, gt_row_grid, gt_col_grid
-):
+def test_estimate_init_disparity_grids(dataset_disp_maps, degree, next_resolution_shape, gt_row_grid, gt_col_grid):
     """
     Test the estimate_init_disparity_grids method
     """
@@ -373,7 +368,7 @@ def test_estimate_init_disparity_grids(
     coefficients_row, coefficients_col, _, __, ___ = model_estimation.estimate_model(dataset_disp_maps, degree)
 
     estimated_init_row_grid, estimated_init_col_grid = model_estimation.estimate_init_disparity_grids(
-        dataset_disp_maps, coefficients_row, coefficients_col, scale_factor, degree, next_resolution_shape
+        dataset_disp_maps, coefficients_row, coefficients_col, degree, next_resolution_shape
     )
 
     np.testing.assert_array_almost_equal(estimated_init_row_grid, gt_row_grid)
