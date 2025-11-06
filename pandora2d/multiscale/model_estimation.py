@@ -26,6 +26,7 @@ import numpy as np
 import xarray as xr
 
 from numpy.typing import NDArray
+from scipy.linalg import cho_factor, cho_solve
 
 
 def get_invalid_disp_mask(row_map: NDArray, col_map: NDArray, invalid_disp: Union[int, float]) -> NDArray:
@@ -164,11 +165,14 @@ def estimate_model(dataset_disp_maps: xr.Dataset, degree: int) -> Tuple[NDArray,
 
 
 def estimate_model_cholesky(
-    dataset_disp_maps: xr.Dataset, degree: int, lambda_ridge: Union[int, None] = None
+    dataset_disp_maps: xr.Dataset, degree: int, lambda_ridge: Union[int, float, None] = None
 ) -> Tuple[NDArray, NDArray, NDArray, NDArray, List]:
     """
     Estimate deformation model from initial positions to final positions
     by resolving y=Xb using Cholesky decomposition.
+
+    We have X.T*X*b = X.T*y and X.T*X = L*L.T with L a lower triangular matrix.
+    Then, using Cholesky decomposition we can resolve L*z=X.T*y and L.T*b = z.
 
     If a value is specified for lamba_ridge, Ridge regularization is used.
 
@@ -177,7 +181,7 @@ def estimate_model_cholesky(
     :param degree: polynomial degree
     :type degree: int
     :param lambda_ridge: Ridge regularization factor
-    :type lambda_ridge: Union[int,None], None by default
+    :type lambda_ridge: Union[int, float, None], None by default
     :return: least square solution and sum of residuals for rows and columns
     :rtype: Tuple[NDArray, NDArray, NDArray, NDArray, List]
     """
@@ -190,21 +194,22 @@ def estimate_model_cholesky(
     # Check that we have enough observations compared to the number of parameters
     check_nb_observations(design_matrix)
 
+    # Build the normal matrix (X.T*X) and right-hand sides (X.T*y)
+    x_transpose_x = np.dot(design_matrix.T, design_matrix).astype(float)
+    x_transpose_y_row = np.dot(design_matrix.T, row_final_coords.ravel())
+    x_transpose_y_col = np.dot(design_matrix.T, col_final_coords.ravel())
+
     # Add ridge penalty if the lambda_ridge parameter is specified
     # then compute Cholesky matrix L such as X.T*X = L*L.T
-    if lambda_ridge is None:
-        cholesky_matrix = np.linalg.cholesky(np.dot(design_matrix.T, design_matrix))
-    else:
-        ridge_regularisation = lambda_ridge * np.eye(design_matrix.shape[1])
-        cholesky_matrix = np.linalg.cholesky(np.dot(design_matrix.T, design_matrix) + ridge_regularisation)
+    if lambda_ridge is not None:
+        x_transpose_x += lambda_ridge * np.eye(design_matrix.shape[1])
 
-    # Resolve first system L*z=X.T*y
-    intermediate_vector_row = np.linalg.solve(cholesky_matrix, np.dot(design_matrix.T, row_final_coords.ravel()))
-    intermediate_vector_col = np.linalg.solve(cholesky_matrix, np.dot(design_matrix.T, col_final_coords.ravel()))
+    # Compute the Cholesky factorization (L is lower triangular)
+    c, low = cho_factor(x_transpose_x, lower=True)
 
-    # Resolve second system L.T*b=z
-    coefficients_row = np.linalg.solve(cholesky_matrix.T, intermediate_vector_row)
-    coefficients_col = np.linalg.solve(cholesky_matrix.T, intermediate_vector_col)
+    # Resolve Cholesky system
+    coefficients_row = cho_solve((c, low), x_transpose_y_row)
+    coefficients_col = cho_solve((c, low), x_transpose_y_col)
 
     # Compute sum of squared residuals
     sum_sq_residuals_row = np.sum((row_final_coords.ravel() - np.dot(design_matrix, coefficients_row)) ** 2)
@@ -264,16 +269,18 @@ def estimate_init_disparity_grids(
     estimated_final_row_grid = estimated_final_row.reshape(scaled_row_2d.shape)
     estimated_final_col_grid = estimated_final_col.reshape(scaled_col_2d.shape)
     # Compute estimated initial disparity grid for next resolution
-    # by subtracting the resampled initial position
-    estimated_init_row_grid = np.round(estimated_final_row_grid - scaled_row_2d)
-    estimated_init_col_grid = np.round(estimated_final_col_grid - scaled_col_2d)
+    # by subtracting the resampled initial position and multiplying by the scale factor
+    scale_factor_row = np.round(next_resolution_shape[0] / len(dataset_disp_maps.coords["row"].values))
+    scale_factor_col = np.round(next_resolution_shape[1] / len(dataset_disp_maps.coords["col"].values))
+    estimated_init_row_grid = np.round((estimated_final_row_grid - scaled_row_2d) * scale_factor_row)
+    estimated_init_col_grid = np.round((estimated_final_col_grid - scaled_col_2d) * scale_factor_col)
 
     return estimated_init_row_grid, estimated_init_col_grid
 
 
 def get_init_disparity_grids(
     dataset_disp_maps: xr.Dataset, multiscale_cfg: Dict, next_resolution_shape: Tuple
-) -> Tuple[NDArray, NDArray]:
+) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Return initial disparity grid after computing least square coefficients
 
@@ -283,13 +290,13 @@ def get_init_disparity_grids(
     :type multiscale_cfg: Dict
     :param next_resolution_shape: shape of image for next resolution
     :type next_resolution_shape: Tuple (height, width)
-    :return: initial disparity grids for rows and columns
-    :rtype: Tuple[NDArray, NDArray]
+    :return: initial disparity grids for rows and columns and sum of squared residuals
+    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
     # Estimate model
-    coefficients_row, coefficients_col, _, __, ___ = estimate_model(
-        dataset_disp_maps, multiscale_cfg["model"]["degree"]
+    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, _ = estimate_model_cholesky(
+        dataset_disp_maps, multiscale_cfg["model"]["degree"], lambda_ridge=1.0e-6
     )
 
     # Estimate initial disparity grids for next resolution
@@ -301,4 +308,4 @@ def get_init_disparity_grids(
         next_resolution_shape,
     )
 
-    return estimated_init_row_grid, estimated_init_col_grid
+    return estimated_init_row_grid, estimated_init_col_grid, sum_sq_residuals_row, sum_sq_residuals_col
