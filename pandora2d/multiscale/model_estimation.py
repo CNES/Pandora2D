@@ -28,6 +28,8 @@ import xarray as xr
 from numpy.typing import NDArray
 from scipy.linalg import cho_factor, cho_solve
 
+COMPRESSION_FACTOR = 0.5
+
 
 def get_invalid_disp_mask(row_map: NDArray, col_map: NDArray, invalid_disp: Union[int, float]) -> NDArray:
     """
@@ -58,6 +60,7 @@ def make_position_vectors(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArr
     """
     Construct initial et final positions vectors using dataset_disp_maps coordinates
     and disparity maps.
+    To reduce numerical instability, a compression factor is used to create the final and initial position grids.
 
     For the least squares problem y=Xb:
         - X is constructed using init_row_coords and init_col_coords
@@ -71,15 +74,15 @@ def make_position_vectors(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArr
 
     # dataset_disp_maps xarray coordinates are used to get initial positions
     # for each point of the image
-    col_coords = dataset_disp_maps["col"].values
-    row_coords = dataset_disp_maps["row"].values
+    col_coords = dataset_disp_maps["col"].values * COMPRESSION_FACTOR
+    row_coords = dataset_disp_maps["row"].values * COMPRESSION_FACTOR
 
     init_col_coords, init_row_coords = np.meshgrid(col_coords, row_coords)
 
     # final positions are computed using initial positions
     # to which we add the disparities calculated by pandora2d
-    final_col_coords = init_col_coords + dataset_disp_maps["col_map"].data
-    final_row_coords = init_row_coords + dataset_disp_maps["row_map"].data
+    final_col_coords = init_col_coords + dataset_disp_maps["col_map"].data * COMPRESSION_FACTOR
+    final_row_coords = init_row_coords + dataset_disp_maps["row_map"].data * COMPRESSION_FACTOR
 
     # We remove the points that are invalid_disp either in row_map or in col_map
     # so as not to distort the calculation of the least squares coefficients
@@ -244,17 +247,24 @@ def estimate_init_disparity_grids(
     """
 
     # Get resampled coordinates according to scale factor
-    scaled_row = np.linspace(
-        dataset_disp_maps.coords["row"].values[0],
-        dataset_disp_maps.coords["row"].values[-1] + 1,
-        next_resolution_shape[0],
-        endpoint=False,
+    # To reduce numerical instability, a compression factor is used to create resampled coordinates
+    scaled_row = (
+        np.linspace(
+            dataset_disp_maps.coords["row"].values[0],
+            dataset_disp_maps.coords["row"].values[-1] + 1,
+            next_resolution_shape[0],
+            endpoint=False,
+        )
+        * COMPRESSION_FACTOR
     )
-    scaled_col = np.linspace(
-        dataset_disp_maps.coords["col"].values[0],
-        dataset_disp_maps.coords["col"].values[-1] + 1,
-        next_resolution_shape[1],
-        endpoint=False,
+    scaled_col = (
+        np.linspace(
+            dataset_disp_maps.coords["col"].values[0],
+            dataset_disp_maps.coords["col"].values[-1] + 1,
+            next_resolution_shape[1],
+            endpoint=False,
+        )
+        * COMPRESSION_FACTOR
     )
 
     # Get initial positions for resampled coordinates
@@ -268,12 +278,16 @@ def estimate_init_disparity_grids(
     # Reshape estimated final disparity grids
     estimated_final_row_grid = estimated_final_row.reshape(scaled_row_2d.shape)
     estimated_final_col_grid = estimated_final_col.reshape(scaled_col_2d.shape)
-    # Compute estimated initial disparity grid for next resolution
-    # by subtracting the resampled initial position and multiplying by the scale factor
+    # Compute estimated initial disparity grid for next resolution by subtracting the resampled initial position,
+    # multiplying by the scale factor and dividing by the compression factor
     scale_factor_row = np.round(next_resolution_shape[0] / len(dataset_disp_maps.coords["row"].values))
     scale_factor_col = np.round(next_resolution_shape[1] / len(dataset_disp_maps.coords["col"].values))
-    estimated_init_row_grid = np.round((estimated_final_row_grid - scaled_row_2d) * scale_factor_row)
-    estimated_init_col_grid = np.round((estimated_final_col_grid - scaled_col_2d) * scale_factor_col)
+    estimated_init_row_grid = np.round(
+        (estimated_final_row_grid - scaled_row_2d) * scale_factor_row / COMPRESSION_FACTOR
+    )
+    estimated_init_col_grid = np.round(
+        (estimated_final_col_grid - scaled_col_2d) * scale_factor_col / COMPRESSION_FACTOR
+    )
 
     return estimated_init_row_grid, estimated_init_col_grid
 
