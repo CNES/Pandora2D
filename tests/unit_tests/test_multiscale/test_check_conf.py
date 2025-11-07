@@ -23,6 +23,8 @@ Test multiscale check_conf method
 
 # pylint: disable=redefined-outer-name
 
+from copy import deepcopy
+
 import json
 import pytest
 import numpy as np
@@ -132,6 +134,17 @@ def correct_multiscale_config(tmp_correct_repository, tmp_json_file):
 
 
 @pytest.fixture()
+def correct_multiscale_config_with_mesh(correct_multiscale_config):
+    """
+    Correct multiscale configuration with mesh key
+    """
+
+    cfg = deepcopy(correct_multiscale_config)
+    cfg["mesh"] = {"row": 2, "col": 3}
+    return cfg
+
+
+@pytest.fixture()
 def incorrect_multiscale_config(request):
     """
     Incorrect multiscale configuration
@@ -142,6 +155,7 @@ def incorrect_multiscale_config(request):
             "left": {"pyramid": str(request.getfixturevalue(request.param["left_path"]))},
             "right": {"pyramid": str(request.getfixturevalue(request.param["right_path"]))},
             "model": {"type": request.param["model_type"], "degree": request.param["model_degree"]},
+            "mesh": request.param["mesh"],
             "scale_factors": request.param["scale_factors"],
             "output": request.param["output"],
         },
@@ -149,12 +163,16 @@ def incorrect_multiscale_config(request):
     }
 
 
-def test_multiscale_check_conf(correct_multiscale_config):
+@pytest.mark.parametrize(
+    "multiscale_config",
+    ["correct_multiscale_config", "correct_multiscale_config_with_mesh"],
+)
+def test_multiscale_check_conf(multiscale_config, request):
     """
     Test check_conf method for multiscale configuration
     """
 
-    multiscale.check_configuration.check_conf(correct_multiscale_config)
+    multiscale.check_configuration.check_conf(request.getfixturevalue(multiscale_config))
 
 
 def test_fails_if_multiscale_section_is_missing():
@@ -185,6 +203,7 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "pol",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
                 "scale_factors": [1, 2],
@@ -197,6 +216,7 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "right_path": "tmp_repository_with_unreadable_tif",
                 "model_type": "pol",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 2},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
                 "scale_factors": [1, 2],
@@ -209,6 +229,7 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "pol",
                 "model_degree": 2.2,
+                "mesh": {"row": 2, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
                 "scale_factors": [1, 2],
@@ -221,6 +242,7 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "wrong_model",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
                 "scale_factors": [1, 2],
@@ -233,6 +255,7 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "pol",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
                 "output": 2,
                 "json_file": "tmp_json_file",
                 "scale_factors": [1, 2],
@@ -245,11 +268,25 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "pol",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
                 "output": 2,
                 "json_file": "fake_json_file",
                 "scale_factors": [1, 2],
             },
             id="Wrong pandora2d json file",
+        ),
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "model_type": "pol",
+                "model_degree": 2,
+                "mesh": {"row": 1, "col": "test"},
+                "output": 2,
+                "json_file": "fake_json_file",
+                "scale_factors": [1, 2],
+            },
+            id="Wrong mesh type",
         ),
     ],
     indirect=["incorrect_multiscale_config"],
@@ -295,6 +332,8 @@ def test_default_values(correct_multiscale_config):
 
     assert result["multiscale"]["model"]["type"] == "pol"
     assert result["multiscale"]["model"]["degree"] == 2
+    assert result["multiscale"]["mesh"]["row"] == 1
+    assert result["multiscale"]["mesh"]["col"] == 1
 
 
 @pytest.mark.parametrize(
@@ -306,6 +345,7 @@ def test_default_values(correct_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "pol",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
                 "scale_factors": [1, 2],
@@ -334,6 +374,7 @@ def test_fails_with_different_number_of_tif(incorrect_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "pol",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
                 "scale_factors": [1],
@@ -346,6 +387,7 @@ def test_fails_with_different_number_of_tif(incorrect_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "pol",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
                 "scale_factors": [1, 2, 4],
