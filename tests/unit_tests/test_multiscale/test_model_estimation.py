@@ -117,13 +117,15 @@ def test_make_position_vectors(dataset_disp_maps, gt_row_pos, gt_col_pos):
         dataset_disp_maps["row_map"].data, dataset_disp_maps["col_map"].data, dataset_disp_maps.attrs["invalid_disp"]
     )
 
-    np.testing.assert_array_equal(row_coords_2d, gt_row_pos)
-    np.testing.assert_array_equal(col_coords_2d, gt_col_pos)
+    np.testing.assert_array_equal(row_coords_2d, gt_row_pos * model_estimation.COMPRESSION_FACTOR)
+    np.testing.assert_array_equal(col_coords_2d, gt_col_pos * model_estimation.COMPRESSION_FACTOR)
     np.testing.assert_array_equal(
-        final_row_coords, row_coords_2d + dataset_disp_maps["row_map"].data[~mask_invalid].ravel()
+        final_row_coords,
+        row_coords_2d + dataset_disp_maps["row_map"].data[~mask_invalid].ravel() * model_estimation.COMPRESSION_FACTOR,
     )
     np.testing.assert_array_equal(
-        final_col_coords, col_coords_2d + dataset_disp_maps["col_map"].data[~mask_invalid].ravel()
+        final_col_coords,
+        col_coords_2d + dataset_disp_maps["col_map"].data[~mask_invalid].ravel() * model_estimation.COMPRESSION_FACTOR,
     )
 
 
@@ -180,10 +182,10 @@ def test_make_polynomial_design_matrix(init_row_pos, init_col_pos, degree, desig
     ["row_coords", "col_coords", "data_row_map", "data_col_map", "degree", "gt_coeff", "gt_resid", "method"],
     [
         pytest.param(
-            np.arange(3),
-            np.arange(2, 4),
-            np.array([[0, 1], [1, 2], [3, 4]]),
-            np.array([[1, 1], [2, 0], [1, 2]]),
+            np.arange(3) / model_estimation.COMPRESSION_FACTOR,
+            np.arange(2, 4) / model_estimation.COMPRESSION_FACTOR,
+            np.array([[0, 1], [1, 2], [3, 4]]) / model_estimation.COMPRESSION_FACTOR,
+            np.array([[1, 1], [2, 0], [1, 2]]) / model_estimation.COMPRESSION_FACTOR,
             1,
             (np.array([-2.16666667, 1.0, 2.5]), np.array([1.75, 0.66666667, 0.25])),  # (gt_coeff_row, gt_coeff_col)
             (np.array([0.3333333]), np.array([2.41666667])),  # (gt_resid_row, gt_resid_col)
@@ -191,10 +193,10 @@ def test_make_polynomial_design_matrix(init_row_pos, init_col_pos, degree, desig
             id="Classic case",
         ),
         pytest.param(
-            np.arange(3),
-            np.arange(2, 4),
-            np.array([[0, 1], [1, 2], [3, 4]]),
-            np.array([[1, 1], [2, 0], [1, 2]]),
+            np.arange(3) / model_estimation.COMPRESSION_FACTOR,
+            np.arange(2, 4) / model_estimation.COMPRESSION_FACTOR,
+            np.array([[0, 1], [1, 2], [3, 4]]) / model_estimation.COMPRESSION_FACTOR,
+            np.array([[1, 1], [2, 0], [1, 2]]) / model_estimation.COMPRESSION_FACTOR,
             1,
             (np.array([-2.16666667, 1.0, 2.5]), np.array([1.75, 0.66666667, 0.25])),  # (gt_coeff_row, gt_coeff_col)
             (np.array([0.3333333]), np.array([2.41666667])),  # (gt_resid_row, gt_resid_col)
@@ -222,10 +224,10 @@ def test_estimate_model(dataset_disp_maps, degree, gt_coeff, gt_resid, method):
     ["row_coords", "col_coords", "data_row_map", "data_col_map", "degree", "gt_coeff", "gt_resid"],
     [
         pytest.param(
-            np.arange(3),
-            np.arange(2, 4),
-            np.array([[0, 1], [1, 2], [3, 4]]),
-            np.array([[1, 1], [2, 0], [1, 2]]),
+            np.arange(3) / model_estimation.COMPRESSION_FACTOR,
+            np.arange(2, 4) / model_estimation.COMPRESSION_FACTOR,
+            np.array([[0, 1], [1, 2], [3, 4]]) / model_estimation.COMPRESSION_FACTOR,
+            np.array([[1, 1], [2, 0], [1, 2]]) / model_estimation.COMPRESSION_FACTOR,
             1,
             (
                 np.array([0.01818182, 0.45454545, 1.67272727]),
