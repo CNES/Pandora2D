@@ -259,6 +259,7 @@ multiscale_configuration_schema = {
         "mask": Or(None, And(str, is_repository_with_tif_file)),
     },
     "model": {"type": And(str, lambda s: s == "pol"), "degree": And(int, lambda d: d >= 0)},
+    "mesh": {"row": And(int, lambda x: x > 0), "col": And(int, lambda x: x > 0)},
     "scale_factors": And(list, lambda l: all(isinstance(x, int) for x in l)),
     "output": str,
 }
@@ -273,5 +274,6 @@ default_configuration_multiscale = {
             "type": "pol",
             "degree": 2,
         },
+        "mesh": {"row": 1, "col": 1},
     }
 }
