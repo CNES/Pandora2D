@@ -143,9 +143,15 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
             given_row_path.is_file() and given_col_path.is_dir()
         ):
             raise ValueError("Directory must not be mixed with file.")
+
+        if given_row_path.is_dir() and given_col_path.is_dir() and given_row_path != given_col_path:
+            raise ValueError("Row and Col disparities must use the same directory.")
+
+        row_path = given_row_path if given_row_path.is_file() else given_row_path / "row_map.tif"
+        col_path = given_col_path if given_col_path.is_file() else given_col_path / "col_map.tif"
         # Read disparity grids
-        disparity_row_reader = rasterio_open(row_init)
-        disparity_col_reader = rasterio_open(col_init)
+        disparity_row_reader = rasterio_open(str(row_path))  # cast because of bad typing in rasterio_open
+        disparity_col_reader = rasterio_open(str(col_path))  # cast because of bad typing in rasterio_open
 
         # Check disparity grids size and number of bands
         check_disparity_grids(image_metadata, disparity_row_reader)

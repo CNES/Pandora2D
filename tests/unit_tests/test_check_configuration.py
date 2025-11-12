@@ -776,10 +776,13 @@ class TestCheckDirectoryDisparity:
         return create_disparity_grid_fixture(data, 3, file_path)
 
     @pytest.fixture
-    def row_disparity_directory(self, row_disparity_grid):
+    def row_disparity_directory(self, tmp_path, row_disparity_grid):
         """row disparity directory"""
         disparity_file_path = Path(row_disparity_grid["init"])
-        row_disparity_grid.update({"init": str(disparity_file_path.parent)})
+        row_directory = tmp_path / "row_directory"
+        row_directory.mkdir()
+        disparity_file_path.rename(row_directory / disparity_file_path.name)
+        row_disparity_grid.update({"init": str(row_directory)})
         return row_disparity_grid
 
     @pytest.fixture
@@ -800,9 +803,13 @@ class TestCheckDirectoryDisparity:
         return create_disparity_grid_fixture(data, 3, file_path)
 
     @pytest.fixture
-    def col_disparity_directory(self, col_disparity_grid):
+    def col_disparity_directory(self, tmp_path, col_disparity_grid):
+        """col disparity directory"""
         disparity_file_path = Path(col_disparity_grid["init"])
-        col_disparity_grid.update({"init": str(disparity_file_path.parent)})
+        col_directory = tmp_path / "col_directory"
+        col_directory.mkdir()
+        disparity_file_path.rename(col_directory / disparity_file_path.name)
+        col_disparity_grid.update({"init": str(col_directory)})
         return col_disparity_grid
 
     @pytest.fixture
@@ -814,6 +821,10 @@ class TestCheckDirectoryDisparity:
         file_path = disparity_map_directory / "attributes.json"
         file_path.touch()
         return file_path
+
+    @pytest.fixture
+    def disparity_map_directory_config(self, disparity_map_directory, row_disparity_grid, col_disparity_grid):
+        return {"init": str(disparity_map_directory), "range": row_disparity_grid["range"]}
 
     @pytest.mark.parametrize(
         ["make_input_cfg"],
@@ -838,6 +849,24 @@ class TestCheckDirectoryDisparity:
     def test_fails_when_directory_is_mixed_with_file(self, make_input_cfg, image_metadata):
         """Both disparities must be directories"""
         with pytest.raises(ValueError, match="Directory must not be mixed with file."):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "row_disparity_directory",
+                    "col_disparity": "col_disparity_directory",
+                },
+                id="Different directories",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_when_directories_are_different(self, make_input_cfg, image_metadata):
+        """Both disparities must use the same directory"""
+        with pytest.raises(ValueError, match="Row and Col disparities must use the same directory."):
             check_configuration.check_disparity(image_metadata, make_input_cfg)
 
 
