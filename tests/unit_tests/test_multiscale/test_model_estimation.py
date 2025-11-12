@@ -375,3 +375,135 @@ def test_estimate_init_disparity_grids(dataset_disp_maps, degree, next_resolutio
 
     np.testing.assert_array_almost_equal(estimated_init_row_grid, gt_row_grid)
     np.testing.assert_array_almost_equal(estimated_init_col_grid, gt_col_grid)
+
+
+@pytest.mark.parametrize(
+    ["next_resolution_shape", "nb_mesh", "ground_truth"],
+    [
+        pytest.param(
+            100,
+            1,
+            [100],
+            id="Only one mesh",
+        ),
+        pytest.param(
+            1500,
+            2,
+            [750, 750],
+            id="next_resolution_shape mod nb_mesh = 0",
+        ),
+        pytest.param(1486, 3, [495, 495, 496], id="next_resolution_shape mod nb_mesh = 1"),
+        pytest.param(14, 3, [4, 5, 5], id="next_resolution_shape mod nb_mesh = 2"),
+        pytest.param(18, 5, [3, 3, 4, 4, 4], id="next_resolution_shape mod nb_mesh = 3"),
+    ],
+)
+def test_get_next_shape_mesh_list(next_resolution_shape, nb_mesh, ground_truth):
+    """
+    Test the get_next_shape_mesh_list method
+    """
+
+    next_shape_list = model_estimation.get_next_shape_mesh_list(next_resolution_shape, nb_mesh)
+
+    assert next_shape_list == ground_truth
+
+
+@pytest.mark.parametrize(
+    ["estimated_init_grid_list", "nb_row_mesh", "nb_col_mesh", "ground_truth"],
+    [
+        pytest.param(
+            [np.array([[1, 1, 2, 2], [1, 1, 2, 2], [3, 3, 4, 4], [3, 3, 4, 4]])],
+            1,
+            1,
+            np.array([[1, 1, 2, 2], [1, 1, 2, 2], [3, 3, 4, 4], [3, 3, 4, 4]]),
+            id="1 mesh in row and 1 mesh in column",
+        ),
+        pytest.param(
+            [
+                np.array([[1, 1], [1, 1]]),
+                np.array([[2, 2], [2, 2]]),
+                np.array([[3, 3], [3, 3]]),
+                np.array([[4, 4], [4, 4]]),
+            ],
+            2,
+            2,
+            np.array([[1, 1, 2, 2], [1, 1, 2, 2], [3, 3, 4, 4], [3, 3, 4, 4]]),
+            id="2 mesh in row and 2 mesh in column",
+        ),
+        pytest.param(
+            [
+                np.array([[1], [1], [1], [1]]),
+                np.array([[2], [2], [2], [2]]),
+                np.array([[3, 3], [3, 3], [3, 3], [3, 3]]),
+            ],
+            1,
+            3,
+            np.array([[1, 2, 3, 3], [1, 2, 3, 3], [1, 2, 3, 3], [1, 2, 3, 3]]),
+            id="1 mesh in row and 3 mesh in column",
+        ),
+        pytest.param(
+            [np.array([[1, 1, 1, 1]]), np.array([[2, 2, 2, 2]]), np.array([[3, 3, 3, 3], [3, 3, 3, 3]])],
+            3,
+            1,
+            np.array([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [3, 3, 3, 3]]),
+            id="3 mesh in row and 1 mesh in column",
+        ),
+        pytest.param(
+            [
+                np.array([[1, 1], [1, 1], [1, 1]]),
+                np.array([[2, 2], [2, 2], [2, 2]]),
+                np.array([[3, 3], [3, 3], [3, 3]]),
+                np.array([[4, 4], [4, 4], [4, 4]]),
+                np.array([[5, 5], [5, 5], [5, 5]]),
+                np.array([[6, 6], [6, 6], [6, 6]]),
+            ],
+            2,
+            3,
+            np.array(
+                [
+                    [1, 1, 2, 2, 3, 3],
+                    [1, 1, 2, 2, 3, 3],
+                    [1, 1, 2, 2, 3, 3],
+                    [4, 4, 5, 5, 6, 6],
+                    [4, 4, 5, 5, 6, 6],
+                    [4, 4, 5, 5, 6, 6],
+                ]
+            ),
+            id="2 mesh in row and 3 mesh in column",
+        ),
+        pytest.param(
+            [
+                np.array([[1, 1, 1]]),
+                np.array([[2, 2, 2]]),
+                np.array([[3, 3, 3]]),
+                np.array([[4, 4, 4]]),
+                np.array([[5, 5, 5], [5, 5, 5]]),
+                np.array([[6, 6, 6], [6, 6, 6]]),
+                np.array([[7, 7, 7], [7, 7, 7]]),
+                np.array([[8, 8, 8], [8, 8, 8]]),
+            ],
+            4,
+            2,
+            np.array(
+                [
+                    [1, 1, 1, 2, 2, 2],
+                    [3, 3, 3, 4, 4, 4],
+                    [5, 5, 5, 6, 6, 6],
+                    [5, 5, 5, 6, 6, 6],
+                    [7, 7, 7, 8, 8, 8],
+                    [7, 7, 7, 8, 8, 8],
+                ]
+            ),
+            id="4 mesh in row and 2 mesh in column",
+        ),
+    ],
+)
+def test_concatenate_estimated_grids(estimated_init_grid_list, nb_row_mesh, nb_col_mesh, ground_truth):
+    """
+    Test the concatenate_estimated_grids method
+    """
+
+    estimated_init_grid = model_estimation.concatenate_estimated_grids(
+        estimated_init_grid_list, nb_row_mesh, nb_col_mesh
+    )
+
+    np.testing.assert_array_equal(estimated_init_grid, ground_truth)
