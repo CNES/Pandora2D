@@ -24,7 +24,7 @@
 Test configuration
 """
 
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,too-many-lines
 
 import random
 import string
@@ -867,6 +867,25 @@ class TestCheckDirectoryDisparity:
     def test_fails_when_directories_are_different(self, make_input_cfg, image_metadata):
         """Both disparities must use the same directory"""
         with pytest.raises(ValueError, match="Row and Col disparities must use the same directory."):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "disparity_map_directory_config",
+                    "col_disparity": "disparity_map_directory_config",
+                },
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_when_attributes_file_is_missing(self, make_input_cfg, image_metadata, attributes_file):
+        """Both disparities must use the same directory"""
+        attributes_file.unlink()
+        with pytest.raises(FileNotFoundError, match=str(attributes_file)):
             check_configuration.check_disparity(image_metadata, make_input_cfg)
 
 

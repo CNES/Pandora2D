@@ -149,6 +149,12 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
 
         row_path = given_row_path if given_row_path.is_file() else given_row_path / "row_map.tif"
         col_path = given_col_path if given_col_path.is_file() else given_col_path / "col_map.tif"
+
+        if given_row_path.is_dir():
+            attributes_path = given_row_path / "attributes.json"
+            if not attributes_path.is_file():
+                raise FileNotFoundError(attributes_path)
+
         # Read disparity grids
         disparity_row_reader = rasterio_open(str(row_path))  # cast because of bad typing in rasterio_open
         disparity_col_reader = rasterio_open(str(col_path))  # cast because of bad typing in rasterio_open
