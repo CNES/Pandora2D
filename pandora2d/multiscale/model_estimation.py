@@ -292,6 +292,54 @@ def estimate_init_disparity_grids(
     return estimated_init_row_grid, estimated_init_col_grid
 
 
+def get_next_shape_mesh_list(next_resolution_shape: int, nb_mesh: int) -> List[int]:
+    """
+    Return list of shape for mesh for next resolution.
+    This list is then used to estimate initial disparity grid at next resolution
+    with the right shape for each mesh.
+
+    :param next_resolution_shape: next resolution shape (row or column)
+    :type next_resolution_shape: int
+    :param nb_mesh: number of mesh (row or column)
+    :type nb_mesh: int
+    :return: List of shape by mesh (row or column)
+    :rtype: List[int]
+    """
+
+    next_shape_list = [
+        next_resolution_shape // nb_mesh + (1 if mesh >= nb_mesh - (next_resolution_shape % nb_mesh) else 0)
+        for mesh in range(nb_mesh)
+    ]
+
+    return next_shape_list
+
+
+def concatenate_estimated_grids(estimated_init_grid_list: List[NDArray], nb_row_mesh: int, nb_col_mesh: int) -> NDArray:
+    """
+    Concatenate the estimated disparity grids computed by mesh
+    and return the full initial disparity grid for next resolution.
+
+    :param estimated_init_grid_list:
+    :type estimated_init_grid_list: List[NDArray]
+    :param nb_row_mesh: number of mesh for rows
+    :type nb_row_mesh: int
+    :param nb_col_mesh: number of mesh for columns
+    :type nb_col_mesh: int
+    :return: full estimated initial disparity grid for next resolution
+    :rtype: NDArray
+    """
+
+    estimated_init_grid = np.concatenate(
+        [
+            np.concatenate(estimated_init_grid_list[mesh_row * nb_col_mesh : (mesh_row + 1) * nb_col_mesh], axis=1)
+            for mesh_row in range(nb_row_mesh)
+        ],
+        axis=0,
+    )
+
+    return estimated_init_grid
+
+
 def get_init_disparity_grids(
     dataset_disp_maps: xr.Dataset, multiscale_cfg: Dict, next_resolution_shape: Tuple
 ) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
@@ -308,18 +356,52 @@ def get_init_disparity_grids(
     :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
-    # Estimate model
-    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, _ = estimate_model_cholesky(
-        dataset_disp_maps, multiscale_cfg["model"]["degree"], lambda_ridge=1.0e-6
-    )
+    nb_row_mesh = multiscale_cfg["mesh"]["row"]
+    nb_col_mesh = multiscale_cfg["mesh"]["col"]
 
-    # Estimate initial disparity grids for next resolution
-    estimated_init_row_grid, estimated_init_col_grid = estimate_init_disparity_grids(
-        dataset_disp_maps,
-        coefficients_row,
-        coefficients_col,
-        multiscale_cfg["model"]["degree"],
-        next_resolution_shape,
-    )
+    rows, cols = dataset_disp_maps["row_map"].data.shape
+
+    rows_in_mesh = rows // nb_row_mesh
+    cols_in_mesh = cols // nb_col_mesh
+
+    estimated_init_row_grid_list = []
+    estimated_init_col_grid_list = []
+
+    # Get shape for next resolution for each mesh
+    rows_next_shape_list = get_next_shape_mesh_list(next_resolution_shape[0], nb_row_mesh)
+    cols_next_shape_list = get_next_shape_mesh_list(next_resolution_shape[1], nb_col_mesh)
+
+    for mesh_row in range(nb_row_mesh):
+        for mesh_col in range(nb_col_mesh):
+
+            row_start = mesh_row * rows_in_mesh
+            col_start = mesh_col * cols_in_mesh
+
+            row_end = rows if mesh_row == nb_row_mesh - 1 else (mesh_row + 1) * rows_in_mesh
+            col_end = cols if mesh_col == nb_col_mesh - 1 else (mesh_col + 1) * cols_in_mesh
+
+            # Select sub dataset corresponding to each mesh
+            sub_dataset = dataset_disp_maps.isel(row=slice(row_start, row_end), col=slice(col_start, col_end))
+
+            # Estimate model
+            coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, _ = estimate_model_cholesky(
+                sub_dataset, multiscale_cfg["model"]["degree"], lambda_ridge=1.0e-6
+            )
+
+            # Estimate initial disparity grids for next resolution
+            sub_estimated_init_row_grid, sub_estimated_init_col_grid = estimate_init_disparity_grids(
+                sub_dataset,
+                coefficients_row,
+                coefficients_col,
+                multiscale_cfg["model"]["degree"],
+                (rows_next_shape_list[mesh_row], cols_next_shape_list[mesh_col]),
+            )
+
+            estimated_init_row_grid_list.append(sub_estimated_init_row_grid)
+            estimated_init_col_grid_list.append(sub_estimated_init_col_grid)
+
+    # Concatenate mesh to get full initial disparity grids
+    estimated_init_row_grid = concatenate_estimated_grids(estimated_init_row_grid_list, nb_row_mesh, nb_col_mesh)
+    estimated_init_col_grid = concatenate_estimated_grids(estimated_init_col_grid_list, nb_row_mesh, nb_col_mesh)
 
     return estimated_init_row_grid, estimated_init_col_grid, sum_sq_residuals_row, sum_sq_residuals_col
