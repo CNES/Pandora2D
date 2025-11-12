@@ -62,7 +62,7 @@ extensions = [
     "sphinx_tabs.tabs",
 ]
 
-autoapi_dirs = ["../../pandora2d"]
+autoapi_dirs = ["../../src/pandora2d"]
 autoapi_root = "api_reference"
 autoapi_keep_files = True
 autoapi_options = [
