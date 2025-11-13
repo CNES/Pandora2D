@@ -27,6 +27,7 @@ import numpy as np
 import xarray as xr
 from json_checker import And
 
+from ..common import all_same
 from ..constants import Criteria
 from ..interpolation_filter import AbstractFilter
 
@@ -310,11 +311,6 @@ class Point(NamedTuple):
 
     row: Union[int, float, np.float32]
     col: Union[int, float, np.float32]
-
-
-def all_same(sequence):
-    """Return True if all items in sequence are equals."""
-    return len(set(sequence)) == 1
 
 
 def search_new_best_point(

@@ -44,6 +44,7 @@ from pandora.img_tools import get_metadata, rasterio_open
 from rasterio.io import DatasetReader
 
 from pandora2d.state_machine import Pandora2DMachine
+from .common import all_same
 
 
 def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
@@ -138,22 +139,22 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
     if isinstance(row_init, str) and isinstance(col_init, str):
         given_row_path = Path(row_init)
         given_col_path = Path(col_init)
+        given_paths = {given_row_path, given_col_path}
 
-        if (given_row_path.is_dir() and given_col_path.is_file()) or (
-            given_row_path.is_file() and given_col_path.is_dir()
-        ):
+        paths_are_dirs = [p.is_dir() for p in given_paths]
+        paths_are_files = [p.is_file() for p in given_paths]
+
+        if any(paths_are_dirs) and any(paths_are_files):
             raise ValueError("Directory must not be mixed with file.")
 
-        if given_row_path.is_dir() and given_col_path.is_dir() and given_row_path != given_col_path:
+        if not all_same(given_paths) and all(paths_are_dirs):
             raise ValueError("Row and Col disparities must use the same directory.")
+
+        if all(paths_are_dirs) and not (attributes_path := given_row_path / "attributes.json").is_file():
+            raise FileNotFoundError(attributes_path)
 
         row_path = given_row_path if given_row_path.is_file() else given_row_path / "row_map.tif"
         col_path = given_col_path if given_col_path.is_file() else given_col_path / "col_map.tif"
-
-        if given_row_path.is_dir():
-            attributes_path = given_row_path / "attributes.json"
-            if not attributes_path.is_file():
-                raise FileNotFoundError(attributes_path)
 
         # Read disparity grids
         disparity_row_reader = rasterio_open(str(row_path))  # cast because of bad typing in rasterio_open
