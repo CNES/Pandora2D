@@ -356,6 +356,40 @@ def get_init_disparity_grids(
     :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
+    # Estimate model
+    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, _ = estimate_model_cholesky(
+        dataset_disp_maps, multiscale_cfg["model"]["degree"], lambda_ridge=1.0e-6
+    )
+
+    # Estimate initial disparity grids for next resolution
+    estimated_init_row_grid, estimated_init_col_grid = estimate_init_disparity_grids(
+        dataset_disp_maps,
+        coefficients_row,
+        coefficients_col,
+        multiscale_cfg["model"]["degree"],
+        next_resolution_shape,
+    )
+
+    return estimated_init_row_grid, estimated_init_col_grid, sum_sq_residuals_row, sum_sq_residuals_col
+
+
+def get_init_disparity_grids_with_mesh(
+    dataset_disp_maps: xr.Dataset, multiscale_cfg: Dict, next_resolution_shape: Tuple
+) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
+    """
+    Return initial disparity grid after computing least square coefficients
+    for each mesh
+
+    :param dataset_disp_maps: disparity maps dataset
+    :type dataset_disp_maps: xr.Dataset
+    :param multiscale_cfg: multiscale pipeline configuration
+    :type multiscale_cfg: Dict
+    :param next_resolution_shape: shape of image for next resolution
+    :type next_resolution_shape: Tuple (height, width)
+    :return: initial disparity grids for rows and columns and RMSE for row and columns
+    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
+    """
+
     nb_row_mesh = multiscale_cfg["mesh"]["row"]
     nb_col_mesh = multiscale_cfg["mesh"]["col"]
 
@@ -371,6 +405,9 @@ def get_init_disparity_grids(
     rows_next_shape_list = get_next_shape_mesh_list(next_resolution_shape[0], nb_row_mesh)
     cols_next_shape_list = get_next_shape_mesh_list(next_resolution_shape[1], nb_col_mesh)
 
+    sum_sq_residuals_row_total = 0.0
+    sum_sq_residuals_col_total = 0.0
+
     for mesh_row in range(nb_row_mesh):
         for mesh_col in range(nb_col_mesh):
 
@@ -383,25 +420,26 @@ def get_init_disparity_grids(
             # Select sub dataset corresponding to each mesh
             sub_dataset = dataset_disp_maps.isel(row=slice(row_start, row_end), col=slice(col_start, col_end))
 
-            # Estimate model
-            coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, _ = estimate_model_cholesky(
-                sub_dataset, multiscale_cfg["model"]["degree"], lambda_ridge=1.0e-6
-            )
-
-            # Estimate initial disparity grids for next resolution
-            sub_estimated_init_row_grid, sub_estimated_init_col_grid = estimate_init_disparity_grids(
-                sub_dataset,
-                coefficients_row,
-                coefficients_col,
-                multiscale_cfg["model"]["degree"],
-                (rows_next_shape_list[mesh_row], cols_next_shape_list[mesh_col]),
+            # Compute initial disparity grid by mesh
+            sub_estimated_init_row_grid, sub_estimated_init_col_grid, sum_sq_residuals_row, sum_sq_residuals_col = (
+                get_init_disparity_grids(
+                    sub_dataset, multiscale_cfg, (rows_next_shape_list[mesh_row], cols_next_shape_list[mesh_col])
+                )
             )
 
             estimated_init_row_grid_list.append(sub_estimated_init_row_grid)
             estimated_init_col_grid_list.append(sub_estimated_init_col_grid)
 
+            # Cast in float to avoir mypy error
+            sum_sq_residuals_row_total += float(sum_sq_residuals_row)
+            sum_sq_residuals_col_total += float(sum_sq_residuals_col)
+
     # Concatenate mesh to get full initial disparity grids
     estimated_init_row_grid = concatenate_estimated_grids(estimated_init_row_grid_list, nb_row_mesh, nb_col_mesh)
     estimated_init_col_grid = concatenate_estimated_grids(estimated_init_col_grid_list, nb_row_mesh, nb_col_mesh)
 
-    return estimated_init_row_grid, estimated_init_col_grid, sum_sq_residuals_row, sum_sq_residuals_col
+    # Compute RMSE
+    rmse_row = np.sqrt(sum_sq_residuals_row_total / (dataset_disp_maps["row_map"].size))
+    rmse_col = np.sqrt(sum_sq_residuals_col_total / (dataset_disp_maps["row_map"].size))
+
+    return estimated_init_row_grid, estimated_init_col_grid, rmse_row, rmse_col

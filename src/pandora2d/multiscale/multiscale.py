@@ -37,7 +37,7 @@ from pandora2d.common import string_to_path, resolve_path_in_config
 from pandora2d import run_pandora2d, run_pandora2d_segment_mode
 from pandora2d.state_machine import Pandora2DMachine
 from .check_configuration import check_conf, get_tif_files_list, get_tif_shape_list
-from .model_estimation import get_init_disparity_grids
+from .model_estimation import get_init_disparity_grids_with_mesh
 
 
 # Multiscale pipeline logger
@@ -250,8 +250,8 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
         if resolution != len(tif_files_path_left):
 
             # Estimate initial disparity grids for next resolution
-            estimated_init_row_grid, estimated_init_col_grid, sum_sq_residuals_row, sum_sq_residuals_col = (
-                get_init_disparity_grids(dataset_disp_maps, checked_cfg["multiscale"], tif_files_shape[resolution])
+            estimated_init_row_grid, estimated_init_col_grid, rmse_row, rmse_col = get_init_disparity_grids_with_mesh(
+                dataset_disp_maps, checked_cfg["multiscale"], tif_files_shape[resolution]
             )
 
             # Save initial disparity grids for next resolution
@@ -263,8 +263,8 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
                 output_path_next_res, "init_grid_col", estimated_init_col_grid, dataset_disp_maps
             )
 
-            logger.info("Sum of squared residuals for row disparities is: %f", sum_sq_residuals_row)
-            logger.info("Sum of squared residuals for col disparities is: %f", sum_sq_residuals_col)
+            logger.info("RMSE for row disparities is: %f", rmse_row)
+            logger.info("RMSE for col disparities is: %f", rmse_col)
 
         # Save disparity maps
         multiscale_completed_cfg = deepcopy(completed_cfg)
