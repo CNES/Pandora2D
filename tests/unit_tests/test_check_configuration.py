@@ -717,13 +717,13 @@ class TestCheckDisparity:
             pytest.param(
                 {"row_disparity": "two_bands_grid", "col_disparity": "correct_grid"},
                 AttributeError,
-                "Initial disparity grid must be a 1-channel grid",
+                "Initial disparity grids must be a 1-channel grid",
                 id="Row disparity grid has two band",
             ),
             pytest.param(
                 {"row_disparity": "correct_grid", "col_disparity": "wrong_size_grid"},
                 AttributeError,
-                "Initial disparity grids and image must have the same size",
+                "Initial disparity grids' sizes do not match",
                 id="Column disparity grid size is different from image size",
             ),
         ],
@@ -763,11 +763,7 @@ class TestCheckDirectoryDisparity:
         return height, width
 
     @pytest.fixture
-    def row_disparity_grid_shape(self, image_shape):
-        return image_shape
-
-    @pytest.fixture
-    def row_disparity_grid(self, disparity_map_directory, create_disparity_grid_fixture, row_disparity_grid_shape):
+    def row_disparity_grid(self, disparity_map_directory, create_disparity_grid_fixture, image_shape):
         """row disparity grid"""
         data = np.ones(image_shape)
         file_path = disparity_map_directory / "row_map.tif"
@@ -790,11 +786,7 @@ class TestCheckDirectoryDisparity:
         return {"init": 0, "range": 3}
 
     @pytest.fixture
-    def col_disparity_grid_shape(self, image_shape):
-        return image_shape
-
-    @pytest.fixture
-    def col_disparity_grid(self, disparity_map_directory, create_disparity_grid_fixture, col_disparity_grid_shape):
+    def col_disparity_grid(self, disparity_map_directory, create_disparity_grid_fixture, image_shape):
         """col disparity grid"""
         data = np.ones(image_shape)
         file_path = disparity_map_directory / "col_map.tif"
@@ -886,6 +878,28 @@ class TestCheckDirectoryDisparity:
         """Both disparities must use the same directory"""
         attributes_file.unlink()
         with pytest.raises(FileNotFoundError, match=str(attributes_file)):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "different_sized_grid_directory",
+                    "col_disparity": "different_sized_grid_directory",
+                },
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_when_sizes_do_not_match(
+        self,
+        make_input_cfg,
+        image_metadata,
+    ):
+        """An exception should be raised when disparity grids' sizes mismatch."""
+        with pytest.raises(AttributeError, match="Initial disparity grids' sizes do not match"):
             check_configuration.check_disparity(image_metadata, make_input_cfg)
 
 

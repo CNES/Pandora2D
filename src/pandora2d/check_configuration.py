@@ -160,8 +160,7 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
         disparity_col_reader = rasterio_open(str(col_path))  # cast because of bad typing in rasterio_open
 
         # Check disparity grids size and number of bands
-        check_disparity_grids(image_metadata, disparity_row_reader)
-        check_disparity_grids(image_metadata, disparity_col_reader)
+        check_disparity_grids(image_metadata, [disparity_row_reader, disparity_col_reader])
 
         # Get correct disparity dictionaries from init disparity grids to give as input of
         # the check_disparity_ranges_are_inside_image method
@@ -179,26 +178,26 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
     check_disparity_ranges_are_inside_image(image_metadata, row_disp_dict, col_disp_dict)
 
 
-def check_disparity_grids(image_metadata: xr.Dataset, disparity_reader: DatasetReader) -> None:
+def check_disparity_grids(image_metadata: xr.Dataset, disparity_readers: list[DatasetReader]) -> None:
     """
     Check that disparity grids contains two bands and are
     the same size as the input image
 
     :param image_metadata:
     :type image_metadata: xr.Dataset
-    :param disparity_reader: disparity grids
-    :type disparity_reader: rasterio.io.DatasetReader
+    :param disparity_readers: disparity grids
+    :type disparity_readers: list[rasterio.io.DatasetReader]
     """
 
     # Check that disparity grids are 1-channel grids
-    if disparity_reader.count != 1:
-        raise AttributeError("Initial disparity grid must be a 1-channel grid")
+    if any(r.count != 1 for r in disparity_readers):
+        raise AttributeError("Initial disparity grids must be a 1-channel grid")
+
+    if len(shapes := {r.shape for r in disparity_readers}) > 1:  # more than one shape
+        raise AttributeError("Initial disparity grids' sizes do not match", shapes)
 
     # Check that disparity grids are the same size as the input image
-    if (disparity_reader.height, disparity_reader.width) != (
-        image_metadata.sizes["row"],
-        image_metadata.sizes["col"],
-    ):
+    if disparity_readers[0].shape != (image_metadata.sizes["row"], image_metadata.sizes["col"]):
         raise AttributeError("Initial disparity grids and image must have the same size")
 
 
