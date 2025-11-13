@@ -64,10 +64,12 @@ variables:
   # default production ref name (pattern)
   PROD_REF: /^(master|main)$/
   # default integration ref name (pattern)
+  # Decomment to add new branch TickerNumber-XXX
+  #INTEG_REF: /^(develop|release|TickerNumber-XXX)$/
   INTEG_REF: /^(develop|release)$/
 
   # Python
-  PIP_INDEX_URL: "https://${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}@${UL_ARTIFACTORY_HOST}/artifactory/api/pypi/pypi/simple"
+  PIP_INDEX_URL: "https://${PANDORA_ARTIFACTORY_USERNAME}:${PANDORA_ARTIFACTORY_KEY}@${UL_ARTIFACTORY_HOST}/artifactory/api/pypi/pypi/simple"
   # Hack: Use extraneous parentesis to avoid spaces in expression due to over-tokenization of GitLab
   # Command line executed for Python unit tests, excluding notebook and plugin tests
   PYTEST_ARGS: -m (unit_tests)and(not(notebook_tests))and(not(plugin_tests))
@@ -220,7 +222,12 @@ github-sync:
     - cat ${CNES_CERTIFICATE} > /usr/local/share/ca-certificates/my-cert.crt
     - cat /usr/local/share/ca-certificates/my-cert.crt >> /etc/ssl/certs/ca-certificates.crt
   script:
+    - echo "CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME"
+    - echo "GITHUB_URL=$GITHUB_URL"
+    - echo "CI_COMMIT_SHA=$CI_COMMIT_SHA"
     - git remote add github https://${PANDORA_CNES_GITHUB_TOKEN_USERNAME}:${PANDORA_CNES_GITHUB_TOKEN_PASSWORD}@${GITHUB_URL}
+    - git fetch origin ${CI_COMMIT_SHA}
+    - git checkout -B ${CI_COMMIT_REF_NAME}
     - git push github ${CI_COMMIT_REF_NAME}
   rules:
     # run on production and integration branches + release pipelines
