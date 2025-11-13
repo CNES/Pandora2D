@@ -126,7 +126,6 @@ def correct_multiscale_config(tmp_correct_repository, tmp_json_file):
             "left": {"pyramid": str(tmp_correct_repository)},
             "right": {"pyramid": str(tmp_correct_repository)},
             "model": {"type": "pol", "degree": 2},
-            "scale_factors": [1, 2],
             "output": "output_test",
         },
         "pandora2d": str(tmp_json_file),
@@ -156,7 +155,6 @@ def incorrect_multiscale_config(request):
             "right": {"pyramid": str(request.getfixturevalue(request.param["right_path"]))},
             "model": {"type": request.param["model_type"], "degree": request.param["model_degree"]},
             "mesh": request.param["mesh"],
-            "scale_factors": request.param["scale_factors"],
             "output": request.param["output"],
         },
         "pandora2d": str(request.getfixturevalue(request.param["json_file"])),
@@ -206,7 +204,6 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "mesh": {"row": 1, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
-                "scale_factors": [1, 2],
             },
             id="Repository without tif file",
         ),
@@ -219,7 +216,6 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "mesh": {"row": 1, "col": 2},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
-                "scale_factors": [1, 2],
             },
             id="Repository with corrupted tif file",
         ),
@@ -232,7 +228,6 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "mesh": {"row": 2, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
-                "scale_factors": [1, 2],
             },
             id="Float model degree",
         ),
@@ -245,7 +240,6 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "mesh": {"row": 1, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
-                "scale_factors": [1, 2],
             },
             id="Wrong model type",
         ),
@@ -258,7 +252,6 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "mesh": {"row": 1, "col": 1},
                 "output": 2,
                 "json_file": "tmp_json_file",
-                "scale_factors": [1, 2],
             },
             id="Wrong output type",
         ),
@@ -271,7 +264,6 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "mesh": {"row": 1, "col": 1},
                 "output": 2,
                 "json_file": "fake_json_file",
-                "scale_factors": [1, 2],
             },
             id="Wrong pandora2d json file",
         ),
@@ -284,7 +276,6 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "mesh": {"row": 1, "col": "test"},
                 "output": 2,
                 "json_file": "fake_json_file",
-                "scale_factors": [1, 2],
             },
             id="Wrong mesh type",
         ),
@@ -348,7 +339,6 @@ def test_default_values(correct_multiscale_config):
                 "mesh": {"row": 1, "col": 1},
                 "output": "output_test",
                 "json_file": "tmp_json_file",
-                "scale_factors": [1, 2],
             },
             id="Repository without tif file",
         ),
@@ -363,48 +353,3 @@ def test_fails_with_different_number_of_tif(incorrect_multiscale_config):
     with pytest.raises(ValueError) as exc_info:
         multiscale.check_configuration.check_conf(incorrect_multiscale_config)
     assert str(exc_info.value) == "Left and right pyramid repositories must contain the same number of tif files."
-
-
-@pytest.mark.parametrize(
-    ["incorrect_multiscale_config"],
-    [
-        pytest.param(
-            {
-                "left_path": "tmp_correct_repository",
-                "right_path": "tmp_correct_repository",
-                "model_type": "pol",
-                "model_degree": 2,
-                "mesh": {"row": 1, "col": 1},
-                "output": "output_test",
-                "json_file": "tmp_json_file",
-                "scale_factors": [1],
-            },
-            id="Less scale factors than tif files",
-        ),
-        pytest.param(
-            {
-                "left_path": "tmp_correct_repository",
-                "right_path": "tmp_correct_repository",
-                "model_type": "pol",
-                "model_degree": 2,
-                "mesh": {"row": 1, "col": 1},
-                "output": "output_test",
-                "json_file": "tmp_json_file",
-                "scale_factors": [1, 2, 4],
-            },
-            id="More scale factors than tif files",
-        ),
-    ],
-    indirect=["incorrect_multiscale_config"],
-)
-def test_fails_with_wrong_number_of_scale_factors(incorrect_multiscale_config):
-    """
-    Test that check_conf fails when pyramid repositories contain a number of images
-    that differs from the number of scale factors
-    """
-
-    with pytest.raises(ValueError) as exc_info:
-        multiscale.check_configuration.check_conf(incorrect_multiscale_config)
-    assert (
-        str(exc_info.value) == "There should be as many images in the pyramid repositories as there are scale factors."
-    )

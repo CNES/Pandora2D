@@ -117,7 +117,7 @@ def is_json_file(path: Union[str, Path]) -> bool:
     return True
 
 
-def check_pyramid_repositories(path_left: Union[str, Path], path_right: Union[str, Path], scale_factors: List[int]):
+def check_pyramid_repositories(path_left: Union[str, Path], path_right: Union[str, Path]):
     """
     Check if left and right repositories contain the same number of tif files.
     Check if tif files have correct suffix.
@@ -126,8 +126,6 @@ def check_pyramid_repositories(path_left: Union[str, Path], path_right: Union[st
     :type path_left: Union[str, Path]
     :param path_right: path to right pyramid repository
     :type path_right: Union[str, Path]
-    :param scale_factors: list of scale factors
-    :type scale_factors: List[int]
     """
 
     path_left = Path(path_left)
@@ -141,9 +139,6 @@ def check_pyramid_repositories(path_left: Union[str, Path], path_right: Union[st
 
     if nb_tif_left != nb_tif_right:
         raise ValueError("Left and right pyramid repositories must contain the same number of tif files.")
-
-    if nb_tif_left != len(scale_factors):
-        raise ValueError("There should be as many images in the pyramid repositories as there are scale factors.")
 
 
 def get_multiscale_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
@@ -187,9 +182,7 @@ def check_multiscale_section(user_cfg) -> Dict[str, dict]:
     checker = Checker(configuration_schema)
     checker.validate(cfg)
 
-    check_pyramid_repositories(
-        cfg["multiscale"]["left"]["pyramid"], cfg["multiscale"]["right"]["pyramid"], cfg["multiscale"]["scale_factors"]
-    )
+    check_pyramid_repositories(cfg["multiscale"]["left"]["pyramid"], cfg["multiscale"]["right"]["pyramid"])
 
     return cfg
 
@@ -260,7 +253,6 @@ multiscale_configuration_schema = {
     },
     "model": {"type": And(str, lambda s: s == "pol"), "degree": And(int, lambda d: d >= 0)},
     "mesh": {"row": And(int, lambda x: x > 0), "col": And(int, lambda x: x > 0)},
-    "scale_factors": And(list, lambda l: all(isinstance(x, int) for x in l)),
     "output": str,
 }
 
