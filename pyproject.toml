@@ -4,7 +4,6 @@ build-backend = "mesonpy"
 
 [tool.meson-python.args]
 setup = ["-Dbuild_cpp_tests=disabled"]
-compile = ['-j4']
 install = ['--skip-subprojects=eigen']
 
 [tool.setuptools_scm]
