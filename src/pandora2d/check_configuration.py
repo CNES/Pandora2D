@@ -120,7 +120,7 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
 
 def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
     """
-    All checks on disparity
+    All checks on disparity and resolve disparity grid paths.
 
     :param image_metadata: only metadata on the left image
     :type image_metadata: xr.Dataset
@@ -167,6 +167,10 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
         # the check_disparity_ranges_are_inside_image method
         row_disp_dict = get_dictionary_from_init_grid(disparity_row_reader, input_cfg["row_disparity"]["range"])
         col_disp_dict = get_dictionary_from_init_grid(disparity_col_reader, input_cfg["col_disparity"]["range"])
+
+        # Resolve and update paths
+        input_cfg["row_disparity"]["init"] = str(row_path.resolve())
+        input_cfg["col_disparity"]["init"] = str(col_path.resolve())
 
     elif isinstance(row_init, int) and isinstance(col_init, int):
         row_disp_dict = input_cfg["row_disparity"]

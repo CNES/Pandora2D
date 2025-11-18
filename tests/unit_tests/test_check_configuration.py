@@ -200,6 +200,26 @@ class TestCheckInputSection:
         ):
             check_configuration.check_input_section(correct_input_cfg, basic_estimation_cfg)
 
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_disparity_directory_is_replaced_by_path_to_file(self, make_input_cfg):
+        """When a directory is given, it is replaced by disparity grid paths."""
+        result = check_configuration.check_input_section({"input": make_input_cfg})
+
+        assert Path(result["input"]["row_disparity"]["init"]).name == "row_map.tif"
+        assert Path(result["input"]["col_disparity"]["init"]).name == "col_map.tif"
+
 
 class TestCheckPipelineSection:
     """Test check_pipeline_section."""
