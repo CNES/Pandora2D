@@ -276,6 +276,11 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
             id="Pipeline with disparity grids",
         ),
         pytest.param(
+            {"row_disparity": "same_sized_grid_directory", "col_disparity": "same_sized_grid_directory"},
+            "correct_pipeline_without_refinement",
+            id="Pipeline with disparity grid directory",
+        ),
+        pytest.param(
             {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
             "correct_pipeline_with_dichotomy_python",
             id="Pipeline with disparity grids and dichotomy python",

@@ -25,6 +25,7 @@ This module contains functions allowing to check the configuration given to Pand
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Dict
@@ -341,6 +342,28 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     return pipeline_cfg
 
 
+def check_step_from_attributes(disparity_directory: Path, expected_step_value: list[int]) -> None:
+    """
+    Validate that the initial disparity attributes match the pipeline configuration.
+
+    :param disparity_directory: Input section of user configuration dictionary.
+    :type disparity_directory: dict
+    :param expected_step_value: Checked pipeline section configuration dictionary.
+    :type expected_step_value: dict
+    :raises AttributeError: If the steps do not match.
+    """
+
+    with disparity_directory.joinpath("attributes.json").open(encoding="utf-8") as fd:
+        attributes = json.load(fd)
+
+    attributes_step = [attributes["step"]["row"], attributes["step"]["col"]]
+
+    if attributes_step != expected_step_value:
+        raise AttributeError(
+            f"Initial disparity grid step {attributes_step} does not match configuration step {expected_step_value}."
+        )
+
+
 def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> None:
     """
     Check if we have a subpix value of 1 with a dichotomy refinement method,
@@ -397,7 +420,8 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
 
     # check input
     user_cfg_input = get_config_input(user_cfg)
-    cfg_input = check_input_section(user_cfg_input, user_cfg["pipeline"].get("estimation"))
+    estimation_config = user_cfg["pipeline"].get("estimation")
+    cfg_input = check_input_section(user_cfg_input, estimation_config)
 
     user_cfg_roi = get_roi_config(user_cfg)
     cfg_roi = check_roi_section(user_cfg_roi)
@@ -407,6 +431,9 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
 
     # check pipeline
     cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
+    row_init = user_cfg_input["input"].get("row_disparity", {}).get("init")
+    if isinstance(row_init, str) and (disparity_directory := Path(row_init)).is_dir():
+        check_step_from_attributes(disparity_directory, cfg_pipeline["pipeline"]["matching_cost"]["step"])
 
     # The estimation step can be utilized independently.
     if "matching_cost" in cfg_pipeline["pipeline"]:
@@ -540,8 +567,8 @@ input_configuration_schema = {
 }
 
 disparity_schema = {
-    "col_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
-    "row_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
+    "col_disparity": {"init": Or(int, str), "range": And(int, lambda x: x >= 0)},
+    "row_disparity": {"init": Or(int, str), "range": And(int, lambda x: x >= 0)},
 }
 
 default_short_configuration_input = {

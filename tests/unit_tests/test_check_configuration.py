@@ -26,7 +26,9 @@ Test configuration
 
 # pylint: disable=unused-argument,too-many-lines
 
+import json
 import random
+import re
 import string
 from copy import deepcopy
 from pathlib import Path
@@ -829,9 +831,25 @@ class TestCheckDirectoryDisparity:
         return {"init": 0, "range": 3}
 
     @pytest.fixture
-    def attributes_file(self, disparity_map_directory):
+    def step(self):
+        return [1, 1]
+
+    @pytest.fixture
+    def pipeline_config(self, step, pipeline_config):
+        pipeline_config["pipeline"]["matching_cost"]["step"] = step
+        return pipeline_config
+
+    @pytest.fixture
+    def step_offset(self):
+        """Offset to add to step in attributes file."""
+        return [0, 0]
+
+    @pytest.fixture
+    def attributes_file(self, disparity_map_directory, step, step_offset):
+        """Create attributes files with step+step_offset."""
         file_path = disparity_map_directory / "attributes.json"
-        file_path.touch()
+        with open(file_path, "w", encoding="utf-8") as fd:
+            json.dump({"step": {"row": step[0] + step_offset[0], "col": step[1] + step_offset[1]}}, fd)
         return file_path
 
     @pytest.fixture
@@ -921,6 +939,56 @@ class TestCheckDirectoryDisparity:
         """An exception should be raised when disparity grids' sizes mismatch."""
         with pytest.raises(AttributeError, match="Initial disparity grids' sizes do not match"):
             check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg", "step_offset"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "disparity_map_directory_config",
+                    "col_disparity": "disparity_map_directory_config",
+                },
+                (1, 3),
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_check_conf_fails_when_steps_differs(
+        self, pandora2d_machine, make_input_cfg, pipeline_config, attributes_file, step, step_offset
+    ):
+        """Check conf should fail when step from pipeline config and step from attributes differs."""
+        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
+        attributes_step = [step[0] + step_offset[0], step[1] + step_offset[1]]
+        message = f"Initial disparity grid step {attributes_step} does not match configuration step {step}."
+        with pytest.raises(AttributeError, match=re.escape(message)):
+            check_configuration.check_conf(user_cfg, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "disparity_map_directory_config",
+                    "col_disparity": "disparity_map_directory_config",
+                },
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_check_conf_pass_when_steps_equals(
+        self,
+        pandora2d_machine,
+        make_input_cfg,
+        pipeline_config,
+        attributes_file,
+        step,
+    ):
+        """Check conf should pass when step from pipeline config and step from attributes equals."""
+        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
+
+        check_configuration.check_conf(user_cfg, pandora2d_machine)
 
 
 @pytest.mark.parametrize(
