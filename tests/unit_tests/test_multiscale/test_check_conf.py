@@ -59,6 +59,15 @@ def fake_json_file():
 
 
 @pytest.fixture()
+def wrong_json_list(tmp_json_file):
+    """
+    Create a wrong list of json files
+    """
+
+    return [str(tmp_json_file), 2]
+
+
+@pytest.fixture()
 def tmp_correct_repository(tmp_path_factory):
     """
     Create a temporary repository with two valid tif files (can be opened by rasterio).
@@ -139,7 +148,19 @@ def correct_multiscale_config_with_mesh(correct_multiscale_config):
     """
 
     cfg = deepcopy(correct_multiscale_config)
-    cfg["mesh"] = {"row": 2, "col": 3}
+    cfg["multiscale"]["mesh"] = {"row": 2, "col": 3}
+    return cfg
+
+
+@pytest.fixture()
+def correct_multiscale_config_with_json_list(correct_multiscale_config, tmp_json_file):
+    """
+    Correct multiscale configuration with json files list
+    for pandora2d configurations
+    """
+
+    cfg = deepcopy(correct_multiscale_config)
+    cfg["pandora2d"] = [str(tmp_json_file), str(tmp_json_file)]
     return cfg
 
 
@@ -163,7 +184,7 @@ def incorrect_multiscale_config(request):
 
 @pytest.mark.parametrize(
     "multiscale_config",
-    ["correct_multiscale_config", "correct_multiscale_config_with_mesh"],
+    ["correct_multiscale_config", "correct_multiscale_config_with_mesh", "correct_multiscale_config_with_json_list"],
 )
 def test_multiscale_check_conf(multiscale_config, request):
     """
@@ -273,6 +294,18 @@ def test_fails_if_pandora2d_section_is_missing(correct_multiscale_config):
                 "right_path": "tmp_correct_repository",
                 "model_type": "pol",
                 "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
+                "output": 2,
+                "json_file": "wrong_json_list",
+            },
+            id="Wrong pandora2d json file list",
+        ),
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "model_type": "pol",
+                "model_degree": 2,
                 "mesh": {"row": 1, "col": "test"},
                 "output": 2,
                 "json_file": "fake_json_file",
@@ -353,3 +386,37 @@ def test_fails_with_different_number_of_tif(incorrect_multiscale_config):
     with pytest.raises(ValueError) as exc_info:
         multiscale.check_configuration.check_conf(incorrect_multiscale_config)
     assert str(exc_info.value) == "Left and right pyramid repositories must contain the same number of tif files."
+
+
+@pytest.mark.parametrize(
+    ["incorrect_multiscale_config"],
+    [
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "model_type": "pol",
+                "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
+                "output": "output_test",
+                "json_file": "tmp_json_file",
+            },
+            id="Wrong number of pandora2d json file",
+        ),
+    ],
+    indirect=["incorrect_multiscale_config"],
+)
+def test_fails_with_incorrect_number_of_pandora2d_cfg(incorrect_multiscale_config, tmp_json_file):
+    """
+    Test that check_conf fails when the list contains a different
+    number of pandora2d configurations than images in the pyramids
+    """
+
+    incorrect_multiscale_config["pandora2d"] = [str(tmp_json_file), str(tmp_json_file), str(tmp_json_file)]
+
+    with pytest.raises(ValueError) as exc_info:
+        multiscale.check_configuration.check_conf(incorrect_multiscale_config)
+    assert (
+        str(exc_info.value) == "If you fill in several pandora2d configuration files, "
+        "you must have as many as there are images to process in the pyramid."
+    )
