@@ -242,6 +242,22 @@ def check_conf(user_cfg: Dict) -> Dict[str, dict]:
     cfg_pandora2d = get_pandora2d_config(user_cfg)
     check_pandora2d_section(cfg_pandora2d)
 
+    cfg_multiscale["multiscale"]["left"]["pyramid"] = get_tif_files_list(
+        Path(cfg_multiscale["multiscale"]["left"]["pyramid"])
+    )
+    cfg_multiscale["multiscale"]["right"]["pyramid"] = get_tif_files_list(
+        Path(cfg_multiscale["multiscale"]["right"]["pyramid"])
+    )
+
+    # If we have different pandora2d configurations,
+    # we check that we have as many as there are resolutions to process.
+    if isinstance(cfg_pandora2d["pandora2d"], list):
+        if len(cfg_multiscale["multiscale"]["left"]["pyramid"]) != len(cfg_pandora2d["pandora2d"]):
+            raise ValueError(
+                "If you fill in several pandora2d configuration files, "
+                "you must have as many as there are images to process in the pyramid."
+            )
+
     return {**cfg_multiscale, **cfg_pandora2d}
 
 
@@ -256,7 +272,10 @@ multiscale_configuration_schema = {
     "output": str,
 }
 
-pandora2d_configuration_schema = And(str, is_json_file)
+pandora2d_configuration_schema = Or(
+    lambda s: isinstance(s, str) and is_json_file(s), lambda l: isinstance(l, list) and all(is_json_file(x) for x in l)
+)
+
 
 default_configuration_multiscale = {
     "multiscale": {

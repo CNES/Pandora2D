@@ -36,7 +36,7 @@ import pandora2d
 from pandora2d.common import string_to_path, resolve_path_in_config
 from pandora2d import run_pandora2d, run_pandora2d_segment_mode
 from pandora2d.state_machine import Pandora2DMachine
-from .check_configuration import check_conf, get_tif_files_list, get_tif_shape_list
+from .check_configuration import check_conf, get_tif_shape_list
 from .model_estimation import get_init_disparity_grids_with_mesh
 
 
@@ -128,13 +128,17 @@ def resolve_path_in_config_multiscale(config: Dict, config_path: Path) -> Dict:
     if right_mask := config["multiscale"]["right"].get("mask"):
         result["multiscale"]["right"]["mask"] = str(string_to_path(right_mask, relative_to))
 
-    result["pandora2d"] = str(string_to_path(config["pandora2d"], relative_to))
+    pandora2d_cfg = config["pandora2d"]
+    if isinstance(pandora2d_cfg, str):
+        result["pandora2d"] = str(string_to_path(pandora2d_cfg, relative_to))
+    elif isinstance(pandora2d_cfg, list):
+        result["pandora2d"] = [str(string_to_path(json_file, relative_to)) for json_file in pandora2d_cfg]
     result["multiscale"]["output"] = str(string_to_path(config["multiscale"]["output"], relative_to))
 
     return result
 
 
-def get_pandora2d_cfg(user_cfg: Dict, path_left_image: Path, path_right_image: Path) -> Dict:
+def get_pandora2d_cfg(user_cfg: Dict, path_left_image: Path, path_right_image: Path, resolution_index: int) -> Dict:
     """
     Returns pandora2d configuration for a given resolution to process
 
@@ -144,12 +148,19 @@ def get_pandora2d_cfg(user_cfg: Dict, path_left_image: Path, path_right_image: P
     :type path_left_image: Path
     :param path_right_image: path of right image
     :type path_right_image: Path
+    :param iteration_index: index of the current iteration
+    :type iteration_index: int
     :return: pandora2d configuration
     :rtype: Dict
     """
 
     # Create pandora2d configuration
-    pandora2d_cfg_path = Path(user_cfg["pandora2d"])
+    if isinstance(user_cfg["pandora2d"], str):
+        pandora2d_cfg_path = Path(user_cfg["pandora2d"])
+    elif isinstance(user_cfg["pandora2d"], list):
+        pandora2d_cfg_path = Path(user_cfg["pandora2d"][resolution_index])
+    else:
+        raise ValueError("Pandora2d configuration must be a path to a json file or a list of path to json files")
 
     pandora2d_cfg = read_config_file(pandora2d_cfg_path)
     pandora2d_cfg["input"]["left"]["img"] = path_left_image
@@ -214,8 +225,8 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
     checked_cfg = check_conf(user_cfg)  # pylint: disable=unused-variable
 
     # Get lists of tif files and their shape
-    tif_files_path_left = get_tif_files_list(Path(checked_cfg["multiscale"]["left"]["pyramid"]))
-    tif_files_path_right = get_tif_files_list(Path(checked_cfg["multiscale"]["right"]["pyramid"]))
+    tif_files_path_left = checked_cfg["multiscale"]["left"]["pyramid"]
+    tif_files_path_right = checked_cfg["multiscale"]["right"]["pyramid"]
     tif_files_shape = get_tif_shape_list(tif_files_path_left)
 
     output_path = checked_cfg["multiscale"]["output"] + "/" + "iteration_"
@@ -229,7 +240,7 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
         )
 
         pandora2d_cfg = get_pandora2d_cfg(
-            checked_cfg, tif_files_path_left[resolution - 1], tif_files_path_right[resolution - 1]
+            checked_cfg, tif_files_path_left[resolution - 1], tif_files_path_right[resolution - 1], resolution - 1
         )
 
         # We use estimated initial disparity grids computed at the previous resolution
