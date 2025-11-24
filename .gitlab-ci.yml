@@ -59,6 +59,7 @@ include:
     inputs:
       image: ${UL_ARTIFACTORY_HOST}/ghcr.io/sphinx-doc/sphinx-ci:latest
       project-dir: docs
+      build-args: -W
     
 variables:
   # default production ref name (pattern)
