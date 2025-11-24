@@ -15,7 +15,8 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     import pandora2d
 
     from pandora2d.state_machine import Pandora2DMachine
-    from pandora2d import check_configuration, common
+    from pandora2d.check_configuration import check_conf
+    from pandora2d.common import save_disparity_maps
     from pandora2d.img_tools import create_datasets_from_inputs
 
     # Paths to left and right images
