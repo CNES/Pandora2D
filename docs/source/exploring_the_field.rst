@@ -9,4 +9,5 @@ Exploring the field
    exploring_the_field/refining_disparity.rst
    exploring_the_field/interpolation_filters.rst
    exploring_the_field/validity_criteria.rst
+   exploring_the_field/multiscale_mode.rst
 
