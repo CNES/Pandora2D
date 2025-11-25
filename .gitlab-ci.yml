@@ -59,7 +59,7 @@ include:
     inputs:
       image: ${UL_ARTIFACTORY_HOST}/ghcr.io/sphinx-doc/sphinx-ci:latest
       project-dir: docs
-      build-args: -W
+      build-args: --fail-on-warning  # fail if a warning is raised
     
 variables:
   # default production ref name (pattern)
