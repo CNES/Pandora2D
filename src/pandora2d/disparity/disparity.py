@@ -79,13 +79,9 @@ class Disparity:
         Memory consumption is reduced by splitting the 4D Array.
 
         :param cost_volumes: the cost volume dataset
-        :type cost_volumes: xarray.Dataset
         :param axis: research axis
-        :type axis: int
         :param extrema_func: minimal or maximal research
-        :type extrema_func: Callable
         :return: the disparities for which the cost volume values are the smallest
-        :rtype: np.ndarray
         """
 
         cv_dims = cost_volumes["cost_volumes"].shape
@@ -120,11 +116,8 @@ class Disparity:
         Memory consumption is reduced by splitting the 3D Array.
 
         :param cost_volume: the cost volume dataset
-        :type cost_volume: xarray.Dataset
         :param extrema_func: minimal or maximal research
-        :type extrema_func: Callable
         :return: the disparities for which the cost volume values are the smallest
-        :rtype: np.ndarray
         """
 
         ncol, nrow, _ = cost_volume.shape
@@ -158,13 +151,9 @@ class Disparity:
         Memory consumption is reduced by splitting the 3D Array.
 
         :param maps: maps with maximum
-        :type maps: np.ndarray
         :param axis: axis
-        :type axis: int
         :param extrema_func: minimal or maximal index research
-        :type extrema_func: Callable
         :return: the disparities for which the cost volume values are the smallest
-        :rtype: np.ndarray
         """
         ncol, nrow, _ = maps.shape
         disp = np.zeros((ncol, nrow), dtype=np.int64)
@@ -197,13 +186,11 @@ class Disparity:
 
         :param cost_volumes: the cost volumes dataset with the data variables:
             - cost_volume 4D xarray.DataArray (row, col, disp_row, disp_col)
-        :type cost_volumes: xr.Dataset
         :return: three numpy.array:
 
                 - disp_map_col : disparity map for columns
                 - disp_map_row : disparity map for row
                 - correlation_score_map : map containing matching_cost step score
-        :rtype: tuple (numpy.ndarray, numpy.ndarray, numpy.ndarray)
         """
 
         disparity_margins = cost_volumes.attrs["disparity_margins"]

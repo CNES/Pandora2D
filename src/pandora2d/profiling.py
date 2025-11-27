@@ -83,7 +83,6 @@ def get_current_memory():
     Get current memory of process
 
     :return: memory
-    :rtype: float
 
     """
 
@@ -245,19 +244,13 @@ def generate_figure(
     Generic function to generate different types of plots.
 
     :param fig_type: Type of figure ('pie', 'box', 'barh')
-    :type fig_type: str
     :param dataframe: DataFrame containing the data
-    :type dataframe: pd.DataFrame
     :param values: Values for bar chart
 
     :param title: Title of the chart
-    :type title: str
     :param xlabel: Label for x-axis
-    :type xlabel: str
     :param ylabel: Label for y-axis
-    :type ylabel: str
     :return: Performance graph
-    :rtype: plt.Figure
     """
     fig = plt.figure(figsize=(12, 12))
     plt.tight_layout()
@@ -293,9 +286,7 @@ def generate_summary(path_output: os.PathLike, expert_mode_cfg: dict):
     Generate graphs referencing memory management and time for each step.
 
     :param path_output: output directory
-    :type path_output: str
     :param expert_mode_cfg: Dictionary containing expert_mode parameters
-    :type expert_mode_cfg: dict
     """
 
     # Copy memory_profiling results in the correct folder

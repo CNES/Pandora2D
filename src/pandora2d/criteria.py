@@ -21,9 +21,9 @@ This module contains functions associated to the validity mask and criteria data
 """
 import itertools
 from enum import IntFlag
+from functools import partial
 from typing import Tuple, Type, Union
 
-from functools import partial
 import numpy as np
 import xarray as xr
 from numpy.typing import ArrayLike, DTypeLike, NDArray
@@ -53,7 +53,7 @@ class FlagArray(np.ndarray):
             return
         self.flag = getattr(obj, "flag", None)  # pylint: disable=attribute-defined-outside-init
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.flag is None:
             return super().__repr__()
         max_line_width = np.get_printoptions()["linewidth"]
@@ -80,11 +80,8 @@ def get_disparity_grids(
     We need to use the cost volume coordinates to process the right points when the step is different from 1.
 
     :param left_image: left image
-    :type left_image: xr.Dataset
     :param cv_coords: cost volumes row and column coordinates
-    :type cv_coords: Tuple[NDArray, NDArray]
     :return: 4 disparity grids
-    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
     # Get rows disparity grid
@@ -110,11 +107,8 @@ def binary_dilation_dataarray(img: xr.Dataset, window_size: int) -> xr.DataArray
             - msk (optional): 2D (row, col) xarray.DataArray int16
             - classif (optional): 3D (band_classif, row, col) xarray.DataArray int16
             - segm (optional): 2D (row, col) xarray.DataArray int16
-    :type img: xarray.Dataset
     :param window_size: window size of the cost volume
-    :type window_size: int
     :return: np.ndarray with location of pixels that are marked as no_data according to the image mask
-    :rtype: np.ndarray
     """
 
     dilated_mask = binary_dilation(
@@ -134,13 +128,9 @@ def allocate_criteria_dataarray(
     Initially, all points are considered valid and have the value XX.
 
     :param cv: cost_volumes
-    :type cv: 4D xarray.Dataset
     :param value: value representing the valid criteria, by default Criteria.VALID = 0
-    :type value: Union[int, float, Criteria]
     :param data_type: the desired data-type for the criteria_dataarray.
-    :type data_type: Union[np.dtype, None], by default None
     :return: criteria_dataarray: 4D DataArray containing the criteria
-    :rtype: criteria_dataarray: xr.DataArray
     """
     return xr.DataArray(
         FlagArray(np.full(cv.cost_volumes.shape, value, data_type), Criteria, data_type),
@@ -156,13 +146,9 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     the methods implemented in this file
 
     :param left_image: left image
-    :type left_image: xr.Dataset
     :param right_image: right image
-    :type right_image: xr.Dataset
     :param cv: cost_volumes
-    :type cv: 4D xarray.Dataset
     :return: criteria_dataarray: 4D DataArray containing the criteria
-    :rtype: criteria_dataarray: xr.DataArray
     """
 
     # Allocate criteria dataarray
@@ -205,11 +191,8 @@ def mask_border(left_image: xr.Dataset, offset: int, criteria_dataarray: xr.Data
     P2D_LEFT_BORDER criteria is non-cumulative, so this method will be called last.
 
     :param left_image: left image
-    :type left_image: xr.Dataset
     :param offset: offset
-    :type offset: int
     :param criteria_dataarray: 4D xarray.DataArray with all criteria
-    :type criteria_dataarray: 4D xarray.DataArray
     """
 
     left_image_border = xr.full_like(left_image["im"], 0, dtype=np.uint8)
@@ -233,11 +216,8 @@ def mask_disparity_outside_right_image(img_right: xr.Dataset, offset: int, crite
     the right image
 
     :param img_right: right image.
-    :type img_right: xr.Dataset
     :param offset: offset
-    :type offset: int
     :param criteria_dataarray: 4D xarray.DataArray with all criteria
-    :type criteria_dataarray: 4D xarray.DataArray
     """
     row_coords = img_right.row.values
     col_coords = img_right.col.values
@@ -264,11 +244,8 @@ def mask_left_no_data(left_image: xr.Dataset, window_size: int, criteria_dataarr
     position in the mask.
 
     :param left_image: left image with `msk` data var.
-    :type left_image: xr.Dataset
     :param window_size: window size
-    :type window_size: int
     :param criteria_dataaray: criteria dataarray to update
-    :type criteria_dataaray: xr.DataArray
     """
     dilated_mask = binary_dilation_dataarray(left_image, window_size).sel(
         row=criteria_dataarray.row, col=criteria_dataarray.col
@@ -285,13 +262,9 @@ def mask_right_no_data(
     position in the mask shift by its disparity.
 
     :param img_right: right image with `msk` data var.
-    :type img_right: xr.Dataset
     :param window_size: window size
-    :type window_size: int
     :param criteria_dataaray: criteria dataarray to update
-    :type criteria_dataaray: xr.DataArray
     :param spline_order_filter: order of the scipy filter
-    :type spline_order: int
     """
     mask_criteria_right = xr.full_like(img_right["msk"], np.uint8(Criteria.VALID), dtype=np.uint8)
 
@@ -310,9 +283,7 @@ def mask_left_invalid(left_image: xr.Dataset, criteria_dataarray: xr.DataArray) 
     is different from the values of the valid_pixels and no_data_mask attributes.
 
     :param left_image: left image with `msk` data var.
-    :type left_image: xr.Dataset
     :param criteria_dataaray: criteria dataarray to update
-    :type criteria_dataaray: xr.DataArray
     """
     invalid_left_mask = get_invalid_mask(left_image).sel(row=criteria_dataarray.row, col=criteria_dataarray.col)
 
@@ -328,9 +299,7 @@ def mask_right_invalid(img_right: xr.Dataset, criteria_dataarray: xr.DataArray) 
     is different from the values of the valid_pixels and no_data_mask attributes.
 
     :param img_right: right image with `msk` data var.
-    :type img_right: xr.Dataset
     :param criteria_dataaray: criteria dataarray to update
-    :type criteria_dataaray: xr.DataArray
     """
 
     mask_criteria_right = xr.full_like(img_right["msk"], np.uint8(Criteria.VALID), dtype=np.uint8)
@@ -349,9 +318,7 @@ def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
     or no data.
 
     :param image: image with `msk` data var.
-    :type image: xr.Dataset
     :return: invalid_mask: mask containing invalid points
-    :rtype: invalid_mask: xr.Dataarray
     """
 
     invalid_mask = (image.msk != image.attrs["no_data_mask"]) & (image.msk != image.attrs["valid_pixels"])
@@ -359,16 +326,14 @@ def get_invalid_mask(image: xr.Dataset) -> xr.DataArray:
     return invalid_mask
 
 
-def apply_invalid_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray):
+def apply_invalid_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray) -> None:
     """
     This method apply mask_criteria_right array on criteria_dataarray according
     to row and column disparities.
     Ignore invalid pixels from the input mask used in interpolation to raise the P2D_INVALID_MASK_RIGHT criterion
 
     :param criteria_dataaray: criteria dataarray to update
-    :type criteria_dataaray: xr.DataArray
     :param mask_criteria_right: mask to apply to criteria dataarray
-    :type mask_criteria_right: xr.DataArray
     """
 
     # We use a temporary mask of the same size as the image to correctly handle cases where the step is different from 1
@@ -405,7 +370,7 @@ def apply_invalid_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_cri
 
 def apply_nodata_right_criteria_mask(
     criteria_dataarray: xr.DataArray, mask_criteria_right: xr.DataArray, spline_order_filter: int
-):  # pylint: disable=too-many-branches
+) -> None:  # pylint: disable=too-many-branches
     """
     This method apply mask_criteria_right array on criteria_dataarray according
     to row and column disparities.
@@ -413,11 +378,8 @@ def apply_nodata_right_criteria_mask(
     input mask was used to interpolate the corresponding point.
 
     :param criteria_dataaray: criteria dataarray to update
-    :type criteria_dataaray: xr.DataArray
     :param mask_criteria_right: mask to apply to criteria dataarray
-    :type mask_criteria_right: xr.DataArray
     :param spline_order_filter: order of the scipy filter
-    :type spline_order: int
     """
 
     # We use a temporary mask of the same size as the image to correctly handle cases where the step is different from 1
@@ -495,22 +457,17 @@ def apply_peak_on_edge(
     cv_coords: Tuple[NDArray, NDArray],
     row_map: NDArray,
     col_map: NDArray,
-):
+) -> None:
     """
     This method raises P2D_PEAK_ON_EDGE criteria for points (row, col)
     for which the best matching cost is found for the edge of the disparity range.
     This criteria is applied on point (row, col), for each disparity value.
 
     :param validity_map: 3D validity map
-    :type validity_map: xr.DataArray
     :param left_image: left image
-    :type left_image: xr.Dataset
     :param cv_coords: cost volumes row and column coordinates
-    :type cv_coords: Tuple[NDArray, NDArray]
     :param row_map: row disparity map
-    :type row_map: NDArray
     :param col_map: col disparity map
-    :type col_map: NDArray
     """
 
     # Get disparity grids according to cost volumes coordinates
@@ -538,7 +495,6 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     Allocate the validity dataset which contains an additional 'criteria' dimension.
 
     :param criteria_dataarray: criteria_dataarray used to create validity mask
-    :type criteria_dataarray: xr.DataArray
     """
 
     # Get criteria names to stock them in the 'criteria' coordinate in the allocated xr.Dataset
@@ -567,13 +523,9 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray, row_disparity: list, 
     Fill the validity dataset which contains an additional 'criteria' dimension.
 
     :param criteria_dataarray: criteria_dataarray used to create validity mask
-    :type criteria_dataarray: xr.DataArray
     :param row_disparity: user row disparity
-    :type row_disparity: list
     :param col_disparity: user col disparity
-    :type col_disparity: list
     :return: validity Dataset
-    :rtype: xr.Dataset
     """
 
     validity_dataset = allocate_validity_dataset(criteria_dataarray)
@@ -617,9 +569,7 @@ def get_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
           by the user have been computed
 
     :param criteria_dataarray: 4D DataArray containing the criteria
-    :type criteria_dataarray: xr.DataArray
     :return: validity mask band
-    :rtype: xr.DataArray
     """
 
     disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))

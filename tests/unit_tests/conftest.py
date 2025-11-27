@@ -23,7 +23,8 @@
 # pylint: disable=redefined-outer-name
 
 from copy import deepcopy
-from typing import Tuple
+from pathlib import Path
+from typing import Sequence, Tuple
 
 import numpy as np
 import pytest
@@ -54,16 +55,13 @@ def make_empty_image(tmp_path):
     give a different name for each one.
     """
 
-    def make(name="empty.tiff", shape=(450, 450)):
+    def make(name: str = "empty.tiff", shape: Sequence[int] = (450, 450)) -> Path:
         """
         Make an empty image and return its path.
 
         :param name: name of the image
-        :type name: str
         :param shape: shape of the image
-        :type shape: Tuple[int, int]
         :return: image path
-        :rtype: pathlib.Path
         """
         path = tmp_path / name
         imsave(path, np.empty(shape))

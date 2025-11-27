@@ -27,12 +27,11 @@ import copy
 import logging
 from abc import ABC, abstractmethod
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Dict, List, Literal, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Annotated, Dict, List, Literal, Optional, TypedDict, Union
 
 import xarray as xr
 from pandora.margins import GlobalMargins
 from transitions import MachineError
-from typing_extensions import Annotated
 
 from pandora2d import common, criteria, disparity, estimation, img_tools, refinement
 from pandora2d.cost_volume_confidence import CostVolumeConfidenceRegistry
@@ -51,7 +50,7 @@ else:
     class Machine(GraphMachine):
         """A GraphMachine which defaults to graphviz engine."""
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs, graph_engine="graphviz")
 
 
@@ -65,7 +64,7 @@ class MarginsProperties(TypedDict):
 class BaseMachine(Machine, ABC):
     """Base model and state machine for pandora2d."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # For communication between matching_cost and refinement steps
         self.step: Union[List, None] = None
         self.pipeline_cfg: Dict = {"pipeline": {}}
@@ -132,7 +131,6 @@ class BaseMachine(Machine, ABC):
         Check configuration and transitions
 
         :param cfg: pipeline configuration
-        :type  cfg: dict
         :return:
         """
 
@@ -142,9 +140,7 @@ class BaseMachine(Machine, ABC):
         Estimation's computation step.
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -154,9 +150,7 @@ class BaseMachine(Machine, ABC):
         Matching cost computation step.
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -166,9 +160,7 @@ class BaseMachine(Machine, ABC):
         Cost volume confidence's computation.
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -178,9 +170,7 @@ class BaseMachine(Machine, ABC):
         Disparity's computation.
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -190,9 +180,7 @@ class BaseMachine(Machine, ABC):
         Refinement's configuration.
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -205,7 +193,6 @@ class CheckMachine(BaseMachine):
         Check configuration and transitions
 
         :param cfg: pipeline configuration
-        :type  cfg: dict
         :return:
         """
         for input_step in list(cfg["pipeline"]):
@@ -220,9 +207,7 @@ class CheckMachine(BaseMachine):
         Check the estimation computation configuration
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -234,9 +219,7 @@ class CheckMachine(BaseMachine):
         Check the matching cost computation configuration
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -254,9 +237,7 @@ class CheckMachine(BaseMachine):
         Check the cost volume confidence computation configuration
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -272,9 +253,7 @@ class CheckMachine(BaseMachine):
         Check the disparity computation configuration
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -287,9 +266,7 @@ class CheckMachine(BaseMachine):
         Check the refinement configuration
 
         :param cfg: configuration
-        :type cfg: dict
         :param input_step: current step
-        :type input_step: string
         :return: None
         """
 
@@ -338,14 +315,11 @@ class Pandora2DMachine(BaseMachine):
 
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xarray.Dataset
         :param img_right: left Dataset image containing :
 
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xarray.Dataset
         :param cfg: configuration
-        :type cfg: Dict[str, dict]
         """
 
         self.left_img = img_left
@@ -357,9 +331,7 @@ class Pandora2DMachine(BaseMachine):
         Run pandora 2D step by triggering the corresponding machine transition
 
         :param input_step: step to trigger
-        :type input_step: str
         :param cfg: pipeline configuration
-        :type  cfg: dict
         :return: None
         """
         try:
@@ -384,7 +356,6 @@ class Pandora2DMachine(BaseMachine):
         Check configuration and transitions
 
         :param cfg: pipeline configuration
-        :type  cfg: dict
         :return:
         """
 
@@ -404,7 +375,6 @@ class Pandora2DMachine(BaseMachine):
         Delete all transitions defined in the input list
 
         :param transition_list: list of transitions
-        :type transition_list: dict
         :return: None
         """
         # Transition is removed using trigger name. But one trigger name can be used by multiple transitions
@@ -421,9 +391,7 @@ class Pandora2DMachine(BaseMachine):
         Matching cost prepare
 
         :param cfg: pipeline configuration
-        :type  cfg: dict
         :param input_step: step to trigger
-        :type input_step: str
         :return: None
         """
         MatchingCost = MatchingCostRegistry.get(  # pylint:disable=invalid-name # NOSONAR
@@ -466,9 +434,7 @@ class Pandora2DMachine(BaseMachine):
         Shift's estimation step
 
         :param cfg: pipeline configuration
-        :type  cfg: dict
         :param input_step: step to trigger
-        :type input_step: str
         :return: None
         """
 
@@ -538,9 +504,7 @@ class Pandora2DMachine(BaseMachine):
         Disparity computation and validity mask
 
         :param cfg: pipeline configuration
-        :type  cfg: dict
         :param input_step: step to trigger
-        :type input_step: str
         :return: None
         """
 
@@ -567,9 +531,7 @@ class Pandora2DMachine(BaseMachine):
         Subpixel disparity refinement
 
         :param cfg: pipeline configuration
-        :type  cfg: dict
         :param input_step: step to trigger
-        :type input_step: str
         :return: None
         """
 

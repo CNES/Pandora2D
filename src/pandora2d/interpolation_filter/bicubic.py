@@ -37,12 +37,11 @@ class BicubicPython(AbstractFilter):
     _ALPHA = -0.5
     _SIZE = 4
 
-    def __init__(self, cfg, **_):
+    def __init__(self, cfg: dict, **_) -> None:
         """
         Initialize a BicubicPython instance.
 
         :param cfg: optional configuration, {}
-        :type cfg: dict
         :return: None
         """
 
@@ -64,9 +63,7 @@ class BicubicPython(AbstractFilter):
             - For a column shift, returned array size = left_margin + right_margin + 1
 
         :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
-        :type fractional_shift: float
         :return: a array of interpolator coefficients whose size depends on the filter margins
-        :rtype: np.ndarray
         """
         tab_coeffs = np.empty(4)
         alpha = self._ALPHA

@@ -45,7 +45,6 @@ class Ambiguity(CostVolumeConfidence):
         Initialisation of Ambiguity class
 
         :param cfg: user_config for cost volume confidence
-        :type cfg: dict
         :return: None
         """
 
@@ -83,15 +82,10 @@ class Ambiguity(CostVolumeConfidence):
         Compute a confidence prediction.
 
         :param left_image: left Dataset image
-        :type left_image: xarray.Dataset
         :param right_image: right Dataset image
-        :type right_image: xarray.Dataset
         :param cost_volumes: cost volume dataset
-        :type cost_volumes: xarray.Dataset
         :param dataset_disp_maps: dataset containg row and col disparity maps
-        :type dataset_disp_maps: xarray.Dataset
         :return: the disparity map and the cost volume updated with the confidence measure
-        :rtype: Tuple[xr.Dataset, xr.Dataset]
         """
 
         logging.warning("The ambiguity method has not yet been implemented")

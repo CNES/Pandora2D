@@ -67,7 +67,6 @@ class CorrelationMethods(BaseMatchingCost):
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :return: None
         """
         self.shifted_right_images = shift_subpix_img_2d(img_right, self._subpix, order=self._spline_order)
@@ -84,15 +83,11 @@ class CorrelationMethods(BaseMatchingCost):
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :param margins: refinement margins
-        :type margins: Margins
         :return: cost_volumes: 4D Dataset containing the cost_volumes
-        :rtype: cost_volumes: xr.Dataset
         """
 
         # Add type measure to attributes for WTA

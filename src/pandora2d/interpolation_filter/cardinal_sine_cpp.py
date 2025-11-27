@@ -36,14 +36,12 @@ class CardinalSine(AbstractFilter):
 
     schema = {"method": "sinc", OptionalKey("size"): And(int, lambda a: 6 <= a <= 21)}
 
-    def __init__(self, cfg: Dict, fractional_shift: float = 0.5):
+    def __init__(self, cfg: Dict, fractional_shift: float = 0.5) -> None:
         """
 
         :param cfg: config
-        :type cfg: dict
         :param fractional_shift: interval between each interpolated point, sometimes referred to as precision.
                                  Expected value in the range [0,1[.
-        :type fractional_shift: float
         """
         super().__init__(cfg)
         self._check_fractional_shift(fractional_shift)

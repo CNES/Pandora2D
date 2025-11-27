@@ -22,7 +22,7 @@
 This module contains functions associated to the optical flow method used in the refinement step.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Literal, Tuple
 
 import numpy as np
 import xarray as xr
@@ -56,11 +56,8 @@ class OpticalFlow(refinement.AbstractRefinement):
     def __init__(self, cfg: dict = None, step: list = None, window_size: int = 5) -> None:
         """
         :param cfg: optional configuration, {}
-        :type cfg: dict
         :param step: list containing row and col step
-        :type step: list
         :param window_size: window size
-        :type window_size: int
         :return: None
         """
         # Update user configuration with step and window_size parameters to check them
@@ -79,9 +76,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         Check the refinement configuration
 
         :param cfg: user_config for refinement
-        :type cfg: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
 
         cfg["iterations"] = cfg.get("iterations", cls._ITERATIONS)
@@ -100,24 +95,18 @@ class OpticalFlow(refinement.AbstractRefinement):
         img: xr.Dataset,
         cost_volumes: xr.Dataset,
         coordinates: Tuple[List, List],
-        disp_row: np.ndarray = None,
-        disp_col: np.ndarray = None,
-    ):
+        disp_row: NDArray = None,
+        disp_col: NDArray = None,
+    ) -> NDArray:
         """
         Transform image from (nb_col, nb_row) to (window_size, window_size, nbcol*nbrow)
 
         :param img: image to reshape
-        :type img: xr.Dataset
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.Dataset
         :param coordinates: min and max index coordinate for row and col [(first_row,last_row),(first_col,last_col)]
-        :type coordinates: tuple
         :param disp_row: array dim [] containing all the row shift
-        :type disp_row: np.ndarray
         :param disp_col: array dim [] containing all the columns shift
-        :type disp_col: np.ndarray
         :return: array containing reshaped image [window_size, window_size, nbcol*nbrow]
-        :rtype: np.ndarray
         """
 
         # get numpy array datas for image
@@ -188,21 +177,16 @@ class OpticalFlow(refinement.AbstractRefinement):
         return patches
 
     def warped_img(
-        self, right_reshape: np.ndarray, delta_row: np.ndarray, delta_col: np.ndarray, index_to_compute: list
-    ):
+        self, right_reshape: NDArray, delta_row: NDArray, delta_col: NDArray, index_to_compute: list
+    ) -> NDArray:
         """
         Shifted matching_cost window with computed disparity
 
         :param right_reshape: image right reshaped with dims (window_size, window_size, nbcol*nb_row)
-        :type right_reshape: np.ndarray
         :param delta_row: rows disparity map
-        :type delta_row: np.ndarray
         :param delta_col: columns disparity map
-        :type delta_col: np.ndarray
         :param index_to_compute: list containing all valid pixel for computing optical flow
-        :type index_to_compute: list
         :return: new array containing shifted matching_cost windows
-        :rtype: np.ndarray
         """
 
         x, y = np.meshgrid(range(self._window_size), range(self._window_size))
@@ -219,16 +203,13 @@ class OpticalFlow(refinement.AbstractRefinement):
 
         return new_img
 
-    def lucas_kanade_core_algorithm(self, left_data: np.ndarray, right_data: np.ndarray) -> Tuple[float, float]:
+    def lucas_kanade_core_algorithm(self, left_data: NDArray, right_data: NDArray) -> Tuple[float, float]:
         """
         Implement lucas & kanade algorithm core
 
         :param left_data: matching_cost window for one pixel from left image
-        :type left_data: np.ndarray
         :param right_data: matching_cost window for one pixel from left image
-        :type right_data: np.ndarray
         :return: sub-pixel disparity computed by Lucas & Kanade optical flow
-        :rtype: Tuple[float, float]
         """
 
         grad_y, grad_x = np.gradient(left_data)
@@ -251,21 +232,17 @@ class OpticalFlow(refinement.AbstractRefinement):
 
     def optical_flow(
         self,
-        left_img: np.ndarray,
-        right_img: np.ndarray,
+        left_img: NDArray,
+        right_img: NDArray,
         list_idx_to_compute: list,
-    ) -> Tuple[np.ndarray, np.ndarray, list]:
+    ) -> Tuple[NDArray, NDArray, list]:
         """
         Computing optical flow between left and right image
 
         :param left_img: reshaped left image array
-        :type left_img: np.ndarray
         :param right_img: reshaped right image array
-        :type right_img: np.ndarray
         :param list_idx_to_compute: list of valid pixel
-        :type list_idx_to_compute: list
         :return: computed sub-pixel disparity map
-        :rtype: Tuple[np.ndarray, np.ndarray, list]
         """
 
         new_list_to_compute = []
@@ -296,16 +273,13 @@ class OpticalFlow(refinement.AbstractRefinement):
         return final_dec_row, final_dec_col, new_list_to_compute
 
     @staticmethod
-    def find_nearest_column(value, data, direction):
+    def find_nearest_column(value: int, data: NDArray, direction: Literal["+", "-"]) -> NDArray:
         """
         Return the nearest column from initial column index coordinate in a given direction
 
         :param value: initial column index
-        :type value: int
         :param data: cost volume coordinates
-        :type data: np.ndarray
         :param direction: direction sign (must be + or -)
-        :type direction: string
         """
 
         if direction == "+":
@@ -322,15 +296,10 @@ class OpticalFlow(refinement.AbstractRefinement):
         Return the subpixel disparity maps
 
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.Dataset
         :param disp_map: pixels disparity maps
-        :type disp_map: xarray.Dataset
         :param img_left: left image dataset
-        :type img_left: xarray.Dataset
         :param img_right: right image dataset
-        :type img_right: xarray.Dataset
         :return: the refined disparity maps and disparity correlation score
-        :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """
 
         # get invalid_disp value
@@ -418,17 +387,16 @@ class OpticalFlow(refinement.AbstractRefinement):
 
         return delta_col, delta_row, disp_map["correlation_score"].data
 
-    def _invalid_out_of_grid_disparities(self, step: List, delta: NDArray[np.floating], disparity: xr.DataArray):
+    def _invalid_out_of_grid_disparities(
+        self, step: List, delta: NDArray[np.floating], disparity: xr.DataArray
+    ) -> None:
         """
         Replace delta values by invalid_disp value when it is outside the corresponding disparity range defined by
         the disparity grid.
 
         :param step: [row_step, col_step]
-        :type step: list
         :param delta: refined disparity map
-        :type delta: np.NDArray
         :param disparity: pixelic disparity grids with min and max `band_disp` coordinates.
-        :type disparity: xr.DataArray
         """
         delta[delta <= disparity.sel(band_disp="min").data[:: step[0], :: step[1]]] = self._invalid_disp
         delta[delta >= disparity.sel(band_disp="max").data[:: step[0], :: step[1]]] = self._invalid_disp

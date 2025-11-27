@@ -34,7 +34,6 @@ class CostVolumeConfidence(ABC):
         Initialisation of CostVolumeConfidence class
 
         :param cfg: user_config for cost volume confidence
-        :type cfg: dict
         :return: None
         """
         self._cfg = self.check_conf(cfg)
@@ -59,9 +58,7 @@ class CostVolumeConfidence(ABC):
         Check the cost volume confidence configuration
 
         :param cfg: user_config for cost volume confidence
-        :type cfg: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
         updated_config = self._update_with_default_config_values(cfg)
         checker = Checker(self.schema)
@@ -78,7 +75,6 @@ class CostVolumeConfidence(ABC):
         Get used configuration
 
         :return: cfg: dictionary with all parameters
-        :rtype: cfg: dict
         """
         return self._cfg
 
@@ -94,13 +90,8 @@ class CostVolumeConfidence(ABC):
         Compute a confidence prediction.
 
         :param left_image: left Dataset image
-        :type left_image: xarray.Dataset
         :param right_image: right Dataset image
-        :type right_image: xarray.Dataset
         :param cost_volumes: cost volume dataset
-        :type cost_volumes: xarray.Dataset
         :param dataset_disp_maps: dataset containg row and col disparity maps
-        :type dataset_disp_maps: xarray.Dataset
         :return: the disparity map and the cost volume updated with the confidence measure
-        :rtype: Tuple[xr.Dataset, xr.Dataset]
         """

@@ -39,25 +39,15 @@ def compute_dichotomy_float(
     Dichotomy calculation with float data
 
     :param cost_volume: cost volume data
-    :type cost_volume: NDArray[np.floating]
     :param disparity_map_col: column disparity map data
-    :type disparity_map_col: NDArray[np.floating]
     :param disparity_map_row: row disparity map data
-    :type disparity_map_row: NDArray[np.floating]
     :param score_map: score map data
-    :type score_map: NDArray[np.floating]
     :param invalid_map: invalid map data
-    :type invalid_map: NDArray[np.floating]
     :param criteria_map: criteria map data
-    :type criteria_map: NDArray[np.floating]
     :param subpixel: sub-sampling of cost_volume
-    :type subpixel: int
     :param nb_iterations: number of iterations of the dichotomy
-    :type nb_iterations: int
     :param filter: interpolation filter
-    :type filter: abstractfilter::AbstractFilter
     :param method_matching_cost: max or min
-    :type method_matching_cost: str
     """
 
 def compute_dichotomy_double(
@@ -76,23 +66,13 @@ def compute_dichotomy_double(
     Dichotomy calculation with double data
 
     :param cost_volume: cost volume data
-    :type cost_volume: NDArray[np.floating]
     :param disparity_map_col: column disparity map data
-    :type disparity_map_col: NDArray[np.floating]
     :param disparity_map_row: row disparity map data
-    :type disparity_map_row: NDArray[np.floating]
     :param score_map: score map data
-    :type score_map: NDArray[np.floating]
     :param invalid_map: invalid map data
-    :type invalid_map: NDArray[np.floating]
     :param criteria_map: criteria map data
-    :type criteria_map: NDArray[np.floating]
     :param subpixel: sub-sampling of cost_volume
-    :type subpixel: int
     :param nb_iterations: number of iterations of the dichotomy
-    :type nb_iterations: int
     :param filter: interpolation filter
-    :type filter: abstractfilter::AbstractFilter
     :param method_matching_cost: max or min
-    :type method_matching_cost: str
     """

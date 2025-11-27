@@ -47,7 +47,6 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
     def __init__(self, cfg: Dict) -> None:
         """
         :param cfg: optional configuration, {'range_col': int, 'range_row': int, 'sample_factor': int}
-        :type cfg: dict
         :return: None
         """
 
@@ -62,9 +61,7 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
         Check the estimation configuration
 
         :param cfg: user_config for refinement
-        :type cfg: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
 
         # Give the default value if the required element is not in the conf
@@ -96,15 +93,12 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
 
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :return: row disparity: list
                 col disparity: list
                 Calculated shifts: np.ndarray
                 Extra information about estimation: dict
-        :rtype: list, list, np.ndarray, dict
         """
 
         # https://scikit-image.org/docs/stable/api/

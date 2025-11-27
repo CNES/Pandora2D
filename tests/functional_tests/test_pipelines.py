@@ -36,16 +36,13 @@ from pandora2d.check_configuration import check_conf
 from pandora2d.img_tools import create_datasets_from_inputs
 
 
-def remove_extra_keys(extended: dict, reference: dict):
+def remove_extra_keys(extended: dict, reference: dict) -> dict:
     """
     Removes the extra keys in the `extended` dictionary that are not present in the `reference` dictionary.
 
     :param extended: The dictionary that may contain extra keys.
-    :type extended: dict
     :param reference: The reference dictionary that contains the desired keys.
-    :type reference: dict
     :return: A copy of the `extended` dictionary with only the keys present in the `reference` dictionary.
-    :rtype: dict
 
     :Example:
 

@@ -46,7 +46,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         Initialisation of matching_cost class
 
         :param cfg: user_config for matching cost
-        :type cfg: dict
         :return: None
         """
         super().__init__(cfg)
@@ -63,7 +62,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         Get used configuration
 
         :return: cfg: dictionary with all parameters
-        :rtype: cfg: dict
         """
         return {
             "matching_cost_method": self._method,
@@ -92,17 +90,15 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         Get window_size, parameter specific to pandora
 
         :return: window_size: window used to compute correlation
-        :rtype: window_size: int
         """
         return self.pandora_matching_cost_._window_size  # pylint: disable=W0212 protected-access
 
     @window_size.setter
-    def window_size(self, value) -> None:
+    def window_size(self, value: int) -> None:
         """
         Set window_size, parameter specific to pandora
 
-        :return: window_size: window used to compute correlation
-        :rtype: window_size: int
+        :value: window used to compute correlation
         """
         # Does nothing as we just want to override superclass behavior
 
@@ -112,7 +108,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         Get subpix, parameter specific to pandora
 
         :return: subpix: subpix used
-        :rtype: subpix: int
         """
         return self.pandora_matching_cost_._subpix  # pylint: disable=W0212 protected-access
 
@@ -122,7 +117,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         Set subpix, parameter specific to pandora
 
         :return: subpix: subpix used
-        :rtype: subpix: int
         """
         # Does nothing as we just want to override superclass behavior
 
@@ -132,7 +126,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         Get spline_order, parameter specific to pandora
 
         :return: spline_order: spline_order used
-        :rtype: spline_order: int
         """
         return self.pandora_matching_cost_._spline_order  # pylint: disable=W0212 protected-access
 
@@ -142,7 +135,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         Set spline_order, parameter specific to pandora
 
         :return: spline_order: spline_order used
-        :rtype: spline_order: int
         """
         # Does nothing as we just want to override superclass behavior
 
@@ -159,9 +151,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         Get configuration for matching_cost in pandora
 
         :param cfg: user_config for matching cost pandora2d
-        :type cfg: dict
         :return: cfg: matching cost pandora configuration
-        :rtype: cfg: dict
         """
         copy_cfg = copy.deepcopy(cfg)
         copy_cfg["step"] = self._step_col
@@ -185,15 +175,11 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :param cfg: matching_cost computation configuration
-        :type cfg: Dict
         :param margins: refinement margins
-        :type margins: Margins
         :return: None
         """
 
@@ -223,7 +209,6 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :return: None
         """
         self.shifted_right_images = img_tools.shift_subpix_img(img_right, self._subpix, order=self._spline_order)
@@ -241,15 +226,11 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :param margins: refinement margins
-        :type margins: Margins
         :return: cost_volumes: 4D Dataset containing the cost_volumes
-        :rtype: cost_volumes: xr.Dataset
         """
 
         grid_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()

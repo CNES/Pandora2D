@@ -1,19 +1,27 @@
+"""
+Utilities for notebooks.
+"""
+
 import os
+from typing import Union
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+from numpy.typing import NDArray
 
 
-def plot_image(img, title=None, output_dir=None, cmap="viridis"):
+def plot_image(
+    img: NDArray,
+    title: Union[str, None] = None,
+    output_dir: Union[str, os.PathLike[str], None] = None,
+    cmap: str = "viridis",
+) -> None:
     """
      Show images
     :param img: image to show
-    :type img: numpy.ndarray
     :param title: Title of graph
-    :type title: str
     :param output_dir: path to output directory
-    :type output_dir: str
     :param cmap: type of colors for the map
-    :type cmap: str
 
     :return: None
     """
@@ -25,21 +33,22 @@ def plot_image(img, title=None, output_dir=None, cmap="viridis"):
         fig.savefig(os.path.join(output_dir, title + ".pdf"))
 
 
-def plot_two_images(img1, img2, title1="first_image", title2="second_image", output_dir=None, cmap="viridis"):
+def plot_two_images(
+    img1: NDArray,
+    img2: NDArray,
+    title1: str = "first_image",
+    title2: str = "second_image",
+    output_dir: Union[str, os.PathLike[str], None] = None,
+    cmap: str = "viridis",
+) -> None:
     """
     Show images side by side
     :param img1: image 1 to show
-    :type img1: numpy.ndarray
     :param img2: image 2 to show
-    :type img2: numpy.ndarray
     :param title1: Title of graph 1
-    :type title1: str
     :param title2: Title of graph 2
-    :type title1: str
     :param output_dir: path to output directory
-    :type output_dir: str
     :param cmap: type of colors for the map
-    :type cmap: str
 
     :return: None
     """

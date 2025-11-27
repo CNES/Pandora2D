@@ -30,7 +30,6 @@ from json_checker import And
 from ..common import all_same
 from ..constants import Criteria
 from ..interpolation_filter import AbstractFilter
-
 from . import refinement
 
 COST_SELECTION_METHOD_MAPPING = {"min": np.nanargmin, "max": np.nanargmax}
@@ -50,7 +49,6 @@ class DichotomyPython(refinement.AbstractRefinement):
     def __init__(self, cfg: dict = None, _: list = None, __: int = 5) -> None:
         """
         :param cfg: optional configuration, {}
-        :type cfg: dict
         :return: None
         """
 
@@ -68,9 +66,7 @@ class DichotomyPython(refinement.AbstractRefinement):
         Will change `number_of_iterations` value by `Dichotomy.NB_MAX_ITER` if above `Dichotomy.NB_MAX_ITER`.
 
         :param cfg: user_config for refinement method
-        :type cfg: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
         cfg = super().check_conf(cfg)
         if cfg["iterations"] > cls.NB_MAX_ITER:
@@ -99,15 +95,10 @@ class DichotomyPython(refinement.AbstractRefinement):
         Return the subpixel disparity maps
 
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.Dataset
         :param disp_map: pixel disparity maps
-        :type disp_map: xarray.Dataset
         :param img_left: left image dataset
-        :type img_left: xarray.Dataset
         :param img_right: right image dataset
-        :type img_right: xarray.Dataset
         :return: the refined disparity maps
-        :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """
         cost_selection_method = COST_SELECTION_METHOD_MAPPING[cost_volumes.attrs["type_measure"]]
 
@@ -281,15 +272,13 @@ class CostSurfaces:
     The container is iterable row first then columns.
     """
 
-    def __init__(self, cost_volumes: xr.Dataset):
+    def __init__(self, cost_volumes: xr.Dataset) -> None:
         """
         Extract subsampling cost surfaces from cost volumes around a given disparity from cost volumes.
 
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.Dataset
         :param disp_map: pixels disparity maps
         :param disparity_margins: margins used to define disparity ranges
-        :type disparity_margins: Margins
         """
         self.cost_volumes = cost_volumes
         self.cost_volumes["cost_volumes"].attrs.update({"subpixel": cost_volumes.attrs["subpixel"]})
@@ -326,21 +315,13 @@ def search_new_best_point(
     Find best position and cost after interpolation of cost surface for given precision.
 
     :param cost_surface: Disparities in rows and cols of a point
-    :type cost_surface: xr.Dataarray with subpix attribute
     :param precision: subpixellic disparity precision to use
-    :type precision: float
     :param initial_disparity: initial disparities (disp_row, disp_col)
-    :type initial_disparity: Union[Tuple[np.floating, np.floating], Tuple[int, int]]
     :param initial_position: coordinates (row, col) to interpolate around
-    :type initial_position: Union[Tuple[np.floating, np.floating], Tuple[int, int]]
     :param initial_value: initial value
-    :type initial_value: np.float32
     :param filter_dicho: filter used to do interpolation in dichotomy loop
-    :type filter_dicho: AbstractFilter
     :param cost_selection_method: function used to select best cost
-    :type cost_selection_method: Callable
     :return: coordinates of best interpolated cost, its value and its corresponding disparities.
-    :rtype: Tuple[Point, np.floating, np.floating, np.floating]
     """
 
     # initial_disp_row corresponds to row_map[i,j]

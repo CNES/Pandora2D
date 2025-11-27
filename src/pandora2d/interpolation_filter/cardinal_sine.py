@@ -35,14 +35,12 @@ class CardinalSinePython(AbstractFilter):
 
     schema = {"method": "sinc_python", OptionalKey("size"): And(int, lambda a: 6 <= a <= 21)}
 
-    def __init__(self, cfg: Dict, fractional_shift: float = 0.5):
+    def __init__(self, cfg: Dict, fractional_shift: float = 0.5) -> None:
         """
 
         :param cfg: config
-        :type cfg: dict
         :param fractional_shift: interval between each interpolated point, sometimes referred to as precision.
                                  Expected value in the range [0,1[.
-        :type fractional_shift: float
         """
         super().__init__(cfg)
         self._check_fractional_shift(fractional_shift)
@@ -79,11 +77,8 @@ def compute_coefficient_table(filter_size: int, fractional_shifts: NDArray[np.fl
     The Gaussian window width correspond to the size of the filter.
 
     :param filter_size: Half number of coefficients to compute.
-    :type filter_size: int
     :param fractional_shifts: At which fractional shifts to compute coefficients
-    :type fractional_shifts: NDArray[np.floating]
     :return: 2D array with computed coefficients
-    :rtype: NDArray[np.floating]
     """
     sigma = filter_size
     aux1 = (-2.0 * np.pi) / (sigma * sigma)

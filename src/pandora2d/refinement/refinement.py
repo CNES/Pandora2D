@@ -25,14 +25,20 @@ This module contains functions associated to the refinement computation step.
 from __future__ import annotations
 
 import logging
+import sys
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Tuple
+from typing import Callable, Dict, Tuple
 
 import numpy as np
 import xarray as xr
 from json_checker import Checker
 
 from pandora2d.margins import NullMargins
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class AbstractRefinement:
@@ -54,7 +60,6 @@ class AbstractRefinement:
         Return the plugin associated with the refinement_method given in the configuration
 
         :param cfg: configuration {'refinement_method': value}
-        :type cfg: dictionary
         """
 
         if cls is AbstractRefinement:
@@ -91,20 +96,18 @@ class AbstractRefinement:
         print(f"{self._refinement_method} refinement measure")
 
     @classmethod
-    def register_subclass(cls, short_name: str):
+    def register_subclass(cls, short_name: str) -> Callable[[type[Self]], type[Self]]:
         """
         Allows to register the subclass with its short name
 
         :param short_name: the subclass to be registered
-        :type short_name: string
         """
 
-        def decorator(subclass):
+        def decorator(subclass: type[Self]) -> type[Self]:
             """
             Registers the subclass in the available methods
 
             :param subclass: the subclass to be registered
-            :type subclass: object
             """
             cls.refinement_methods_avail[short_name] = subclass
             return subclass
@@ -114,11 +117,8 @@ class AbstractRefinement:
     def __init__(self, cfg: Dict, _: list = None, __: int = 5) -> None:
         """
         :param cfg: optional configuration, {}
-        :type cfg: dict
         :param step: list containing row and col step
-        :type step: list
         :param window_size: window size
-        :type window_size: int
         :return: None
         """
         self.cfg = self.check_conf(cfg)
@@ -134,9 +134,7 @@ class AbstractRefinement:
         Check the refinement method configuration.
 
         :param cfg: user_config for refinement method
-        :type cfg: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
         checker = Checker(cls.schema)
         checker.validate(cfg)
@@ -151,13 +149,8 @@ class AbstractRefinement:
         Return the subpixel disparity maps
 
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.Dataset
         :param disp_map: pixels disparity maps
-        :type disp_map: xarray.Dataset
         :param img_left: left image dataset
-        :type img_left: xarray.Dataset
         :param img_right: right image dataset
-        :type img_right: xarray.Dataset
         :return: the refined disparity maps
-        :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """
