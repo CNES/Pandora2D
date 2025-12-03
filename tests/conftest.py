@@ -342,6 +342,7 @@ def create_disparity_grid_fixture(tmp_path):
             disparity_grid = xr.DataArray(data, dims=["row", "col", "band"])
 
         path = tmp_path / suffix_path
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         write_data_array(data_array=disparity_grid, filename=str(path), dtype=disp_type)
 
@@ -377,7 +378,7 @@ def second_correct_grid_data(left_img_shape):
 @pytest.fixture
 def second_correct_grid(second_correct_grid_data, create_disparity_grid_fixture):
     """Create a correct initial disparity grid and save it in tmp"""
-    return create_disparity_grid_fixture(second_correct_grid_data, 5, "second_disparity.tif")
+    return create_disparity_grid_fixture(second_correct_grid_data, 5, "tata/second_disparity.tif")
 
 
 @pytest.fixture
