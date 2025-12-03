@@ -267,8 +267,14 @@ def estimate_init_disparity_grids(
         * COMPRESSION_FACTOR
     )
 
+    # We add 0.5 to scaled_col and scaled_row because we want to consider the center of the pixels
+    # and not their upper left corner.
+    scaled_row += 0.5 * COMPRESSION_FACTOR
+    scaled_col += 0.5 * COMPRESSION_FACTOR
+
     # Get initial positions for resampled coordinates
     scaled_col_2d, scaled_row_2d = np.meshgrid(scaled_col, scaled_row)
+
     # Get design matrix for resampled initial positions
     design_matrix, _ = make_polynomial_design_matrix(scaled_row_2d.ravel(), scaled_col_2d.ravel(), degree)
 
