@@ -1,0 +1,17 @@
+
+
+{
+"multiscale": {
+
+        "left" : {"pyramid": "../images/maricopa_pyramid/left"},
+        "right" : {"pyramid": "../images/maricopa_pyramid/right"},
+        "model": {"type": "pol", "degree": 2},
+        "mesh": {"row":3, "col":3},
+        "output": 
+            "a_multiscale_output"
+        
+    },
+"pandora2d": 
+  ["a_basic_pipeline.json", "a_dichotomy_pipeline.json", "a_dichotomy_pipeline.json"]
+
+}
