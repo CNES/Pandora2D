@@ -39,7 +39,7 @@ spec:
       default: false
 ---
 include:
-  - component: $CI_SERVER_FQDN/to-be-continuous/python/gitlab-ci-python@8.1.3  # TBC Python component version
+  - component: $CI_SERVER_FQDN/to-be-continuous/python/gitlab-ci-python@8.6.0  # TBC Python component version
     # Default stage for jobs is build.
     # Below is the list of items to contains.
     inputs:
@@ -68,6 +68,10 @@ variables:
   # Decomment to add new branch TickerNumber-XXX
   #INTEG_REF: /^(develop|release|TickerNumber-XXX)$/
   INTEG_REF: /^(develop|release)$/
+
+  # Pandora's branch to integrate with
+  # Override from pipeline GUI/Schedule if needed
+  PANDORA_BRANCH: release
 
   # Python
   PIP_INDEX_URL: "https://${PANDORA_ARTIFACTORY_USERNAME}:${PANDORA_ARTIFACTORY_KEY}@${UL_ARTIFACTORY_HOST}/artifactory/api/pypi/pypi/simple"
@@ -104,6 +108,22 @@ py-pytest:
     # ${TRACE+-d} define the log level
     # Install in editable mode to compute coverage
     - make ${TRACE+-d} test-unit
+
+# Set the version of Pandora to use
+pandora-version:
+  stage: .pre
+  image: $PYTHON_IMAGE
+  extends: .python-base
+  script:
+    # Use CI job token to authenticate
+    - echo "PANDORA_BRANCH=$PANDORA_BRANCH"
+    - sed -i 's#"pandora[>=<].*",#"pandora @ git+https://gitlab-ci-token@'${CI_SERVER_HOST}/dali/PandoraBox/pandora.git@${PANDORA_BRANCH}'",#' pyproject.toml
+  artifacts:
+    paths:
+      - pyproject.toml
+  rules:
+    # Run this job only if PANDORA_BRANCH is valued
+    - if: $PANDORA_BRANCH
 
 # C++ unit Test
 unit-cpp-test:
@@ -193,6 +213,11 @@ notebook-test:
 py-mypy:
   variables:
     PYTHON_EXTRA_DEPS: dev
+
+# Trivy check
+py-trivy:
+  variables:
+    TRIVY_SEVERITY: HIGH,CRITICAL
 
 # CppCheck
 cppcheck:
