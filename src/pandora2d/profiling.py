@@ -31,6 +31,7 @@ from functools import wraps
 from multiprocessing import Pipe
 from pathlib import Path
 from threading import Thread
+from typing import Any, TypedDict
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -55,18 +56,18 @@ class Data:
     Data class
     """
 
-    def __init__(self):
-        self._data = []
-        self.timestamp = datetime.datetime.now().strftime("%Y-%m-%d %Hh%Mm%Ss")
+    def __init__(self) -> None:
+        self._data: list[Any] = []
+        self.timestamp: str = datetime.datetime.now().strftime("%Y-%m-%d %Hh%Mm%Ss")
 
     def append(self, line):
         self._data.append(line)
 
-    def reset(self):
+    def reset(self) -> None:
         self._data.clear()
 
     @property
-    def timestamp(self):
+    def timestamp(self) -> str:
         return self._timestamp
 
     @timestamp.setter
@@ -78,7 +79,7 @@ expert_mode_config = ExpertModeConfig()
 data = Data()
 
 
-def get_current_memory():
+def get_current_memory() -> float:
     """
     Get current memory of process
 
@@ -103,7 +104,7 @@ class MemProf(Thread):
     Profiling thread with time and memory performances in seconds and  MiB
     """
 
-    def __init__(self, pid, pipe, interval=0.1):
+    def __init__(self, pid, pipe, interval=0.1) -> None:
         """
         Init function of Pandora2dMemProf
         """
@@ -113,7 +114,7 @@ class MemProf(Thread):
         self.cpu_interval = 0.1
         self.process = psutil.Process(pid)
 
-    def run(self):
+    def run(self) -> None:
         """
         Run
         """
@@ -232,21 +233,31 @@ def mem_time_profile(name=None, interval=0.1):
     return decorator_generator
 
 
-def generate_figure(
-    fig_type: str,
-    dataframe,
-    values=None,
-    title: str = "",
-    xlabel: str = "",
-    ylabel: str = "",
-) -> Figure:
+def generate_barh_figure(series: pd.Series, values: Any, title: str = "") -> Figure:
     """
-    Generic function to generate different types of plots.
+    Barh figure.
 
-    :param fig_type: Type of figure ('pie', 'box', 'barh')
-    :param dataframe: DataFrame containing the data
+    :param series: Series containing the data
     :param values: Values for bar chart
+    :param title: Title of the chart
+    :return: Performance graph
+    """
+    fig = plt.figure(figsize=(12, 12))
+    plt.tight_layout()
+    hbar = plt.barh(values, series, alpha=0.6)
+    small_hbar = [f"{d:.2f}" if d <= (max(series) / 2) else "" for d in series]
+    large_hbar = [f"{d:.2f}" if d > (max(series) / 2) else "" for d in series]
+    plt.bar_label(hbar, small_hbar, padding=5, fmt="%.2f", color="black")
+    plt.bar_label(hbar, large_hbar, padding=-35, fmt="%.2f", color="black")
+    plt.title(title)
+    return fig
 
+
+def generate_box_figure(dataframe: pd.DataFrame, title: str = "", xlabel: str = "", ylabel: str = "") -> Figure:
+    """
+    Box figure.
+
+    :param dataframe: DataFrame containing the data
     :param title: Title of the chart
     :param xlabel: Label for x-axis
     :param ylabel: Label for y-axis
@@ -254,34 +265,42 @@ def generate_figure(
     """
     fig = plt.figure(figsize=(12, 12))
     plt.tight_layout()
+    dataframe.T.boxplot(vert=False, showfliers=False)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
 
-    if fig_type == "box":
-        dataframe.T.boxplot(vert=False, showfliers=False)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-
-        # Get median and quartiles
-        stats = dataframe.T.describe()
-        for idx, col in enumerate(dataframe.T.columns):
-            q1 = stats[col]["25%"]
-            median = stats[col]["50%"]
-            q3 = stats[col]["75%"]
-            plt.text(median, idx + 1, f"Med: {median:.2f}", va="center", ha="center", color="black", fontsize=8)
-            plt.text(q1, idx + 1, f"Q1: {q1:.2f}", va="center", ha="center", color="blue", fontsize=8)
-            plt.text(q3, idx + 1, f"Q3: {q3:.2f}", va="center", ha="center", color="blue", fontsize=8)
-
-    elif fig_type == "barh":
-        hbar = plt.barh(values, dataframe, alpha=0.6)
-        small_hbar = [f"{d:.2f}" if d <= (max(dataframe) / 2) else "" for d in dataframe]
-        large_hbar = [f"{d:.2f}" if d > (max(dataframe) / 2) else "" for d in dataframe]
-        plt.bar_label(hbar, small_hbar, padding=5, fmt="%.2f", color="black")
-        plt.bar_label(hbar, large_hbar, padding=-35, fmt="%.2f", color="black")
-
+    # Get median and quartiles
+    stats = dataframe.T.describe()
+    for idx, col in enumerate(dataframe.T.columns):
+        q1 = stats[col]["25%"]
+        median = stats[col]["50%"]
+        q3 = stats[col]["75%"]
+        plt.text(median, idx + 1, f"Med: {median:.2f}", va="center", ha="center", color="black", fontsize=8)
+        plt.text(q1, idx + 1, f"Q1: {q1:.2f}", va="center", ha="center", color="blue", fontsize=8)
+        plt.text(q3, idx + 1, f"Q3: {q3:.2f}", va="center", ha="center", color="blue", fontsize=8)
     plt.title(title)
     return fig
 
 
-def generate_summary(path_output: os.PathLike, expert_mode_cfg: dict):
+class PerformanceSummaryItem(TypedDict):
+    """Item of a Performance Summary."""
+
+    df: pd.DataFrame
+    unit: str
+
+
+class PerformanceSummary(TypedDict):
+    """Performance Summary."""
+
+    Time: PerformanceSummaryItem
+    Process_time: PerformanceSummaryItem
+    Maximum_memory: PerformanceSummaryItem
+    Start_RAM: PerformanceSummaryItem
+    End_RAM: PerformanceSummaryItem
+    MAX_CPU: PerformanceSummaryItem
+
+
+def generate_summary(path_output: os.PathLike, expert_mode_cfg: dict) -> None:
     """
     Generate graphs referencing memory management and time for each step.
 
@@ -302,72 +321,60 @@ def generate_summary(path_output: os.PathLike, expert_mode_cfg: dict):
     resumed_performance_df = pd.read_csv(csv_data_path)
     grouped = resumed_performance_df.groupby("Function_name")
 
-    metrics_list = ["mean", "sum"]
+    metrics_list: list[Any] = ["mean", "sum"]  # use Any instead of str because typing of agg method is very annoying
 
-    dict_perf = {
-        "Time": {"df": grouped["Time (s)"].agg(metrics_list), "unit": "seconds"},  # type: ignore
-        "Process time": {"df": grouped["CPU Time (s)"].agg(metrics_list), "unit": "seconds"},  # type: ignore
-        "Maximum_memory": {"df": grouped["Max_Memory (MiB)"].agg(metrics_list), "unit": "MiB"},  # type: ignore
-        "Start_RAM": {"df": grouped["Start_Ram (MiB)"].agg(metrics_list), "unit": "MiB"},  # type: ignore
-        "End_RAM": {"df": grouped["End_Ram (MiB)"].agg(metrics_list), "unit": "MiB"},  # type: ignore
-        "MAX_CPU": {"df": grouped["Max_CPU"].agg(metrics_list), "unit": "unit"},  # type: ignore
+    dict_perf: PerformanceSummary = {
+        "Time": {"df": grouped["Time (s)"].agg(metrics_list), "unit": "seconds"},
+        "Process_time": {"df": grouped["CPU Time (s)"].agg(metrics_list), "unit": "seconds"},
+        "Maximum_memory": {"df": grouped["Max_Memory (MiB)"].agg(metrics_list), "unit": "MiB"},
+        "Start_RAM": {"df": grouped["Start_Ram (MiB)"].agg(metrics_list), "unit": "MiB"},
+        "End_RAM": {"df": grouped["End_Ram (MiB)"].agg(metrics_list), "unit": "MiB"},
+        "MAX_CPU": {"df": grouped["Max_CPU"].agg(metrics_list), "unit": "unit"},
     }
 
     # Time graphics
-    histo_mean_time = generate_figure(
-        "barh",
-        dict_perf["Time"]["df"]["mean"],  # type: ignore
-        values=dict_perf["Time"]["df"].index,  # type: ignore
+    histo_mean_time = generate_barh_figure(
+        dict_perf["Time"]["df"]["mean"],
+        values=dict_perf["Time"]["df"].index,
         title="Mean time",
-        ylabel="Function name",
     )
-    histo_total_time = generate_figure(
-        "barh",
-        dict_perf["Time"]["df"]["sum"],  # type: ignore
-        values=dict_perf["Time"]["df"].index,  # type: ignore
+    histo_total_time = generate_barh_figure(
+        dict_perf["Time"]["df"]["sum"],
+        values=dict_perf["Time"]["df"].index,
         title="Total time",
-        ylabel="Function name",
     )
-    histo_mean_cpu_time = generate_figure(
-        "barh",
-        dict_perf["Process time"]["df"]["mean"],  # type: ignore
-        values=dict_perf["Process time"]["df"].index,  # type: ignore
+    histo_mean_cpu_time = generate_barh_figure(
+        dict_perf["Process_time"]["df"]["mean"],
+        values=dict_perf["Process_time"]["df"].index,
         title="Mean CPU time",
-        ylabel="Function name",
     )
-    histo_total_cpu_time = generate_figure(
-        "barh",
-        dict_perf["Process time"]["df"]["sum"],  # type: ignore
-        values=dict_perf["Process time"]["df"].index,  # type: ignore
+    histo_total_cpu_time = generate_barh_figure(
+        dict_perf["Process_time"]["df"]["sum"],
+        values=dict_perf["Process_time"]["df"].index,
         title="Total CPU time",
-        ylabel="Function name",
     )
 
     # Memory graphics
-    max_cpu = generate_figure(
-        "box",
+    max_cpu = generate_box_figure(
         dict_perf["MAX_CPU"]["df"],
         title="Max CPU",
-        xlabel=str(dict_perf["Maximum_memory"]["unit"]),
+        xlabel=dict_perf["Maximum_memory"]["unit"],
         ylabel="Function name",
     )
 
-    max_mem = generate_figure(
-        "box",
+    max_mem = generate_box_figure(
         dict_perf["Maximum_memory"]["df"],
         title="Maximum memory per task",
-        xlabel=str(dict_perf["Maximum_memory"]["unit"]),
+        xlabel=dict_perf["Maximum_memory"]["unit"],
         ylabel="Function name",
     )
 
     # Calls graphics
     occurrences = grouped["Function_name"].value_counts().reset_index()
-    occ = generate_figure(
-        "barh",
+    occ = generate_barh_figure(
         occurrences["count"],
         values=occurrences["Function_name"],
         title="Number of calls",
-        ylabel="Function name",
     )
 
     # Save all figures in PDF file
