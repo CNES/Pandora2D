@@ -342,6 +342,7 @@ def create_disparity_grid_fixture(tmp_path):
             disparity_grid = xr.DataArray(data, dims=["row", "col", "band"])
 
         path = tmp_path / suffix_path
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         write_data_array(data_array=disparity_grid, filename=str(path), dtype=disp_type)
 
@@ -351,27 +352,85 @@ def create_disparity_grid_fixture(tmp_path):
 
 
 @pytest.fixture
-def correct_grid(left_img_shape, create_disparity_grid_fixture):
-    """Create a correct initial disparity grid and save it in tmp"""
-
-    height, width = left_img_shape
-
-    # Array of size (height, width) with alternating rows of 2, 0 and 3
-    init_band = np.tile([[2], [0], [3]], (height // 3 + 1, width))[:height, :]
-
-    return create_disparity_grid_fixture(init_band, 5, "disparity.tif")
+def correct_grid_data(left_img_shape):
+    """Array of size left_img_shape with alternating rows of 2, 0 and 3"""
+    data = np.full(left_img_shape, 2)
+    data[1::3] = 0
+    data[2::3] = 3
+    return data
 
 
 @pytest.fixture
-def second_correct_grid(left_img_shape, create_disparity_grid_fixture):
+def correct_grid(correct_grid_data, create_disparity_grid_fixture):
     """Create a correct initial disparity grid and save it in tmp"""
+    return create_disparity_grid_fixture(correct_grid_data, 5, "disparity.tif")
 
-    height, width = left_img_shape
 
-    # Array of size (height, width) with alternating columns of 5, -21 and -1
-    init_band = np.tile([[5, -21, -1]], (height, width // 3 + 1))[:, :width]
+@pytest.fixture
+def second_correct_grid_data(left_img_shape):
+    """Array of size left_img_shape with alternating columns of 5, -21 and -1"""
+    data = np.full(left_img_shape, 5)
+    data[:, 1::3] = -21
+    data[:, 2::3] = -1
+    return data
 
-    return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
+
+@pytest.fixture
+def second_correct_grid(second_correct_grid_data, create_disparity_grid_fixture):
+    """Create a correct initial disparity grid and save it in tmp"""
+    return create_disparity_grid_fixture(second_correct_grid_data, 5, "tata/second_disparity.tif")
+
+
+@pytest.fixture
+def step():
+    return [1, 1]
+
+
+@pytest.fixture
+def attributes(left_img_path, step):
+    """Return attributes dictionnary from some left_img properties."""
+    with rasterio.open(left_img_path) as src:
+        crs = src.crs
+        transform = src.transform
+    return {
+        "origin_coordinates": {"row": 0, "col": 0},
+        "step": {"row": step[0], "col": step[1]},
+        "crs": crs,
+        "transform": transform * rasterio.Affine.scale(*step),
+        "invalid_disp": -9999,
+    }
+
+
+@pytest.fixture
+def same_sized_grid_directory(
+    tmp_path, correct_grid_data, second_correct_grid_data, create_disparity_grid_fixture, attributes
+):
+    """Create a directory with row_map and col_map of same sizes."""
+    directory = tmp_path / "input_disparities"
+    directory.mkdir()
+    # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
+    # instead of being prefixed:
+    create_disparity_grid_fixture(correct_grid_data, 5, directory / "row_map.tif")
+    create_disparity_grid_fixture(second_correct_grid_data, 5, directory / "col_map.tif")
+    with (directory / "attributes.json").open("w") as fd:
+        json.dump(attributes, fd)
+    return {"init": str(directory), "range": 5}
+
+
+@pytest.fixture
+def different_sized_grid_directory(
+    tmp_path, correct_grid_data, second_correct_grid_data, create_disparity_grid_fixture, attributes
+):
+    """Create a directory with row_map and col_map of different sizes."""
+    directory = tmp_path / "input_disparities"
+    directory.mkdir()
+    # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
+    # instead of being prefixed:
+    create_disparity_grid_fixture(correct_grid_data[::2, ::2], 5, directory / "row_map.tif")
+    create_disparity_grid_fixture(second_correct_grid_data, 5, directory / "col_map.tif")
+    with (directory / "attributes.json").open("w") as fd:
+        json.dump(attributes, fd)
+    return {"init": str(directory), "range": 5}
 
 
 @pytest.fixture

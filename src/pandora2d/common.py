@@ -28,7 +28,7 @@ import warnings
 from copy import deepcopy
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Dict, Generic, Tuple, Type, TypeVar, Union
+from typing import Callable, Dict, Generic, Iterable, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import rasterio
@@ -444,3 +444,8 @@ def resolve_path_in_config(config: Dict, config_path: Path) -> Dict:
             result["input"]["row_disparity"]["init"] = str(string_to_path(row_disparity_init, relative_to))
     result["output"]["path"] = str(string_to_path(config["output"]["path"], relative_to))
     return result
+
+
+def all_same(iterable: Iterable) -> bool:
+    """Return True if all items in sequence are equals."""
+    return len(set(iterable)) == 1

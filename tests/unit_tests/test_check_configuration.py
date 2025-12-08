@@ -24,12 +24,18 @@
 Test configuration
 """
 
+# pylint: disable=unused-argument,too-many-lines
+
+import json
 import random
+import re
 import string
 from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 import pytest
+import rasterio
 import transitions
 import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
@@ -195,6 +201,26 @@ class TestCheckInputSection:
             "the col_disparity and row_disparity keys must not be given in the configuration file",
         ):
             check_configuration.check_input_section(correct_input_cfg, basic_estimation_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_disparity_directory_is_replaced_by_path_to_file(self, make_input_cfg):
+        """When a directory is given, it is replaced by disparity grid paths."""
+        result = check_configuration.check_input_section({"input": make_input_cfg})
+
+        assert Path(result["input"]["row_disparity"]["init"]).name == "row_map.tif"
+        assert Path(result["input"]["col_disparity"]["init"]).name == "col_map.tif"
 
 
 class TestCheckPipelineSection:
@@ -713,13 +739,13 @@ class TestCheckDisparity:
             pytest.param(
                 {"row_disparity": "two_bands_grid", "col_disparity": "correct_grid"},
                 AttributeError,
-                "Initial disparity grid must be a 1-channel grid",
+                "Initial disparity grids must be a 1-channel grid",
                 id="Row disparity grid has two band",
             ),
             pytest.param(
                 {"row_disparity": "correct_grid", "col_disparity": "wrong_size_grid"},
                 AttributeError,
-                "Initial disparity grids and image must have the same size",
+                "Initial disparity grids' sizes do not match",
                 id="Column disparity grid size is different from image size",
             ),
         ],
@@ -734,6 +760,235 @@ class TestCheckDisparity:
 
         with pytest.raises(error_type, match=error_message):
             check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+
+class TestCheckDirectoryDisparity:
+    """Test check_disparity method when the disparity path is a directory."""
+
+    @pytest.fixture
+    def image_metadata(self, left_img_path):
+        return get_metadata(left_img_path)
+
+    @pytest.fixture
+    def disparity_map_directory(self, tmp_path):
+        """Disparity map directory with files inside."""
+        destination = tmp_path / "destination"
+        destination.mkdir()
+        return destination
+
+    @pytest.fixture
+    def image_shape(self, left_img_path):
+        """image shape"""
+        with rasterio.open(left_img_path) as src:
+            width = src.width
+            height = src.height
+        return height, width
+
+    @pytest.fixture
+    def row_disparity_grid(self, disparity_map_directory, create_disparity_grid_fixture, image_shape):
+        """row disparity grid"""
+        data = np.ones(image_shape)
+        file_path = disparity_map_directory / "row_map.tif"
+        # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
+        # instead of being prefixed:
+        return create_disparity_grid_fixture(data, 3, file_path)
+
+    @pytest.fixture
+    def row_disparity_directory(self, tmp_path, row_disparity_grid):
+        """row disparity directory"""
+        disparity_file_path = Path(row_disparity_grid["init"])
+        row_directory = tmp_path / "row_directory"
+        row_directory.mkdir()
+        disparity_file_path.rename(row_directory / disparity_file_path.name)
+        row_disparity_grid.update({"init": str(row_directory)})
+        return row_disparity_grid
+
+    @pytest.fixture
+    def row_disparity_value(self):
+        return {"init": 0, "range": 3}
+
+    @pytest.fixture
+    def col_disparity_grid(self, disparity_map_directory, create_disparity_grid_fixture, image_shape):
+        """col disparity grid"""
+        data = np.ones(image_shape)
+        file_path = disparity_map_directory / "col_map.tif"
+        # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
+        # instead of being prefixed:
+        return create_disparity_grid_fixture(data, 3, file_path)
+
+    @pytest.fixture
+    def col_disparity_directory(self, tmp_path, col_disparity_grid):
+        """col disparity directory"""
+        disparity_file_path = Path(col_disparity_grid["init"])
+        col_directory = tmp_path / "col_directory"
+        col_directory.mkdir()
+        disparity_file_path.rename(col_directory / disparity_file_path.name)
+        col_disparity_grid.update({"init": str(col_directory)})
+        return col_disparity_grid
+
+    @pytest.fixture
+    def col_disparity_value(self):
+        return {"init": 0, "range": 3}
+
+    @pytest.fixture
+    def step(self):
+        return [1, 1]
+
+    @pytest.fixture
+    def pipeline_config(self, step, pipeline_config):
+        pipeline_config["pipeline"]["matching_cost"]["step"] = step
+        return pipeline_config
+
+    @pytest.fixture
+    def step_offset(self):
+        """Offset to add to step in attributes file."""
+        return [0, 0]
+
+    @pytest.fixture
+    def attributes_file(self, disparity_map_directory, step, step_offset):
+        """Create attributes files with step+step_offset."""
+        file_path = disparity_map_directory / "attributes.json"
+        with open(file_path, "w", encoding="utf-8") as fd:
+            json.dump({"step": {"row": step[0] + step_offset[0], "col": step[1] + step_offset[1]}}, fd)
+        return file_path
+
+    @pytest.fixture
+    def disparity_map_directory_config(self, disparity_map_directory, row_disparity_grid, col_disparity_grid):
+        return {"init": str(disparity_map_directory), "range": row_disparity_grid["range"]}
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "row_disparity_directory",
+                    "col_disparity": "col_disparity_grid",
+                },
+                id="Row: directory; Col: file",
+            ),
+            pytest.param(
+                {
+                    "row_disparity": "row_disparity_grid",
+                    "col_disparity": "col_disparity_directory",
+                },
+                id="Row: file; Col: directory",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_when_directory_is_mixed_with_file(self, make_input_cfg, image_metadata):
+        """Both disparities must be directories"""
+        with pytest.raises(ValueError, match="Directory must not be mixed with file."):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "row_disparity_directory",
+                    "col_disparity": "col_disparity_directory",
+                },
+                id="Different directories",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_when_directories_are_different(self, make_input_cfg, image_metadata):
+        """Both disparities must use the same directory"""
+        with pytest.raises(ValueError, match="Row and Col disparities must use the same directory."):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "disparity_map_directory_config",
+                    "col_disparity": "disparity_map_directory_config",
+                },
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_when_attributes_file_is_missing(self, make_input_cfg, image_metadata, attributes_file):
+        """Both disparities must use the same directory"""
+        attributes_file.unlink()
+        with pytest.raises(FileNotFoundError, match=str(attributes_file)):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "different_sized_grid_directory",
+                    "col_disparity": "different_sized_grid_directory",
+                },
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_when_sizes_do_not_match(
+        self,
+        make_input_cfg,
+        image_metadata,
+    ):
+        """An exception should be raised when disparity grids' sizes mismatch."""
+        with pytest.raises(AttributeError, match="Initial disparity grids' sizes do not match"):
+            check_configuration.check_disparity(image_metadata, make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg", "step_offset"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "disparity_map_directory_config",
+                    "col_disparity": "disparity_map_directory_config",
+                },
+                (1, 3),
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_check_conf_fails_when_steps_differs(
+        self, pandora2d_machine, make_input_cfg, pipeline_config, attributes_file, step, step_offset
+    ):
+        """Check conf should fail when step from pipeline config and step from attributes differs."""
+        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
+        attributes_step = [step[0] + step_offset[0], step[1] + step_offset[1]]
+        message = f"Initial disparity grid step {attributes_step} does not match configuration step {step}."
+        with pytest.raises(AttributeError, match=re.escape(message)):
+            check_configuration.check_conf(user_cfg, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "disparity_map_directory_config",
+                    "col_disparity": "disparity_map_directory_config",
+                },
+                id="Config",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_check_conf_pass_when_steps_equals(
+        self,
+        pandora2d_machine,
+        make_input_cfg,
+        pipeline_config,
+        attributes_file,
+        step,
+    ):
+        """Check conf should pass when step from pipeline config and step from attributes equals."""
+        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
+
+        check_configuration.check_conf(user_cfg, pandora2d_machine)
 
 
 @pytest.mark.parametrize(

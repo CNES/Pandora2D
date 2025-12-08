@@ -25,7 +25,9 @@ This module contains functions allowing to check the configuration given to Pand
 
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 from typing import Dict
 
 import numpy as np
@@ -43,6 +45,7 @@ from pandora.img_tools import get_metadata, rasterio_open
 from rasterio.io import DatasetReader
 
 from pandora2d.state_machine import Pandora2DMachine
+from .common import all_same
 
 
 def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
@@ -118,7 +121,7 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
 
 def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
     """
-    All checks on disparity
+    All checks on disparity and resolve disparity grid paths.
 
     :param image_metadata: only metadata on the left image
     :type image_metadata: xr.Dataset
@@ -131,21 +134,46 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
     if not (isinstance(input_cfg["row_disparity"], dict) and isinstance(input_cfg["col_disparity"], dict)):
         raise AttributeError("The disparities in rows and columns must be given as 2 dictionaries.")
 
-    if isinstance(input_cfg["row_disparity"]["init"], str) and isinstance(input_cfg["col_disparity"]["init"], str):
+    row_init = input_cfg["row_disparity"]["init"]
+    col_init = input_cfg["col_disparity"]["init"]
+
+    if isinstance(row_init, str) and isinstance(col_init, str):
+        given_row_path = Path(row_init)
+        given_col_path = Path(col_init)
+        given_paths = {given_row_path, given_col_path}
+
+        paths_are_dirs = [p.is_dir() for p in given_paths]
+        paths_are_files = [p.is_file() for p in given_paths]
+
+        if any(paths_are_dirs) and any(paths_are_files):
+            raise ValueError("Directory must not be mixed with file.")
+
+        if not all_same(given_paths) and all(paths_are_dirs):
+            raise ValueError("Row and Col disparities must use the same directory.")
+
+        if all(paths_are_dirs) and not (attributes_path := given_row_path / "attributes.json").is_file():
+            raise FileNotFoundError(attributes_path)
+
+        row_path = given_row_path if given_row_path.is_file() else given_row_path / "row_map.tif"
+        col_path = given_col_path if given_col_path.is_file() else given_col_path / "col_map.tif"
+
         # Read disparity grids
-        disparity_row_reader = rasterio_open(input_cfg["row_disparity"]["init"])
-        disparity_col_reader = rasterio_open(input_cfg["col_disparity"]["init"])
+        disparity_row_reader = rasterio_open(str(row_path))  # cast because of bad typing in rasterio_open
+        disparity_col_reader = rasterio_open(str(col_path))  # cast because of bad typing in rasterio_open
 
         # Check disparity grids size and number of bands
-        check_disparity_grids(image_metadata, disparity_row_reader)
-        check_disparity_grids(image_metadata, disparity_col_reader)
+        check_disparity_grids(image_metadata, [disparity_row_reader, disparity_col_reader])
 
         # Get correct disparity dictionaries from init disparity grids to give as input of
         # the check_disparity_ranges_are_inside_image method
         row_disp_dict = get_dictionary_from_init_grid(disparity_row_reader, input_cfg["row_disparity"]["range"])
         col_disp_dict = get_dictionary_from_init_grid(disparity_col_reader, input_cfg["col_disparity"]["range"])
 
-    elif isinstance(input_cfg["row_disparity"]["init"], int) and isinstance(input_cfg["col_disparity"]["init"], int):
+        # Resolve and update paths
+        input_cfg["row_disparity"]["init"] = str(row_path.resolve())
+        input_cfg["col_disparity"]["init"] = str(col_path.resolve())
+
+    elif isinstance(row_init, int) and isinstance(col_init, int):
         row_disp_dict = input_cfg["row_disparity"]
         col_disp_dict = input_cfg["col_disparity"]
 
@@ -156,26 +184,26 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
     check_disparity_ranges_are_inside_image(image_metadata, row_disp_dict, col_disp_dict)
 
 
-def check_disparity_grids(image_metadata: xr.Dataset, disparity_reader: DatasetReader) -> None:
+def check_disparity_grids(image_metadata: xr.Dataset, disparity_readers: list[DatasetReader]) -> None:
     """
     Check that disparity grids contains two bands and are
     the same size as the input image
 
     :param image_metadata:
     :type image_metadata: xr.Dataset
-    :param disparity_reader: disparity grids
-    :type disparity_reader: rasterio.io.DatasetReader
+    :param disparity_readers: disparity grids
+    :type disparity_readers: list[rasterio.io.DatasetReader]
     """
 
     # Check that disparity grids are 1-channel grids
-    if disparity_reader.count != 1:
-        raise AttributeError("Initial disparity grid must be a 1-channel grid")
+    if any(r.count != 1 for r in disparity_readers):
+        raise AttributeError("Initial disparity grids must be a 1-channel grid")
+
+    if len(shapes := {r.shape for r in disparity_readers}) > 1:  # more than one shape
+        raise AttributeError("Initial disparity grids' sizes do not match", shapes)
 
     # Check that disparity grids are the same size as the input image
-    if (disparity_reader.height, disparity_reader.width) != (
-        image_metadata.sizes["row"],
-        image_metadata.sizes["col"],
-    ):
+    if disparity_readers[0].shape != (image_metadata.sizes["row"], image_metadata.sizes["col"]):
         raise AttributeError("Initial disparity grids and image must have the same size")
 
 
@@ -314,6 +342,28 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     return pipeline_cfg
 
 
+def check_step_from_attributes(disparity_directory: Path, expected_step_value: list[int]) -> None:
+    """
+    Validate that the initial disparity attributes match the pipeline configuration.
+
+    :param disparity_directory: Input section of user configuration dictionary.
+    :type disparity_directory: dict
+    :param expected_step_value: Checked pipeline section configuration dictionary.
+    :type expected_step_value: dict
+    :raises AttributeError: If the steps do not match.
+    """
+
+    with disparity_directory.joinpath("attributes.json").open(encoding="utf-8") as fd:
+        attributes = json.load(fd)
+
+    attributes_step = [attributes["step"]["row"], attributes["step"]["col"]]
+
+    if attributes_step != expected_step_value:
+        raise AttributeError(
+            f"Initial disparity grid step {attributes_step} does not match configuration step {expected_step_value}."
+        )
+
+
 def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> None:
     """
     Check if we have a subpix value of 1 with a dichotomy refinement method,
@@ -370,7 +420,8 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
 
     # check input
     user_cfg_input = get_config_input(user_cfg)
-    cfg_input = check_input_section(user_cfg_input, user_cfg["pipeline"].get("estimation"))
+    estimation_config = user_cfg["pipeline"].get("estimation")
+    cfg_input = check_input_section(user_cfg_input, estimation_config)
 
     user_cfg_roi = get_roi_config(user_cfg)
     cfg_roi = check_roi_section(user_cfg_roi)
@@ -380,6 +431,9 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
 
     # check pipeline
     cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
+    row_init = user_cfg_input["input"].get("row_disparity", {}).get("init")
+    if isinstance(row_init, str) and (disparity_directory := Path(row_init)).is_dir():
+        check_step_from_attributes(disparity_directory, cfg_pipeline["pipeline"]["matching_cost"]["step"])
 
     # The estimation step can be utilized independently.
     if "matching_cost" in cfg_pipeline["pipeline"]:
@@ -513,8 +567,8 @@ input_configuration_schema = {
 }
 
 disparity_schema = {
-    "col_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
-    "row_disparity": {"init": Or(int, rasterio_can_open), "range": And(int, lambda x: x >= 0)},
+    "col_disparity": {"init": Or(int, str), "range": And(int, lambda x: x >= 0)},
+    "row_disparity": {"init": Or(int, str), "range": And(int, lambda x: x >= 0)},
 }
 
 default_short_configuration_input = {
