@@ -319,7 +319,7 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     return pipeline_cfg
 
 
-def check_step_from_attributes(disparity_directory: Path, expected_step_value: list[int]) -> None:
+def check_step_from_attributes(attributes: dict, expected_step_value: list[int]) -> None:
     """
     Validate that the initial disparity attributes match the pipeline configuration.
 
@@ -330,15 +330,24 @@ def check_step_from_attributes(disparity_directory: Path, expected_step_value: l
     :raises AttributeError: If the steps do not match.
     """
 
-    with disparity_directory.joinpath("attributes.json").open(encoding="utf-8") as fd:
-        attributes = json.load(fd)
-
     attributes_step = [attributes["step"]["row"], attributes["step"]["col"]]
 
     if attributes_step != expected_step_value:
         raise AttributeError(
             f"Initial disparity grid step {attributes_step} does not match configuration step {expected_step_value}."
         )
+
+
+def load_attributes(disparity_directory: Path) -> dict:
+    """
+    Load attributes from json file in disparity directory.
+
+    :param disparity_directory: directory where to find attributes' file.
+    :return: attributes dictionary
+    """
+    with disparity_directory.joinpath("attributes.json").open(encoding="utf-8") as fd:
+        attributes = json.load(fd)
+    return attributes
 
 
 def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> None:
@@ -403,7 +412,8 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     cfg_pipeline = check_pipeline_section(user_cfg, pandora2d_machine)
     row_init = user_cfg_input["input"].get("row_disparity", {}).get("init")
     if isinstance(row_init, str) and (disparity_directory := Path(row_init)).is_dir():
-        check_step_from_attributes(disparity_directory, cfg_pipeline["pipeline"]["matching_cost"]["step"])
+        attributes = load_attributes(disparity_directory)
+        check_step_from_attributes(attributes, cfg_pipeline["pipeline"]["matching_cost"]["step"])
 
     # The estimation step can be utilized independently.
     if "matching_cost" in cfg_pipeline["pipeline"]:
