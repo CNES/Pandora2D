@@ -188,17 +188,17 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
     :return: 3D numpy array containing min/max disparity grids and list with disparity source
     """
     disparity_dtype = np.float32
+    disp_min_max = np.empty((2, dataset.sizes["row"], dataset.sizes["col"]), dtype=disparity_dtype)
+
     # Creates min and max disparity grids if initial disparity is constant (int)
     if isinstance(disparity["init"], int):
-
-        shape = (dataset.sizes["row"], dataset.sizes["col"])
-
         disp_interval = [
             disparity["init"] * pow(-1, right) - disparity["range"],
             disparity["init"] * pow(-1, right) + disparity["range"],
         ]
 
-        disp_min_max = np.array([np.full(shape, disparity) for disparity in disp_interval], dtype=disparity_dtype)
+        disp_min_max[0, ...] = disp_interval[0]
+        disp_min_max[1, ...] = disp_interval[1]
 
     # Creates min and max disparity grids if initial disparities are variable (grid)
     elif isinstance(disparity["init"], str):
@@ -212,13 +212,8 @@ def get_min_max_disp_from_dicts(dataset: xr.Dataset, disparity: Dict, right: boo
         disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=np.float32, window=window)
 
         # Use disparity data to creates min/max grids
-        disp_min_max = np.array(
-            [
-                disp_data * pow(-1, right) - disparity["range"],
-                disp_data * pow(-1, right) + disparity["range"],
-            ],
-            dtype=disparity_dtype,
-        )
+        disp_min_max[0, ...] = disp_data * pow(-1, right) - disparity["range"]
+        disp_min_max[1, ...] = disp_data * pow(-1, right) + disparity["range"]
 
         disp_interval = [np.min(disp_min_max[0, ::]), np.max(disp_min_max[1, ::])]
 
