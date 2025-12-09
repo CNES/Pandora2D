@@ -38,7 +38,7 @@ A deformation model can be calculated for the entire image,
 or several deformation models can be calculated by dividing the image into meshes. 
 The mesh division is parameterized in the multiscale :ref:`configuration <multiscale_mode>`.
 
-The :math:`\beta` coefficients are then used to calculate the grid deformation which is then converted into initial disparity grids in rows and columns for the next resolution.
+The coefficients :math:`\beta` are then used to calculate the grid deformation which is then converted into initial disparity grids in rows and columns for the next resolution.
 
 Example of multiscale pipeline
 ------------------------------
@@ -46,7 +46,7 @@ Example of multiscale pipeline
 Below are step-by-step diagrams explaining how multiscale mode works. 
 
 .. note:: 
-    In this example, we consider the estimation of an row deformation model. 
+    In this example, we consider the estimation of a row deformation model. 
     The same steps apply to estimating a column deformation model.
 
 .. important::

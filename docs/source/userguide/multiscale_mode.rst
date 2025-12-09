@@ -6,6 +6,8 @@ Multiscale mode
 In order to process an image more quickly and robustly with pandora2d, it is possible to use multiscale mode. 
 This mode launches pandora2d pipelines on a given image in different resolutions. 
 
+To use multiscale mode, you must be on the gitlab pandora2d **mvp-pandora2d-multiscale** branch.
+
 Multiscale mode can be launched with the following command: 
 
 .. code-block:: console
@@ -18,10 +20,10 @@ We can use a verbose mode:
     - -vv option prints informations about multiscale and pandora2d pipelines
 
 .. hint:: 
-    It is possible to run a_multiscale_pipeline.json located in the pandora2d gitlab repository on the mvp-pandora2d-multiscale branch. 
+    It is possible to run a_multiscale_pipeline.json `a_multiscale_pipeline.json <https://gitlab.cnes.fr/dali/PandoraBox/pandora2d/-/blob/mvp-pandora2d-multiscale/data_samples/json_conf_files/a_multiscale_pipeline.json>`_ located in the pandora2d gitlab repository on the mvp-pandora2d-multiscale branch. 
     
-    The image pyramids used are derived from the left.tif and right.tif images in the maricopa folder, 
-    which were used to create pyramids of 3 images with subsampling factors of 4, 8, and 16.
+    The image pyramids used are derived from the left.tif and right.tif images in the maricopa folder that were first downsampled by a factor 4.
+    Then these images were downsampled again by factors 4 and 2 to create pyramids of 3 images with subsampling factors of 1, 2, and 4.
 
 To learn more about multiscale theory, please refer to :ref:`this section <exploring_the_field_multiscale_mode>`
 
@@ -48,7 +50,7 @@ Multiscale mode configuration is composed of the following keys:
       - Yes
     * - *pandora2d*
       - Pandora2d configuration used for each resolution
-      - str or List[str]
+      - str or list[str]
       - None
       - Yes
 
@@ -204,7 +206,7 @@ Example of results at each iteration
 Below are diagrams representing the results at each iteration of the multiscale mode. 
 
 To do this, we used image pyramids created with maricopa images with subsampling factors of 1, 2, and 4.
-We use 3 meshes in a row and 3 meshes in columns and a degree 2 polynomial model.
+We use 3 meshes in a row and 3 meshes in columns and a degree 2 polynomial model (arbitrary model choice).
 The pandora2d configuration is the one in a_segment_mode_pipeline.json.
 
 For the right pyramid, we shifted the original maricopa left image by:

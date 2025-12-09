@@ -278,7 +278,7 @@ def estimate_init_disparity_grids(
     # Get design matrix for resampled initial positions
     design_matrix, _ = make_polynomial_design_matrix(scaled_row_2d.ravel(), scaled_col_2d.ravel(), degree)
 
-    # Compute the final disparity grids estimated using least squares coefficients
+    # Compute the final position grids estimated using least squares coefficients
     estimated_final_row = np.dot(design_matrix, coefficients_row)
     estimated_final_col = np.dot(design_matrix, coefficients_col)
     # Reshape estimated final disparity grids
