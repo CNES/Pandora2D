@@ -44,7 +44,7 @@ class Statistics:
     quantiles: Quantiles
     minimal_valid_pixel_ratio: Union[float, np.floating] = 1.0
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Mean: {self.mean} ± {self.std}"
 
     def to_dict(self) -> Dict:
@@ -57,11 +57,8 @@ def compute_statistics(data: np.ndarray, invalid_values: Union[np.floating, np.i
     """Compute statistics of a dataArray.
 
     :param data: data to compute statistics from.
-    :type data: xr.DataArray
     :param invalid_values: value to exclude from computation
-    :type invalid_values: Union[np.floating, np.integer]
     :return: computed statistics
-    :rtype: Statistics
     """
     if invalid_values is None or np.isnan(invalid_values):
         minimal_valid_pixel_ratio = (~np.isnan(data)).sum() / data.size

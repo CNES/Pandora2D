@@ -53,9 +53,7 @@ def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
     Check that left and right datasets are correct
 
     :param left: dataset
-    :type dataset: xr.Dataset
     :param right: dataset
-    :type dataset: xr.Dataset
     """
 
     # Check the dataset content
@@ -77,11 +75,8 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :param estimation_config: get estimation config if in user_config
-    :type estimation_config: dict
     :return: cfg: global configuration
-    :rtype: cfg: dict
     """
 
     if "input" not in user_cfg:
@@ -124,9 +119,7 @@ def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict) -> None:
     All checks on disparity and resolve disparity grid paths.
 
     :param image_metadata: only metadata on the left image
-    :type image_metadata: xr.Dataset
     :param input_cfg: input configuration
-    :type input_cfg: Dict
 
     """
 
@@ -189,10 +182,8 @@ def check_disparity_grids(image_metadata: xr.Dataset, disparity_readers: list[Da
     Check that disparity grids contains two bands and are
     the same size as the input image
 
-    :param image_metadata:
-    :type image_metadata: xr.Dataset
-    :param disparity_readers: disparity grids
-    :type disparity_readers: list[rasterio.io.DatasetReader]
+    :param image_metadata: only metadata on the left image
+    :param disparity_reader: disparity grids
     """
 
     # Check that disparity grids are 1-channel grids
@@ -213,11 +204,8 @@ def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: i
     from initial disparity grids.
 
     :param disparity_reader: initial disparity grid
-    :type disparity_reader: rasterio.io.DatasetReader
     :param disp_range: range of exploration
-    :type disp_range: int
     :return: a disparity dictionary to give to check_disparity_ranges_are_inside_image() method
-    :rtype: Dict
     """
 
     init_disp_grid = disparity_reader.read(1)
@@ -237,14 +225,10 @@ def check_disparity_ranges_are_inside_image(
     """
     Raise an error if disparity ranges are out off image.
 
-    :param image_metadata:
-    :type image_metadata: xr.Dataset
-    :param row_disparity:
-    :type row_disparity: Dict
-    :param col_disparity:
-    :type col_disparity: Dict
+    :param image_metadata: only metadata on the left image
+    :param row_disparity: row disparity configuration
+    :param col_disparity: col disparity configuration
     :return: None
-    :rtype: None
     :raises: ValueError
     """
     if np.abs(row_disparity["init"]) - row_disparity["range"] > image_metadata.sizes["row"]:
@@ -258,9 +242,7 @@ def check_segment_mode_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     Complete and check if the segment mode dictionary is correct
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return: cfg: global configuration
-    :rtype: cfg: dict
     """
 
     # Add missing defaults values in user_cfg
@@ -279,9 +261,7 @@ def check_roi_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return: cfg: global configuration
-    :rtype: cfg: dict
     """
     if not user_cfg:
         return {}
@@ -308,11 +288,8 @@ def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora
     - Checking parameters, define in dictionary, of each Pandora step
 
     :param user_cfg: pipeline user configuration
-    :type user_cfg: dict
     :param pandora2d_machine: instance of PandoraMachine
-    :type pandora2d_machine: PandoraMachine object
     :return: cfg: pipeline configuration
-    :rtype: cfg: dict
     """
 
     cfg = update_conf({}, user_cfg)
@@ -370,9 +347,7 @@ def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> No
     in which case we return a warning to prevent aliasing.
 
     :param refinement_method: refinement method in user configuration
-    :type refinement_method: str
     :param subpix: subpix value in user configuration
-    :type subpix: int
     """
 
     if (refinement_method in ("dichotomy", "dichotomy_python")) and (subpix == 1):
@@ -387,9 +362,7 @@ def check_expert_mode_section(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return: cfg: global configuration
-    :rtype: cfg: dict
     """
 
     if "profiling" not in user_cfg:
@@ -410,12 +383,9 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     Complete and check if the dictionary is correct
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :param pandora2d_machine: instance of Pandora2DMachine
-    :type pandora2d_machine: Pandora2DMachine
 
     :return: cfg: global configuration
-    :rtype: cfg: dict
     """
 
     # check input
@@ -452,10 +422,8 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
 def get_output_config(user_cfg: Dict) -> Dict:
     """
     Extract output config from user_cfg and fill default values.
-    :param user_cfg:
-    :type user_cfg:
+    :param user_cfg: user configuration
     :return: output_config
-    :rtype: Dict
     """
     defaults = {"format": "tiff"}
     try:
@@ -469,9 +437,7 @@ def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
     """
     Check that only int is accepted for nodata of right image when matching_cost_method is sad or ssd.
     :param cfg_input: inputs section of configuration
-    :type cfg_input: Dict
     :param cfg_pipeline: pipeline section of configuration
-    :type cfg_pipeline: Dict
     """
 
     if not isinstance(cfg_input["input"]["right"]["nodata"], int) and cfg_pipeline["pipeline"]["matching_cost"][
@@ -487,9 +453,7 @@ def check_roi_coherence(roi_cfg: dict) -> None:
     Check that the first ROI coords are lower than the last.
 
     :param roi_cfg: user configuration for ROI
-    :type roi_cfg: dict
     :param dim: dimension row or col
-    :type dim: str
     """
     if roi_cfg["first"] > roi_cfg["last"]:
         raise ValueError('"first" should be lower than "last" in sensor ROI')
@@ -500,9 +464,7 @@ def get_section_config(user_cfg: Dict[str, dict], key: str) -> Dict[str, dict]:
     Get the section configuration from key
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return cfg: partial configuration
-    :rtype cfg: dict
     """
 
     cfg = {}
@@ -518,9 +480,7 @@ def get_segment_mode_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     Get the segment_mode configuration
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return cfg: partial configuration
-    :rtype cfg: dict
     """
 
     return get_section_config(user_cfg, "segment_mode")
@@ -531,9 +491,7 @@ def get_roi_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     Get the ROI configuration
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return cfg: partial configuration
-    :rtype cfg: dict
     """
 
     return get_section_config(user_cfg, "ROI")
@@ -544,7 +502,6 @@ def check_output_section(config: Dict) -> None:
     Validate the given output section.
 
     :param config: configuration to validate.
-    :type config: Dict
     :return: None
     :raise: json_checker errors in the configuration does not respect the schema.
     """

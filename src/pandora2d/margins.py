@@ -42,12 +42,12 @@ class Margins(BaseMargins):
 class UniformMargins(Margins):
     """Margins set to same values in all directions."""
 
-    def __init__(self, value):
+    def __init__(self, value) -> None:
         super().__init__(value, value, value, value)
 
 
 class NullMargins(UniformMargins):
     """Margins set to zero in all directions."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(0)

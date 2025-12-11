@@ -29,9 +29,7 @@ def report_disparities(data: xr.Dataset) -> Dict:
     """
     Report statistics on disparities.
     :param data: disparities to report statistics from.
-    :type data: xr.Dataset
     :return: dictionary with reported data
-    :rtype: Dict
     """
     row_stats = compute_statistics(data["row_map"].data, data.attrs["invalid_disp"])
     col_stats = compute_statistics(data["col_map"].data, data.attrs["invalid_disp"])

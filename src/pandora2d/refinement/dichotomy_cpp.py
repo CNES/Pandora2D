@@ -45,7 +45,6 @@ class Dichotomy(refinement.AbstractRefinement):
     def __init__(self, cfg: dict = None, _: list = None, __: int = 5) -> None:
         """
         :param cfg: optional configuration, {}
-        :type cfg: dict
         :return: None
         """
 
@@ -63,9 +62,7 @@ class Dichotomy(refinement.AbstractRefinement):
         Will change `number_of_iterations` value by `Dichotomy.NB_MAX_ITER` if above `Dichotomy.NB_MAX_ITER`.
 
         :param cfg: user_config for refinement method
-        :type cfg: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
         cfg = super().check_conf(cfg)
         if cfg["iterations"] > cls.NB_MAX_ITER:
@@ -94,15 +91,10 @@ class Dichotomy(refinement.AbstractRefinement):
         Return the subpixel disparity maps
 
         :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-        :type cost_volumes: xarray.Dataset
         :param disp_map: pixel disparity maps
-        :type disp_map: xarray.Dataset
         :param img_left: left image dataset
-        :type img_left: xarray.Dataset
         :param img_right: right image dataset
-        :type img_right: xarray.Dataset
         :return: the refined disparity maps
-        :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
         """
 
         # Initial disparity maps
@@ -187,13 +179,9 @@ def disparity_to_index(disparity_map: xr.DataArray, shift: int, subpixel: int) -
                           0 5 6 5
 
     :param disparity_map: 2D map
-    :type disparity_map: xarray.DataArray
     :param shift: the first value of the disparity coordinates in the cost volume
-    :type shift: int
     :param subpixel: :sub-sampling of cost_volume
-    :type subpixel: int
     :return: the index map
-    :rtype: np.ndarray
     """
     return (disparity_map.to_numpy() - shift) * subpixel
 
@@ -205,13 +193,9 @@ def index_to_disparity(index_map: np.ndarray, shift: int, subpixel: int) -> np.n
     For examples, see disparity_to_index method.
 
     :param index_map: 2D map
-    :type index_map: np.ndarray
     :param shift: the first value of the disparity coordinates in the cost volume
-    :type shift: int
     :param subpixel: :sub-sampling of cost_volume
-    :type subpixel: int
     :return: the index map
-    :rtype: np.ndarray
     """
     return (index_map / subpixel) + shift
 
@@ -221,11 +205,8 @@ def create_cost_values_map(cost_volumes: xr.Dataset, disp_map: xr.Dataset) -> np
     Return the map with best matching score
 
     :param cost_volumes: cost_volumes 4D row, col, disp_col, disp_row
-    :type cost_volumes: xarray.Dataset
     :param disp_map: pixel disparity maps
-    :type disp_map: xarray.Dataset
     :return: the cost_value map and the invalid_disparity_map
-    :rtype: Tuple[np.ndarray, np.ndarray, np.ndarray]
     """
     # Initial disparity maps
     row_map = disp_map["row_map"]

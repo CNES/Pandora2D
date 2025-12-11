@@ -38,14 +38,12 @@ from pandora2d.profiling import expert_mode_config, generate_summary
 from pandora2d.state_machine import Pandora2DMachine
 
 
-def log_list_elements(list_to_log: list, log_level: int):
+def log_list_elements(list_to_log: list, log_level: int) -> None:
     """
     Display each element of a list line by line
 
-    :param list_lot_log: elements
-    :type list_to_log: list
+    :param list_to_log: elements
     :param log_level: logging level define by user
-    :type log_level: int
     """
     for i, item in enumerate(list_to_log):
         logging.log(log_level, "%s : %s", i, item)
@@ -56,7 +54,6 @@ def setup_logging(verbose: int) -> None:
     Setup the logging configuration
 
     :param verbose: verbose mode
-    :type verbose: int
     :return: None
     """
 
@@ -77,24 +74,20 @@ def run(
     img_left: xr.Dataset,
     img_right: xr.Dataset,
     cfg: Dict[str, dict],
-):
+) -> tuple[xr.Dataset, dict]:
     """
     Run the Pandora 2D pipeline
 
     :param pandora2d_machine: instance of Pandora2DMachine
-    :type pandora2d_machine: Pandora2DMachine
     :param img_left: left Dataset image containing :
 
             - im : 2D (row, col) xarray.DataArray
             - msk (optional): 2D (row, col) xarray.DataArray
-    :type img_left: xarray.Dataset
     :param img_right: right Dataset image containing :
 
             - im : 2D (row, col) xarray.DataArray
             - msk (optional): 2D (row, col) xarray.DataArray
-    :type img_right: xarray.Dataset
     :param cfg: configuration
-    :type cfg: Dict[str, dict]
 
     :return: None
     """
@@ -109,14 +102,12 @@ def run(
     return pandora2d_machine.dataset_disp_maps, pandora2d_machine.completed_cfg
 
 
-def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]):
+def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]) -> tuple[xr.Dataset, dict]:
     """
     Process ROI, create image datasets and run pandora2d pipeline
 
     :param pandora2d_machine: instance of Pandora2DMachine
-    :type pandora2d_machine: Pandora2DMachine
     :param cfg: configuration
-    :type cfg: Dict[str, dict]
     """
 
     # check roi in user configuration
@@ -148,14 +139,12 @@ def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]):
     return dataset_disp_maps, completed_cfg
 
 
-def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]):
+def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]) -> tuple[xr.Dataset, dict]:
     """
     Run pandora2d pipeline with segment mode
 
     :param pandora2d_machine: instance of Pandora2DMachine
-    :type pandora2d_machine: Pandora2DMachine
     :param cfg: configuration
-    :type cfg: Dict[str, dict]
     """
 
     # Get the list of ROIs to iterate on
@@ -169,7 +158,7 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[st
         return run_pandora2d(pandora2d_machine, cfg)
 
     # Initialisation of output objects
-    completed_cfg = {}
+    completed_cfg: dict = {}
     final_dataset_disp_maps = xr.Dataset()
     init_roi = cfg["ROI"] if "ROI" in cfg else None
 
@@ -203,9 +192,7 @@ def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
     Check config file and run pandora 2D framework accordingly
 
     :param cfg_path: path to the json configuration file
-    :type cfg_path: PathLike|str
     :param verbose: verbose mode
-    :type verbose: bool
     :return: None
     """
 

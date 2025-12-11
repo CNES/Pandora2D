@@ -24,11 +24,17 @@ This module contains functions associated to the estimation computation step.
 from __future__ import annotations
 
 import logging
+import sys
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Tuple
+from typing import Callable, Dict, Tuple
 
 import numpy as np
 import xarray as xr
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class AbstractEstimation:
@@ -47,7 +53,6 @@ class AbstractEstimation:
         Return the plugin associated with the estimation_method given in the configuration
 
         :param cfg: configuration {'estimation_method': value}
-        :type cfg: dictionary
         """
         if cls is AbstractEstimation:
             if isinstance(cfg["estimation_method"], str):
@@ -76,20 +81,18 @@ class AbstractEstimation:
         return None
 
     @classmethod
-    def register_subclass(cls, short_name: str):
+    def register_subclass(cls, short_name: str) -> Callable[[type[Self]], type[Self]]:
         """
         Allows to register the subclass with its short name
 
         :param short_name: the subclass to be registered
-        :type short_name: string
         """
 
-        def decorator(subclass):
+        def decorator(subclass: type[Self]) -> type[Self]:
             """
             Registers the subclass in the available methods
 
             :param subclass: the subclass to be registered
-            :type subclass: object
             """
             cls.estimation_methods_avail[short_name] = subclass
             return subclass
@@ -110,15 +113,12 @@ class AbstractEstimation:
 
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :return:row disparity: Dict
                 col disparity: Dict
                 Calculated shifts: list
                 Extra information about estimation : dict
-        :rtype: dict, dict, np.ndarray, dict
         """
 
     @staticmethod
@@ -129,17 +129,11 @@ class AbstractEstimation:
         Save calculated shifts in a configuration dictionary
 
         :param cfg: user configuration
-        :type cfg: dict
         :param disp_col: dict with init and range for disparity in column
-        :type disp_col: {"init" : int, "range" : int >= 0}
         :param disp_row: dict with init and range for disparity in row
-        :type disp_row: {"init" : int, "range" : int >= 0}
         :param shifts: computed global shifts between left and right
-        :type shifts: [np.float32, np.float32]
         :param extra_dict: Dictionary containing extra information about estimation
-        :type extra_dict: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
 
         cfg["input"]["col_disparity"] = disp_col

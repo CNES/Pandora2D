@@ -46,7 +46,7 @@ dependencies = [
     "scikit-image",
     "scipy",
     "transitions",
-    "typing_extensions",
+    "typing_extensions;python_version<'3.11'",
     "xarray",
 ]
 

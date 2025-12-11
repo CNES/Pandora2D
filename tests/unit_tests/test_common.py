@@ -51,9 +51,7 @@ def assert_equal_or_isnan(actual, expected):
     Assert that `actual` equals `expected` or that both are NaNs.
 
     :param actual:
-    :type actual:
     :param expected:
-    :type expected:
     """
     if np.isnan(expected):
         assert np.isnan(actual), f"expected np.nan, got {actual}"

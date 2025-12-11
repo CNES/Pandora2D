@@ -19,16 +19,14 @@
 """Segment mode tests."""
 
 
+import json
 from copy import deepcopy
 
-import json
 import numpy as np
-import rasterio
 import pytest
-
+import rasterio
 
 from pandora2d import memory_estimation
-
 
 # pylint: disable=too-many-positional-arguments,invalid-name,too-many-arguments
 

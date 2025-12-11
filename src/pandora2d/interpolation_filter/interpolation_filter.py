@@ -24,13 +24,19 @@ from __future__ import annotations
 
 import logging
 import math
+import sys
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 import numpy as np
 from json_checker import Checker
 
 from pandora2d.margins import NullMargins
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class AbstractFilter(ABC):
@@ -48,7 +54,6 @@ class AbstractFilter(ABC):
         Return the plugin associated with the interpolation filter given in the configuration
 
         :param filter_method: filter_method
-        :type cfg: str | None
         """
 
         if cls is AbstractFilter:
@@ -64,7 +69,6 @@ class AbstractFilter(ABC):
     def __init__(self, cfg: Dict, **_) -> None:
         """
         :param cfg: optional configuration, {}
-        :type cfg: dict
         :return: None
         """
         self.cfg = self.check_conf(cfg)
@@ -79,9 +83,7 @@ class AbstractFilter(ABC):
         Check the refinement method configuration.
 
         :param cfg: user_config for refinement method
-        :type cfg: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
         checker = Checker(self.schema)  # type: ignore[attr-defined]
         checker.validate(cfg)
@@ -96,20 +98,18 @@ class AbstractFilter(ABC):
         print(f"{self. _interpolation_filter_method} interpolation filter")
 
     @classmethod
-    def register_subclass(cls, short_name: str):
+    def register_subclass(cls, short_name: str) -> Callable[[type[Self]], type[Self]]:
         """
         Allows to register the subclass with its short name
 
         :param short_name: the subclass to be registered
-        :type short_name: string
         """
 
-        def decorator(subclass):
+        def decorator(subclass: type[Self]) -> type[Self]:
             """
             Registers the subclass in the available methods
 
             :param subclass: the subclass to be registered
-            :type subclass: object
             """
             cls.interpolation_filter_methods_avail[short_name] = subclass
             return subclass
@@ -126,9 +126,7 @@ class AbstractFilter(ABC):
             - For a column shift, returned array size = left_margin + right_margin + 1
 
         :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
-        :type fractional_shift: float
         :return: a array of interpolator coefficients whose size depends on the filter margins
-        :rtype: np.ndarray
         """
 
     @staticmethod
@@ -137,13 +135,9 @@ class AbstractFilter(ABC):
         Returns the value of the interpolated position
 
         :param resampling_area: area on which interpolator coefficients will be applied
-        :type resampling_area: np.ndarray
         :param row_coeff: interpolator coefficients in rows
-        :type row_coeff: np.ndarray
         :param col_coeff: interpolator coefficients in columns
-        :type col_coeff: np.ndarray
         :return: the interpolated value of the position corresponding to col_coeff and row_coeff
-        :rtype: float
         """
 
         return (row_coeff.dot(resampling_area)).dot(col_coeff)
@@ -155,13 +149,9 @@ class AbstractFilter(ABC):
         Returns the values of the 8 interpolated position
 
         :param image: image
-        :type image: np.ndarray
         :param positions: subpix positions to be interpolated
-        :type positions: Tuple[np.ndarray, np.ndarray]
         :param max_fractional_value: maximum fractional value used to get coefficients
-        :type max_fractional_value: float
         :return: the interpolated values of the corresponding subpix positions
-        :rtype: List of float
         """
 
         # Initialisation of the result list

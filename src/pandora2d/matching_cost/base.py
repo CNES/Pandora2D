@@ -39,7 +39,6 @@ class BaseMatchingCost(ABC):
         Initialisation of matching_cost class
 
         :param cfg: user_config for matching cost
-        :type cfg: dict
         :return: None
         """
         self._cfg = self.check_conf(cfg)
@@ -84,9 +83,7 @@ class BaseMatchingCost(ABC):
         """Check the matching cost configuration
 
         :param cfg: user_config for matching cost
-        :type cfg: dict
         :return: cfg: global configuration
-        :rtype: cfg: dict
         """
         updated_config = self._update_with_default_config_values(cfg)
         checker = Checker(self.schema)
@@ -103,7 +100,6 @@ class BaseMatchingCost(ABC):
         Get used configuration
 
         :return: cfg: dictionary with all parameters
-        :rtype: cfg: dict
         """
         return self._cfg
 
@@ -113,7 +109,6 @@ class BaseMatchingCost(ABC):
         Get step [row, col]
 
         :return: step: list with row & col step
-        :rtype: step: list
         """
         return [self._step_row, self._step_col]
 
@@ -123,7 +118,6 @@ class BaseMatchingCost(ABC):
         Get window_size
 
         :return: window_size: window used to compute correlation
-        :rtype: window_size: int
         """
         return self._window_size
 
@@ -140,19 +134,12 @@ class BaseMatchingCost(ABC):
         Allocate the cost volumes
 
         :param cost_volume_attr: the cost_volume's attributes
-        :type cost_volume_attr: xr.Dataset
         :param row: dimension of the image (row)
-        :type row: np.ndarray
         :param col: dimension of the image (columns)
-        :type col: np.ndarray
         :param disp_range_row: rows disparity range.
-        :type disp_range_row: np.ndarray
         :param disp_range_col: columns disparity range.
-        :type disp_range_col: np.ndarray
         :param np_data: 4D numpy.ndarray og cost_volumes. Defaults to None.
-        :type np_data: np.ndarray
         :return: cost_volumes: 4D Dataset containing the cost_volumes
-        :rtype: cost_volumes: xr.Dataset
         """
 
         # Create the cost volume
@@ -177,13 +164,9 @@ class BaseMatchingCost(ABC):
         Compute cost_volumes row and col coordinates according to image coordinates
 
         :param img_row_coordinates: row coordinates of left image
-        :type img_row_coordinates: NDArray
         :param img_col_coordinates: col coordinates of left image
-        :type img_col_coordinates: NDArray
         :param cfg: matching_cost computation configuration
-        :type cfg: Dict
         :return: a Tuple of np.ndarray that contains the right coordinates for row and col
-        :rtype: Tuple[NDArray, NDArray]
         """
 
         # Get updated ROI left/up margin for get_coordinates() method
@@ -218,11 +201,8 @@ class BaseMatchingCost(ABC):
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param margins: refinement margins
-        :type margins: Margins
         :return: a Tuple of np.ndarray that contains the right coordinates for disparities
-        :rtype: Tuple[NDArray, NDArray]
         """
 
         # Get min/max row disparity grids
@@ -249,11 +229,8 @@ class BaseMatchingCost(ABC):
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param margins: refinement margins
-        :type margins: Margins
         :return: a Tuple of np.ndarray that contains the right coordinates for disparities
-        :rtype: Tuple[NDArray, NDArray]
         """
 
         # Get min/max col disparity grids
@@ -283,10 +260,8 @@ class BaseMatchingCost(ABC):
         We need to have left_margin = cfg["ROI"]["col"]["first"] and up_margin = cfg["ROI"]["row"]["first"]
 
         :param cfg: user configuration
-        :type cfg: Dict
         :return: updated configuration to be sure to process the first point of ROI
                  when ROI margin > ROI first point (left or up)
-        :rtype: Dict
         """
 
         new_cfg = copy.deepcopy(cfg)
@@ -318,15 +293,11 @@ class BaseMatchingCost(ABC):
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :param cfg: matching_cost computation configuration
-        :type cfg: Dict
         :param margins: refinement margins
-        :type margins: Margins
         :return: None
         """
 
@@ -374,9 +345,7 @@ class BaseMatchingCost(ABC):
         The operation is done inplace.
 
         :param img_left: left image xarray.Dataset
-        :type img_left: xr.Dataset
         :param value: value to set on data.
-        :type value: Union[int, float]
         """
 
         # Select correct rows and columns in case of a step different from 1.
@@ -409,7 +378,6 @@ class BaseMatchingCost(ABC):
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :return: None
         """
 
@@ -427,15 +395,11 @@ class BaseMatchingCost(ABC):
         :param img_left: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_left: xr.Dataset
         :param img_right: xarray.Dataset containing :
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :type img_right: xr.Dataset
         :param margins: refinement margins
-        :type margins: Margins
         :return: cost_volumes: 4D Dataset containing the cost_volumes
-        :rtype: cost_volumes: xr.Dataset
         """
 
 
@@ -452,15 +416,10 @@ def set_out_of_row_disparity_range_to_other_value(
     The operation is done inplace.
 
     :param data: cost_volumes to modify.
-    :type data: xr.DataArray 4D
     :param min_disp_grid: grid of min disparity.
-    :type min_disp_grid: NDArray[np.floating]
     :param max_disp_grid: grid of max disparity.
-    :type max_disp_grid: NDArray[np.floating]
     :param value: value to set on data.
-    :type value: Union[int, float]
     :param global_disparity_range: global row disparity range
-    :type global_disparity_range: List[int]
     """
     ndisp_row = data.shape[-2]
 
@@ -493,15 +452,10 @@ def set_out_of_col_disparity_range_to_other_value(
     The operation is done inplace.
 
     :param data: cost_volumes to modify.
-    :type data: xr.DataArray 4D
     :param min_disp_grid: grid of min disparity.
-    :type min_disp_grid: NDArray[np.floating]
     :param max_disp_grid: grid of max disparity.
-    :type max_disp_grid: NDArray[np.floating]
     :param value: value to set on data.
-    :type value: Union[int, float]
     :param global_disparity_range: global column disparity range
-    :type global_disparity_range: List[int]
     """
     ndisp_col = data.shape[-1]
 

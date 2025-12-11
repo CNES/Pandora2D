@@ -62,15 +62,10 @@ def estimate_total_consumption(config: Dict, height: int, width: int, margin_dis
     """
     Estimate the total memory consumption of all objects that will be allocated.
     :param config: configuration with ROI margins if necessary.
-    :type config: Dict
     :param height: Image height including any ROI adjustments.
-    :type height: int
     :param width: Image width including any ROI adjustments.
-    :type width: int
     :param margin_disp: Disparity margins.
-    :type margin_disp: Margins
     :return: Memory consumption estimate in megabytes.
-    :rtype: float
     """
     matching_cost_config = config["pipeline"]["matching_cost"]
     cost_volume_dtype = np.dtype(matching_cost_config["float_precision"])
@@ -101,12 +96,9 @@ def compute_effective_image_size(config: Dict, image_margins: Margins) -> Tuple[
     Compute the effective image size (height, width), including ROI and global margins.
 
     :param config: Configuration dictionary containing the image path and optional ROI information.
-    :type config: Dict
     :param image_margins: Margins to apply around the ROI to ensure the full region is processed.
                           Used only when a ROI is defined. Defaults to None.
-    :type image_margins: Margins or None
     :return: Image dimensions as (height, width) including margins.
-    :rtype: Tuple[int, int]
     """
     height, width = get_img_size(config["input"]["left"]["img"], config.get("ROI"))
     if "ROI" in config:
@@ -128,9 +120,7 @@ def get_img_size(img_path: str, roi: Dict = None) -> Tuple[int, int]:
     If a ROI is given, its width and height are returned without takin margins into account.
 
     :param img_path: img path
-    :type img_path: str
     :return:  width and height of the image
-    :rtype: Tuple[int,int]
     """
 
     # Get image width and height
@@ -167,15 +157,10 @@ def get_nb_disp(disparity: Dict, before_margins: int = 0, after_margins: int = 0
     Get number of disparities.
 
     :param disparity: init and range for disparities.
-    :type disparity: Dict
     :param before_margins: Margins before the minimum disparity.
-    :type before_margins: int
     :param after_margins: Margins after the maximum disparity.
-    :type after_margins: int
     :param subpix: subpix
-    :type subpix: int
     :return:  number of disparities
-    :rtype: int
     """
 
     # Get initial disparity values
@@ -188,18 +173,14 @@ def get_nb_disp(disparity: Dict, before_margins: int = 0, after_margins: int = 0
     return (max_disparity - min_disparity + before_margins + after_margins) * subpix + 1
 
 
-def get_roi_margins(row_disparity, col_disparity, global_margins: Margins) -> Margins:
+def get_roi_margins(row_disparity: dict, col_disparity: dict, global_margins: Margins) -> Margins:
     """
     Get ROI margins according to row and col disparities and global margins calculated in the check conf step.
 
     :param row_disparity: init and range for disparities in rows.
-    :type row_disparity: Dict
     :param col_disparity: init and range for disparities in columns.
-    :type col_disparity: Dict
     :param global_margins: global image margins computed in the check conf
-    :type global_margins: Margins
     :return: ROI margins updated according to disparity values
-    :rtype: Margins
     """
 
     # Get initial disparity values
@@ -223,13 +204,9 @@ def img_dataset_size(height: int, width: int, nb_bytes: int) -> float:
     to the different data types contained in the image dataset.
 
     :param height: image or ROI number of rows
-    :type height: int
     :param width: image or ROI number of columns
-    :type width: int
     :param nb_bytes: sum of the number of bytes.
-    :type nb_bytes: int
     :return: size of image dataset in MB
-    :rtype: float
     """
 
     return (height * width * (nb_bytes)) / BYTE_TO_MB
@@ -241,13 +218,9 @@ def estimate_input_size(height: int, width: int, data_vars: List[str]) -> float:
     and data variables contained in the image dataset.
 
     :param height: image or ROI number of rows
-    :type height: int
     :param width: image or ROI number of columns
-    :type width: int
     :param data_vars: data variables contained in the image dataset.
-    :type data_vars: List of str
     :return: size of image dataset in MB
-    :rtype: float
     """
 
     # Compute input configuration size according to each data variable contained in the image dataset
@@ -264,17 +237,11 @@ def estimate_cost_volumes_size(
     number of disparities, subpix, step and data variables contained in the cost volumes dataset.
 
     :param user_cfg: user configuration
-    :type user_cfg: Dict
     :param height: image or ROI number of rows
-    :type height: int
     :param width: image or ROI number of columns
-    :type width: int
     :param margins_disp: disparity margins computed in the check conf
-    :type margins_disp: Margins
     :param data_vars: data variables contained in the cost_volumes dataset.
-    :type data_vars: List of str
     :return: size of image dataset in MB
-    :rtype: float
     """
 
     # Get cost volumes parameters used in size estimation
@@ -299,13 +266,9 @@ def estimate_shifted_right_images_size(height: int, width: int, subpix: int) -> 
     Estimate the size in MB of the list of shifted right images (excluding the original right image itself).
 
     :param height: height of image
-    :type height: int
     :param width: width of image
-    :type width: int
     :param subpix: subpixel
-    :type subpix:
     :return: estimated size in MB
-    :rtype: float
     """
     one_image_size = img_dataset_size(height, width, DATA_VARS_TYPE_SIZE["im"])
     # When subpix is 1, no new image is created; instead, a reference to the original right image is used.
@@ -320,15 +283,10 @@ def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, mar
     Estimate the size in MB of the cost volume according to image width, height, and refinement margins.
 
     :param config: user configuration.
-    :type config: Dict
     :param height: image or ROI number of rows
-    :type height: int
     :param width: image or ROI number of columns
-    :type width: int
     :param margins: Refinement margins.
-    :type margins: Margins
     :return: estimated size in MB.
-    :rtype: float
     """
     subpix = config["pipeline"]["matching_cost"]["subpix"]
     step = config["pipeline"]["matching_cost"]["step"]
@@ -344,15 +302,10 @@ def estimate_dataset_disp_map_size(height: int, width: int, step: List, dtype: D
     Estimate the size in MB of the disparity map dataset.
 
     :param height: image or ROI number of rows.
-    :type height: int
     :param width: image or ROI number of columns.
-    :type width: int
     :param step: step.
-    :type step: List
     :param dtype: dtype of the disparity map (should be same as cost volumes dataset).
-    :type dtype: np.typing.DTypeLike
     :return: estimated size in MB.
-    :rtype: float
     """
     image_size = math.ceil(height / step[0]) * math.ceil(width / step[1])
     number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
@@ -370,9 +323,7 @@ class RoiRange(TypedDict):
     Represents the range of rows or columns in a region of interest (ROI).
 
     :param first: Index of the first row or column.
-    :type first: int
     :param last: Index of the last row or column (inclusive).
-    :type last: int
     """
 
     first: int
@@ -384,9 +335,7 @@ class Roi(TypedDict):
     Represents a 2D region of interest, defined by row and column bounds.
 
     :param row: Row range of the ROI.
-    :type row: RoiRange
     :param col: Column range of the ROI.
-    :type col: RoiRange
     """
 
     row: RoiRange
@@ -403,17 +352,13 @@ def segment_image_by_rows(config: Dict, disp_margins: Margins, image_margins: Ma
     the allowed limit.
 
     :param config: Configuration dictionary containing keys such as 'segment_mode' and 'pipeline'.
-    :type config: Dict
 
     :param disp_margins: Margins applied during disparity computation.
                          Defaults to NullMargins.
-    :type disp_margins: Margins
 
     :param image_margins: Margins applied to image.
-    :type image_margins: Margins
 
     :return: List of segment dictionaries with row and column bounds.
-    :rtype: List[Roi]
 
     :raises ValueError: If the minimum memory required for processing a basic segment
                         exceeds the configured `memory_per_work`.

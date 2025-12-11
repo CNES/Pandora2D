@@ -68,7 +68,6 @@ class Registry(Generic[T]):
         Initialize the registry with an optional default class.
 
         :param default: Default class to return if name is not registered. If None, will raise a KeyError.
-        :type default: Union[Type[T], None]
         """
         self.registered: Dict[str, Type[T]] = {}
         self.default = default
@@ -78,9 +77,7 @@ class Registry(Generic[T]):
         Register a class with `name`.
 
         :param name: Name to register the decorated class with.
-        :type name: str
         :return: The decorated class.
-        :rtype: Type[T]
         """
 
         def decorator(cls: Type[T]) -> Type[T]:
@@ -96,9 +93,7 @@ class Registry(Generic[T]):
         Get the class registered as `name`.
 
         :param name: The name of the registered class to retrieve.
-        :type name: str
         :return: The class registered under `name` or the default class if not found.
-        :rtype: Type[T]
         :raises KeyError: If no class is registered under `name` and no default is set.
         """
         if self.default is None and name not in self.registered:
@@ -128,9 +123,7 @@ def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
 
         - lines : the disparity map for the lines 2D DataArray (row, col)
         - columns : the disparity map for the columns 2D DataArray (row, col)
-    :type dataset: xr.Dataset
     :param cfg: user configuration
-    :type cfg: Dict
     :return: None
     """
 
@@ -157,9 +150,7 @@ def save_confidence_maps(dataset: xr.Dataset, cfg: Dict) -> None:
 
         - lines : the confidence map for the lines 2D DataArray (row, col)
         - columns : the confidence map for the columns 2D DataArray (row, col)
-    :type dataset: xr.Dataset
     :param cfg: user configuration
-    :type cfg: Dict
     :return: None
     """
 
@@ -181,9 +172,7 @@ def _save_disparity_maps_report(dataset: xr.Dataset, output: Path) -> None:
     """
     Generate a report about disparities statistics and save it to json file.
     :param dataset: disparity maps
-    :type dataset: xr.Dataset
     :param output: path where to save report
-    :type output: Path
     """
     report = {"statistics": {"disparity": reporting.report_disparities(dataset)}}
     with open(output / "report.json", "w", encoding="utf8") as fd:
@@ -195,9 +184,7 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
     Save data_vars in the output directory.
 
     :param dataset: Dataset
-    :type dataset: xr.Dataset
     :param output: output directory
-    :type output: Path
     :return: None
     """
     output.mkdir(parents=True, exist_ok=True)
@@ -237,9 +224,7 @@ def save_attributes(dataset: xr.Dataset, output: Union[str, PathLike]) -> None:
 
         - row_map : the disparity map for the lines 2D DataArray (row, col)
         - col_map : the disparity map for the columns 2D DataArray (row, col)
-    :type dataset: xr.Dataset
     :param output: output directory
-    :type output: Union[str, PathLike]
     :return: None
     """
     with open(output / Path("attributes.json"), "w", encoding="utf8") as fd:
@@ -251,9 +236,7 @@ def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:
     Change origin in case a ROI is present and set pixel size to the matching cost step.
 
     :param dataset: dataset to configure.
-    :type dataset: xr.Dataset
     :param cfg: configuration
-    :type cfg: Dict
     """
     if "ROI" in cfg:
         # Translate georeferencement origin to ROI origin:
@@ -266,9 +249,7 @@ def get_step(cfg: Dict) -> Tuple[int, int]:
     """
     Get step from matching cost or retun default value.
     :param cfg: configuration
-    :type cfg: Dict
     :return: row_step, col_step
-    :rtype: Tuple[int, int]
     """
     try:
         return cfg["pipeline"]["matching_cost"]["step"]
@@ -283,11 +264,8 @@ def set_pixel_size(dataset: xr.Dataset, row_step: int = 1, col_step: int = 1) ->
     This ensures that all pixels are well geo-referenced in case a step is applied.
 
     :param dataset: Data to save
-    :type dataset: xr.Dataset
     :param row_step: step used in row
-    :type row_step: int
     :param col_step: step used in column
-    :type col_step: int
     """
     dataset.attrs["transform"] *= Affine.scale(col_step, row_step)
 
@@ -301,20 +279,15 @@ def dataset_disp_maps(
     """
     Create the dataset containing disparity maps and score maps
     :param coords: disparity maps coordinates
-    :type coords: xr.Coordinates
     :param dataset_validity: xr.Dataset containing validity informations
-    :type dataset_validity: xr.Dataset
     :param attributes: disparity map for col
-    :type attributes: dict
     :param dtype: dtype of the dataset
-    :type dtype: np.typing.DTypeLike
     :return: dataset: Dataset with the empty disparity maps and score with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)
             - col_map 2D xarray.DataArray (row, col)
             - score 2D xarray.DataArray (row, col)
 
-    :rtype: xarray.Dataset
     """
 
     # Raise an error if col coordinate is missing
@@ -359,13 +332,9 @@ def fill_dataset_disp_maps(
     Fill the dataset with computed disparity maps and score maps
 
     :param disparity_dataset: initialized disparity maps dataset
-    :type disparity_dataset: xr.Dataset
     :param delta_row: disparity map for row
-    :type delta_row: np.ndarray
     :param delta_col: disparity map for col
-    :type delta_col: np.ndarray
     :param correlation_score: score map
-    :type correlation_score: np.ndarray
     """
 
     disparity_dataset["row_map"].data = delta_row
@@ -379,7 +348,6 @@ def save_config(config: Dict) -> None:
 
     Create file tree if it does not exist,
     :param config: configuration to save
-    :type config: Dict
     """
     path_output = Path(config["output"]["path"])
     path_output.mkdir(parents=True, exist_ok=True)
@@ -393,11 +361,8 @@ def string_to_path(path: str, relative_to: Union[Path, str]) -> Path:
     it resolves it relative to the provided ``relative_to`` path.
 
     :param path: The path string to convert to an absolute path.
-    :type path: str
     :param relative_to: The base path to resolve the relative path.
-    :type relative_to: PathLike | str
     :return: The absolute path of the given path string.
-    :rtype: Path
 
     :Example:
         >>> string_to_path('/absolute/path', Path('/home/user'))
@@ -419,11 +384,8 @@ def resolve_path_in_config(config: Dict, config_path: Path) -> Dict:
     config_path.
 
     :param config: config to modify
-    :type config: Dict
     :param config_path: path to the config file.
-    :type config_path: Path
     :return: The configuration with changed paths.
-    :rtype: Dict
     """
     result = deepcopy(config)
     relative_to = config_path.parent
