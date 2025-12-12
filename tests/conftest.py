@@ -25,6 +25,7 @@ import json
 import pathlib
 import re
 import tracemalloc
+from copy import deepcopy
 
 import numpy as np
 import pytest
@@ -308,8 +309,10 @@ def make_input_cfg(left_img_path, right_img_path, request):
             "nodata": -9999,
         },
         "right": {"img": right_img_path, "nodata": -9999},
-        "col_disparity": request.getfixturevalue(request.param["col_disparity"]),
-        "row_disparity": request.getfixturevalue(request.param["row_disparity"]),
+        # As disparities can be dicts and because of pytest caching, if those originate from the same fixture we need
+        # to do a deepcopy so that we can modify them separately:
+        "col_disparity": deepcopy(request.getfixturevalue(request.param["col_disparity"])),
+        "row_disparity": deepcopy(request.getfixturevalue(request.param["row_disparity"])),
     }
 
     return input_cfg

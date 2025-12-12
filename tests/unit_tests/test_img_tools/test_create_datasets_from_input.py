@@ -21,7 +21,6 @@
 """
 Test create_dataset_from_inputs function.
 """
-from copy import deepcopy
 from pathlib import Path
 
 # Make pylint happy with fixtures:
@@ -491,9 +490,6 @@ class TestReturnedValue:
 
         We expect that attributes with step exists and was integrated into the input section.
         """
-        # Pytest caches fixture results, so both disparity dicts point to the same mutable object. We need to replace
-        # one before modifying them separately.
-        make_input_cfg["col_disparity"] = deepcopy(make_input_cfg["col_disparity"])
         # We need to transform directory path to grid path:
         make_input_cfg["row_disparity"]["init"] = str(Path(make_input_cfg["row_disparity"]["init"]) / "row_map.tif")
         make_input_cfg["col_disparity"]["init"] = str(Path(make_input_cfg["col_disparity"]["init"]) / "col_map.tif")
