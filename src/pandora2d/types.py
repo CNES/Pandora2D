@@ -60,3 +60,32 @@ class Origin:
 
     row: int = 0
     col: int = 0
+
+
+@dataclass(frozen=True)
+class Extent:
+    """
+    Represents a rectangular extent in row/column coordinates.
+    Coordinates are half-open: [row_min, row_max), [col_min, col_max).
+    """
+
+    row_min: int
+    row_max: int
+    col_min: int
+    col_max: int
+
+    def width(self) -> int:
+        """Number of columns (col_max - col_min)."""
+        return self.col_max - self.col_min
+
+    def height(self) -> int:
+        """Number of rows (row_max - row_min)."""
+        return self.row_max - self.row_min
+
+    def is_within(self, image_height: int, image_width: int) -> bool:
+        """
+        Returns True if the extent is fully contained within the image bounds.
+        :param image_height: height of the image.
+        :param image_width: width of the image.
+        """
+        return self.row_min >= 0 and self.col_min >= 0 and self.row_max <= image_height and self.col_max <= image_width

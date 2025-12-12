@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Sequence
+from typing import Dict, Sequence, Any
 
 import numpy as np
 import xarray as xr
@@ -46,6 +46,7 @@ from rasterio.io import DatasetReader
 
 from pandora2d.state_machine import Pandora2DMachine
 from .common import all_same
+from .types import Extent
 
 
 def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
@@ -180,8 +181,12 @@ def check_disparity_grids(input_cfg: dict) -> None:
     if len(shapes := {r.shape for r in disparity_readers}) > 1:  # more than one shape
         raise AttributeError("Initial disparity grids' sizes do not match", shapes)
 
-    # Check that disparity grids are the same size as the input image
-    if disparity_readers[0].shape != image_reader.shape:
+    if attributes := config.get("attributes"):
+        if not is_disparity_extent_within_image(disparity_readers[0], image_reader, attributes):
+            message = "Initial disparity grid is not inside image boundaries."
+            raise AttributeError(message)
+
+    elif disparity_readers[0].shape != image_reader.shape:
         raise AttributeError("Initial disparity grids and image must have the same size")
 
     # Get correct disparity dictionaries from init disparity grids to give as input of
@@ -190,6 +195,45 @@ def check_disparity_grids(input_cfg: dict) -> None:
     col_disp_dict = get_dictionary_from_init_grid(disparity_readers[1], col_disparity["range"])
 
     check_disparity_ranges_are_inside_image(image_reader.shape, row_disp_dict, col_disp_dict)
+
+
+def is_disparity_extent_within_image(disparity_reader, image_reader, attributes) -> bool:
+    """
+    Returns True if the computed disparity extent fits within the image.
+    """
+    extent = compute_disparity_extent(
+        disparity_height=disparity_reader.height,
+        disparity_width=disparity_reader.width,
+        attributes=attributes,
+    )
+    return extent.is_within(image_reader.height, image_reader.width)
+
+
+def compute_disparity_extent(
+    disparity_height: int,
+    disparity_width: int,
+    attributes: Dict[str, Any],
+) -> Extent:
+    """
+    Computes the final extent of the disparity grid using:
+    - grid size (disparity_height, disparity_width),
+    - step (attributes['step']['row'], attributes['step']['col']),
+    - origin (attributes['origin_coordinates']['row'], ['col']).
+    """
+    step_row = attributes["step"]["row"]
+    step_col = attributes["step"]["col"]
+    row_origin = attributes["origin_coordinates"]["row"]
+    col_origin = attributes["origin_coordinates"]["col"]
+
+    final_height = disparity_height * step_row
+    final_width = disparity_width * step_col
+
+    return Extent(
+        row_min=row_origin,
+        row_max=row_origin + final_height,
+        col_min=col_origin,
+        col_max=col_origin + final_width,
+    )
 
 
 def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: int) -> Dict:

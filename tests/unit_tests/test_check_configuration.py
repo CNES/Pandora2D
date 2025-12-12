@@ -1001,6 +1001,7 @@ class TestCheckDirectoryDisparity:
         with pytest.raises(AttributeError, match=re.escape(message)):
             check_configuration.check_conf(user_cfg, pandora2d_machine)
 
+    @pytest.mark.parametrize("image_shape", [pytest.param((10, 12), id="Grid shape different from image")])
     @pytest.mark.parametrize(
         ["make_input_cfg"],
         [
@@ -1021,11 +1022,54 @@ class TestCheckDirectoryDisparity:
         pipeline_config,
         attributes_file,
         step,
+        image_shape,
     ):
         """Check conf should pass when step from pipeline config and step from attributes equals."""
         user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
 
         check_configuration.check_conf(user_cfg, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+        ],
+        [
+            pytest.param((10, 10), (10, 10), {"row": 0, "col": 0}, [200, 200], id="Step"),
+            pytest.param((10, 10), (10, 10), {"row": 370, "col": 445}, [1, 1], id="Origin"),
+        ],
+    )
+    def test_check_conf_fails_when_disparity_grids_bounds_are_out_of_image(
+        self,
+        pandora2d_machine,
+        make_input_cfg,
+        pipeline_config,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+    ):
+        """The disparity grids must remain inside the image boundaries after expansion by step and/or origin."""
+        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
+        message = "Initial disparity grid is not inside image boundaries."
+        with pytest.raises(AttributeError, match=re.escape(message)):
+            check_configuration.check_conf(user_cfg, pandora2d_machine)
 
 
 @pytest.mark.parametrize(
