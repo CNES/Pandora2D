@@ -24,12 +24,13 @@
 Test configuration
 """
 
-# pylint: disable=unused-argument,too-many-lines
+# pylint: disable=unused-argument,too-many-lines, too-many-arguments,too-many-positional-arguments
 
 import json
 import random
 import re
 import string
+import logging
 from copy import deepcopy
 from pathlib import Path
 
@@ -40,6 +41,7 @@ import transitions
 import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
 from skimage.io import imsave
+from pandora.img_tools import rasterio_open
 
 from pandora2d import check_configuration
 from pandora2d.img_tools import add_disparity_grid, create_datasets_from_inputs
@@ -796,8 +798,15 @@ class TestCheckDisparity:
             check_configuration.check_disparity_grids({"input": make_input_cfg})
 
 
-class TestCheckDirectoryDisparity:
+class TestCheckDirectoryDisparity:  # pylint: disable=too-many-public-methods
     """Test check_disparity method when the disparity path is a directory."""
+
+    @pytest.fixture
+    def user_cfg(self, make_input_cfg, pipeline_config):
+        """
+        User configuration
+        """
+        return {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
 
     @pytest.fixture
     def disparity_map_directory(self, tmp_path):
@@ -891,6 +900,47 @@ class TestCheckDirectoryDisparity:
     @pytest.fixture
     def disparity_map_directory_config(self, disparity_map_directory, row_disparity_grid, col_disparity_grid):
         return {"init": str(disparity_map_directory), "range": row_disparity_grid["range"]}
+
+    @pytest.fixture
+    def disparity_readers(self, user_cfg):
+        """
+        Disparity readers to test disparity directory
+        """
+
+        # The path to the disparity directory is replaced by the paths to the disparity maps,
+        # as is done in the code.
+        row_path = Path(user_cfg["input"]["row_disparity"]["init"]) / "row_map.tif"
+        col_path = Path(user_cfg["input"]["col_disparity"]["init"]) / "col_map.tif"
+
+        user_cfg["input"]["row_disparity"]["init"] = str(row_path.resolve())
+        user_cfg["input"]["col_disparity"]["init"] = str(col_path.resolve())
+
+        disparity_readers = rasterio_open(user_cfg["input"]["row_disparity"]["init"]), rasterio_open(
+            user_cfg["input"]["col_disparity"]["init"]
+        )
+
+        return disparity_readers
+
+    @pytest.fixture
+    def attributes_cfg(self, user_cfg):
+        """
+        Attributes to test disparity directory
+        """
+        # Attributes are added to input configuration as is done in the code.
+        user_cfg["input"]["attributes"] = check_configuration.load_attributes(
+            Path(user_cfg["input"]["row_disparity"]["init"])
+        )
+
+        return user_cfg["input"].get("attributes")
+
+    @pytest.fixture
+    def extent(self, attributes_cfg, disparity_readers):
+        """
+        Extent to test disparity directory
+        """
+        return check_configuration.compute_disparity_extent(
+            disparity_readers[0].height, disparity_readers[0].width, attributes_cfg
+        )
 
     @pytest.mark.parametrize(
         ["make_input_cfg"],
@@ -992,10 +1042,9 @@ class TestCheckDirectoryDisparity:
         indirect=["make_input_cfg"],
     )
     def test_check_conf_fails_when_steps_differs(
-        self, pandora2d_machine, make_input_cfg, pipeline_config, attributes_file, step, step_offset
+        self, pandora2d_machine, user_cfg, pipeline_config, attributes_file, step, step_offset
     ):
         """Check conf should fail when step from pipeline config and step from attributes differs."""
-        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
         attributes_step = [step[0] + step_offset[0], step[1] + step_offset[1]]
         message = f"Initial disparity grid step {attributes_step} does not match configuration step {step}."
         with pytest.raises(AttributeError, match=re.escape(message)):
@@ -1018,15 +1067,13 @@ class TestCheckDirectoryDisparity:
     def test_check_conf_pass_when_steps_equals(
         self,
         pandora2d_machine,
-        make_input_cfg,
+        user_cfg,
         pipeline_config,
         attributes_file,
         step,
         image_shape,
     ):
         """Check conf should pass when step from pipeline config and step from attributes equals."""
-        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
-
         check_configuration.check_conf(user_cfg, pandora2d_machine)
 
     @pytest.mark.parametrize(
@@ -1058,7 +1105,7 @@ class TestCheckDirectoryDisparity:
     def test_check_conf_fails_when_disparity_grids_bounds_are_out_of_image(
         self,
         pandora2d_machine,
-        make_input_cfg,
+        user_cfg,
         pipeline_config,
         correct_grid_shape,
         second_correct_grid_shape,
@@ -1066,10 +1113,316 @@ class TestCheckDirectoryDisparity:
         step,
     ):
         """The disparity grids must remain inside the image boundaries after expansion by step and/or origin."""
-        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
         message = "Initial disparity grid is not inside image boundaries."
         with pytest.raises(AttributeError, match=re.escape(message)):
             check_configuration.check_conf(user_cfg, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        ["correct_grid_shape", "second_correct_grid_shape", "origin_coordinates", "step", "roi_gt"],
+        [
+            pytest.param(
+                (10, 10),
+                (10, 10),
+                {"row": 0, "col": 0},
+                [1, 1],
+                {"row": {"first": 0, "last": 9}, "col": {"first": 0, "last": 9}},
+                id="Classic case",
+            ),
+            pytest.param(
+                (10, 10),
+                (10, 10),
+                {"row": 2, "col": 3},
+                [1, 1],
+                {"row": {"first": 2, "last": 11}, "col": {"first": 3, "last": 12}},
+                id="Offset origin",
+            ),
+            pytest.param(
+                (5, 5),
+                (5, 5),
+                {"row": 0, "col": 0},
+                [2, 3],
+                {"row": {"first": 0, "last": 9}, "col": {"first": 0, "last": 14}},
+                id="Step=[2,3]",
+            ),
+            pytest.param(
+                (7, 7),
+                (7, 7),
+                {"row": 1, "col": 2},
+                [3, 2],
+                {"row": {"first": 1, "last": 21}, "col": {"first": 2, "last": 15}},
+                id="Step=[3,2] and offset origin",
+            ),
+            pytest.param(
+                (93, 450),
+                (93, 450),
+                {"row": 0, "col": 0},
+                [4, 1],
+                {"row": {"first": 0, "last": 371}, "col": {"first": 0, "last": 449}},
+                id="Step=[4,1]",
+            ),
+        ],
+    )
+    def test_check_conf_with_roi_grid(
+        self,
+        pandora2d_machine,
+        user_cfg,
+        pipeline_config,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        roi_gt,
+    ):
+        """
+        Check that the ROI constructed from input disparity grids is correct
+        """
+        check_configuration.check_conf(user_cfg, pandora2d_machine)
+        assert user_cfg["ROI"] == roi_gt
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+        ],
+        [
+            pytest.param((375, 450), (375, 450), {"row": 0, "col": 0}, [1, 1], id="No ROI grid"),
+            pytest.param((75, 45), (75, 45), {"row": 0, "col": 0}, [5, 10], id="No ROI grid with step"),
+        ],
+    )
+    def test_check_conf_without_roi_grid(
+        self,
+        pandora2d_machine,
+        user_cfg,
+        pipeline_config,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+    ):
+        """
+        Check that no ROI is added to the configuration when the input disparity grid
+        is already the size of the image.
+        """
+
+        check_configuration.check_conf(user_cfg, pandora2d_machine)
+
+        roi_key = user_cfg.get("ROI")
+        assert roi_key is None
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        ["correct_grid_shape", "second_correct_grid_shape", "origin_coordinates", "step", "roi_user", "roi_gt"],
+        [
+            pytest.param(
+                (7, 7),
+                (7, 7),
+                {"row": 1, "col": 2},
+                [3, 2],
+                {"row": {"first": 0, "last": 18}, "col": {"first": 2, "last": 24}},
+                {"row": {"first": 1, "last": 21}, "col": {"first": 2, "last": 15}},
+                id="Step=[3,2] and offset origin",
+            ),
+        ],
+    )
+    def test_check_conf_with_roi_grid_and_user_roi(
+        self,
+        pandora2d_machine,
+        user_cfg,
+        pipeline_config,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        roi_user,
+        roi_gt,
+        caplog,
+    ):
+        """
+        Check that the ROI constructed from the disparity grid overwrites the user ROI
+        """
+
+        user_cfg["ROI"] = roi_user
+
+        with caplog.at_level(logging.WARNING):
+            check_configuration.check_conf(user_cfg, pandora2d_machine)
+
+        assert user_cfg["ROI"] == roi_gt
+        assert (
+            "The ROI given in the user configuration will be replaced by the ROI derived from the disparity grids."
+            in caplog.messages
+        )
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        ["correct_grid_shape", "second_correct_grid_shape", "origin_coordinates", "step", "roi_gt"],
+        [
+            pytest.param(
+                (10, 10),
+                (10, 10),
+                {"row": 0, "col": 0},
+                [1, 1],
+                {"row": {"first": 0, "last": 9}, "col": {"first": 0, "last": 9}},
+                id="Classic case",
+            ),
+            pytest.param(
+                (10, 10),
+                (10, 10),
+                {"row": 2, "col": 3},
+                [1, 1],
+                {"row": {"first": 2, "last": 11}, "col": {"first": 3, "last": 12}},
+                id="Offset origin",
+            ),
+            pytest.param(
+                (5, 5),
+                (5, 5),
+                {"row": 0, "col": 0},
+                [2, 3],
+                {"row": {"first": 0, "last": 9}, "col": {"first": 0, "last": 14}},
+                id="Step=[2,3]",
+            ),
+            pytest.param(
+                (7, 7),
+                (7, 7),
+                {"row": 1, "col": 2},
+                [3, 2],
+                {"row": {"first": 1, "last": 21}, "col": {"first": 2, "last": 15}},
+                id="Step=[3,2] and offset origin",
+            ),
+            pytest.param(
+                (93, 450),
+                (93, 450),
+                {"row": 0, "col": 0},
+                [4, 1],
+                {"row": {"first": 0, "last": 371}, "col": {"first": 0, "last": 449}},
+                id="Step=[4,1]",
+            ),
+        ],
+    )
+    def test_update_roi_from_disparity_grid(
+        self,
+        user_cfg,
+        extent,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        roi_gt,
+    ):
+        """
+        Check that the ROI constructed by update_roi_from_disparity_grid method is correct
+        """
+
+        # Precise type of roi_disp_grid to fix mypy error
+        roi: dict[str, dict] = {}
+
+        image_reader = rasterio_open(user_cfg["input"]["left"]["img"])
+
+        check_configuration.update_roi_from_disparity_grid(extent, image_reader.height, image_reader.width, roi)
+        assert roi == roi_gt
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+        ],
+        [
+            pytest.param((375, 450), (375, 450), {"row": 0, "col": 0}, [1, 1], id="No ROI grid"),
+            pytest.param((75, 45), (75, 45), {"row": 0, "col": 0}, [5, 10], id="No ROI grid with step"),
+        ],
+    )
+    def test_update_roi_from_disparity_grid_without_roi_grid(
+        self,
+        user_cfg,
+        extent,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+    ):
+        """
+        Check that no ROI is computed by update_roi_from_disparity_grid
+        when the input disparity grid is already the size of the image.
+        """
+
+        # Precise type of roi_disp_grid to fix mypy error
+        roi: dict[str, dict] = {}
+
+        image_reader = rasterio_open(user_cfg["input"]["left"]["img"])
+
+        check_configuration.update_roi_from_disparity_grid(extent, image_reader.height, image_reader.width, roi)
+        assert not roi
 
 
 @pytest.mark.parametrize(
