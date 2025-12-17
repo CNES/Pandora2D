@@ -84,8 +84,17 @@ class Extent:
 
     def is_within(self, image_height: int, image_width: int) -> bool:
         """
-        Returns True if the extent is fully contained within the image bounds.
+        Return True if the extent is fully contained within the image bounds.
         :param image_height: height of the image.
         :param image_width: width of the image.
         """
         return self.row_min >= 0 and self.col_min >= 0 and self.row_max <= image_height and self.col_max <= image_width
+
+    def is_smaller(self, image_height: int, image_width: int) -> bool:
+        """
+        Return True if the extent is smaller than the image.
+        :param image_height: height of the image.
+        :param image_width: width of the image.
+        """
+
+        return self.row_max < image_height or self.col_max < image_width
