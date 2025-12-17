@@ -915,7 +915,7 @@ class TestCheckDirectoryDisparity:
     def test_fails_when_attributes_file_is_missing(self, make_input_cfg, image_metadata, attributes_file):
         """Both disparities must use the same directory"""
         attributes_file.unlink()
-        with pytest.raises(FileNotFoundError, match=str(attributes_file)):
+        with pytest.raises(FileNotFoundError, match=re.escape(str(attributes_file))):
             check_configuration.check_disparity(image_metadata, make_input_cfg)
 
     @pytest.mark.parametrize(
