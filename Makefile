@@ -37,6 +37,9 @@ endif
 # We can not get easily the build-dir that meson-python will use, so we build the name with the same code:
 CPP_BUILD_DIR=$(shell $(PYTHON) -c "import sys; interpreters = {'python': 'py', 'cpython': 'cp', 'pypy': 'pp', 'ironpython': 'ip', 'jython': 'jy'}; version = sys.version_info;name = sys.implementation.name; name = interpreters.get(name, name); print(f'build/{name}{version[0]}{version[1]}')")
 
+# Directory containing source files for coverage analysis.
+COVERAGE_SOURCE="src/pandora2d"
+
 ################ MAKE targets by sections ######################
 
 .PHONY: help
