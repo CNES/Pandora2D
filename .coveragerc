@@ -5,7 +5,7 @@ source =
 
 [run]
 # Directories to include in coverage analysis
-source = src/pandora2d
+source = ${COVERAGE_SOURCE}
 
 # Files and directories to omit from coverage analysis
 omit = */build/*,tests/*
