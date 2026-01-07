@@ -343,6 +343,34 @@ class TestCheckOutputSection:
         with pytest.raises(DictCheckerError, match="format"):
             check_configuration.check_output_section({"path": "/home/me/out", "format": format_})
 
+    @pytest.mark.parametrize(
+        "deformation_grid",
+        [{"init_pixel_conv_grid": [0, 0]}, {"init_pixel_conv_grid": [0.5, 0.5]}],
+    )
+    def test_accept_optional_deformation_grid(self, deformation_grid):
+        """
+        Check that optional deformation_grid key is accepted in output configuration
+        """
+        check_configuration.check_output_section({"path": "/home/me/out", "deformation_grid": deformation_grid})
+
+    @pytest.mark.parametrize(
+        "deformation_grid",
+        [
+            {"init_pixel_conv_grid": [0, 0.5]},
+            {"init_pixel_conv_grid": [0.5, 0.0]},
+            {"init_pixel_conv_grid": "wrong_type"},
+            {},
+            {"wrong_key": [0, 0]},
+        ],
+    )
+    def test_fails_with_wrong_deformation_grid(self, deformation_grid):
+        """
+        Check that check_output_section fails when using a wrong deformation_grid type
+        """
+
+        with pytest.raises(DictCheckerError, match="deformation_grid"):
+            check_configuration.check_output_section({"path": "/home/me/out", "deformation_grid": deformation_grid})
+
 
 class TestGetOutputConfig:
     """Test get_output_config."""
