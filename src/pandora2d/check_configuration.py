@@ -505,7 +505,12 @@ def check_output_section(config: Dict) -> None:
     :return: None
     :raise: json_checker errors in the configuration does not respect the schema.
     """
-    schema = {"path": str, OptionalKey("format"): And(str, lambda v: v in ["tiff"])}
+    schema = {
+        "path": str,
+        OptionalKey("format"): And(str, lambda v: v in ["tiff"]),
+        OptionalKey("deformation_grid"): {"init_pixel_conv_grid": Or([0, 0], [0.5, 0.5])},
+    }
+
     checker = Checker(schema)
     checker.validate(config)
 
