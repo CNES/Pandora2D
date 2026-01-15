@@ -39,7 +39,6 @@ import rasterio
 import transitions
 import xarray as xr
 from json_checker import DictCheckerError, MissKeyCheckerError
-from pandora.img_tools import get_metadata
 from skimage.io import imsave
 
 from pandora2d import check_configuration
@@ -722,14 +721,11 @@ class TestCheckDisparity:
         ],
         indirect=["make_input_cfg"],
     )
-    def test_passes_check_disparity(self, left_img_path, make_input_cfg):
+    def test_passes_check_disparity(self, make_input_cfg):
         """
         Test check_disparity method with correct input disparities
         """
-
-        image_metadata = get_metadata(left_img_path)
-
-        check_configuration.check_disparity(image_metadata, make_input_cfg)
+        check_configuration.check_disparity(make_input_cfg)
 
     @pytest.mark.parametrize(
         ["make_input_cfg", "error_type", "error_message"],
@@ -753,16 +749,29 @@ class TestCheckDisparity:
                 id="Initial value is different for columns and rows disparity",
             ),
             pytest.param(
-                {"row_disparity": "out_of_image_grid", "col_disparity": "second_correct_grid"},
-                ValueError,
-                "Row disparity range out of image",
-                id="Row disparity grid out of image for one point",
-            ),
-            pytest.param(
                 {"row_disparity": "constant_initial_disparity", "col_disparity": "incorrect_disp_dict"},
                 ValueError,
                 "Column disparity range out of image",
                 id="Column disparity dict out of image for one point",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    def test_fails_check_disparity(self, left_img_path, make_input_cfg, error_type, error_message):
+        """
+        Test check_disparity method with incorrect input disparities
+        """
+        with pytest.raises(error_type, match=error_message):
+            check_configuration.check_disparity(make_input_cfg)
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg", "error_type", "error_message"],
+        [
+            pytest.param(
+                {"row_disparity": "out_of_image_grid", "col_disparity": "second_correct_grid"},
+                ValueError,
+                "Row disparity range out of image",
+                id="Row disparity grid out of image for one point",
             ),
             pytest.param(
                 {"row_disparity": "two_bands_grid", "col_disparity": "correct_grid"},
@@ -779,23 +788,16 @@ class TestCheckDisparity:
         ],
         indirect=["make_input_cfg"],
     )
-    def test_fails_check_disparity(self, left_img_path, make_input_cfg, error_type, error_message):
+    def test_fails_check_disparity_grids(self, make_input_cfg, error_type, error_message):
         """
-        Test check_disparity method with incorrect input disparities
+        Test check_disparity_grids method with incorrect input disparities
         """
-
-        image_metadata = get_metadata(left_img_path)
-
         with pytest.raises(error_type, match=error_message):
-            check_configuration.check_disparity(image_metadata, make_input_cfg)
+            check_configuration.check_disparity_grids({"input": make_input_cfg})
 
 
 class TestCheckDirectoryDisparity:
     """Test check_disparity method when the disparity path is a directory."""
-
-    @pytest.fixture
-    def image_metadata(self, left_img_path):
-        return get_metadata(left_img_path)
 
     @pytest.fixture
     def disparity_map_directory(self, tmp_path):
@@ -877,7 +879,13 @@ class TestCheckDirectoryDisparity:
         """Create attributes files with step+step_offset."""
         file_path = disparity_map_directory / "attributes.json"
         with open(file_path, "w", encoding="utf-8") as fd:
-            json.dump({"step": {"row": step[0] + step_offset[0], "col": step[1] + step_offset[1]}}, fd)
+            json.dump(
+                {
+                    "step": {"row": step[0] + step_offset[0], "col": step[1] + step_offset[1]},
+                    "origin_coordinates": {"row": 0, "col": 0},
+                },
+                fd,
+            )
         return file_path
 
     @pytest.fixture
@@ -904,10 +912,10 @@ class TestCheckDirectoryDisparity:
         ],
         indirect=["make_input_cfg"],
     )
-    def test_fails_when_directory_is_mixed_with_file(self, make_input_cfg, image_metadata):
+    def test_fails_when_directory_is_mixed_with_file(self, make_input_cfg):
         """Both disparities must be directories"""
         with pytest.raises(ValueError, match="Directory must not be mixed with file."):
-            check_configuration.check_disparity(image_metadata, make_input_cfg)
+            check_configuration.check_disparity(make_input_cfg)
 
     @pytest.mark.parametrize(
         ["make_input_cfg"],
@@ -922,10 +930,10 @@ class TestCheckDirectoryDisparity:
         ],
         indirect=["make_input_cfg"],
     )
-    def test_fails_when_directories_are_different(self, make_input_cfg, image_metadata):
+    def test_fails_when_directories_are_different(self, make_input_cfg):
         """Both disparities must use the same directory"""
         with pytest.raises(ValueError, match="Row and Col disparities must use the same directory."):
-            check_configuration.check_disparity(image_metadata, make_input_cfg)
+            check_configuration.check_disparity(make_input_cfg)
 
     @pytest.mark.parametrize(
         ["make_input_cfg"],
@@ -940,11 +948,11 @@ class TestCheckDirectoryDisparity:
         ],
         indirect=["make_input_cfg"],
     )
-    def test_fails_when_attributes_file_is_missing(self, make_input_cfg, image_metadata, attributes_file):
-        """Both disparities must use the same directory"""
+    def test_fails_when_attributes_file_is_missing(self, make_input_cfg, attributes_file):
+        """The directory must contain attribute file."""
         attributes_file.unlink()
         with pytest.raises(FileNotFoundError, match=re.escape(str(attributes_file))):
-            check_configuration.check_disparity(image_metadata, make_input_cfg)
+            check_configuration.check_disparity(make_input_cfg)
 
     @pytest.mark.parametrize(
         ["make_input_cfg"],
@@ -962,11 +970,12 @@ class TestCheckDirectoryDisparity:
     def test_fails_when_sizes_do_not_match(
         self,
         make_input_cfg,
-        image_metadata,
     ):
         """An exception should be raised when disparity grids' sizes mismatch."""
+        # resolve paths:
+        check_configuration.check_disparity(make_input_cfg)
         with pytest.raises(AttributeError, match="Initial disparity grids' sizes do not match"):
-            check_configuration.check_disparity(image_metadata, make_input_cfg)
+            check_configuration.check_disparity_grids({"input": make_input_cfg})
 
     @pytest.mark.parametrize(
         ["make_input_cfg", "step_offset"],
@@ -992,6 +1001,7 @@ class TestCheckDirectoryDisparity:
         with pytest.raises(AttributeError, match=re.escape(message)):
             check_configuration.check_conf(user_cfg, pandora2d_machine)
 
+    @pytest.mark.parametrize("image_shape", [pytest.param((10, 12), id="Grid shape different from image")])
     @pytest.mark.parametrize(
         ["make_input_cfg"],
         [
@@ -1012,11 +1022,54 @@ class TestCheckDirectoryDisparity:
         pipeline_config,
         attributes_file,
         step,
+        image_shape,
     ):
         """Check conf should pass when step from pipeline config and step from attributes equals."""
         user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
 
         check_configuration.check_conf(user_cfg, pandora2d_machine)
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+        ],
+        [
+            pytest.param((10, 10), (10, 10), {"row": 0, "col": 0}, [200, 200], id="Step"),
+            pytest.param((10, 10), (10, 10), {"row": 370, "col": 445}, [1, 1], id="Origin"),
+        ],
+    )
+    def test_check_conf_fails_when_disparity_grids_bounds_are_out_of_image(
+        self,
+        pandora2d_machine,
+        make_input_cfg,
+        pipeline_config,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+    ):
+        """The disparity grids must remain inside the image boundaries after expansion by step and/or origin."""
+        user_cfg = {"input": make_input_cfg, **pipeline_config, "output": {"path": "here"}}
+        message = "Initial disparity grid is not inside image boundaries."
+        with pytest.raises(AttributeError, match=re.escape(message)):
+            check_configuration.check_conf(user_cfg, pandora2d_machine)
 
 
 @pytest.mark.parametrize(

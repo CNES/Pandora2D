@@ -21,9 +21,10 @@
 """
 Test create_dataset_from_inputs function.
 """
+from pathlib import Path
 
 # Make pylint happy with fixtures:
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name,unused-argument,too-many-arguments,too-many-positional-arguments
 
 import numpy as np
 import pandora
@@ -444,6 +445,104 @@ class TestReturnedValue:
         np.testing.assert_array_equal(datasets.left["row_disparity"], expected_left_row_disparity)
         np.testing.assert_array_equal(datasets.right["col_disparity"], expected_right_col_disparity)
         np.testing.assert_array_equal(datasets.right["row_disparity"], expected_right_row_disparity)
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+        ],
+        [
+            [(10, 10), (10, 10), {"row": 11, "col": 11}, [2, 2]],
+            [(13, 15), (13, 15), {"row": 14, "col": 15}, [2, 2]],
+        ],
+    )
+    def test_disparities_from_roi(
+        self,
+        attributes,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        disparity_range,
+        left_img_shape,
+        correct_grid_data,
+        second_correct_grid_data,
+        make_input_cfg,
+    ):
+        """
+        Test disparities generated from a previous run with ROI (smaller than image with a step)
+
+        We expect that attributes with step exists and was integrated into the input section.
+        """
+        # We need to transform directory path to grid path:
+        make_input_cfg["row_disparity"]["init"] = str(Path(make_input_cfg["row_disparity"]["init"]) / "row_map.tif")
+        make_input_cfg["col_disparity"]["init"] = str(Path(make_input_cfg["col_disparity"]["init"]) / "col_map.tif")
+        make_input_cfg["attributes"] = attributes
+
+        result = img_tools.create_datasets_from_inputs(make_input_cfg)
+
+        assert result.left.sizes["row"], result.left.sizes["col"] == left_img_shape
+        assert result.right.sizes["row"], result.right.sizes["col"] == left_img_shape
+        np.testing.assert_equal(
+            result.left["row_disparity"]
+            .sel(band_disp="min")
+            .data[
+                origin_coordinates["row"] : origin_coordinates["row"] + correct_grid_shape[0] * step[0] : step[0],
+                origin_coordinates["col"] : origin_coordinates["col"] + correct_grid_shape[1] * step[1] : step[1],
+            ]
+            + disparity_range,
+            correct_grid_data,
+        )
+        np.testing.assert_equal(
+            result.left["row_disparity"]
+            .sel(band_disp="max")
+            .data[
+                origin_coordinates["row"] : origin_coordinates["row"] + correct_grid_shape[0] * step[0] : step[0],
+                origin_coordinates["col"] : origin_coordinates["col"] + correct_grid_shape[1] * step[1] : step[1],
+            ]
+            - disparity_range,
+            correct_grid_data,
+        )
+        np.testing.assert_equal(
+            result.left["col_disparity"]
+            .sel(band_disp="min")
+            .data[
+                origin_coordinates["row"] : origin_coordinates["row"]
+                + second_correct_grid_shape[0] * step[0] : step[0],
+                origin_coordinates["col"] : origin_coordinates["col"]
+                + second_correct_grid_shape[1] * step[1] : step[1],
+            ]
+            + disparity_range,
+            second_correct_grid_data,
+        )
+        np.testing.assert_equal(
+            result.left["col_disparity"]
+            .sel(band_disp="max")
+            .data[
+                origin_coordinates["row"] : origin_coordinates["row"]
+                + second_correct_grid_shape[0] * step[0] : step[0],
+                origin_coordinates["col"] : origin_coordinates["col"]
+                + second_correct_grid_shape[1] * step[1] : step[1],
+            ]
+            - disparity_range,
+            second_correct_grid_data,
+        )
 
 
 class TestDisparityChecking:

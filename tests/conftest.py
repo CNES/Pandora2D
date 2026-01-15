@@ -25,6 +25,7 @@ import json
 import pathlib
 import re
 import tracemalloc
+from copy import deepcopy
 
 import numpy as np
 import pytest
@@ -308,8 +309,10 @@ def make_input_cfg(left_img_path, right_img_path, request):
             "nodata": -9999,
         },
         "right": {"img": right_img_path, "nodata": -9999},
-        "col_disparity": request.getfixturevalue(request.param["col_disparity"]),
-        "row_disparity": request.getfixturevalue(request.param["row_disparity"]),
+        # As disparities can be dicts and because of pytest caching, if those originate from the same fixture we need
+        # to do a deepcopy so that we can modify them separately:
+        "col_disparity": deepcopy(request.getfixturevalue(request.param["col_disparity"])),
+        "row_disparity": deepcopy(request.getfixturevalue(request.param["row_disparity"])),
     }
 
     return input_cfg
@@ -352,9 +355,14 @@ def create_disparity_grid_fixture(tmp_path):
 
 
 @pytest.fixture
-def correct_grid_data(left_img_shape):
+def correct_grid_shape(left_img_shape):
+    return left_img_shape
+
+
+@pytest.fixture
+def correct_grid_data(correct_grid_shape):
     """Array of size left_img_shape with alternating rows of 2, 0 and 3"""
-    data = np.full(left_img_shape, 2)
+    data = np.full(correct_grid_shape, 2)
     data[1::3] = 0
     data[2::3] = 3
     return data
@@ -367,9 +375,14 @@ def correct_grid(correct_grid_data, create_disparity_grid_fixture):
 
 
 @pytest.fixture
-def second_correct_grid_data(left_img_shape):
+def second_correct_grid_shape(left_img_shape):
+    return left_img_shape
+
+
+@pytest.fixture
+def second_correct_grid_data(second_correct_grid_shape):
     """Array of size left_img_shape with alternating columns of 5, -21 and -1"""
-    data = np.full(left_img_shape, 5)
+    data = np.full(second_correct_grid_shape, 5)
     data[:, 1::3] = -21
     data[:, 2::3] = -1
     return data
@@ -387,13 +400,19 @@ def step():
 
 
 @pytest.fixture
-def attributes(left_img_path, step):
-    """Return attributes dictionnary from some left_img properties."""
+def origin_coordinates():
+    """Coordinates of upper-left corner of ROI in attributes.json"""
+    return {"row": 0, "col": 0}
+
+
+@pytest.fixture
+def attributes(left_img_path, step, origin_coordinates):
+    """Return attributes dictionary from some left_img properties."""
     with rasterio.open(left_img_path) as src:
         crs = src.crs
         transform = src.transform
     return {
-        "origin_coordinates": {"row": 0, "col": 0},
+        "origin_coordinates": origin_coordinates,
         "step": {"row": step[0], "col": step[1]},
         "crs": crs,
         "transform": transform * rasterio.Affine.scale(*step),
@@ -402,19 +421,24 @@ def attributes(left_img_path, step):
 
 
 @pytest.fixture
+def disparity_range():
+    return 5
+
+
+@pytest.fixture
 def same_sized_grid_directory(
-    tmp_path, correct_grid_data, second_correct_grid_data, create_disparity_grid_fixture, attributes
+    tmp_path, correct_grid_data, second_correct_grid_data, create_disparity_grid_fixture, disparity_range, attributes
 ):
     """Create a directory with row_map and col_map of same sizes."""
     directory = tmp_path / "input_disparities"
     directory.mkdir()
     # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
     # instead of being prefixed:
-    create_disparity_grid_fixture(correct_grid_data, 5, directory / "row_map.tif")
-    create_disparity_grid_fixture(second_correct_grid_data, 5, directory / "col_map.tif")
+    create_disparity_grid_fixture(correct_grid_data, disparity_range, directory / "row_map.tif")
+    create_disparity_grid_fixture(second_correct_grid_data, disparity_range, directory / "col_map.tif")
     with (directory / "attributes.json").open("w") as fd:
         json.dump(attributes, fd)
-    return {"init": str(directory), "range": 5}
+    return {"init": str(directory), "range": disparity_range}
 
 
 @pytest.fixture
