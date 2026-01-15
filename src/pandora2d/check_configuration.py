@@ -197,9 +197,15 @@ def check_disparity_grids(input_cfg: dict) -> None:
     check_disparity_ranges_are_inside_image(image_reader.shape, row_disp_dict, col_disp_dict)
 
 
-def is_disparity_extent_within_image(disparity_reader, image_reader, attributes) -> bool:
+def is_disparity_extent_within_image(
+    disparity_reader: DatasetReader, image_reader: DatasetReader, attributes: Dict[str, Any]
+) -> bool:
     """
     Returns True if the computed disparity extent fits within the image.
+
+    :param disparity_reader: initial disparity grid
+    :param image_reader: left image
+    :param attributes: metadata for disparity grid
     """
     extent = compute_disparity_extent(
         disparity_height=disparity_reader.height,
@@ -219,6 +225,10 @@ def compute_disparity_extent(
     - grid size (disparity_height, disparity_width),
     - step (attributes['step']['row'], attributes['step']['col']),
     - origin (attributes['origin_coordinates']['row'], ['col']).
+
+    :param disparity_height: height of initial disparity grid
+    :param disparity_width: width of initial disparity grid
+    :param attributes: metadata for disparity grid
     """
     step_row = attributes["step"]["row"]
     step_col = attributes["step"]["col"]
