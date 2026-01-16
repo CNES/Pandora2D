@@ -31,6 +31,15 @@ def report_disparities(data: xr.Dataset) -> Dict:
     :param data: disparities to report statistics from.
     :return: dictionary with reported data
     """
-    row_stats = compute_statistics(data["row_map"].data, data.attrs["invalid_disp"])
-    col_stats = compute_statistics(data["col_map"].data, data.attrs["invalid_disp"])
+
+    if {"row_deformation_map", "col_deformation_map"}.issubset(data.data_vars):
+        row_data = data["row_deformation_map"].data
+        col_data = data["col_deformation_map"].data
+    else:
+        row_data = data["row_map"].data
+        col_data = data["col_map"].data
+
+    row_stats = compute_statistics(row_data, data.attrs["invalid_disp"])
+    col_stats = compute_statistics(col_data, data.attrs["invalid_disp"])
+
     return {"row": row_stats.to_dict(), "col": col_stats.to_dict()}

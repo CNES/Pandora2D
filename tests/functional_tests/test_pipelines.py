@@ -773,5 +773,35 @@ class TestCostVolumeConfidence:
             confidence_map = src.read(1)
 
         # Checking that resulting confidence map is not full of nans
-        with np.testing.assert_raises(AssertionError):
-            assert np.all(np.isnan(confidence_map))
+        assert not np.all(np.isnan(confidence_map))
+
+
+class TestDeformationGridMode:
+    """
+    Test deformation grid mode
+    """
+
+    @pytest.fixture()
+    def configuration(self, correct_input_cfg, correct_pipeline_without_refinement, init_pixel_conv_grid, tmp_path):
+        return {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            **{"output": {"path": str(tmp_path), "deformation_grid": {"init_pixel_conv_grid": init_pixel_conv_grid}}},
+        }
+
+    @pytest.mark.parametrize("init_pixel_conv_grid", [[0, 0], [0.5, 0.5]])
+    def test_deformation_grid_pipeline(self, configuration, run_pipeline, tmp_path):
+        """
+        Test execution of a pipeline with deformation grid mode enabled
+        """
+
+        run_pipeline(configuration)
+
+        with rasterio.open(tmp_path / "disparity_map" / "row_deformation_map.tif") as src:
+            row_deformation_map = src.read(1)
+        with rasterio.open(tmp_path / "disparity_map" / "col_deformation_map.tif") as src:
+            col_deformation_map = src.read(1)
+
+        # Checking that resulting deformation grids are not full of nans
+        assert not np.all(np.isnan(row_deformation_map))
+        assert not np.all(np.isnan(col_deformation_map))

@@ -319,6 +319,42 @@ class TestSaveDisparityMaps:
 
         assert result == {"statistics": {"disparity": fake_report_data}}
 
+    @pytest.fixture
+    def deformation_grid_cfg(self, correct_input_cfg, correct_pipeline_without_refinement, save_folder):
+        """
+        Deformation grid mode configuration
+        """
+
+        return {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            "output": {
+                "path": save_folder / "test_deformation_grid",
+                "deformation_grid": {"init_pixel_conv_grid": [0, 0]},
+            },
+        }
+
+    def test_save_deformation_maps(self, create_test_dataset, deformation_grid_cfg):
+        """
+        Check that deformation grids are correctly saved when
+        grid mode is activated
+        """
+
+        common.save_disparity_maps(
+            create_test_dataset,
+            deformation_grid_cfg,
+        )
+
+        output_row_deformation_map = (
+            deformation_grid_cfg["output"]["path"] / "disparity_map" / "row_deformation_map.tif"
+        )
+        output_col_deformation_map = (
+            deformation_grid_cfg["output"]["path"] / "disparity_map" / "col_deformation_map.tif"
+        )
+
+        assert output_row_deformation_map.exists()
+        assert output_col_deformation_map.exists()
+
 
 def create_dataset_coords(data_row, data_col, data_score, data_validity, row, col):
     """
@@ -657,6 +693,186 @@ class TestDatasetDispMaps:
         )
 
         assert disparity_maps.equals(dataset_ground_truth)
+
+
+class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
+    """
+    Test convert_disp_to_grid  and convert_grid_to_disp methods
+    """
+
+    def create_dataset_grid(self, data_row_grid, data_col_grid, data_score, data_validity, row, col):
+        """
+        Create xr.Dataset with data_row_grid, data_col_grid, data_score and data_validity
+        as data variables and row and col as coordinates
+        """
+
+        criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+        coords = {"row": row, "col": col}
+        dims = ("row", "col")
+
+        dataset = xr.Dataset(
+            {
+                "row_deformation_map": xr.DataArray(data_row_grid, dims=dims, coords=coords),
+                "col_deformation_map": xr.DataArray(data_col_grid, dims=dims, coords=coords),
+                "correlation_score": xr.DataArray(data_score, dims=dims, coords=coords),
+                "validity": xr.DataArray(
+                    data_validity, dims=("row", "col", "criteria"), coords={**coords, "criteria": criteria_values}
+                ),
+            },
+        )
+
+        return dataset
+
+    @pytest.mark.parametrize(
+        [
+            "data_row",
+            "data_col",
+            "data_score",
+            "data_validity",
+            "row",
+            "col",
+            "pixel_convention",
+            "row_grid_gt",
+            "col_grid_gt",
+        ],
+        [
+            pytest.param(
+                np.zeros((5, 5)),
+                np.zeros((5, 5)),
+                np.zeros((5, 5)),
+                np.zeros((5, 5, 8)),
+                np.arange(5),
+                np.arange(5),
+                [0, 0],
+                np.array(
+                    [
+                        [0.0, 0.0, 0.0, 0.0, 0.0],
+                        [1.0, 1.0, 1.0, 1.0, 1.0],
+                        [2.0, 2.0, 2.0, 2.0, 2.0],
+                        [3.0, 3.0, 3.0, 3.0, 3.0],
+                        [4.0, 4.0, 4.0, 4.0, 4.0],
+                    ]
+                ),
+                np.array(
+                    [
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                    ]
+                ),
+                id="Pixel convention = [0,0]",
+            ),
+            pytest.param(
+                np.array([[0.0, 0.0, 1.0, 2.0], [4.0, 5.0, 1.0, 3.0], [0.0, 1.0, 2.0, 2.0]]),
+                np.array([[3.0, 1.0, 1.0, 4.0], [1.0, 1.0, 2.0, 6.0], [0.0, 1.0, 0.0, 2.0]]),
+                np.zeros((3, 4)),
+                np.zeros((3, 4, 8)),
+                np.arange(3),
+                np.arange(4),
+                [0.5, 0.5],
+                np.array([[0.5, 0.5, 1.5, 2.5], [5.5, 6.5, 2.5, 4.5], [2.5, 3.5, 4.5, 4.5]]),
+                np.array([[3.5, 2.5, 3.5, 7.5], [1.5, 2.5, 4.5, 9.5], [0.5, 2.5, 2.5, 5.5]]),
+                id="Pixel convention = [0.5,0.5]",
+            ),
+        ],
+    )
+    def test_convert_disp_to_grid(  # pylint: disable=too-many-positional-arguments, too-many-arguments
+        self, data_row, data_col, data_score, data_validity, row, col, pixel_convention, row_grid_gt, col_grid_gt
+    ):
+        """
+        Test the convert_disp_to_grid method
+        """
+
+        dataset = create_dataset_coords(data_row, data_col, data_score, data_validity, row, col)
+
+        # Check that the conversion of disparity maps into deformation grids is correct
+        dataset = common.convert_disp_to_grid(dataset, pixel_convention)
+
+        np.testing.assert_array_equal(dataset["row_deformation_map"].data, row_grid_gt)
+        np.testing.assert_array_equal(dataset["col_deformation_map"].data, col_grid_gt)
+        assert set(dataset.data_vars) == {"row_deformation_map", "col_deformation_map", "correlation_score", "validity"}
+
+    @pytest.mark.parametrize(
+        [
+            "data_row_grid",
+            "data_col_grid",
+            "data_score",
+            "data_validity",
+            "row",
+            "col",
+            "pixel_convention",
+            "row_map_gt",
+            "col_map_gt",
+        ],
+        [
+            pytest.param(
+                np.array(
+                    [
+                        [0.0, 0.0, 0.0, 0.0, 0.0],
+                        [1.0, 1.0, 1.0, 1.0, 1.0],
+                        [2.0, 2.0, 2.0, 2.0, 2.0],
+                        [3.0, 3.0, 3.0, 3.0, 3.0],
+                        [4.0, 4.0, 4.0, 4.0, 4.0],
+                    ]
+                ),
+                np.array(
+                    [
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                        [0.0, 1.0, 2.0, 3.0, 4.0],
+                    ]
+                ),
+                np.zeros((5, 5)),
+                np.zeros((5, 5, 8)),
+                np.arange(5),
+                np.arange(5),
+                [0, 0],
+                np.zeros((5, 5)),
+                np.zeros((5, 5)),
+                id="Pixel convention = [0,0]",
+            ),
+            pytest.param(
+                np.array([[0.5, 0.5, 1.5, 2.5], [5.5, 6.5, 2.5, 4.5], [2.5, 3.5, 4.5, 4.5]]),
+                np.array([[3.5, 2.5, 3.5, 7.5], [1.5, 2.5, 4.5, 9.5], [0.5, 2.5, 2.5, 5.5]]),
+                np.zeros((3, 4)),
+                np.zeros((3, 4, 8)),
+                np.arange(3),
+                np.arange(4),
+                [0.5, 0.5],
+                np.array([[0.0, 0.0, 1.0, 2.0], [4.0, 5.0, 1.0, 3.0], [0.0, 1.0, 2.0, 2.0]]),
+                np.array([[3.0, 1.0, 1.0, 4.0], [1.0, 1.0, 2.0, 6.0], [0.0, 1.0, 0.0, 2.0]]),
+                id="Pixel convention = [0.5,0.5]",
+            ),
+        ],
+    )
+    def test_convert_grid_to_disp(  # pylint: disable=too-many-positional-arguments, too-many-arguments
+        self,
+        data_row_grid,
+        data_col_grid,
+        data_score,
+        data_validity,
+        row,
+        col,
+        pixel_convention,
+        row_map_gt,
+        col_map_gt,
+    ):
+        """
+        Test the convert_grid_to_disp method
+        """
+
+        dataset = self.create_dataset_grid(data_row_grid, data_col_grid, data_score, data_validity, row, col)
+
+        # Check that the conversion of deformation grids into disparity maps is correct
+        dataset = common.convert_grid_to_disp(dataset, pixel_convention)
+
+        np.testing.assert_array_equal(dataset["row_map"].data, row_map_gt)
+        np.testing.assert_array_equal(dataset["col_map"].data, col_map_gt)
+        assert set(dataset.data_vars) == {"row_map", "col_map", "correlation_score", "validity"}
 
 
 def test_disparity_map_output_georef(correct_pipeline, correct_input_cfg):

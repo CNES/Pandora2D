@@ -114,6 +114,41 @@ class AllPrimitiveEncoder(json.JSONEncoder):
         return super().default(o)
 
 
+def convert_disp_to_grid(dataset: xr.Dataset, pixel_convention: list[int]) -> xr.Dataset:
+    """
+    Convet disparity maps to deformation grids
+
+    :param dataset: disparity maps dataset
+    :param pixel_convention: initial pixel convention for grid
+    """
+
+    dataset = dataset.rename_vars({"row_map": "row_deformation_map", "col_map": "col_deformation_map"})
+
+    col_coords_2d, row_coords_2d = np.meshgrid(dataset["col"].values, dataset["row"].values)
+    dataset["row_deformation_map"].data += row_coords_2d + pixel_convention[0]
+    dataset["col_deformation_map"].data += col_coords_2d + pixel_convention[1]
+
+    return dataset
+
+
+def convert_grid_to_disp(dataset: xr.Dataset, pixel_convention: list[int]) -> xr.Dataset:
+    """
+    Convet deformation grids to disparity maps
+
+    :param dataset: deformation maps dataset
+    :param pixel_convention: initial pixel convention for grid
+    """
+
+    dataset = dataset.rename_vars({"row_deformation_map": "row_map", "col_deformation_map": "col_map"})
+
+    col_coords_2d, row_coords_2d = np.meshgrid(dataset["col"].values, dataset["row"].values)
+
+    dataset["row_map"].data -= row_coords_2d + pixel_convention[0]
+    dataset["col_map"].data -= col_coords_2d + pixel_convention[1]
+
+    return dataset
+
+
 def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
     """
     Save disparity maps into directory defined by cfg's `output/path` key,
@@ -129,7 +164,10 @@ def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
 
     if dataset.attrs["transform"] is not None:
         adjust_georeferencement(dataset, cfg)
-    # create output dir
+
+    if "deformation_grid" in cfg["output"]:
+        dataset = convert_disp_to_grid(dataset, cfg["output"]["deformation_grid"]["init_pixel_conv_grid"])
+
     output = Path(cfg["output"]["path"]) / "disparity_map"
 
     if "confidence_measure" in dataset.data_vars:
