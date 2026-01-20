@@ -96,9 +96,9 @@ class Ambiguity(CostVolumeConfidence):
 
         cv_4d = cost_volumes["cost_volumes"].data
         cv_3d = cv_4d.reshape(
-            cost_volumes.dims["row"],
-            cost_volumes.dims["col"],
-            cost_volumes.dims["disp_row"] * cost_volumes.dims["disp_col"],
+            cost_volumes.sizes["row"],
+            cost_volumes.sizes["col"],
+            cost_volumes.sizes["disp_row"] * cost_volumes.sizes["disp_col"],
         )
 
         ambiguity_ = pandora_confidence.AbstractCostVolumeConfidence(
@@ -134,6 +134,7 @@ class Ambiguity(CostVolumeConfidence):
 
         # Fill confidence_measure data variables with zeros to test cost volume confidence output is correct
         if len(dataset_disp_maps.data_vars) != 0:
+            logging.info("save ambiguity in dataset")
             confidence = xr.DataArray(
                 ambiguity,
                 coords={"row": dataset_disp_maps.row, "col": dataset_disp_maps.col},
