@@ -118,6 +118,10 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
     - The step value defined in the pipeline configuration must match the one declared in the `attributes.json` file.
 
 .. warning::
+  If an output directory path is specified as input disparities and 
+  it contains disparity maps smaller than the image, these maps will serve as the ROI (see :ref:`roi`). 
+
+.. warning::
     With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`) , `nodata` only accepts `int` type.
     
     In addition, when the `nodata` value entered is `NaN` or `inf`, it is replaced by -9999  in the image datasets to avoid disrupting processing.

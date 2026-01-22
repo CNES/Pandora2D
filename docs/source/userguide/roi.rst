@@ -63,6 +63,13 @@ Row and col parameters contain dictionaries, each is different depending on the 
 .. note::
     It is necessary for the **first** coordinate to be lower than the **last** coordinate.
 
+.. warning::
+    If the input disparities are specified as paths to a pandora2d output folder containing disparity maps smaller than the image, 
+    these maps will be used as the ROI. 
+    The origin point and the step used to calculate the disparity maps are retrieved in order to correctly reconstruct the corresponding ROI. 
+
+    If, in this case, a user ROI has already been specified, it will be overwritten by the one constructed from the disparity maps.
+
 **Example**
 
 .. code:: json

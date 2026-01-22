@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Sequence, Any
+from typing import Dict, Sequence, Any, Union, Tuple
 
 import numpy as np
 import xarray as xr
@@ -161,7 +161,7 @@ def check_disparity(input_cfg: Dict) -> None:
         raise ValueError("Initial columns and row disparity values must be two strings or two integers")
 
 
-def check_disparity_grids(input_cfg: dict) -> None:
+def check_disparity_grids(input_cfg: dict) -> Tuple[Union[Extent, None], int, int]:
     """
     Check that disparity grids contains two bands and are
     the same size as the input image
@@ -181,8 +181,10 @@ def check_disparity_grids(input_cfg: dict) -> None:
     if len(shapes := {r.shape for r in disparity_readers}) > 1:  # more than one shape
         raise AttributeError("Initial disparity grids' sizes do not match", shapes)
 
+    extent = None
     if attributes := config.get("attributes"):
-        if not is_disparity_extent_within_image(disparity_readers[0], image_reader, attributes):
+        extent = compute_disparity_extent(disparity_readers[0].height, disparity_readers[0].width, attributes)
+        if not extent.is_within(image_reader.height, image_reader.width):
             message = "Initial disparity grid is not inside image boundaries."
             raise AttributeError(message)
 
@@ -196,23 +198,7 @@ def check_disparity_grids(input_cfg: dict) -> None:
 
     check_disparity_ranges_are_inside_image(image_reader.shape, row_disp_dict, col_disp_dict)
 
-
-def is_disparity_extent_within_image(
-    disparity_reader: DatasetReader, image_reader: DatasetReader, attributes: Dict[str, Any]
-) -> bool:
-    """
-    Returns True if the computed disparity extent fits within the image.
-
-    :param disparity_reader: initial disparity grid
-    :param image_reader: left image
-    :param attributes: metadata for disparity grid
-    """
-    extent = compute_disparity_extent(
-        disparity_height=disparity_reader.height,
-        disparity_width=disparity_reader.width,
-        attributes=attributes,
-    )
-    return extent.is_within(image_reader.height, image_reader.width)
+    return extent, image_reader.height, image_reader.width
 
 
 def compute_disparity_extent(
@@ -221,7 +207,7 @@ def compute_disparity_extent(
     attributes: Dict[str, Any],
 ) -> Extent:
     """
-    Computes the final extent of the disparity grid using:
+    Compute the final extent of the disparity grid using:
     - grid size (disparity_height, disparity_width),
     - step (attributes['step']['row'], attributes['step']['col']),
     - origin (attributes['origin_coordinates']['row'], ['col']).
@@ -244,6 +230,33 @@ def compute_disparity_extent(
         col_min=col_origin,
         col_max=col_origin + final_width,
     )
+
+
+def update_roi_from_disparity_grid(extent: Extent, image_height: int, image_width: int, roi: dict):
+    """
+    Construct ROI from input disparity grids when there are smaller than image,
+
+    :param extent: initial disparity grid extent
+    :param image_height: image height
+    :param image_width: image width
+    :param roi: roi to complete if using disparity grids smaller than images
+    """
+
+    # Use grids as ROI if they are smaller than the image
+    if extent.is_smaller(image_height, image_width):
+
+        roi.update(
+            {
+                "row": {
+                    "first": extent.row_min,
+                    "last": extent.row_max - 1,
+                },
+                "col": {
+                    "first": extent.col_min,
+                    "last": extent.col_max - 1,
+                },
+            }
+        )
 
 
 def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: int) -> Dict:
@@ -450,9 +463,6 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     estimation_config = user_cfg["pipeline"].get("estimation")
     cfg_input = check_input_section(user_cfg_input, estimation_config)
 
-    user_cfg_roi = get_roi_config(user_cfg)
-    cfg_roi = check_roi_section(user_cfg_roi)
-
     user_cfg_segment_mode = get_segment_mode_config(user_cfg)
     cfg_segment_mode = check_segment_mode_section(user_cfg_segment_mode)
 
@@ -461,9 +471,26 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     if attributes := cfg_input["input"].get("attributes"):
         check_step_from_attributes(attributes, cfg_pipeline["pipeline"]["matching_cost"]["step"])
 
+    # Precise type of roi_disp_grid to fix mypy error
+    roi_disp_grid: dict[str, dict] = {}
     row_init = user_cfg_input["input"].get("row_disparity", {}).get("init")
     if isinstance(row_init, str):
-        check_disparity_grids(cfg_input)
+        # Check disparity grids, whether there are given in a directory or in tif files.
+        disparity_extent, image_height, image_width = check_disparity_grids(cfg_input)
+        # If disparity_grids are given in a directory and are smaller than the input image,
+        # we use these disparity grids as ROI for the user configuration
+        if attributes:
+            update_roi_from_disparity_grid(disparity_extent, image_height, image_width, roi_disp_grid)
+
+    if roi_disp_grid:
+        if "ROI" in user_cfg:
+            logging.warning(
+                "The ROI given in the user configuration will be replaced by the ROI derived from the disparity grids."
+            )
+        user_cfg["ROI"] = roi_disp_grid
+
+    user_cfg_roi = get_roi_config(user_cfg)
+    cfg_roi = check_roi_section(user_cfg_roi)
 
     # The estimation step can be utilized independently.
     if "matching_cost" in cfg_pipeline["pipeline"]:
