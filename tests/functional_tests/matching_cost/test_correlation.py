@@ -26,6 +26,7 @@ Tests pandora2d machine execution with mutual information and zncc cpp methods
 # pylint: disable=redefined-outer-name
 import time
 
+from copy import deepcopy
 import numpy as np
 import pytest
 
@@ -101,7 +102,8 @@ class TestCorrelation:
         """
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_correlation_with_roi, pandora2d_machine)
+        user_cfg = deepcopy(cfg_for_correlation_with_roi)
+        cfg = check_conf(user_cfg, pandora2d_machine)
 
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
@@ -133,7 +135,8 @@ class TestCorrelation:
 
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_correlation_with_roi, pandora2d_machine)
+        user_cfg = deepcopy(cfg_for_correlation_with_roi)
+        cfg = check_conf(user_cfg, pandora2d_machine)
 
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
@@ -167,7 +170,8 @@ class TestCorrelation:
 
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_correlation_with_roi, pandora2d_machine)
+        user_cfg = deepcopy(cfg_for_correlation_with_roi)
+        cfg = check_conf(user_cfg, pandora2d_machine)
 
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
@@ -184,7 +188,8 @@ class TestCorrelation:
 
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_correlation_with_roi, pandora2d_machine)
+        user_cfg = deepcopy(cfg_for_correlation_with_roi)
+        cfg = check_conf(user_cfg, pandora2d_machine)
 
         cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
         roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])

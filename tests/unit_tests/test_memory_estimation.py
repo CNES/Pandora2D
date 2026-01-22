@@ -858,7 +858,10 @@ class TestSegmentImageByRows:
         )
 
         assert len(result) >= 2, "There should be at least 2 segments."
-        assert all(check_roi_section({"ROI": cast(Dict, e)}).get("ROI") for e in result)
+        for e in result:
+            roi_cfg = {"ROI": cast(Dict, e)}
+            check_roi_section(roi_cfg)
+            assert roi_cfg.get("ROI")
         assert image_can_be_fully_reconstructed(result, step)
         assert all(
             (estimate_roi_memory_consumption(roi) + dataset_disp_map_size)

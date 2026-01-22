@@ -21,6 +21,7 @@
 """
 Test create_dataset_from_inputs function.
 """
+
 from pathlib import Path
 
 # Make pylint happy with fixtures:
@@ -493,9 +494,8 @@ class TestReturnedValue:
         # We need to transform directory path to grid path:
         make_input_cfg["row_disparity"]["init"] = str(Path(make_input_cfg["row_disparity"]["init"]) / "row_map.tif")
         make_input_cfg["col_disparity"]["init"] = str(Path(make_input_cfg["col_disparity"]["init"]) / "col_map.tif")
-        make_input_cfg["attributes"] = attributes
 
-        result = img_tools.create_datasets_from_inputs(make_input_cfg)
+        result = img_tools.create_datasets_from_inputs(make_input_cfg, attributes=attributes)
 
         assert result.left.sizes["row"], result.left.sizes["col"] == left_img_shape
         assert result.right.sizes["row"], result.right.sizes["col"] == left_img_shape
