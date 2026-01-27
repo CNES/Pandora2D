@@ -77,3 +77,13 @@ def pandora_cmap():
     cmap_shift = LinearSegmentedColormap.from_list("mycmap", list(zip(nodes, colors)))
 
     return cmap_shift
+
+
+def pandora_cmap_deformation_grid():
+    """
+    Instantiate colors for deformation grids
+    """
+    colors = ["white", "lightpink", "crimson", "yellowgreen"]
+    nodes = [0.0, 0.3, 0.6, 1.0]
+    cmap = LinearSegmentedColormap.from_list("pandora_deformation_grid", list(zip(nodes, colors)))
+    return cmap
