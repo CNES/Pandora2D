@@ -170,8 +170,7 @@ def add_disparity_grid(
     :param dataset: xarray dataset
     :param col_disparity: Disparity interval for columns
     :param row_disparity: Disparity interval for rows
-    :param origin: origin of the grid
-    :param step: step that separates two points in the disparity grid
+    :param attributes: dictionnary with attribute parameters
     :param right: indicates whether the disparity grid is added to the right dataset
 
     :return: dataset : updated dataset
@@ -182,13 +181,19 @@ def add_disparity_grid(
     if attributes is None:
         origin = Origin(0, 0)
         step = Step(1, 1)
+        user_invalid_disp = np.nan
     else:
         origin = Origin(attributes["origin_coordinates"]["row"], attributes["origin_coordinates"]["col"])
         step = Step(attributes["step"]["row"], attributes["step"]["col"])
+        user_invalid_disp = attributes["invalid_disp"]
 
     # Creates min and max disparity grids
-    col_disp_min_max, col_disp_interval = get_min_max_disp_from_dicts(dataset, col_disparity, origin, step, right=right)
-    row_disp_min_max, row_disp_interval = get_min_max_disp_from_dicts(dataset, row_disparity, origin, step, right=right)
+    col_disp_min_max, col_disp_interval = get_min_max_disp_from_dicts(
+        dataset, col_disparity, origin, step, user_invalid_disp, right=right
+    )
+    row_disp_min_max, row_disp_interval = get_min_max_disp_from_dicts(
+        dataset, row_disparity, origin, step, user_invalid_disp, right=right
+    )
 
     # Add disparity grids to dataset
     for key, disparity_data, source in zip(
@@ -209,6 +214,7 @@ def get_min_max_disp_from_dicts(
     disparity: Dict,
     origin: Origin,
     step: Step,
+    user_invalid_disp: Union[int, float],
     right: bool = False,
 ) -> Tuple[NDArray, List]:
     """
@@ -218,11 +224,13 @@ def get_min_max_disp_from_dicts(
     :param disparity: input disparity
     :param origin: origin of the grid
     :param step: step that separates two points in the disparity grid
+    :param user_invalid_disp: user invalid disparity value
     :param right: indicates whether the disparity grid is added to the right dataset
     :return: 3D numpy array containing min/max disparity grids and list with disparity source
     """
+
     disparity_dtype = np.float32
-    disp_min_max = np.empty((2, dataset.sizes["row"], dataset.sizes["col"]), dtype=disparity_dtype)
+    disp_min_max = np.full((2, dataset.sizes["row"], dataset.sizes["col"]), user_invalid_disp, dtype=disparity_dtype)
 
     # Creates min and max disparity grids if initial disparity is constant (int)
     if isinstance(disparity["init"], int):
@@ -240,21 +248,33 @@ def get_min_max_disp_from_dicts(
         rows = dataset.row.data
         cols = dataset.col.data
 
+        row_offset = origin.row
+        col_offset = origin.col
+
         window = Window(cols[0], rows[0], cols.size, rows.size)
 
         # Get disparity data
-        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=np.float32, window=window)
+        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=disparity_dtype, window=window)
+        # When using disparity maps from a previous execution as ROI,
+        # the initial disparity grids can be smaller than the image window.
+        # In this case, we use the entire initial disparity grid and ROI margins are included in disp_min_max.
+        if disp_data.shape < dataset["im"].data.shape:
+            disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=disparity_dtype)
+            # If disp_min_max corresponds to a ROI, we need to convert origin coordinates as index
+            row_offset -= rows[0]
+            col_offset -= cols[0]
 
-        last_row_index = origin.row + disp_data.shape[0] * step.row
-        last_col_index = origin.col + disp_data.shape[1] * step.col
-        row_slice = np.s_[origin.row : last_row_index : step.row]
-        col_slice = np.s_[origin.col : last_col_index : step.col]
+        last_row_index = row_offset + disp_data.shape[0] * step.row
+        last_col_index = col_offset + disp_data.shape[1] * step.col
+        row_slice = np.s_[row_offset : last_row_index : step.row]
+        col_slice = np.s_[col_offset : last_col_index : step.col]
 
         # Use disparity data to creates min/max grids
         disp_min_max[0, row_slice, col_slice] = disp_data * pow(-1, right) - disparity["range"]
         disp_min_max[1, row_slice, col_slice] = disp_data * pow(-1, right) + disparity["range"]
 
-        disp_interval = [np.min(disp_min_max[0, ::]), np.max(disp_min_max[1, ::])]
+        # Invalid disparities will be filtered in a future ticket.
+        disp_interval = [np.nanmin(disp_min_max[0, ::]), np.nanmax(disp_min_max[1, ::])]
 
     return disp_min_max, disp_interval
 
