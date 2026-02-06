@@ -70,7 +70,7 @@ def create_datasets_from_inputs(
 
             with margins : left, up, right, down
     :param estimation_cfg: dictionary containing estimation configuration
-    :param attributes: dictionnary with attribute parameters
+    :param attributes: dictionary with attribute parameters
     :return: Datasets
             NamedTuple with two attributes `left` and `right` each containing a
             xarray.DataSet containing the variables :
@@ -170,7 +170,7 @@ def add_disparity_grid(
     :param dataset: xarray dataset
     :param col_disparity: Disparity interval for columns
     :param row_disparity: Disparity interval for rows
-    :param attributes: dictionnary with attribute parameters
+    :param attributes: dictionary with attribute parameters
     :param right: indicates whether the disparity grid is added to the right dataset
 
     :return: dataset : updated dataset

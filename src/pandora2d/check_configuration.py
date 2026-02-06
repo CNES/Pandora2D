@@ -438,7 +438,7 @@ def check_step_from_attributes(attributes: dict, expected_step_value: list[int])
     """
     Validate that the initial disparity attributes match the pipeline configuration.
 
-    :param attributes: dictionnary grid attributes
+    :param attributes: dictionary grid attributes
     :param expected_step_value: expected step values.
     :raises AttributeError: If the steps do not match.
     """
@@ -457,7 +457,7 @@ def check_disparity_grids_from_directory_within_image(
     """
     Check that disparity grids lie within image boundaries.
 
-    :param attributes: dictionnary grid attributes
+    :param attributes: dictionary grid attributes
     :param disparity_row_reader: row disparity raster reader
     :param image_metadata: left image metadata
     :return: ROI dictionary if grids define a sub-area, otherwise None
