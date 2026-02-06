@@ -496,7 +496,23 @@ class TestReturnedValue:
         make_input_cfg["row_disparity"]["init"] = str(Path(make_input_cfg["row_disparity"]["init"]) / "row_map.tif")
         make_input_cfg["col_disparity"]["init"] = str(Path(make_input_cfg["col_disparity"]["init"]) / "col_map.tif")
 
-        result = img_tools.create_datasets_from_inputs(make_input_cfg, attributes=attributes)
+        # Margins value is arbitrary
+        roi = {
+            "col": {
+                "first": origin_coordinates["col"],
+                "last": origin_coordinates["col"] + correct_grid_shape[1] * step[1],
+            },
+            "row": {
+                "first": origin_coordinates["row"],
+                "last": origin_coordinates["row"] + correct_grid_shape[0] * step[0],
+            },
+            "margins": (1, 1, 1, 1),
+        }
+
+        result = img_tools.create_datasets_from_inputs(make_input_cfg, roi=roi, attributes=attributes)
+
+        row_offset = origin_coordinates["row"] - result.left.row.data[0]
+        col_offset = origin_coordinates["col"] - result.left.col.data[0]
 
         assert result.left.sizes["row"], result.left.sizes["col"] == left_img_shape
         assert result.right.sizes["row"], result.right.sizes["col"] == left_img_shape
@@ -504,8 +520,8 @@ class TestReturnedValue:
             result.left["row_disparity"]
             .sel(band_disp="min")
             .data[
-                origin_coordinates["row"] : origin_coordinates["row"] + correct_grid_shape[0] * step[0] : step[0],
-                origin_coordinates["col"] : origin_coordinates["col"] + correct_grid_shape[1] * step[1] : step[1],
+                row_offset : row_offset + correct_grid_shape[0] * step[0] : step[0],
+                col_offset : col_offset + correct_grid_shape[1] * step[1] : step[1],
             ]
             + disparity_range,
             correct_grid_data,
@@ -514,8 +530,8 @@ class TestReturnedValue:
             result.left["row_disparity"]
             .sel(band_disp="max")
             .data[
-                origin_coordinates["row"] : origin_coordinates["row"] + correct_grid_shape[0] * step[0] : step[0],
-                origin_coordinates["col"] : origin_coordinates["col"] + correct_grid_shape[1] * step[1] : step[1],
+                row_offset : row_offset + correct_grid_shape[0] * step[0] : step[0],
+                col_offset : col_offset + correct_grid_shape[1] * step[1] : step[1],
             ]
             - disparity_range,
             correct_grid_data,
@@ -524,10 +540,8 @@ class TestReturnedValue:
             result.left["col_disparity"]
             .sel(band_disp="min")
             .data[
-                origin_coordinates["row"] : origin_coordinates["row"]
-                + second_correct_grid_shape[0] * step[0] : step[0],
-                origin_coordinates["col"] : origin_coordinates["col"]
-                + second_correct_grid_shape[1] * step[1] : step[1],
+                row_offset : row_offset + second_correct_grid_shape[0] * step[0] : step[0],
+                col_offset : col_offset + second_correct_grid_shape[1] * step[1] : step[1],
             ]
             + disparity_range,
             second_correct_grid_data,
@@ -536,10 +550,8 @@ class TestReturnedValue:
             result.left["col_disparity"]
             .sel(band_disp="max")
             .data[
-                origin_coordinates["row"] : origin_coordinates["row"]
-                + second_correct_grid_shape[0] * step[0] : step[0],
-                origin_coordinates["col"] : origin_coordinates["col"]
-                + second_correct_grid_shape[1] * step[1] : step[1],
+                row_offset : row_offset + second_correct_grid_shape[0] * step[0] : step[0],
+                col_offset : col_offset + second_correct_grid_shape[1] * step[1] : step[1],
             ]
             - disparity_range,
             second_correct_grid_data,
