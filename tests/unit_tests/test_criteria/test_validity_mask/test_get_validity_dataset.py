@@ -87,8 +87,8 @@ class TestGetValidityDataset:
         criteria_dataarray.loc[{"row": 2, "col": 1}] = np.uint8(other_criteria_var)
         result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
-        assert result["validity"].sel(criteria="validity_mask", row=2, col=1) == 2
-        assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
+        assert result["validity"].sel(criteria="partial_validity_mask", row=2, col=1) == 1
+        assert np.count_nonzero(result["validity"].sel(criteria="partial_validity_mask") == 1) == 1
         assert (result["validity"].sel(criteria=criteria_var.name) == 0).all()
 
     def test_only_one_disparity(self, criteria_dataarray, criteria_var, row_disp, col_disp):
@@ -138,8 +138,8 @@ class TestGetValidityDataset:
 
         result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
-        assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 2
-        assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
+        assert result["validity"].sel(criteria="partial_validity_mask", row=1, col=0) == 1
+        assert np.count_nonzero(result["validity"].sel(criteria="partial_validity_mask") == 1) == 1
         assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1
         assert result["validity"].sel(criteria=other_criteria_var.name, row=1, col=0) == 1
 
@@ -149,6 +149,6 @@ class TestGetValidityDataset:
 
         result = criteria.get_validity_dataset(criteria_dataarray, row_disp, col_disp)
 
-        assert result["validity"].sel(criteria="validity_mask", row=1, col=0) == 2
-        assert np.count_nonzero(result["validity"].sel(criteria="validity_mask") == 2) == 1
+        assert result["validity"].sel(criteria="partial_validity_mask", row=1, col=0) == 1
+        assert np.count_nonzero(result["validity"].sel(criteria="partial_validity_mask") == 1) == 1
         assert result["validity"].sel(criteria=criteria_var.name, row=1, col=0) == 1

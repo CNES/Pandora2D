@@ -212,7 +212,7 @@ class TestSaveDisparityMaps:
 
         dims = ("row", "col")
 
-        criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+        criteria_values = ["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:]
         validity = np.full((2, 2, len(criteria_values)), 1)
 
         dataset = xr.Dataset(
@@ -275,7 +275,10 @@ class TestSaveDisparityMaps:
 
         data = self._test_saved_attributes_and_properties(attributes, file_name, save_disparity_maps)
         assert data.nodata is None
-        assert list(data.descriptions) == ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+        assert (
+            list(data.descriptions)
+            == ["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:]
+        )
 
     def _test_saved_attributes_and_properties(
         self, attributes, file_name: str, save_disparity_maps: Path
@@ -361,7 +364,7 @@ def create_dataset_coords(data_row, data_col, data_score, data_validity, row, co
     as data variables and row and col as coordinates
     """
 
-    criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+    criteria_values = ["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:]
     coords = {"row": row, "col": col}
     dims = ("row", "col")
 
@@ -415,7 +418,7 @@ class TestDatasetDispMaps:
             "col": col,
         }
 
-        criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+        criteria_values = ["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:]
         validity = np.full((len(row), len(col), len(criteria_values)), 1)
 
         dataset_validity = xr.Dataset(
@@ -705,7 +708,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
         as data variables and row and col as coordinates
         """
 
-        criteria_values = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+        criteria_values = ["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:]
         coords = {"row": row, "col": col}
         dims = ("row", "col")
 
@@ -739,7 +742,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.zeros((5, 5)),
                 np.zeros((5, 5)),
                 np.zeros((5, 5)),
-                np.zeros((5, 5, 8)),
+                np.zeros((5, 5, 9)),
                 np.arange(5),
                 np.arange(5),
                 [0, 0],
@@ -767,7 +770,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.0, 0.0, 1.0, 2.0], [4.0, 5.0, 1.0, 3.0], [0.0, 1.0, 2.0, 2.0]]),
                 np.array([[3.0, 1.0, 1.0, 4.0], [1.0, 1.0, 2.0, 6.0], [0.0, 1.0, 0.0, 2.0]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 8)),
+                np.zeros((3, 4, 9)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
@@ -826,7 +829,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                     ]
                 ),
                 np.zeros((5, 5)),
-                np.zeros((5, 5, 8)),
+                np.zeros((5, 5, 9)),
                 np.arange(5),
                 np.arange(5),
                 [0, 0],
@@ -838,7 +841,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.5, 0.5, 1.5, 2.5], [5.5, 6.5, 2.5, 4.5], [2.5, 3.5, 4.5, 4.5]]),
                 np.array([[3.5, 2.5, 3.5, 7.5], [1.5, 2.5, 4.5, 9.5], [0.5, 2.5, 2.5, 5.5]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 8)),
+                np.zeros((3, 4, 9)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],

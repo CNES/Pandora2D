@@ -594,7 +594,11 @@ def test_validity_mask(make_cost_volumes, expected):
         disp_col=slice(cost_volumes.attrs["col_disparity_source"][0], cost_volumes.attrs["col_disparity_source"][1]),
     )
 
-    validity_mask_band = criteria.get_validity_mask_band(subset)
+    # Sum validity_mask and partial_validity_mask, if value = 2, the pixel is invalid,
+    #   value = 1 is a partial valid pixel and value = 0 is a valid pixel.
+    validity_mask_band = criteria.get_validity_mask_band(subset, mask_type="strict") + criteria.get_validity_mask_band(
+        subset, mask_type="partial"
+    )
 
     np.testing.assert_array_equal(validity_mask_band, expected)
 
@@ -765,7 +769,11 @@ def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, re
         disp_col=slice(col_disparity[0], col_disparity[1]),
     )
 
-    validity_mask_band_without_margins = criteria.get_validity_mask_band(subset_without_margins)
+    # Sum validity_mask and partial_validity_mask, if value = 2, the pixel is invalid,
+    #   value = 1 is a partial valid pixel and value = 0 is a valid pixel.
+    validity_mask_band_without_margins = criteria.get_validity_mask_band(
+        subset_without_margins, mask_type="strict"
+    ) + criteria.get_validity_mask_band(subset_without_margins, mask_type="partial")
 
     cost_volumes_with_margins = make_cost_volumes(refinement_margins)
     if reset_first_point:
@@ -779,7 +787,11 @@ def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, re
         disp_row=slice(row_disparity[0], row_disparity[1]),
         disp_col=slice(col_disparity[0], col_disparity[1]),
     )
-    validity_mask_band_with_margins = criteria.get_validity_mask_band(subset_with_margins)
+    # Sum validity_mask and partial_validity_mask, if value = 2, the pixel is invalid,
+    #   value = 1 is a partial valid pixel and value = 0 is a valid pixel.
+    validity_mask_band_with_margins = criteria.get_validity_mask_band(
+        subset_with_margins, mask_type="strict"
+    ) + criteria.get_validity_mask_band(subset_with_margins, mask_type="partial")
 
     np.testing.assert_array_equal(validity_mask_band_without_margins, expected)
     np.testing.assert_array_equal(validity_mask_band_with_margins, expected)

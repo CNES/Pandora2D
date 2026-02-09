@@ -239,7 +239,6 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
 
         if name == "validity":
             band_descriptions = list(dataset.criteria.values)
-
             with rasterio.open(
                 (output / str(name)).with_suffix(".tif"),
                 mode="w+",
