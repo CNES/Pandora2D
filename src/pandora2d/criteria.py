@@ -499,7 +499,9 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
 
     # Get criteria names to stock them in the 'criteria' coordinate in the allocated xr.Dataset
     # We use every Criteria except the first one which corresponds to valid points
-    criteria_names = ["validity_mask"] + list(Criteria.__members__.keys())[1:]
+    criteria_names = ["validity_mask"] \
+        + ["partial_validity_mask"] \
+        + list(Criteria.__members__.keys())[1:]
 
     coords = {
         "row": criteria_dataarray.coords.get("row"),
@@ -510,7 +512,7 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     dims = ("row", "col", "criteria")
     shape = (len(coords["row"]), len(coords["col"]), len(coords["criteria"]))
 
-    # Initialize validity dataset data with zeros
+    # Initialize validity / partial_validity dataset data with zeros
     empty_data = np.full(shape, 0, dtype=np.uint8)
 
     dataset = xr.Dataset({"validity": xr.DataArray(empty_data, dims=dims, coords=coords)})
@@ -536,7 +538,9 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray, row_disparity: list, 
         disp_col=slice(col_disparity[0], col_disparity[1]),  # Interval col_disparity for disp_col
     )
 
-    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(subset)
+    # Fill overall mask (partial or complete)
+    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(subset, mask_type = "strict")
+    validity_dataset["validity"].loc[{"criteria": "partial_validity_mask"}] = get_validity_mask_band(subset, mask_type = "partial")
 
     # invalidating criteria do not depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities
@@ -557,26 +561,31 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray, row_disparity: list, 
     return validity_dataset
 
 
-def get_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
+def get_validity_mask_band(criteria_dataarray: xr.DataArray, mask_type: str) -> NDArray:
     """
     This method fills the validity mask band according to the criteria dataarray given as a parameter.
 
     This validity mask shows which points of the image are valid and which are not:
-        - If a point = 2 in the validity mask band --> The point is invalid, no disparity range can be calculated
-        - If a point = 1 in the validity mask band --> The point is partially valid, not all disparity range requested
+        - If mask_type = "strict" --> A point marked 1 is invalid, wether not calculated (masked or out of range)
+          or not all disparity range resquested by the user have been computed
+        - If mask_type != "strict" --> A point marked 1 is partially valid, not all disparity range requested
           by the user have been computed
         - If a point = 0 in the validity mask band --> The point is valid, all the disparity range requested
-          by the user have been computed
+          by the user have been computed, both with "strict" or "partial" option
 
     :param criteria_dataarray: 4D DataArray containing the criteria
+    :param mask_type: String containing the type of mask
     :return: validity mask band
     """
 
     disparity_axis_num = criteria_dataarray.get_axis_num(("disp_row", "disp_col"))
 
-    # Fill partially invalids (at least one criteria in disparities):
-    validity_mask = np.logical_or.reduce(criteria_dataarray.data, axis=disparity_axis_num).astype(np.uint8)
-    # Fill invalids (all disparities has a criteria):
-    invalid_mask = np.logical_and.reduce(criteria_dataarray.data, axis=disparity_axis_num)
-    validity_mask[invalid_mask] = 2
+    if mask_type == "strict":
+        # Fill partially invalids (at least one criteria in disparities):
+        validity_mask = np.logical_or.reduce(criteria_dataarray.data, axis=disparity_axis_num).astype(np.uint8)
+
+    else:
+        # Fill invalids (all disparities has a criteria):
+        validity_mask = np.logical_and.reduce(criteria_dataarray.data, axis=disparity_axis_num).astype(np.uint8)
+    
     return validity_mask

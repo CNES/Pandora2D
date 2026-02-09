@@ -165,7 +165,7 @@ disparity_map repository
 - *correlation_score.tif* : correlation score map.
 - *validity.tif* : validity map containing several bands:
 
-    - a global band 'validity_mask' indicating whether a point is valid (value 0), partially valid (value 1) or invalid (value 2).
+    - a global validity map 'validity_mask', or 'partial_validity_mask', indicating whether each point is valid (value 0), partially valid (value 1 on 'validity_mask', value otherwise) or invalid (value 1).
     - a band for each criteria indicating whether the corresponding criteria is raised at the point or not.
 
 .. warning::
