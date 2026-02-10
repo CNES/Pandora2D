@@ -309,8 +309,9 @@ def estimate_dataset_disp_map_size(height: int, width: int, step: list, dtype: D
     """
     image_size = math.ceil(height / step[0]) * math.ceil(width / step[1])
     number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
-    # The number of criteria is incremented by one in order to take the validity_mask band into account:
-    number_of_validity_bands = len(Criteria.__members__) + 1
+    # The number of criteria is incremented by two
+    #  in order to take the validity_mask/partial_validity_mask bands into account:
+    number_of_validity_bands = len(Criteria.__members__) + 2
     data_vars_size = (
         number_of_dtyped_datavars * np.dtype(dtype).itemsize
         + number_of_validity_bands * DATA_VARS_TYPE_SIZE["criteria"]

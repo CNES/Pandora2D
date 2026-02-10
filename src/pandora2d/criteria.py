@@ -476,6 +476,7 @@ def apply_peak_on_edge(
     # Get P2D_PEAK_ON_EDGE and validity_mask bands
     peak_on_edge_band = validity_map.loc[{"criteria": Criteria.P2D_PEAK_ON_EDGE.name}].data
     validity_mask_band = validity_map.loc[{"criteria": "validity_mask"}].data
+    print(validity_mask_band)
 
     # Condition on peak on edges
     edge_condition = np.logical_or.reduce(
@@ -520,7 +521,7 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
 
 def get_validity_dataset(criteria_dataarray: xr.DataArray, row_disparity: list, col_disparity: list) -> xr.Dataset:
     """
-    Fill the validity dataset which contains an additional 'criteria' dimension.
+    Fill the validity dataset which contains two additional 'criteria' dimensions.
 
     :param criteria_dataarray: criteria_dataarray used to create validity mask
     :param row_disparity: user row disparity
