@@ -237,40 +237,26 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
 
         nodata = dataset.attrs["invalid_disp"] if name in ("row_map", "col_map", "correlation_score") else None
 
+        output_args = {
+            "driver": "GTiff",
+            "dtype": data.dtype,
+            "height": col,
+            "width": row,
+            "count": count,
+            "crs": dataset.attrs["crs"],
+            "transform": dataset.attrs["transform"],
+            "nodata": nodata,
+        }
+
         if name == "validity":
+            output_args["nbits"] = 1  # <= GDAL option to save as true binary for less disk usage
             band_descriptions = list(dataset.criteria.values)
-            with rasterio.open(
-                (output / str(name)).with_suffix(".tif"),
-                mode="w+",
-                nbits=1,
-                driver="GTiff",
-                width=col,
-                height=row,
-                count=count,
-                dtype=data.dtype,
-                crs=dataset.attrs["crs"],
-                transform=dataset.attrs["transform"],
-                nodata=nodata,
-            ) as source_ds:
-                source_ds.write(data)
-                source_ds.descriptions = band_descriptions
         else:
             band_descriptions = [name]
 
-            with rasterio.open(
-                (output / str(name)).with_suffix(".tif"),
-                mode="w+",
-                driver="GTiff",
-                width=col,
-                height=row,
-                count=count,
-                dtype=data.dtype,
-                crs=dataset.attrs["crs"],
-                transform=dataset.attrs["transform"],
-                nodata=nodata,
-            ) as source_ds:
-                source_ds.write(data)
-                source_ds.descriptions = band_descriptions
+        with rasterio.open((output / str(name)).with_suffix(".tif"), mode="w+", **output_args) as source_ds:
+            source_ds.write(data)
+            source_ds.descriptions = band_descriptions
 
     save_attributes(dataset, output)
 

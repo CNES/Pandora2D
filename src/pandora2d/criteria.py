@@ -499,9 +499,7 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
 
     # Get criteria names to stock them in the 'criteria' coordinate in the allocated xr.Dataset
     # We use every Criteria except the first one which corresponds to valid points
-    criteria_names = ["validity_mask"] \
-        + ["partial_validity_mask"] \
-        + list(Criteria.__members__.keys())[1:]
+    criteria_names = ["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:]
 
     coords = {
         "row": criteria_dataarray.coords.get("row"),
@@ -539,8 +537,10 @@ def get_validity_dataset(criteria_dataarray: xr.DataArray, row_disparity: list, 
     )
 
     # Fill overall mask (partial or complete)
-    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(subset, mask_type = "strict")
-    validity_dataset["validity"].loc[{"criteria": "partial_validity_mask"}] = get_validity_mask_band(subset, mask_type = "partial")
+    validity_dataset["validity"].loc[{"criteria": "validity_mask"}] = get_validity_mask_band(subset, mask_type="strict")
+    validity_dataset["validity"].loc[{"criteria": "partial_validity_mask"}] = get_validity_mask_band(
+        subset, mask_type="partial"
+    )
 
     # invalidating criteria do not depend on disparities,
     # so we can use criteria_datarray at the first couple of disparities
@@ -587,5 +587,5 @@ def get_validity_mask_band(criteria_dataarray: xr.DataArray, mask_type: str) -> 
     else:
         # Fill invalids (all disparities has a criteria):
         validity_mask = np.logical_and.reduce(criteria_dataarray.data, axis=disparity_axis_num).astype(np.uint8)
-    
+
     return validity_mask
