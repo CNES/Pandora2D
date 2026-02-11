@@ -250,6 +250,30 @@ def correct_input_with_left_right_mask(left_img_path, right_img_path, mask_path)
     }
 
 
+@pytest.fixture
+def false_input_path_left_mask(left_img_path, right_img_path):
+    return {
+        "input": {
+            "left": {"img": left_img_path, "mask": "./tests/data/lt.png"},
+            "right": {"img": right_img_path},
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
+        }
+    }
+
+
+@pytest.fixture
+def false_input_path_right_mask(left_img_path, right_img_path):
+    return {
+        "input": {
+            "left": {"img": left_img_path},
+            "right": {"img": right_img_path, "mask": "./tests/data/lt.png"},
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
+        }
+    }
+
+
 @pytest.fixture()
 def random_seed():
     """

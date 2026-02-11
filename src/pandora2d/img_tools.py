@@ -45,7 +45,7 @@ from rasterio.io import DatasetReader
 from rasterio.windows import Window
 from scipy.ndimage import shift, zoom
 
-from .types import Step, Origin
+from pandora2d.types import Step, Origin
 
 
 class Datasets(NamedTuple):
@@ -55,7 +55,9 @@ class Datasets(NamedTuple):
     right: xr.Dataset
 
 
-def create_datasets_from_inputs(input_config: Dict, roi: Dict = None, estimation_cfg: Dict = None) -> Datasets:
+def create_datasets_from_inputs(
+    input_config: Dict, roi: Dict = None, estimation_cfg: Dict = None, attributes: Dict = None
+) -> Datasets:
     """
     Read image and return the corresponding xarray.DataSet
 
@@ -68,6 +70,7 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None, estimation
 
             with margins : left, up, right, down
     :param estimation_cfg: dictionary containing estimation configuration
+    :param attributes: dictionnary with attribute parameters
     :return: Datasets
             NamedTuple with two attributes `left` and `right` each containing a
             xarray.DataSet containing the variables :
@@ -83,22 +86,15 @@ def create_datasets_from_inputs(input_config: Dict, roi: Dict = None, estimation
         input_config["col_disparity"] = {"init": -9999, "range": 0}
         input_config["row_disparity"] = {"init": -9999, "range": 0}
 
-    attributes = input_config.get("attributes", {})
-
     return Datasets(
         pandora_img_tools.create_dataset_from_inputs(input_config["left"], roi).pipe(
-            add_disparity_grid,
-            input_config["col_disparity"],
-            input_config["row_disparity"],
-            Origin(**attributes.get("origin_coordinates", {})),
-            Step(**attributes.get("step", {})),
+            add_disparity_grid, input_config["col_disparity"], input_config["row_disparity"], attributes
         ),
         pandora_img_tools.create_dataset_from_inputs(input_config["right"], roi).pipe(
             add_disparity_grid,
             input_config["col_disparity"],
             input_config["row_disparity"],
-            Origin(**attributes.get("origin_coordinates", {})),
-            Step(**attributes.get("step", {})),
+            attributes,
             True,
         ),
     )
@@ -165,8 +161,7 @@ def add_disparity_grid(
     dataset: xr.Dataset,
     col_disparity: Dict,
     row_disparity: Dict,
-    origin: Union[Origin, None] = None,
-    step: Union[Step, None] = None,
+    attributes: Dict = None,
     right: bool = False,
 ) -> xr.Dataset:
     """
@@ -182,8 +177,14 @@ def add_disparity_grid(
     :return: dataset : updated dataset
     """
 
-    origin = Origin(0, 0) if origin is None else origin
-    step = Step(1, 1) if step is None else step
+    # Origin corresponds to the first point of the dataset when the disparity is not given as an output directory
+    # Otherwise, it corresponds to the origin of the ROI saved in the attributes
+    if attributes is None:
+        origin = Origin(0, 0)
+        step = Step(1, 1)
+    else:
+        origin = Origin(attributes["origin_coordinates"]["row"], attributes["origin_coordinates"]["col"])
+        step = Step(attributes["step"]["row"], attributes["step"]["col"])
 
     # Creates min and max disparity grids
     col_disp_min_max, col_disp_interval = get_min_max_disp_from_dicts(dataset, col_disparity, origin, step, right=right)
@@ -240,8 +241,10 @@ def get_min_max_disp_from_dicts(
         cols = dataset.col.data
 
         window = Window(cols[0], rows[0], cols.size, rows.size)
+
         # Get disparity data
         disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=np.float32, window=window)
+
         last_row_index = origin.row + disp_data.shape[0] * step.row
         last_col_index = origin.col + disp_data.shape[1] * step.col
         row_slice = np.s_[origin.row : last_row_index : step.row]
@@ -359,7 +362,7 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
     col = dataset.col.data
 
     # Initialized indexes to get right rows and columns
-    (left, up, right, down) = (0, 0, len(col), len(row))
+    left, up, right, down = (0, 0, len(col), len(row))
 
     # Example with col = [8,10,12,14,16],  step_col=2, row = [0,4,8,12], step_row=4
     # ROI={

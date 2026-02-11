@@ -20,6 +20,7 @@
 """
 This module contains functions to run Pandora pipeline.
 """
+
 import logging
 from importlib.metadata import version
 from os import PathLike
@@ -123,7 +124,10 @@ def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]) -> 
 
     # read images
     image_datasets = create_datasets_from_inputs(
-        input_config=cfg["input"], roi=roi, estimation_cfg=cfg["pipeline"].get("estimation")
+        input_config=cfg["input"],
+        roi=roi,
+        estimation_cfg=cfg["pipeline"].get("estimation"),
+        attributes=cfg.get("attributes"),
     )
 
     # check datasets: shape, format and content
