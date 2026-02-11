@@ -473,10 +473,9 @@ def apply_peak_on_edge(
     # Get disparity grids according to cost volumes coordinates
     d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid = get_disparity_grids(left_image, cv_coords)
 
-    # Get P2D_PEAK_ON_EDGE and validity_mask bands
+    # Get P2D_PEAK_ON_EDGE and partial_validity_mask bands
     peak_on_edge_band = validity_map.loc[{"criteria": Criteria.P2D_PEAK_ON_EDGE.name}].data
     validity_mask_band = validity_map.loc[{"criteria": "validity_mask"}].data
-    print(validity_mask_band)
 
     # Condition on peak on edges
     edge_condition = np.logical_or.reduce(

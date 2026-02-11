@@ -433,7 +433,8 @@ class TestRefinementMethod:
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 1, "col": 0}] = np.nan
         disp_map["col_map"][{"row": 1, "col": 0}] = np.nan
-        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 2
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 1
+        disp_map["validity"].loc[{"criteria": "partial_validity_mask"}][{"row": 1, "col": 0}] = 1
 
         copy_disp_map = copy.deepcopy(disp_map)
 
@@ -470,9 +471,11 @@ class TestRefinementMethod:
         dichotomy_instance = dichotomy_class(config_dichotomy)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 1, "col": 0}] = invalid_disparity
-        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 2
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 1
+        disp_map["validity"].loc[{"criteria": "partial_validity_mask"}][{"row": 1, "col": 0}] = 1
         disp_map["col_map"][{"row": 0, "col": 1}] = invalid_disparity
-        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 0, "col": 1}] = 2
+        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 0, "col": 1}] = 1
+        disp_map["validity"].loc[{"criteria": "partial_validity_mask"}][{"row": 0, "col": 1}] = 1
 
         copy_disp_map = copy.deepcopy(disp_map)
 
@@ -1124,8 +1127,8 @@ class TestExtremaOnEdges:
     ):
         """Fake disparity maps containing extrema on edges of disparity range."""
 
-        # Build empty criteria with only `validity_mask` and P2D_PEAK_ON_EDGE
-        criteria_data = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
+        # Build empty criteria with only `validity_mask`, `partial_validity_mask` and P2D_PEAK_ON_EDGE
+        criteria_data = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 3), 0, dtype=np.uint8)
 
         row = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 4.0)
         row[:, 2] = min_disparity_row
@@ -1161,7 +1164,7 @@ class TestExtremaOnEdges:
             coords={
                 "row": row_coordinates_with_step,
                 "col": col_coordinates_with_step,
-                "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
+                "criteria": ["validity_mask", "partial_validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
             },
             attrs={"invalid_disp": invalid_disparity},
         )
@@ -1290,21 +1293,21 @@ class TestInvalidDisparity:
     ):
         """Fake disparity maps containing extrema on edges of disparity range."""
 
-        row_criteria = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
+        row_criteria = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 3), 0, dtype=np.uint8)
 
         row = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 4.0)
         row[:, 2] = invalid_disparity
-        row_criteria[:, 2, 0] = 2  # Invalid
+        row_criteria[:, 2, 0] = 1  # Invalid
         row[1, 1] = invalid_disparity
-        row_criteria[1, 1, 0] = 2  # Invalid
+        row_criteria[1, 1, 0] = 1  # Invalid
 
-        col_criteria = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
+        col_criteria = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 3), 0, dtype=np.uint8)
 
         col = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 0.0)
         col[0, 0] = invalid_disparity
-        col_criteria[0, 0, 0] = 2  # Invalid
+        col_criteria[0, 0, 0] = 1  # Invalid
         col[1, -2:] = invalid_disparity
-        col_criteria[1, -2:, 0] = 2  # Invalid
+        col_criteria[1, -2:, 0] = 1  # Invalid
 
         # Update criteria_dataarray
         # This test is not intended to test the criteria_dataarray.
@@ -1325,7 +1328,7 @@ class TestInvalidDisparity:
             coords={
                 "row": row_coordinates_with_step,
                 "col": col_coordinates_with_step,
-                "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
+                "criteria": ["validity_mask", "partial_validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
             },
             attrs={"invalid_disp": invalid_disparity},
         )
@@ -1456,8 +1459,8 @@ class TestInvalidElementOnFilterArea:
     ):
         """Fake disparity maps containing extrema on edges of disparity range."""
 
-        # Build empty criteria with only `validity_mask` and P2D_PEAK_ON_EDGE
-        criteria_data = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 2), 0, dtype=np.uint8)
+        # Build empty criteria with only `validity_mask`, `partial_validity_mask` and P2D_PEAK_ON_EDGE
+        criteria_data = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 3), 0, dtype=np.uint8)
         criteria_data[0, 2, 0] = 1
 
         row = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 4.0)
@@ -1485,7 +1488,7 @@ class TestInvalidElementOnFilterArea:
             coords={
                 "row": row_coordinates_with_step,
                 "col": col_coordinates_with_step,
-                "criteria": ["validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
+                "criteria": ["validity_mask", "partial_validity_mask", Criteria.P2D_PEAK_ON_EDGE.name],
             },
             attrs={"invalid_disp": invalid_disparity},
         )
