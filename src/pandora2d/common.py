@@ -240,8 +240,8 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
         output_args = {
             "driver": "GTiff",
             "dtype": data.dtype,
-            "height": col,
-            "width": row,
+            "width": col,
+            "height": row,
             "count": count,
             "crs": dataset.attrs["crs"],
             "transform": dataset.attrs["transform"],
