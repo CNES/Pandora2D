@@ -16,6 +16,7 @@
 """
 Module for common base of all MatchingCost methods.
 """
+
 import copy
 from abc import ABC, abstractmethod
 from typing import Dict, List, Mapping, Tuple, Union, cast

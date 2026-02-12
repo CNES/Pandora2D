@@ -19,6 +19,7 @@
 """
 Test that criteria datarray and validity mask are correct on different pandora2d pipeline
 """
+
 # pylint: disable=too-many-lines
 # pylint: disable=redefined-outer-name
 

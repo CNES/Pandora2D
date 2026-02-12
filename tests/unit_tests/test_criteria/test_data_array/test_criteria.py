@@ -19,6 +19,7 @@
 """
 Test methods from criteria.py file
 """
+
 # pylint: disable=redefined-outer-name
 
 import numpy as np

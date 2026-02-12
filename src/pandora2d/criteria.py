@@ -19,6 +19,7 @@
 """
 This module contains functions associated to the validity mask and criteria dataarray created in the cost volume step.
 """
+
 import itertools
 from enum import IntFlag
 from functools import partial

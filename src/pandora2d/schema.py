@@ -19,6 +19,7 @@
 """
 This module contains parts similar schemas to the configuration file validation.
 """
+
 from json_checker import And
 
 STEP_SCHEMA = And(list, lambda x: len(x) == 2, lambda y: all(val >= 1 for val in y))

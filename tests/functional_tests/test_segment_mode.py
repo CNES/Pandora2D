@@ -18,7 +18,6 @@
 #
 """Segment mode tests."""
 
-
 import json
 from copy import deepcopy
 
