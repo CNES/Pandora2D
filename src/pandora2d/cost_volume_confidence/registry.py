@@ -23,4 +23,4 @@ from pandora2d.common import Registry
 
 from .cost_volume_confidence import CostVolumeConfidence
 
-CostVolumeConfidenceRegistry = Registry[CostVolumeConfidence]()
+CostVolumeConfidenceRegistry = Registry[CostVolumeConfidence]()  # pylint:disable=invalid-name # NOSONAR

@@ -22,4 +22,6 @@ from pandora2d.common import Registry
 from .base import BaseMatchingCost
 from .pandora import PandoraMatchingCostMethods
 
-MatchingCostRegistry = Registry[BaseMatchingCost](default=PandoraMatchingCostMethods)
+MatchingCostRegistry = Registry[BaseMatchingCost](  # pylint: disable=invalid-name # NOSONAR
+    default=PandoraMatchingCostMethods
+)
