@@ -18,6 +18,7 @@
 """
 Module for Dichotomy refinement method (cpp version).
 """
+
 import logging
 from typing import Dict, Tuple
 

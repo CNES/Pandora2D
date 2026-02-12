@@ -16,6 +16,7 @@
 """
 Registry used for all matching cost methods.
 """
+
 from pandora2d.common import Registry
 
 from .base import BaseMatchingCost

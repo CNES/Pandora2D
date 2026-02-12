@@ -21,6 +21,7 @@
 """
 This module contains functions associated to the estimation computation step.
 """
+
 from __future__ import annotations
 
 import logging

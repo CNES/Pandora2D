@@ -18,6 +18,7 @@
 """
 Test the refinement.dichotomy pipeline.
 """
+
 # Make pylint happy with fixtures:
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 

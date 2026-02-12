@@ -22,6 +22,7 @@
 """
 This module contains functions associated to the refinement computation step.
 """
+
 from __future__ import annotations
 
 import logging
