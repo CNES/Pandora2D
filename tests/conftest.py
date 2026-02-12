@@ -430,7 +430,15 @@ def origin_coordinates():
 
 
 @pytest.fixture
-def attributes(left_img_path, step, origin_coordinates):
+def invalid_disp():
+    """
+    Invalid disparity value
+    """
+    return -9999
+
+
+@pytest.fixture
+def attributes(left_img_path, step, origin_coordinates, invalid_disp):
     """Return attributes dictionary from some left_img properties."""
     with rasterio.open(left_img_path) as src:
         crs = src.crs
@@ -440,7 +448,7 @@ def attributes(left_img_path, step, origin_coordinates):
         "step": {"row": step[0], "col": step[1]},
         "crs": crs,
         "transform": transform * rasterio.Affine.scale(*step),
-        "invalid_disp": -9999,
+        "invalid_disp": invalid_disp,
     }
 
 
