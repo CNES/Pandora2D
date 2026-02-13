@@ -19,8 +19,8 @@ The phase cross correlation algorithm is divided into 4 steps:
 - Finally, for sub-pixel level shifting, we perform an interpolation around this peak.
 
 .. note:: Currently, only the **phase_cross_correlation** method is implemented in Pandora2d.
-          We use the phase_cross_correlation function from scipy, for further information please see
-          `Scipy documentation <https://scikit-image.org/docs/stable/api/skimage.registration.html#skimage.registration.phase_cross_correlation>`__
+          We use the phase_cross_correlation function from scikit-image, for further information please see
+          `Scikit-image documentation <https://scikit-image.org/docs/stable/api/skimage.registration.html#skimage.registration.phase_cross_correlation>`__
 
 
 Configuration and parameters
