@@ -21,7 +21,7 @@
 Test check input step configuration
 """
 
-# pylint: disable=redefined-outer-name,too-many-arguments,too-many-positional-arguments, unused-argument, too-many-lines
+# pylint: disable=redefined-outer-name,too-many-arguments,too-many-positional-arguments, too-many-lines
 import json
 import re
 import logging
