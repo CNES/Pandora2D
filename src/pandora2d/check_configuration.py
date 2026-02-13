@@ -25,11 +25,10 @@ This module contains functions allowing to check the configuration given to Pand
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 import json
 import logging
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Dict, Union
 
 import numpy as np
 import xarray as xr
@@ -45,8 +44,8 @@ from pandora.check_configuration import (
 from pandora.img_tools import rasterio_open
 from rasterio.io import DatasetReader
 
-from pandora2d.state_machine import Pandora2DMachine
 from pandora2d.common import all_same
+from pandora2d.state_machine import Pandora2DMachine
 
 
 def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
@@ -72,7 +71,7 @@ def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
         raise ValueError("left and right datasets must have the same shape")
 
 
-def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
+def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> dict:
     """
     Validate and complete the user configuration.
 
@@ -104,7 +103,7 @@ def check_conf(user_cfg: Dict, pandora2d_machine: Pandora2DMachine) -> dict:
     return user_cfg
 
 
-def get_section_config(user_cfg: Dict[str, dict], key: str) -> Dict[str, dict]:
+def get_section_config(user_cfg: dict[str, dict], key: str) -> dict[str, dict]:
     """
     Get the section configuration from key
 
@@ -121,7 +120,7 @@ def get_section_config(user_cfg: Dict[str, dict], key: str) -> Dict[str, dict]:
     return cfg
 
 
-def update_global_conf(global_cfg: Dict[str, dict], completed_cfg: Dict[str, dict]) -> None:
+def update_global_conf(global_cfg: dict[str, dict], completed_cfg: dict[str, dict]) -> None:
     """
     Update global_cfg with completed_cfg
 
@@ -144,7 +143,7 @@ def update_global_conf(global_cfg: Dict[str, dict], completed_cfg: Dict[str, dic
                 global_cfg[key] = value
 
 
-def check_segment_mode_section(user_cfg: Dict[str, dict]) -> None:
+def check_segment_mode_section(user_cfg: dict[str, dict]) -> None:
     """
     Complete and check if the segment mode dictionary is correct
 
@@ -166,7 +165,7 @@ def check_segment_mode_section(user_cfg: Dict[str, dict]) -> None:
     update_global_conf(user_cfg, cfg)
 
 
-def check_pipeline_section(user_cfg: Dict[str, dict], pandora2d_machine: Pandora2DMachine) -> None:
+def check_pipeline_section(user_cfg: dict[str, dict], pandora2d_machine: Pandora2DMachine) -> None:
     """
     Check if the pipeline is correct by
     - Checking the sequence of steps according to the machine transitions
@@ -213,7 +212,7 @@ def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> No
         )
 
 
-def check_output_section(user_cfg: Dict[str, dict]) -> None:
+def check_output_section(user_cfg: dict[str, dict]) -> None:
     """
     Validate the given output section.
 
@@ -231,7 +230,7 @@ def check_output_section(user_cfg: Dict[str, dict]) -> None:
     update_global_conf(user_cfg, user_cfg_output)
 
 
-def check_expert_mode_section(user_cfg: Dict[str, dict]) -> None:
+def check_expert_mode_section(user_cfg: dict[str, dict]) -> None:
     """
     Check if expert mode section is correct
 
@@ -250,7 +249,7 @@ def check_expert_mode_section(user_cfg: Dict[str, dict]) -> None:
     update_global_conf(user_cfg, user_cfg_expert_mode)
 
 
-def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = None) -> None:
+def check_input_section(user_cfg: dict[str, dict], estimation_config: dict = None) -> None:
     """
     Complete and check if the input is correct
 
@@ -298,7 +297,7 @@ def check_input_section(user_cfg: Dict[str, dict], estimation_config: dict = Non
     update_global_conf(user_cfg, input_cfg)
 
 
-def check_disparity(image_metadata: xr.Dataset, input_cfg: Dict, user_cfg: Dict) -> None:
+def check_disparity(image_metadata: xr.Dataset, input_cfg: dict, user_cfg: dict) -> None:
     """
     All checks on disparity
 
@@ -368,7 +367,7 @@ def check_disparity_grids(
     disparity_row_reader: DatasetReader,
     disparity_col_reader: DatasetReader,
     row_path: Path,
-    user_cfg: Dict,
+    user_cfg: dict,
 ) -> None:
     """
     Check that disparity grids contains two bands and are the same size as the input image
@@ -453,7 +452,7 @@ def check_step_from_attributes(attributes: dict, expected_step_value: list[int])
 
 def check_disparity_grids_from_directory_within_image(
     attributes: dict, disparity_row_reader: DatasetReader, image_metadata: xr.Dataset
-) -> Union[dict, None]:
+) -> dict | None:
     """
     Check that disparity grids lie within image boundaries.
 
@@ -505,7 +504,7 @@ def update_roi_from_disparity_grid(row_min: int, row_max: int, col_min: int, col
     }
 
 
-def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: int) -> Dict:
+def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: int) -> dict:
     """
     Get correct dictionaries to give as input of check_disparity_ranges_are_inside_image method
     from initial disparity grids.
@@ -540,7 +539,7 @@ def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: i
 
 
 def check_disparity_ranges_are_inside_image(
-    image_metadata: xr.Dataset, row_disparity: Dict, col_disparity: Dict
+    image_metadata: xr.Dataset, row_disparity: dict, col_disparity: dict
 ) -> None:
     """
     Raise an error if disparity ranges are out off image.
@@ -556,7 +555,7 @@ def check_disparity_ranges_are_inside_image(
         raise ValueError("Column disparity range out of image")
 
 
-def check_roi_section(user_cfg: Dict[str, dict]) -> None:
+def check_roi_section(user_cfg: dict[str, dict]) -> None:
     """
     Complete and check if roi section is correct
 
@@ -590,7 +589,7 @@ def check_roi_coherence(roi_cfg: dict) -> None:
         raise ValueError('"first" should be lower than "last" in sensor ROI')
 
 
-def check_right_nodata_condition(cfg_input: Dict, cfg_pipeline: Dict) -> None:
+def check_right_nodata_condition(cfg_input: dict, cfg_pipeline: dict) -> None:
     """
     Check that only int is accepted for nodata of right image when matching_cost_method is sad or ssd.
     :param cfg_input: inputs section of configuration

@@ -19,7 +19,6 @@
 """Functions to compute statistics on results."""
 
 from dataclasses import asdict, dataclass
-from typing import Dict, Union
 
 import numpy as np
 
@@ -28,32 +27,32 @@ import numpy as np
 class Quantiles:
     """Quantiles."""
 
-    p10: Union[float, np.floating]
-    p25: Union[float, np.floating]
-    p50: Union[float, np.floating]
-    p75: Union[float, np.floating]
-    p90: Union[float, np.floating]
+    p10: float | np.floating
+    p25: float | np.floating
+    p50: float | np.floating
+    p75: float | np.floating
+    p90: float | np.floating
 
 
 @dataclass
 class Statistics:
     """Group various statistics."""
 
-    mean: Union[float, np.floating]
-    std: Union[float, np.floating]
+    mean: float | np.floating
+    std: float | np.floating
     quantiles: Quantiles
-    minimal_valid_pixel_ratio: Union[float, np.floating] = 1.0
+    minimal_valid_pixel_ratio: float | np.floating = 1.0
 
     def __str__(self) -> str:
         return f"Mean: {self.mean} ± {self.std}"
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert statistics into a dictionary."""
         # We need to cast to float because np.float can not be serialized to JSON
         return asdict(self)
 
 
-def compute_statistics(data: np.ndarray, invalid_values: Union[np.floating, np.integer] = None) -> Statistics:
+def compute_statistics(data: np.ndarray, invalid_values: np.floating | np.integer = None) -> Statistics:
     """Compute statistics of a dataArray.
 
     :param data: data to compute statistics from.

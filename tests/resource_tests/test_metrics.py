@@ -24,7 +24,6 @@ This module is used to check the resources used for the tests in this directory.
 # pylint: disable=protected-access
 
 import sqlite3
-from typing import List
 
 import pytest
 
@@ -40,7 +39,7 @@ class Metrics:
     _CPU_USAGE_MAX = 50  # percent
     _MEM_USAGE_MAX = 1024  # megabyte
 
-    def __init__(self, items: List) -> None:
+    def __init__(self, items: list) -> None:
         self.test_name = items[0]
         self.test_variant = items[1]
         self.total_time = items[2]

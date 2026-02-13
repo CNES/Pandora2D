@@ -21,7 +21,8 @@ Module for Dichotomy refinement method (python version).
 """
 
 import logging
-from typing import Callable, Dict, NamedTuple, Tuple, Union
+from collections.abc import Callable
+from typing import NamedTuple
 
 import numpy as np
 import xarray as xr
@@ -59,7 +60,7 @@ class DichotomyPython(refinement.AbstractRefinement):
         )
 
     @classmethod
-    def check_conf(cls, cfg: Dict) -> Dict:
+    def check_conf(cls, cfg: dict) -> dict:
         """
         Check the refinement method configuration.
 
@@ -90,7 +91,7 @@ class DichotomyPython(refinement.AbstractRefinement):
 
     def refinement_method(  # pylint: disable=too-many-locals
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 
@@ -298,19 +299,19 @@ class CostSurfaces:
 class Point(NamedTuple):
     """Coordinates of a subpixellic point of cost surface."""
 
-    row: Union[int, float, np.float32]
-    col: Union[int, float, np.float32]
+    row: int | float | np.float32
+    col: int | float | np.float32
 
 
 def search_new_best_point(
     cost_surface: xr.DataArray,
     precision: float,
-    initial_disparity: Union[Tuple[np.floating, np.floating], Tuple[int, int]],
-    initial_position: Union[Tuple[np.floating, np.floating], Tuple[int, int]],
+    initial_disparity: tuple[np.floating, np.floating] | tuple[int, int],
+    initial_position: tuple[np.floating, np.floating] | tuple[int, int],
     initial_value: np.float32,
     filter_dicho: AbstractFilter,
     cost_selection_method: Callable,
-) -> Tuple[Point, np.floating, np.floating, np.floating]:
+) -> tuple[Point, np.floating, np.floating, np.floating]:
     """
     Find best position and cost after interpolation of cost surface for given precision.
 

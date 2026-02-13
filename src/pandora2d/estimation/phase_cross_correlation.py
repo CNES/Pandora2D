@@ -23,7 +23,6 @@ This module contains functions associated to the phase cross correlation method 
 """
 
 import logging
-from typing import Dict, Tuple
 
 import numpy as np
 import xarray as xr
@@ -44,7 +43,7 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
     _RANGE_ROW = 5
     _SAMPLE_FACTOR = 1
 
-    def __init__(self, cfg: Dict) -> None:
+    def __init__(self, cfg: dict) -> None:
         """
         :param cfg: optional configuration, {'range_col': int, 'range_row': int, 'sample_factor': int}
         :return: None
@@ -56,7 +55,7 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
         self._sample_factor = self.cfg["sample_factor"]
         self._estimation_method = self.cfg["estimation_method"]
 
-    def check_conf(self, cfg: Dict) -> Dict:
+    def check_conf(self, cfg: dict) -> dict:
         """
         Check the estimation configuration
 
@@ -87,7 +86,7 @@ class PhaseCrossCorrelation(estimation.AbstractEstimation):
 
         return cfg
 
-    def compute_estimation(self, img_left: xr.Dataset, img_right: xr.Dataset) -> Tuple[Dict, Dict, np.ndarray, dict]:
+    def compute_estimation(self, img_left: xr.Dataset, img_right: xr.Dataset) -> tuple[dict, dict, np.ndarray, dict]:
         """
         Compute the phase cross correlation method
 

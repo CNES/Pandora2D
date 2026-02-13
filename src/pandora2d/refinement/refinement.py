@@ -28,7 +28,7 @@ from __future__ import annotations
 import logging
 import sys
 from abc import ABCMeta, abstractmethod
-from typing import Callable, Dict, Tuple
+from collections.abc import Callable
 
 import numpy as np
 import xarray as xr
@@ -49,10 +49,10 @@ class AbstractRefinement:
 
     __metaclass__ = ABCMeta
 
-    refinement_methods_avail: Dict = {}
+    refinement_methods_avail: dict = {}
     _refinement_method = None
 
-    schema: Dict  # This will raise an AttributeError if not override in subclasses
+    schema: dict  # This will raise an AttributeError if not override in subclasses
 
     # If we don't make cfg optional, we got this error when we use subprocesses in refinement_method :
     # AbstractRefinement.__new__() missing 1 required positional argument: 'cfg'
@@ -66,9 +66,7 @@ class AbstractRefinement:
         if cls is AbstractRefinement:
             if isinstance(cfg["refinement_method"], str):
                 try:
-                    return super(AbstractRefinement, cls).__new__(
-                        cls.refinement_methods_avail[cfg["refinement_method"]]
-                    )
+                    return super().__new__(cls.refinement_methods_avail[cfg["refinement_method"]])
                 except KeyError:
                     logging.error("No subpixel method named %s supported", cfg["refinement_method"])
                     raise KeyError
@@ -76,9 +74,7 @@ class AbstractRefinement:
                 if isinstance(cfg["refinement_method"], unicode):  # type: ignore # pylint: disable=undefined-variable
                     # creating a plugin from registered short name given as unicode (py2 & 3 compatibility)
                     try:
-                        return super(AbstractRefinement, cls).__new__(
-                            cls.refinement_methods_avail[cfg["refinement_method"].encode("utf-8")]
-                        )
+                        return super().__new__(cls.refinement_methods_avail[cfg["refinement_method"].encode("utf-8")])
                     except KeyError:
                         logging.error(
                             "No subpixel method named %s supported",
@@ -86,7 +82,7 @@ class AbstractRefinement:
                         )
                         raise KeyError
         else:
-            return super(AbstractRefinement, cls).__new__(cls)
+            return super().__new__(cls)
         return None
 
     def desc(self) -> None:
@@ -115,7 +111,7 @@ class AbstractRefinement:
 
         return decorator
 
-    def __init__(self, cfg: Dict, _: list = None, __: int = 5) -> None:
+    def __init__(self, cfg: dict, _: list = None, __: int = 5) -> None:
         """
         :param cfg: optional configuration, {}
         :param step: list containing row and col step
@@ -130,7 +126,7 @@ class AbstractRefinement:
         return NullMargins()
 
     @classmethod
-    def check_conf(cls, cfg: Dict) -> Dict:
+    def check_conf(cls, cfg: dict) -> dict:
         """
         Check the refinement method configuration.
 
@@ -145,7 +141,7 @@ class AbstractRefinement:
     @abstractmethod
     def refinement_method(
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 

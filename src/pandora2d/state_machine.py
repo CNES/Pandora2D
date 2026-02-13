@@ -27,7 +27,7 @@ import copy
 import logging
 from abc import ABC, abstractmethod
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Annotated, Dict, List, Literal, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Annotated, Literal, TypedDict
 
 import xarray as xr
 from pandora.margins import GlobalMargins
@@ -58,7 +58,7 @@ class MarginsProperties(TypedDict):
     """Properties of Margins used in Margins transitions."""
 
     type: Literal["aggregate", "maximum"]
-    margins: Annotated[List[int], '["left, "up", "right", "down"]']
+    margins: Annotated[list[int], '["left, "up", "right", "down"]']
 
 
 class BaseMachine(Machine, ABC):
@@ -66,9 +66,9 @@ class BaseMachine(Machine, ABC):
 
     def __init__(self) -> None:
         # For communication between matching_cost and refinement steps
-        self.step: Union[List, None] = None
-        self.pipeline_cfg: Dict = {"pipeline": {}}
-        self.window_size: Union[int, None] = None
+        self.step: list | None = None
+        self.pipeline_cfg: dict = {"pipeline": {}}
+        self.window_size: int | None = None
         self.margins_img = GlobalMargins()
         self.margins_disp = GlobalMargins()
 
@@ -188,7 +188,7 @@ class BaseMachine(Machine, ABC):
 class CheckMachine(BaseMachine):
     """State Machine that checks Pandora2d configuration."""
 
-    def check_conf(self, cfg: Dict[str, dict]) -> None:
+    def check_conf(self, cfg: dict[str, dict]) -> None:
         """
         Check configuration and transitions
 
@@ -202,7 +202,7 @@ class CheckMachine(BaseMachine):
                 logging.error("Problem occurs during %s check. Be sure of your sequencement step", input_step)
                 raise
 
-    def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def estimation_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Check the estimation computation configuration
 
@@ -214,7 +214,7 @@ class CheckMachine(BaseMachine):
         estimation_ = estimation.AbstractEstimation(cfg["pipeline"][input_step])  # type: ignore[abstract]
         self.pipeline_cfg["pipeline"][input_step] = estimation_.cfg
 
-    def matching_cost_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def matching_cost_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Check the matching cost computation configuration
 
@@ -232,7 +232,7 @@ class CheckMachine(BaseMachine):
         self.window_size = matching_cost.window_size
         self.margins_img.add_cumulative(input_step, matching_cost.margins)
 
-    def cost_volume_confidence_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def cost_volume_confidence_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Check the cost volume confidence computation configuration
 
@@ -248,7 +248,7 @@ class CheckMachine(BaseMachine):
         cost_volume_confidence = CostVolumeConfidence(cfg["pipeline"][input_step])
         self.pipeline_cfg["pipeline"][input_step] = cost_volume_confidence.cfg
 
-    def disparity_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def disparity_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Check the disparity computation configuration
 
@@ -261,7 +261,7 @@ class CheckMachine(BaseMachine):
         self.pipeline_cfg["pipeline"][input_step] = disparity_.cfg
         self.margins_img.add_cumulative(input_step, disparity_.margins)
 
-    def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def refinement_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Check the refinement configuration
 
@@ -296,16 +296,16 @@ class Pandora2DMachine(BaseMachine):
             transition.add_callback("prepare", self.matching_cost_prepare)
 
         # Left image
-        self.left_img: Optional[xr.Dataset] = None
+        self.left_img: xr.Dataset | None = None
         # Right image
-        self.right_img: Optional[xr.Dataset] = None
+        self.right_img: xr.Dataset | None = None
 
-        self.completed_cfg: Dict = {}
+        self.completed_cfg: dict = {}
         self.cost_volumes: xr.Dataset = xr.Dataset()
         self.dataset_disp_maps: xr.Dataset = xr.Dataset()
 
         # Instance matching_cost
-        self.matching_cost_: Union[BaseMatchingCost, None] = None
+        self.matching_cost_: BaseMatchingCost | None = None
 
     def run_prepare(self, img_left: xr.Dataset, img_right: xr.Dataset, cfg: dict) -> None:
         """
@@ -326,7 +326,7 @@ class Pandora2DMachine(BaseMachine):
         self.right_img = img_right
         self.completed_cfg = copy.copy(cfg)
 
-    def run(self, input_step: str, cfg: Dict[str, dict]) -> None:
+    def run(self, input_step: str, cfg: dict[str, dict]) -> None:
         """
         Run pandora 2D step by triggering the corresponding machine transition
 
@@ -351,7 +351,7 @@ class Pandora2DMachine(BaseMachine):
         """
         self.set_state("begin")
 
-    def check_conf(self, cfg: Dict[str, dict]) -> None:
+    def check_conf(self, cfg: dict[str, dict]) -> None:
         """
         Check configuration and transitions
 
@@ -370,7 +370,7 @@ class Pandora2DMachine(BaseMachine):
         # Coming back to the initial state
         self.set_state("begin")
 
-    def remove_transitions(self, transition_list: Dict[str, dict]) -> None:
+    def remove_transitions(self, transition_list: dict[str, dict]) -> None:
         """
         Delete all transitions defined in the input list
 
@@ -386,7 +386,7 @@ class Pandora2DMachine(BaseMachine):
                 self.remove_transition(trans["trigger"])  # type: ignore
                 deleted_triggers.append(trans["trigger"])  # type: ignore
 
-    def matching_cost_prepare(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def matching_cost_prepare(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Matching cost prepare
 
@@ -429,7 +429,7 @@ class Pandora2DMachine(BaseMachine):
         )
 
     @mem_time_profile(name="Estimation step")
-    def estimation_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def estimation_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Shift's estimation step
 
@@ -477,7 +477,7 @@ class Pandora2DMachine(BaseMachine):
         )
 
     @mem_time_profile(name="Cost volume confidence step")
-    def cost_volume_confidence_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def cost_volume_confidence_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Cost volume confidence computation
 
@@ -499,7 +499,7 @@ class Pandora2DMachine(BaseMachine):
         )
 
     @mem_time_profile(name="Disparity step")
-    def disparity_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def disparity_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Disparity computation and validity mask
 
@@ -526,7 +526,7 @@ class Pandora2DMachine(BaseMachine):
         )
 
     @mem_time_profile(name="Refinement step")
-    def refinement_run(self, cfg: Dict[str, dict], input_step: str) -> None:
+    def refinement_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
         Subpixel disparity refinement
 

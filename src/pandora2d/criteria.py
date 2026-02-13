@@ -23,7 +23,6 @@ This module contains functions associated to the validity mask and criteria data
 import itertools
 from enum import IntFlag
 from functools import partial
-from typing import Tuple, Type, Union
 
 import numpy as np
 import xarray as xr
@@ -39,7 +38,7 @@ DISPARITY_DEPENDENT_CRITERIA = set(Criteria) - {Criteria.VALID} - DISPARITY_INDE
 class FlagArray(np.ndarray):
     """NDArray subclass that expects to be filled with Flags and with dedicated repr."""
 
-    def __new__(cls, input_array: ArrayLike, flag: Type[IntFlag], dtype: DTypeLike = np.uint8):
+    def __new__(cls, input_array: ArrayLike, flag: type[IntFlag], dtype: DTypeLike = np.uint8):
         # Input array is an already formed ndarray instance
         # We first cast to be our class type
         obj = np.asarray(input_array, dtype=dtype).view(cls)
@@ -74,8 +73,8 @@ class FlagArray(np.ndarray):
 
 
 def get_disparity_grids(
-    left_image: xr.Dataset, cv_coords: Tuple[NDArray, NDArray]
-) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
+    left_image: xr.Dataset, cv_coords: tuple[NDArray, NDArray]
+) -> tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Return disparity grid from left image according to cost_volumes row and col coordinates.
     We need to use the cost volume coordinates to process the right points when the step is different from 1.
@@ -122,7 +121,7 @@ def binary_dilation_dataarray(img: xr.Dataset, window_size: int) -> xr.DataArray
 
 
 def allocate_criteria_dataarray(
-    cv: xr.Dataset, value: Union[int, float, Criteria] = Criteria.VALID, data_type: Union[DTypeLike, None] = None
+    cv: xr.Dataset, value: int | float | Criteria = Criteria.VALID, data_type: DTypeLike | None = None
 ) -> xr.DataArray:
     """
     This method creates the criteria_dataarray with the same dimensions as cost_volumes (cv).
@@ -455,7 +454,7 @@ def apply_nodata_right_criteria_mask(
 def apply_peak_on_edge(
     validity_map: xr.DataArray,
     left_image: xr.Dataset,
-    cv_coords: Tuple[NDArray, NDArray],
+    cv_coords: tuple[NDArray, NDArray],
     row_map: NDArray,
     col_map: NDArray,
 ) -> None:

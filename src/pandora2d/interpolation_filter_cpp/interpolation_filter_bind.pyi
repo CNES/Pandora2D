@@ -19,8 +19,6 @@
 
 # pylint: skip-file
 
-from typing import List
-
 import numpy as np
 
 class Margins:
@@ -56,7 +54,7 @@ class AbstractFilter:
 
     def interpolate(
         self, image: np.ndarray, col_positions: np.ndarray, row_positions: np.ndarray, max_fractional_value: float = ...
-    ) -> List:
+    ) -> list:
         """
         Returns the values of the 8 interpolated position
 

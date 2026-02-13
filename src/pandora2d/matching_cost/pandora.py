@@ -22,7 +22,6 @@ This module contains functions associated to the matching cost computation step.
 """
 
 import copy
-from typing import Dict, List, Union
 
 import numpy as np
 import xarray as xr
@@ -41,7 +40,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
     Matching Cost class
     """
 
-    def __init__(self, cfg: Dict) -> None:
+    def __init__(self, cfg: dict) -> None:
         """
         Initialisation of matching_cost class
 
@@ -54,10 +53,10 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
             **self.get_config_for_pandora(cfg)
         )
 
-        self.grid: Union[xr.Dataset, None] = None
+        self.grid: xr.Dataset | None = None
 
     @property
-    def cfg(self) -> Dict[str, Union[str, int, List[int]]]:
+    def cfg(self) -> dict[str, str | int | list[int]]:
         """
         Get used configuration
 
@@ -146,7 +145,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         """
         return self.pandora_matching_cost_.margins
 
-    def get_config_for_pandora(self, cfg: Dict) -> Dict[str, str]:
+    def get_config_for_pandora(self, cfg: dict) -> dict[str, str]:
         """
         Get configuration for matching_cost in pandora
 
@@ -165,7 +164,7 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        cfg: Dict,
+        cfg: dict,
         margins: Margins = None,
     ) -> None:
         """

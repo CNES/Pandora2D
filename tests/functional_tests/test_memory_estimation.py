@@ -19,7 +19,6 @@
 """Memory estimation tests."""
 
 import json
-from typing import List
 
 import pytest
 
@@ -36,7 +35,7 @@ class TestEstimateTotalMemoryConsumption:
     @pytest.fixture(scope="class")
     def result_store(self, request, tmp_path_factory):
         """Yield a list of objects that will be dumped to JSON file."""
-        store: List = []
+        store: list = []
 
         yield store
 

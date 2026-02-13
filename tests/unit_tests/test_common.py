@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf8
 #
 # Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
 # Copyright (c) 2025 CS GROUP France
@@ -294,7 +293,7 @@ class TestSaveDisparityMaps:
         assert data.crs == attributes["crs"]
         assert data.transform == attributes["transform"]
 
-        with open(file_attributes, "r", encoding="utf-8") as attrs_file:
+        with open(file_attributes, encoding="utf-8") as attrs_file:
             attrs_json = json.load(attrs_file)
             attrs_json["transform"] = Affine(*attrs_json["transform"])
 

@@ -21,8 +21,6 @@
 Test refinement step
 """
 
-from typing import Dict
-
 # pylint: disable=redefined-outer-name, protected-access, unused-argument
 # mypy: disable-error-code=attr-defined
 import numpy as np
@@ -665,7 +663,7 @@ class TestDisparityGrids:
         )
 
     @pytest.fixture()
-    def cfg(self) -> Dict:
+    def cfg(self) -> dict:
         return {
             "pipeline": {
                 "matching_cost": {
@@ -682,7 +680,7 @@ class TestDisparityGrids:
         return -99
 
     @pytest.fixture()
-    def disparities(self, image: xr.Dataset, cfg: Dict, invalid_value) -> Dict:
+    def disparities(self, image: xr.Dataset, cfg: dict, invalid_value) -> dict:
         """Execute refinement method and return disparities."""
         matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 

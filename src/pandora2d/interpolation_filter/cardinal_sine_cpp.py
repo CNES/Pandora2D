@@ -18,8 +18,6 @@
 
 from __future__ import annotations
 
-from typing import Dict
-
 import numpy as np
 from json_checker import And, OptionalKey
 from numpy.typing import NDArray
@@ -36,7 +34,7 @@ class CardinalSine(AbstractFilter):
 
     schema = {"method": "sinc", OptionalKey("size"): And(int, lambda a: 6 <= a <= 21)}
 
-    def __init__(self, cfg: Dict, fractional_shift: float = 0.5) -> None:
+    def __init__(self, cfg: dict, fractional_shift: float = 0.5) -> None:
         """
 
         :param cfg: config

@@ -23,7 +23,7 @@ Test check input step configuration
 
 import pytest
 
-from pandora2d.check_configuration import check_roi_section, check_roi_coherence
+from pandora2d.check_configuration import check_roi_coherence, check_roi_section
 
 
 class TestCheckRoiSection:

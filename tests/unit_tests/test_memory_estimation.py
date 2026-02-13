@@ -23,7 +23,7 @@ This file contains unit tests associated to the pandora2d memory estimation
 # pylint: disable=redefined-outer-name,too-few-public-methods,invalid-name,too-many-lines
 
 from copy import deepcopy
-from typing import Dict, Tuple, cast
+from typing import cast
 
 import numpy as np
 import pandora
@@ -686,7 +686,7 @@ class TestDatasetDispMap:
     @pytest.mark.parametrize("dtype_argument", [np.float32, "float32"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 2], [2, 1]])
     @pytest.mark.parametrize("image_size", [(200, 300), (700, 500)])
-    def test(self, MemoryTracer, config, step, image_datasets, image_size: Tuple[int, int], dtype_argument):
+    def test(self, MemoryTracer, config, step, image_datasets, image_size: tuple[int, int], dtype_argument):
         """Test coherence between estimated memory consumption and actual memory consumption."""
 
         matching_cost = CorrelationMethods(config["pipeline"]["matching_cost"])
@@ -770,7 +770,7 @@ class TestSegmentImageByRows:
         }
 
     @pytest.fixture
-    def dataset_disp_map_size(self, image_size: Tuple[int, int], checked_config):
+    def dataset_disp_map_size(self, image_size: tuple[int, int], checked_config):
         return memory_estimation.estimate_dataset_disp_map_size(
             *image_size,
             checked_config["pipeline"]["matching_cost"]["step"],
@@ -778,7 +778,7 @@ class TestSegmentImageByRows:
         )
 
     @pytest.fixture
-    def image_can_be_fully_reconstructed(self, image_size: Tuple[int, int]):
+    def image_can_be_fully_reconstructed(self, image_size: tuple[int, int]):
         """Helper that checks that the image can be fully reconstructed from an ROI list."""
 
         def inner(rois, step):
@@ -859,7 +859,7 @@ class TestSegmentImageByRows:
 
         assert len(result) >= 2, "There should be at least 2 segments."
         for e in result:
-            roi_cfg = {"ROI": cast(Dict, e)}
+            roi_cfg = {"ROI": cast(dict, e)}
             check_roi_section(roi_cfg)
             assert roi_cfg.get("ROI")
         assert image_can_be_fully_reconstructed(result, step)

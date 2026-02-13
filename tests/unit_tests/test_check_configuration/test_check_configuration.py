@@ -29,7 +29,7 @@ import pytest
 import xarray as xr
 from json_checker import DictCheckerError
 
-from pandora2d.check_configuration import check_datasets, get_section_config, check_right_nodata_condition, check_conf
+from pandora2d.check_configuration import check_conf, check_datasets, check_right_nodata_condition, get_section_config
 from pandora2d.img_tools import add_disparity_grid, create_datasets_from_inputs
 
 

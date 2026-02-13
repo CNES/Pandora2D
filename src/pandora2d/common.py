@@ -25,10 +25,11 @@ This module contains functions allowing to save the results and the configuratio
 
 import json
 import warnings
+from collections.abc import Callable, Iterable
 from copy import deepcopy
 from os import PathLike
 from pathlib import Path
-from typing import Callable, Dict, Generic, Iterable, Tuple, Type, TypeVar, Union
+from typing import Generic, TypeVar
 
 import numpy as np
 import rasterio
@@ -63,16 +64,16 @@ class Registry(Generic[T]):
     A class to decorate classes in order to register them with a string name.
     """
 
-    def __init__(self, default: Union[Type[T], None] = None) -> None:
+    def __init__(self, default: type[T] | None = None) -> None:
         """
         Initialize the registry with an optional default class.
 
         :param default: Default class to return if name is not registered. If None, will raise a KeyError.
         """
-        self.registered: Dict[str, Type[T]] = {}
+        self.registered: dict[str, type[T]] = {}
         self.default = default
 
-    def add(self, name: str) -> Callable[[Type[T]], Type[T]]:
+    def add(self, name: str) -> Callable[[type[T]], type[T]]:
         """
         Register a class with `name`.
 
@@ -80,7 +81,7 @@ class Registry(Generic[T]):
         :return: The decorated class.
         """
 
-        def decorator(cls: Type[T]) -> Type[T]:
+        def decorator(cls: type[T]) -> type[T]:
             """Returned decorator used for register class."""
             # No verification is made about already registered name: we need to decide on desired behavior
             self.registered[name] = cls
@@ -88,7 +89,7 @@ class Registry(Generic[T]):
 
         return decorator
 
-    def get(self, name: str) -> Type[T]:
+    def get(self, name: str) -> type[T]:
         """
         Get the class registered as `name`.
 
@@ -149,7 +150,7 @@ def convert_grid_to_disp(dataset: xr.Dataset, pixel_convention: list[int]) -> xr
     return dataset
 
 
-def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
+def save_disparity_maps(dataset: xr.Dataset, cfg: dict) -> None:
     """
     Save disparity maps into directory defined by cfg's `output/path` key,
     create it with its parents if necessary.
@@ -179,7 +180,7 @@ def save_disparity_maps(dataset: xr.Dataset, cfg: Dict) -> None:
     _save_disparity_maps_report(dataset, output)
 
 
-def save_confidence_maps(dataset: xr.Dataset, cfg: Dict) -> None:
+def save_confidence_maps(dataset: xr.Dataset, cfg: dict) -> None:
     """
     Save confidence maps into directory defined by cfg's `output/path` key,
     create it with its parents if necessary.
@@ -198,7 +199,7 @@ def save_confidence_maps(dataset: xr.Dataset, cfg: Dict) -> None:
 
     write_data_array(
         dataset["confidence_measure"],
-        str((output / str("confidence_measure")).with_suffix(".tif")),
+        str((output / "confidence_measure").with_suffix(".tif")),
         dtype=dataset["confidence_measure"].dtype,
         band_names=None,
         crs=dataset.attrs["crs"],
@@ -254,7 +255,7 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
     save_attributes(dataset, output)
 
 
-def save_attributes(dataset: xr.Dataset, output: Union[str, PathLike]) -> None:
+def save_attributes(dataset: xr.Dataset, output: str | PathLike) -> None:
     """
     Save dataset attributes in a json file
 
@@ -269,7 +270,7 @@ def save_attributes(dataset: xr.Dataset, output: Union[str, PathLike]) -> None:
         json.dump(dataset.attrs, fd, indent=2, cls=AllPrimitiveEncoder)
 
 
-def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:
+def adjust_georeferencement(dataset: xr.Dataset, cfg: dict) -> None:
     """
     Change origin in case a ROI is present and set pixel size to the matching cost step.
 
@@ -283,7 +284,7 @@ def adjust_georeferencement(dataset: xr.Dataset, cfg: Dict) -> None:
     set_pixel_size(dataset, row_step, col_step)
 
 
-def get_step(cfg: Dict) -> Tuple[int, int]:
+def get_step(cfg: dict) -> tuple[int, int]:
     """
     Get step from matching cost or retun default value.
     :param cfg: configuration
@@ -380,7 +381,7 @@ def fill_dataset_disp_maps(
     disparity_dataset["correlation_score"].data = correlation_score
 
 
-def save_config(config: Dict) -> None:
+def save_config(config: dict) -> None:
     """
     Save config to json file in directory given by the key `output/path`.
 
@@ -393,7 +394,7 @@ def save_config(config: Dict) -> None:
         json.dump(config, fd, indent=2, cls=AllPrimitiveEncoder)
 
 
-def string_to_path(path: str, relative_to: Union[Path, str]) -> Path:
+def string_to_path(path: str, relative_to: Path | str) -> Path:
     """
     Get the absolute path of a given path string. If the path is not absolute,
     it resolves it relative to the provided ``relative_to`` path.
@@ -416,7 +417,7 @@ def string_to_path(path: str, relative_to: Union[Path, str]) -> Path:
     return path if path.is_absolute() else (relative_to / path).resolve()
 
 
-def resolve_path_in_config(config: Dict, config_path: Path) -> Dict:
+def resolve_path_in_config(config: dict, config_path: Path) -> dict:
     """
     Create a copy of config with all path strings replaced by an absolute path string relative to
     config_path.

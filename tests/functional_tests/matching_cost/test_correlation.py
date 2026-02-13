@@ -25,8 +25,8 @@ Tests pandora2d machine execution with mutual information and zncc cpp methods
 
 # pylint: disable=redefined-outer-name
 import time
-
 from copy import deepcopy
+
 import numpy as np
 import pytest
 

@@ -23,7 +23,6 @@ with ambiguity method.
 """
 
 import logging
-from typing import Dict, Tuple
 
 import numpy as np
 import xarray as xr
@@ -40,7 +39,7 @@ class Ambiguity(CostVolumeConfidence):
     Ambiguity class
     """
 
-    def __init__(self, cfg: Dict) -> None:
+    def __init__(self, cfg: dict) -> None:
         """
         Initialisation of Ambiguity class
 
@@ -77,7 +76,7 @@ class Ambiguity(CostVolumeConfidence):
         right_image: xr.Dataset,
         cost_volumes: xr.Dataset,
         dataset_disp_maps: xr.Dataset,
-    ) -> Tuple[xr.Dataset, xr.Dataset]:
+    ) -> tuple[xr.Dataset, xr.Dataset]:
         """
         Compute a confidence prediction.
 
