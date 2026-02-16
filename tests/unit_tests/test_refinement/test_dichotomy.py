@@ -433,6 +433,8 @@ class TestRefinementMethod:
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 1, "col": 0}] = np.nan
         disp_map["col_map"][{"row": 1, "col": 0}] = np.nan
+        # provide both validity_mask and partial_validity mask:
+        #  the partial is required for peak on edges and validity for valid pixels
         disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 1
         disp_map["validity"].loc[{"criteria": "partial_validity_mask"}][{"row": 1, "col": 0}] = 1
 

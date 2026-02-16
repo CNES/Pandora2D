@@ -82,13 +82,13 @@ class TestSegmentMode:
 
         def inner(path):
 
-            with rasterio.open(path / "disparity_map" / "row_map.tif", "r") as src:
+            with rasterio.open(path / "disparity_map" / "row_map.tif") as src:
                 row_map = src.read(1)
-            with rasterio.open(path / "disparity_map" / "col_map.tif", "r") as src:
+            with rasterio.open(path / "disparity_map" / "col_map.tif") as src:
                 col_map = src.read(1)
-            with rasterio.open(path / "disparity_map" / "correlation_score.tif", "r") as src:
+            with rasterio.open(path / "disparity_map" / "correlation_score.tif") as src:
                 correlation_score = src.read(1)
-            with rasterio.open(path / "disparity_map" / "validity.tif", "r") as src:
+            with rasterio.open(path / "disparity_map" / "validity.tif") as src:
                 validity = src.read()
             with open(path / "disparity_map" / "attributes.json", encoding="utf8") as attributes_file:
                 output_attributes = json.load(attributes_file)

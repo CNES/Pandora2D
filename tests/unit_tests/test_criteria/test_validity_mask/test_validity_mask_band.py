@@ -596,15 +596,13 @@ def test_validity_mask(make_cost_volumes, expected):
 
     # Sum validity_mask and partial_validity_mask, if value = 2, the pixel is invalid,
     #   value = 1 is a partial valid pixel and value = 0 is a valid pixel.
-    validity_mask_band = criteria.get_validity_mask_band(subset, mask_type="strict") + criteria.get_validity_mask_band(
-        subset, mask_type="partial"
-    )
+    validity_mask_band = criteria.get_validity_mask_band(subset) + criteria.get_partial_validity_mask_band(subset)
 
     np.testing.assert_array_equal(validity_mask_band, expected)
 
 
 @pytest.mark.parametrize(
-    ["make_cost_volumes", "refinement_margins", "reset_first_point", "expected"],
+    ["make_cost_volumes", "refinement_margins", "reset_first_point", "expected_validity", "expected_partial_validity"],
     [
         pytest.param(
             {
@@ -626,6 +624,16 @@ def test_validity_mask(make_cost_volumes, expected):
                     [1, 1, 0, 0, 0, 0, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
+                ]
+            ),
+            np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
                 ]
             ),
             id="No mask, subpix=1, step=[1,1], window_size=1 and bicubic margins",
@@ -654,11 +662,21 @@ def test_validity_mask(make_cost_volumes, expected):
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 2, 1, 1, 2, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 2, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 2, 1, 2, 1, 2],
-                    [1, 1, 1, 1, 1, 2, 1, 1],
+                    [1, 1, 1, 0, 0, 0, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                ]
+            ),
+            np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 1, 0, 1],
+                    [0, 0, 0, 0, 0, 1, 0, 0],
                 ]
             ),
             id="Left mask, subpix=1, step=[1,1], window_size=1 and cardinal sine margins",
@@ -686,12 +704,22 @@ def test_validity_mask(make_cost_volumes, expected):
             True,
             np.array(
                 [
-                    [2, 2, 2, 2, 2, 2, 2, 2],
-                    [2, 2, 2, 2, 1, 2, 1, 2],
-                    [2, 2, 2, 2, 1, 1, 1, 2],
-                    [2, 1, 2, 2, 2, 1, 2, 2],
-                    [2, 1, 2, 2, 2, 2, 2, 2],
-                    [2, 2, 2, 2, 2, 2, 2, 2],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                ]
+            ),
+            np.array(
+                [
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 0, 0, 0, 1],
+                    [1, 0, 1, 1, 1, 0, 1, 1],
+                    [1, 0, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             ),
             id="Left mask, subpix=2, step=[1,1], window_size=3 and cardinal sine margins and one element margins valid",
@@ -717,7 +745,8 @@ def test_validity_mask(make_cost_volumes, expected):
             },
             Margins(3, 1, 1, 1),
             True,
-            np.full((2, 4), 2),
+            np.full((2, 4), 1),
+            np.full((2, 4), 1),
             id="Left mask, window_size=3, step=[3,2] and random margins and one element on margins valid",
         ),
         pytest.param(
@@ -742,17 +771,29 @@ def test_validity_mask(make_cost_volumes, expected):
             Margins(13, 1, 1, 21),
             True,
             np.array(
-                [
-                    [2, 2, 2, 2],
-                    [2, 1, 1, 1],
-                ]
+                (
+                    [
+                        [1, 1, 1, 1],
+                        [1, 1, 1, 1],
+                    ]
+                )
+            ),
+            np.array(
+                (
+                    [
+                        [1, 1, 1, 1],
+                        [1, 0, 0, 0],
+                    ]
+                )
             ),
             id="Right mask, window_size=3, step=[3,2] and random margins and one element on margins valid",
         ),
     ],
     indirect=["make_cost_volumes"],
 )
-def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, reset_first_point, expected):
+def test_validity_mask_with_refinement(
+    make_cost_volumes, refinement_margins, reset_first_point, expected_validity, expected_partial_validity
+):
     """
     Test that the produced validity mask bands are correct according to:
         - disparities
@@ -769,11 +810,8 @@ def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, re
         disp_col=slice(col_disparity[0], col_disparity[1]),
     )
 
-    # Sum validity_mask and partial_validity_mask, if value = 2, the pixel is invalid,
-    #   value = 1 is a partial valid pixel and value = 0 is a valid pixel.
-    validity_mask_band_without_margins = criteria.get_validity_mask_band(
-        subset_without_margins, mask_type="strict"
-    ) + criteria.get_validity_mask_band(subset_without_margins, mask_type="partial")
+    validity_mask_band_without_margins = criteria.get_validity_mask_band(subset_without_margins)
+    partial_validity_mask_band_without_margins = criteria.get_partial_validity_mask_band(subset_without_margins)
 
     cost_volumes_with_margins = make_cost_volumes(refinement_margins)
     if reset_first_point:
@@ -789,9 +827,10 @@ def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, re
     )
     # Sum validity_mask and partial_validity_mask, if value = 2, the pixel is invalid,
     #   value = 1 is a partial valid pixel and value = 0 is a valid pixel.
-    validity_mask_band_with_margins = criteria.get_validity_mask_band(
-        subset_with_margins, mask_type="strict"
-    ) + criteria.get_validity_mask_band(subset_with_margins, mask_type="partial")
+    validity_mask_band_with_margins = criteria.get_validity_mask_band(subset_with_margins)
+    partial_validity_mask_band_with_margins = criteria.get_partial_validity_mask_band(subset_with_margins)
 
-    np.testing.assert_array_equal(validity_mask_band_without_margins, expected)
-    np.testing.assert_array_equal(validity_mask_band_with_margins, expected)
+    np.testing.assert_array_equal(validity_mask_band_without_margins, expected_validity)
+    np.testing.assert_array_equal(partial_validity_mask_band_without_margins, expected_partial_validity)
+    np.testing.assert_array_equal(validity_mask_band_with_margins, expected_validity)
+    np.testing.assert_array_equal(partial_validity_mask_band_with_margins, expected_partial_validity)
