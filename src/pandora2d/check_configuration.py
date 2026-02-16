@@ -513,13 +513,26 @@ def get_dictionary_from_init_grid(disparity_reader: DatasetReader, disp_range: i
     :param disparity_reader: disparity grid reader
     :param disp_range: range of exploration
     :return: a disparity dictionary to give to check_disparity_ranges_are_inside_image() method
+    :raises ValueError: If the disparity grid is full on invalid values
     """
 
     init_disp_grid = disparity_reader.read(1)
+    no_data_disp = disparity_reader.meta.get("nodata")
+
+    # We must check whether no_data_disp is None because
+    # we cannot pass a value that can be None to the np.isfinite method.
+    if no_data_disp is None or np.isfinite(no_data_disp):
+        valid_mask = init_disp_grid != no_data_disp
+    # Case when no_data_disp is NaN, inf or -inf
+    else:
+        valid_mask = np.isfinite(init_disp_grid)
+
+    if not np.any(valid_mask):
+        raise ValueError("Initial disparity grid is full of invalid values")
 
     # Get dictionary with integer init value corresponding to the maximum absolute value of init_disp_grid
     disp_dict = {
-        "init": np.max(np.abs(init_disp_grid)),
+        "init": np.max(np.abs(init_disp_grid[valid_mask])),
         "range": disp_range,
     }
 

@@ -361,7 +361,7 @@ def create_disparity_grid_fixture(tmp_path):
     Creates initial disparity grid and save it in tmp.
     """
 
-    def create_disparity_grid(data, disp_range, suffix_path, band=False, disp_type=rasterio.dtypes.int64):
+    def create_disparity_grid(data, disp_range, suffix_path, band=False, disp_type=rasterio.dtypes.float32):
 
         if not band:
             disparity_grid = xr.DataArray(data, dims=["row", "col"])
@@ -458,8 +458,19 @@ def disparity_range():
 
 
 @pytest.fixture
+def no_data_disp():
+    return None
+
+
+@pytest.fixture
 def same_sized_grid_directory(
-    tmp_path, correct_grid_data, second_correct_grid_data, create_disparity_grid_fixture, disparity_range, attributes
+    tmp_path,
+    correct_grid_data,
+    second_correct_grid_data,
+    create_disparity_grid_fixture,
+    disparity_range,
+    attributes,
+    no_data_disp,
 ):
     """Create a directory with row_map and col_map of same sizes."""
     directory = tmp_path / "input_disparities"
@@ -470,6 +481,12 @@ def same_sized_grid_directory(
     create_disparity_grid_fixture(second_correct_grid_data, disparity_range, directory / "col_map.tif")
     with (directory / "attributes.json").open("w") as fd:
         json.dump(attributes, fd)
+
+    with rasterio.open(directory / "row_map.tif", "r+") as src:
+        src.nodata = no_data_disp
+    with rasterio.open(directory / "col_map.tif", "r+") as src:
+        src.nodata = no_data_disp
+
     return {"init": str(directory), "range": disparity_range}
 
 

@@ -21,7 +21,7 @@
 Test check input step configuration
 """
 
-# pylint: disable=redefined-outer-name,too-many-arguments,too-many-positional-arguments
+# pylint: disable=redefined-outer-name,too-many-arguments,too-many-positional-arguments, too-many-lines
 import json
 import re
 import logging
@@ -43,6 +43,7 @@ from pandora2d.check_configuration import (
     load_attributes,
     check_step_from_attributes,
     check_disparity_grids_from_directory_within_image,
+    get_dictionary_from_init_grid,
 )
 
 
@@ -523,7 +524,7 @@ class TestCheckDisparityGrids:
 
     @pytest.fixture
     def disparity_readers(self, make_input_cfg):
-        """Path to the col disparity grid"""
+        """Row and col DatasetReader"""
         disparity_row_reader = rasterio_open(make_input_cfg["row_disparity"]["init"])
         disparity_col_reader = rasterio_open(make_input_cfg["col_disparity"]["init"])
         return (disparity_row_reader, disparity_col_reader)
@@ -637,7 +638,7 @@ class TestCheckDisparityGrids:
         roi_user,
         roi_gt,
         caplog,
-    ):  # pylint: disable=unused-argument
+    ):
         """
         Check that the ROI constructed from the disparity grid overwrites the user ROI
         """
@@ -715,9 +716,7 @@ class TestCheckStepFromAttributes:
             pytest.param([7, 7], [7, 7], [1, 1]),
         ],
     )
-    def test_check_conf_fails_when_steps_differs(
-        self, attributes, step, step_offset, expected_value
-    ):  # pylint: disable=unused-argument
+    def test_check_conf_fails_when_steps_differs(self, attributes, step, step_offset, expected_value):
         """Check conf should fail when step from pipeline config and step from attributes differs."""
         attributes_step = [attributes["step"]["row"], attributes["step"]["col"]]
         message = f"Initial disparity grid step {attributes_step} does not match configuration step {expected_value}."
@@ -766,7 +765,7 @@ class TestCheckDisparityGridsFromDirectoryWithinImage:
     )
     def test_fails_when_disparity_grids_bounds_are_out_of_image(
         self, attributes, disparity_in_dir_readers, image_metadata, correct_grid_shape, second_correct_grid_shape
-    ):  # pylint: disable=unused-argument
+    ):
         """The disparity grids must remain inside the image boundaries after expansion by step and/or origin."""
         message = "Initial disparity grid is not inside image boundaries."
         with pytest.raises(AttributeError, match=re.escape(message)):
@@ -819,8 +818,121 @@ class TestCheckDisparityGridsFromDirectoryWithinImage:
         correct_grid_shape,
         second_correct_grid_shape,
         expected,
-    ):  # pylint: disable=unused-argument
+    ):
         """The disparity grids must remain inside the image boundaries after expansion by step and/or origin."""
         roi = check_disparity_grids_from_directory_within_image(attributes, disparity_in_dir_readers[0], image_metadata)
 
         assert roi == expected
+
+
+class TestGetDictionaryFromInitGrid:
+    """
+    Check get_dictionary_from_init_grid method
+    """
+
+    @pytest.fixture()
+    def correct_grid_data(self, no_data_disp):
+        """
+        correct_grid_data fixture for get_dictionary_from_init_grid method
+        """
+
+        data = np.array(
+            [
+                [5.0, 1.0, 2.0, 0.0, 3.0],
+                [1.0, 2.0, 2.0, 2.0, 1.0],
+                [0.0, 1.0, 2.0, 3.0, 4.0],
+                [3.0, 3.0, 1.0, 0.0, 5.0],
+                [2.0, 1.0, 0.0, 5.0, 4.0],
+            ]
+        )
+
+        if no_data_disp is not None:
+            data[0, 0] = no_data_disp
+            data[1, 2] = no_data_disp
+            data[3, 1] = no_data_disp
+
+        return data
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize("correct_grid_shape", [(5, 5)])
+    @pytest.mark.parametrize(
+        [
+            "no_data_disp",
+            "gt_disparity_dict",
+        ],
+        [
+            pytest.param(None, {"init": 5, "range": 5}, id="No data disparity is None"),
+            pytest.param(5, {"init": 4, "range": 5}, id="Integer no data disparity"),
+            pytest.param(-5, {"init": 5, "range": 5}, id="Negative integer no data disparity"),
+            pytest.param(np.nan, {"init": 5, "range": 5}, id="NaN no data disparity"),
+            pytest.param(np.inf, {"init": 5, "range": 5}, id="Inf no data disparity"),
+            pytest.param(-np.inf, {"init": 5, "range": 5}, id="-Inf no data disparity"),
+        ],
+    )
+    def test_get_dictionary_from_init_grid(
+        self,
+        disparity_in_dir_readers,
+        correct_grid_shape,
+        correct_grid_data,
+        no_data_disp,
+        gt_disparity_dict,
+    ):
+        """
+        Check get_dictionary_from_init_grid method
+        """
+
+        # 5 is the range value used for the same_sized_grid_directory fixture
+        disparity_dict = get_dictionary_from_init_grid(disparity_in_dir_readers[0], 5)
+
+        assert disparity_dict == gt_disparity_dict
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize("correct_grid_shape", [(5, 5)])
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_data",
+            "no_data_disp",
+        ],
+        [
+            pytest.param(np.full((5, 5), 5.0), 5, id="Integer no data disparity"),
+            pytest.param(np.full((5, 5), np.nan), np.nan, id="NaN no data disparity"),
+            pytest.param(np.full((5, 5), np.inf), np.inf, id="Inf no data disparity"),
+            pytest.param(np.full((5, 5), -np.inf), -np.inf, id="-Inf no data disparity"),
+        ],
+    )
+    def test_fails_when_init_disp_full_of_no_data_values(
+        self, disparity_in_dir_readers, correct_grid_shape, correct_grid_data, no_data_disp
+    ):
+        """
+        Check get_dictionary_from_init_grid method fails when initial disparity grid is
+        full of no data disparity values.
+        """
+        # 5 is the range value used for the same_sized_grid_directory fixture
+        with pytest.raises(ValueError, match="Initial disparity grid is full of invalid values"):
+            get_dictionary_from_init_grid(disparity_in_dir_readers[0], 5)
