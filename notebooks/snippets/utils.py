@@ -3,7 +3,6 @@ Utilities for notebooks.
 """
 
 import os
-from typing import Union
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -12,8 +11,8 @@ from numpy.typing import NDArray
 
 def plot_image(
     img: NDArray,
-    title: Union[str, None] = None,
-    output_dir: Union[str, os.PathLike[str], None] = None,
+    title: str | None = None,
+    output_dir: str | os.PathLike[str] | None = None,
     cmap: str = "viridis",
 ) -> None:
     """
@@ -38,7 +37,7 @@ def plot_two_images(
     img2: NDArray,
     title1: str = "first_image",
     title2: str = "second_image",
-    output_dir: Union[str, os.PathLike[str], None] = None,
+    output_dir: str | os.PathLike[str] | None = None,
     cmap: str = "viridis",
 ) -> None:
     """

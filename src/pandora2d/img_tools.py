@@ -35,7 +35,7 @@ except ImportError:
 
 import copy
 from math import floor
-from typing import Any, Dict, List, NamedTuple, Tuple, Union
+from typing import Any, NamedTuple
 
 import numpy as np
 import pandora.img_tools as pandora_img_tools
@@ -45,7 +45,7 @@ from rasterio.io import DatasetReader
 from rasterio.windows import Window
 from scipy.ndimage import shift, zoom
 
-from pandora2d.types import Step, Origin
+from pandora2d.types import Origin, Step
 
 
 class Datasets(NamedTuple):
@@ -56,7 +56,7 @@ class Datasets(NamedTuple):
 
 
 def create_datasets_from_inputs(
-    input_config: Dict, roi: Dict = None, estimation_cfg: Dict = None, attributes: Dict = None
+    input_config: dict, roi: dict = None, estimation_cfg: dict = None, attributes: dict = None
 ) -> Datasets:
     """
     Read image and return the corresponding xarray.DataSet
@@ -100,7 +100,7 @@ def create_datasets_from_inputs(
     )
 
 
-def check_disparities(input_config: Dict) -> None:
+def check_disparities(input_config: dict) -> None:
     """
     Do various check against disparities properties.
 
@@ -142,7 +142,7 @@ def check_disparity_types(disparity: Any) -> None:
     """
 
     # Check disparity type
-    if disparity is None or not isinstance(disparity, Dict):
+    if disparity is None or not isinstance(disparity, dict):
         raise ValueError("The input disparity must be a dictionary.")
 
     # Check that dictionary keys are correct
@@ -159,9 +159,9 @@ def check_disparity_types(disparity: Any) -> None:
 
 def add_disparity_grid(
     dataset: xr.Dataset,
-    col_disparity: Dict,
-    row_disparity: Dict,
-    attributes: Dict = None,
+    col_disparity: dict,
+    row_disparity: dict,
+    attributes: dict = None,
     right: bool = False,
 ) -> xr.Dataset:
     """
@@ -211,12 +211,12 @@ def add_disparity_grid(
 
 def get_min_max_disp_from_dicts(
     dataset: xr.Dataset,
-    disparity: Dict,
+    disparity: dict,
     origin: Origin,
     step: Step,
-    user_invalid_disp: Union[int, float],
+    user_invalid_disp: int | float,
     right: bool = False,
-) -> Tuple[NDArray, List]:
+) -> tuple[NDArray, list]:
     """
     Transforms input disparity dicts with constant init into min/max disparity grids
 
@@ -318,7 +318,7 @@ def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
     return img_right_shift
 
 
-def get_margins_values(init_value: Union[int, np.ndarray], range_value: int, margins: list) -> Tuple[int, int]:
+def get_margins_values(init_value: int | np.ndarray, range_value: int, margins: list) -> tuple[int, int]:
     """
     Generate the values of margins
 
@@ -333,7 +333,7 @@ def get_margins_values(init_value: Union[int, np.ndarray], range_value: int, mar
     return max(margins[0] - disp_min, 0), max(margins[1] + disp_max, 0)
 
 
-def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> dict:
+def get_roi_processing(roi: dict, col_disparity: dict, row_disparity: dict) -> dict:
     """
     Return a roi which takes disparities into account.
     Update cfg roi with new margins.
@@ -368,7 +368,7 @@ def get_roi_processing(roi: dict, col_disparity: Dict, row_disparity: Dict) -> d
     return new_roi
 
 
-def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
+def remove_roi_margins(dataset: xr.Dataset, cfg: dict):
     """
     Remove ROI margins before saving output dataset
 
@@ -428,7 +428,7 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: Dict):
 
 
 def row_zoom_img(
-    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[float, int], order: int = 1
+    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: float | int, order: int = 1
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in row
@@ -465,7 +465,7 @@ def row_zoom_img(
 
 
 def col_zoom_img(
-    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: Union[float, int], order: int = 1
+    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: float | int, order: int = 1
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in col
@@ -500,7 +500,7 @@ def col_zoom_img(
     )
 
 
-def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order: int = 1) -> List[xr.Dataset]:
+def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order: int = 1) -> list[xr.Dataset]:
     """
     Return an array that contains the shifted right images
 
@@ -546,7 +546,7 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
     return img_right_shift
 
 
-def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> List[xr.Dataset]:
+def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> list[xr.Dataset]:
     """
     Return an array that contains the shifted right images in rows and columns
 
@@ -568,7 +568,7 @@ def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> L
     return img_right_shift_2d
 
 
-def get_initial_disparity(disparity: Dict) -> Union[DatasetReader, int]:
+def get_initial_disparity(disparity: dict) -> DatasetReader | int:
     """
     Return initial disparity
 
@@ -584,7 +584,7 @@ def get_initial_disparity(disparity: Dict) -> Union[DatasetReader, int]:
     return disparity_init
 
 
-def get_extrema_disparity(init_value: Union[DatasetReader, int], range_value: int) -> Tuple[int, int]:
+def get_extrema_disparity(init_value: DatasetReader | int, range_value: int) -> tuple[int, int]:
     """
     Returns [min, max] disparity
 
@@ -599,7 +599,7 @@ def get_extrema_disparity(init_value: Union[DatasetReader, int], range_value: in
     return disp_min, disp_max
 
 
-def convert_no_data(no_data: Union[float, int]) -> Union[float, int]:
+def convert_no_data(no_data: float | int) -> float | int:
     """
     If no_data is NaN or Inf, return -9999.
     Otherwise return no_data.

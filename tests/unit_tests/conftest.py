@@ -22,9 +22,9 @@
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 
+from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
-from typing import Sequence, Tuple
 
 import numpy as np
 import pytest
@@ -183,7 +183,7 @@ def correct_segment_mode():
 
 
 @pytest.fixture()
-def image_size() -> Tuple[int, int]:
+def image_size() -> tuple[int, int]:
     return 1000, 1000
 
 

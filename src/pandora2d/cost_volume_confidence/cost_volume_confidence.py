@@ -20,7 +20,7 @@ Module for common base of all cost volume confidence methods.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Mapping, Tuple, Union
+from collections.abc import Mapping
 
 import xarray as xr
 from json_checker import Checker
@@ -29,7 +29,7 @@ from json_checker import Checker
 class CostVolumeConfidence(ABC):
     """CostVolumeConfidence base class."""
 
-    def __init__(self, cfg: Dict) -> None:
+    def __init__(self, cfg: dict) -> None:
         """
         Initialisation of CostVolumeConfidence class
 
@@ -53,7 +53,7 @@ class CostVolumeConfidence(ABC):
         Configuration default values
         """
 
-    def check_conf(self, cfg: Dict) -> Dict[str, str]:
+    def check_conf(self, cfg: dict) -> dict[str, str]:
         """
         Check the cost volume confidence configuration
 
@@ -66,11 +66,11 @@ class CostVolumeConfidence(ABC):
 
         return updated_config
 
-    def _update_with_default_config_values(self, cfg: Dict):
+    def _update_with_default_config_values(self, cfg: dict):
         return {**self.defaults, **cfg}
 
     @property
-    def cfg(self) -> Mapping[str, Union[str, int, List[int]]]:
+    def cfg(self) -> Mapping[str, str | int | list[int]]:
         """
         Get used configuration
 
@@ -85,7 +85,7 @@ class CostVolumeConfidence(ABC):
         right_image: xr.Dataset,
         cost_volumes: xr.Dataset,
         dataset_disp_maps: xr.Dataset,
-    ) -> Tuple[xr.Dataset, xr.Dataset]:
+    ) -> tuple[xr.Dataset, xr.Dataset]:
         """
         Compute a confidence prediction.
 

@@ -27,7 +27,7 @@ from __future__ import annotations
 import logging
 import sys
 from abc import ABCMeta, abstractmethod
-from typing import Callable, Dict, Tuple
+from collections.abc import Callable
 
 import numpy as np
 import xarray as xr
@@ -45,7 +45,7 @@ class AbstractEstimation:
 
     __metaclass__ = ABCMeta
 
-    estimation_methods_avail: Dict = {}
+    estimation_methods_avail: dict = {}
     _estimation_method = None
     cfg = None
 
@@ -58,9 +58,7 @@ class AbstractEstimation:
         if cls is AbstractEstimation:
             if isinstance(cfg["estimation_method"], str):
                 try:
-                    return super(AbstractEstimation, cls).__new__(
-                        cls.estimation_methods_avail[cfg["estimation_method"]]
-                    )
+                    return super().__new__(cls.estimation_methods_avail[cfg["estimation_method"]])
                 except KeyError:
                     logging.error("No estimation method named %s supported", cfg["estimation_method"])
                     raise KeyError
@@ -68,9 +66,7 @@ class AbstractEstimation:
                 if isinstance(cfg["estimation_method"], unicode):  # type: ignore # pylint: disable=undefined-variable
                     # creating a plugin from registered short name given as unicode (py2 & 3 compatibility)
                     try:
-                        return super(AbstractEstimation, cls).__new__(
-                            cls.estimation_methods_avail[cfg["estimation_method"].encode("utf-8")]
-                        )
+                        return super().__new__(cls.estimation_methods_avail[cfg["estimation_method"].encode("utf-8")])
                     except KeyError:
                         logging.error(
                             "No estimation method named %s supported",
@@ -78,7 +74,7 @@ class AbstractEstimation:
                         )
                         raise KeyError
         else:
-            return super(AbstractEstimation, cls).__new__(cls)
+            return super().__new__(cls)
         return None
 
     @classmethod
@@ -108,7 +104,7 @@ class AbstractEstimation:
         print(f"{self._estimation_method} estimation measure")
 
     @abstractmethod
-    def compute_estimation(self, img_left: xr.Dataset, img_right: xr.Dataset) -> Tuple[Dict, Dict, np.ndarray, dict]:
+    def compute_estimation(self, img_left: xr.Dataset, img_right: xr.Dataset) -> tuple[dict, dict, np.ndarray, dict]:
         """
         Compute the phase cross correlation method
 
@@ -124,8 +120,8 @@ class AbstractEstimation:
 
     @staticmethod
     def update_cfg_with_estimation(
-        cfg: Dict, disp_col: Dict, disp_row: Dict, shifts: np.ndarray, extra_dict: dict = None
-    ) -> Dict:
+        cfg: dict, disp_col: dict, disp_row: dict, shifts: np.ndarray, extra_dict: dict = None
+    ) -> dict:
         """
         Save calculated shifts in a configuration dictionary
 

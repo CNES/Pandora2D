@@ -26,7 +26,6 @@ from pathlib import Path
 
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name,unused-argument,too-many-arguments,too-many-positional-arguments, too-many-lines
-
 import numpy as np
 import pandora
 import pytest

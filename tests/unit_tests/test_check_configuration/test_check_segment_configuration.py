@@ -22,9 +22,10 @@ Test check segment step configuration
 """
 
 from typing import Any
+
 import pytest
 
-from pandora2d.check_configuration import check_segment_mode_section, build_default_segment_mode_configuration
+from pandora2d.check_configuration import build_default_segment_mode_configuration, check_segment_mode_section
 
 
 class TestCheckSegmentMode:

@@ -21,7 +21,7 @@ This module contains methods associated to the pandora2d memory estimation
 """
 
 import math
-from typing import Dict, List, Tuple, TypedDict
+from typing import TypedDict
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -58,7 +58,7 @@ DATA_VARS_TYPE_SIZE = {
 }
 
 
-def estimate_total_consumption(config: Dict, height: int, width: int, margin_disp: Margins = NullMargins()) -> float:
+def estimate_total_consumption(config: dict, height: int, width: int, margin_disp: Margins = NullMargins()) -> float:
     """
     Estimate the total memory consumption of all objects that will be allocated.
     :param config: configuration with ROI margins if necessary.
@@ -91,7 +91,7 @@ def estimate_total_consumption(config: Dict, height: int, width: int, margin_dis
     return result
 
 
-def compute_effective_image_size(config: Dict, image_margins: Margins) -> Tuple[int, int]:
+def compute_effective_image_size(config: dict, image_margins: Margins) -> tuple[int, int]:
     """
     Compute the effective image size (height, width), including ROI and global margins.
 
@@ -114,7 +114,7 @@ def compute_effective_image_size(config: Dict, image_margins: Margins) -> Tuple[
     return height, width
 
 
-def get_img_size(img_path: str, roi: Dict = None) -> Tuple[int, int]:
+def get_img_size(img_path: str, roi: dict = None) -> tuple[int, int]:
     """
     Get width and height from an image path.
     If a ROI is given, its width and height are returned without takin margins into account.
@@ -152,7 +152,7 @@ def get_img_size(img_path: str, roi: Dict = None) -> Tuple[int, int]:
     return height, width
 
 
-def get_nb_disp(disparity: Dict, before_margins: int = 0, after_margins: int = 0, subpix: int = 1) -> int:
+def get_nb_disp(disparity: dict, before_margins: int = 0, after_margins: int = 0, subpix: int = 1) -> int:
     """
     Get number of disparities.
 
@@ -212,7 +212,7 @@ def img_dataset_size(height: int, width: int, nb_bytes: int) -> float:
     return (height * width * (nb_bytes)) / BYTE_TO_MB
 
 
-def estimate_input_size(height: int, width: int, data_vars: List[str]) -> float:
+def estimate_input_size(height: int, width: int, data_vars: list[str]) -> float:
     """
     Estimate input configuration size (MB) according to image width, height
     and data variables contained in the image dataset.
@@ -230,7 +230,7 @@ def estimate_input_size(height: int, width: int, data_vars: List[str]) -> float:
 
 
 def estimate_cost_volumes_size(
-    user_cfg: Dict, height: int, width: int, margins_disp: Margins, data_vars: List[str]
+    user_cfg: dict, height: int, width: int, margins_disp: Margins, data_vars: list[str]
 ) -> float:
     """
     Estimate 4D cost volumes size (MB) according to image width, height,
@@ -278,7 +278,7 @@ def estimate_shifted_right_images_size(height: int, width: int, subpix: int) -> 
     return one_image_size * number_of_images
 
 
-def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, margins: Margins) -> float:
+def estimate_pandora_cost_volume_size(config: dict, height: int, width: int, margins: Margins) -> float:
     """
     Estimate the size in MB of the cost volume according to image width, height, and refinement margins.
 
@@ -297,7 +297,7 @@ def estimate_pandora_cost_volume_size(config: Dict, height: int, width: int, mar
     return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
 
 
-def estimate_dataset_disp_map_size(height: int, width: int, step: List, dtype: DTypeLike) -> float:
+def estimate_dataset_disp_map_size(height: int, width: int, step: list, dtype: DTypeLike) -> float:
     """
     Estimate the size in MB of the disparity map dataset.
 
@@ -342,7 +342,7 @@ class Roi(TypedDict):
     col: RoiRange
 
 
-def segment_image_by_rows(config: Dict, disp_margins: Margins, image_margins: Margins) -> List[Roi]:
+def segment_image_by_rows(config: dict, disp_margins: Margins, image_margins: Margins) -> list[Roi]:
     """
     Split an image into multiple horizontal ROI segments that fit within memory constraints.
 

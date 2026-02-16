@@ -53,8 +53,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0
@@ -75,8 +74,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0
@@ -97,8 +95,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0
@@ -119,8 +116,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0
@@ -143,8 +139,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks/advanced_examples",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0

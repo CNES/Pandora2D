@@ -22,7 +22,7 @@
 This module contains functions associated to the optical flow method used in the refinement step.
 """
 
-from typing import Dict, List, Literal, Tuple
+from typing import Literal
 
 import numpy as np
 import xarray as xr
@@ -71,7 +71,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         self._step = self.cfg["step"]
 
     @classmethod
-    def check_conf(cls, cfg: Dict) -> Dict:
+    def check_conf(cls, cfg: dict) -> dict:
         """
         Check the refinement configuration
 
@@ -94,7 +94,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         self,
         img: xr.Dataset,
         cost_volumes: xr.Dataset,
-        coordinates: Tuple[List, List],
+        coordinates: tuple[list, list],
         disp_row: NDArray = None,
         disp_col: NDArray = None,
     ) -> NDArray:
@@ -203,7 +203,7 @@ class OpticalFlow(refinement.AbstractRefinement):
 
         return new_img
 
-    def lucas_kanade_core_algorithm(self, left_data: NDArray, right_data: NDArray) -> Tuple[float, float]:
+    def lucas_kanade_core_algorithm(self, left_data: NDArray, right_data: NDArray) -> tuple[float, float]:
         """
         Implement lucas & kanade algorithm core
 
@@ -235,7 +235,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         left_img: NDArray,
         right_img: NDArray,
         list_idx_to_compute: list,
-    ) -> Tuple[NDArray, NDArray, list]:
+    ) -> tuple[NDArray, NDArray, list]:
         """
         Computing optical flow between left and right image
 
@@ -291,7 +291,7 @@ class OpticalFlow(refinement.AbstractRefinement):
 
     def refinement_method(
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 
@@ -388,7 +388,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         return delta_col, delta_row, disp_map["correlation_score"].data
 
     def _invalid_out_of_grid_disparities(
-        self, step: List, delta: NDArray[np.floating], disparity: xr.DataArray
+        self, step: list, delta: NDArray[np.floating], disparity: xr.DataArray
     ) -> None:
         """
         Replace delta values by invalid_disp value when it is outside the corresponding disparity range defined by

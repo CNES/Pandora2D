@@ -18,14 +18,12 @@
 
 """Functions to report information."""
 
-from typing import Dict
-
 import xarray as xr
 
 from .statistics import compute_statistics
 
 
-def report_disparities(data: xr.Dataset) -> Dict:
+def report_disparities(data: xr.Dataset) -> dict:
     """
     Report statistics on disparities.
     :param data: disparities to report statistics from.

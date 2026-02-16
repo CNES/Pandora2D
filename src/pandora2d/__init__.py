@@ -25,7 +25,7 @@ import logging
 from importlib.metadata import version
 from os import PathLike
 from pathlib import Path
-from typing import Dict, Union, cast
+from typing import cast
 
 import xarray as xr
 from pandora import import_plugin, read_config_file
@@ -74,7 +74,7 @@ def run(
     pandora2d_machine: Pandora2DMachine,
     img_left: xr.Dataset,
     img_right: xr.Dataset,
-    cfg: Dict[str, dict],
+    cfg: dict[str, dict],
 ) -> tuple[xr.Dataset, dict]:
     """
     Run the Pandora 2D pipeline
@@ -103,7 +103,7 @@ def run(
     return pandora2d_machine.dataset_disp_maps, pandora2d_machine.completed_cfg
 
 
-def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]) -> tuple[xr.Dataset, dict]:
+def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> tuple[xr.Dataset, dict]:
     """
     Process ROI, create image datasets and run pandora2d pipeline
 
@@ -143,7 +143,7 @@ def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]) -> 
     return dataset_disp_maps, completed_cfg
 
 
-def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[str, dict]) -> tuple[xr.Dataset, dict]:
+def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> tuple[xr.Dataset, dict]:
     """
     Run pandora2d pipeline with segment mode
 
@@ -169,7 +169,7 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[st
     # Iteration on the different segments
     for roi in roi_list:
 
-        cfg["ROI"] = cast(Dict, roi)
+        cfg["ROI"] = cast(dict, roi)
         dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
         final_dataset_disp_maps = xr.merge([dataset_disp_maps, final_dataset_disp_maps])
 
@@ -191,7 +191,7 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: Dict[st
     return final_dataset_disp_maps, completed_cfg
 
 
-def main(cfg_path: Union[PathLike, str], verbose: bool) -> None:
+def main(cfg_path: PathLike | str, verbose: bool) -> None:
     """
     Check config file and run pandora 2D framework accordingly
 

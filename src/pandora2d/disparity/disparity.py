@@ -23,7 +23,7 @@
 This module contains functions associated to the disparity map computation step.
 """
 
-from typing import Callable, Dict, Tuple
+from collections.abc import Callable
 
 import numpy as np
 import xarray as xr
@@ -40,7 +40,7 @@ class Disparity:
 
     _INVALID_DISPARITY = -9999
 
-    def __init__(self, cfg: Dict) -> None:
+    def __init__(self, cfg: dict) -> None:
         self.cfg = self.check_conf(cfg)
         self._invalid_disparity = self.cfg["invalid_disparity"]
 
@@ -49,7 +49,7 @@ class Disparity:
         """Return disparity map's Margins."""
         return NullMargins()
 
-    def check_conf(self, cfg: Dict) -> Dict:
+    def check_conf(self, cfg: dict) -> dict:
         """
         Check the disparity configuration
 
@@ -180,7 +180,7 @@ class Disparity:
 
         return disp
 
-    def compute_disp_maps(self, cost_volumes: xr.Dataset) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def compute_disp_maps(self, cost_volumes: xr.Dataset) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Disparity computation by applying the Winner Takes All strategy
 

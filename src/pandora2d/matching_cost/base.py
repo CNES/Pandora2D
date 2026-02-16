@@ -19,7 +19,8 @@ Module for common base of all MatchingCost methods.
 
 import copy
 from abc import ABC, abstractmethod
-from typing import Dict, List, Mapping, Tuple, Union, cast
+from collections.abc import Mapping
+from typing import cast
 
 import numpy as np
 import xarray as xr
@@ -35,7 +36,7 @@ from pandora2d.margins import Margins
 class BaseMatchingCost(ABC):
     """MatchingCost base class."""
 
-    def __init__(self, cfg: Dict) -> None:
+    def __init__(self, cfg: dict) -> None:
         """
         Initialisation of matching_cost class
 
@@ -55,8 +56,8 @@ class BaseMatchingCost(ABC):
         self._spline_order = cast(int, self._cfg["spline_order"])
         self._float_precision = np.dtype(self._cfg["float_precision"])
 
-        self.cost_volumes: Union[xr.Dataset, None] = None
-        self.shifted_right_images: List[xr.Dataset] = []
+        self.cost_volumes: xr.Dataset | None = None
+        self.shifted_right_images: list[xr.Dataset] = []
 
     @property
     def schema(self):
@@ -80,7 +81,7 @@ class BaseMatchingCost(ABC):
             "float_precision": "float32",
         }
 
-    def check_conf(self, cfg: Dict) -> Dict[str, str]:
+    def check_conf(self, cfg: dict) -> dict[str, str]:
         """Check the matching cost configuration
 
         :param cfg: user_config for matching cost
@@ -92,11 +93,11 @@ class BaseMatchingCost(ABC):
 
         return updated_config
 
-    def _update_with_default_config_values(self, cfg: Dict):
+    def _update_with_default_config_values(self, cfg: dict):
         return {**self.defaults, **cfg}
 
     @property
-    def cfg(self) -> Mapping[str, Union[str, int, List[int]]]:
+    def cfg(self) -> Mapping[str, str | int | list[int]]:
         """
         Get used configuration
 
@@ -105,7 +106,7 @@ class BaseMatchingCost(ABC):
         return self._cfg
 
     @property
-    def step(self) -> List[int]:
+    def step(self) -> list[int]:
         """
         Get step [row, col]
 
@@ -159,8 +160,8 @@ class BaseMatchingCost(ABC):
         return cost_volumes
 
     def get_cv_row_col_coords(
-        self, img_row_coordinates: NDArray, img_col_coordinates: NDArray, cfg: Dict
-    ) -> Tuple[NDArray, NDArray]:
+        self, img_row_coordinates: NDArray, img_col_coordinates: NDArray, cfg: dict
+    ) -> tuple[NDArray, NDArray]:
         """
         Compute cost_volumes row and col coordinates according to image coordinates
 
@@ -252,7 +253,7 @@ class BaseMatchingCost(ABC):
         return disps_col
 
     @staticmethod
-    def cfg_for_get_coordinates(cfg: Dict) -> Dict:
+    def cfg_for_get_coordinates(cfg: dict) -> dict:
         """
         Return right configuration to give to get_coordinates or get_coordinates_2d methods.
 
@@ -284,7 +285,7 @@ class BaseMatchingCost(ABC):
         self,
         img_left: xr.Dataset,
         img_right: xr.Dataset,
-        cfg: Dict,
+        cfg: dict,
         margins: Margins = None,
     ) -> None:
         """
@@ -337,7 +338,7 @@ class BaseMatchingCost(ABC):
     def set_out_of_disparity_range_to_other_value(
         self,
         img_left: xr.Dataset,
-        value: Union[int, float],
+        value: int | float,
     ) -> None:
         """
         Put special value in data where the row or column disparity is out of the range defined
@@ -408,8 +409,8 @@ def set_out_of_row_disparity_range_to_other_value(
     data: xr.DataArray,
     min_disp_grid: NDArray[np.floating],
     max_disp_grid: NDArray[np.floating],
-    value: Union[int, float],
-    global_disparity_range: List[int],
+    value: int | float,
+    global_disparity_range: list[int],
 ) -> None:
     """
     Put special value in data where the row disparity is out of the range defined by disparity grids.
@@ -443,8 +444,8 @@ def set_out_of_col_disparity_range_to_other_value(
     data: xr.DataArray,
     min_disp_grid: NDArray[np.floating],
     max_disp_grid: NDArray[np.floating],
-    value: Union[int, float],
-    global_disparity_range: List[int],
+    value: int | float,
+    global_disparity_range: list[int],
 ) -> None:
     """
     Put special value in data where the column disparity is out of the range defined

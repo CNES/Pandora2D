@@ -26,7 +26,7 @@ import logging
 import math
 import sys
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, Tuple
+from collections.abc import Callable
 
 import numpy as np
 from json_checker import Checker
@@ -44,7 +44,7 @@ class AbstractFilter(ABC):
     Abstract Filter class
     """
 
-    interpolation_filter_methods_avail: Dict = {}
+    interpolation_filter_methods_avail: dict = {}
     _interpolation_filter_method = None
     _SIZE = 4
     cpp_instance = None
@@ -60,13 +60,13 @@ class AbstractFilter(ABC):
             if isinstance(cfg["method"], str):
                 filter_method = cfg["method"]
                 try:
-                    return super(AbstractFilter, cls).__new__(cls.interpolation_filter_methods_avail[filter_method])
+                    return super().__new__(cls.interpolation_filter_methods_avail[filter_method])
                 except KeyError:
                     logging.error("No subpixel method named %s supported", filter_method)
                     raise KeyError
-        return super(AbstractFilter, cls).__new__(cls)
+        return super().__new__(cls)
 
-    def __init__(self, cfg: Dict, **_) -> None:
+    def __init__(self, cfg: dict, **_) -> None:
         """
         :param cfg: optional configuration, {}
         :return: None
@@ -78,7 +78,7 @@ class AbstractFilter(ABC):
         """Return filter's Margins."""
         return NullMargins()
 
-    def check_conf(self, cfg: Dict) -> Dict:
+    def check_conf(self, cfg: dict) -> dict:
         """
         Check the refinement method configuration.
 
@@ -143,8 +143,8 @@ class AbstractFilter(ABC):
         return (row_coeff.dot(resampling_area)).dot(col_coeff)
 
     def interpolate(
-        self, image: np.ndarray, positions: Tuple[np.ndarray, np.ndarray], max_fractional_value: float = 0.998046875
-    ) -> List:
+        self, image: np.ndarray, positions: tuple[np.ndarray, np.ndarray], max_fractional_value: float = 0.998046875
+    ) -> list:
         """
         Returns the values of the 8 interpolated position
 

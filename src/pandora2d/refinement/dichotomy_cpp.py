@@ -20,7 +20,6 @@ Module for Dichotomy refinement method (cpp version).
 """
 
 import logging
-from typing import Dict, Tuple
 
 import numpy as np
 import xarray as xr
@@ -56,7 +55,7 @@ class Dichotomy(refinement.AbstractRefinement):
         )
 
     @classmethod
-    def check_conf(cls, cfg: Dict) -> Dict:
+    def check_conf(cls, cfg: dict) -> dict:
         """
         Check the refinement method configuration.
 
@@ -87,7 +86,7 @@ class Dichotomy(refinement.AbstractRefinement):
 
     def refinement_method(  # pylint: disable=too-many-locals
         self, cost_volumes: xr.Dataset, disp_map: xr.Dataset, img_left: xr.Dataset, img_right: xr.Dataset
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return the subpixel disparity maps
 

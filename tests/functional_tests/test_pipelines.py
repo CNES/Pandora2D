@@ -25,7 +25,6 @@ Run pandora2d configurations from end to end.
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 import pytest
@@ -186,7 +185,7 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
     - Right image : cones/multibands/right.tif
     Requirement : EX_CONF_00, EX_CONF_06, EX_CONF_12
     """
-    configuration: Dict[str, Dict] = {
+    configuration: dict[str, dict] = {
         **correct_multiband_input_cfg,
         **correct_pipeline_without_refinement,
         **{"output": {"path": str(tmp_path / "output")}},
@@ -213,7 +212,7 @@ def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pip
     - Right image : cones/monoband/right.png
     Requirement : EX_CONF_00, EX_CONF_06
     """
-    configuration: Dict[str, Dict] = {
+    configuration: dict[str, dict] = {
         **correct_input_cfg,
         **correct_pipeline_with_optical_flow,
         **{"output": {"path": str(tmp_path / "output")}},

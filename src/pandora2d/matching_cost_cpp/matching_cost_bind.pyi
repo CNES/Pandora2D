@@ -19,8 +19,6 @@
 
 # pylint: skip-file
 
-from typing import List
-
 import numpy as np
 from numpy.typing import NDArray
 
@@ -28,7 +26,7 @@ from ..common_cpp.common_bind import CostVolumeSize
 
 def compute_cost_volumes_cpp_float(
     left: NDArray[np.float32],
-    right: List[NDArray[np.float32]],
+    right: list[NDArray[np.float32]],
     cv_values: NDArray[np.floating],
     criteria_values: NDArray[np.uint8],
     cv_size: CostVolumeSize,
@@ -59,7 +57,7 @@ def compute_cost_volumes_cpp_float(
 
 def compute_cost_volumes_cpp_double(
     left: NDArray[np.float32],
-    right: List[NDArray[np.float32]],
+    right: list[NDArray[np.float32]],
     cv_values: NDArray[np.floating],
     criteria_values: NDArray[np.uint8],
     cv_size: CostVolumeSize,

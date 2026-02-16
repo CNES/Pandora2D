@@ -23,8 +23,8 @@ Test check input step configuration
 
 # pylint: disable=redefined-outer-name,too-many-arguments,too-many-positional-arguments, too-many-lines
 import json
-import re
 import logging
+import re
 from copy import deepcopy
 from pathlib import Path
 
@@ -32,18 +32,18 @@ import numpy as np
 import pytest
 import rasterio
 from json_checker import DictCheckerError
+from pandora.img_tools import get_metadata, rasterio_open
 from skimage.io import imsave
-from pandora.img_tools import rasterio_open, get_metadata
 
 from pandora2d.check_configuration import (
-    check_input_section,
     check_disparity,
-    check_disparity_ranges_are_inside_image,
     check_disparity_grids,
-    load_attributes,
-    check_step_from_attributes,
     check_disparity_grids_from_directory_within_image,
+    check_disparity_ranges_are_inside_image,
+    check_input_section,
+    check_step_from_attributes,
     get_dictionary_from_init_grid,
+    load_attributes,
 )
 
 
