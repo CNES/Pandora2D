@@ -97,11 +97,38 @@ test-functional: install reports_dir ## run functional tests only (for dev and v
 	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage-functional.cobertura.xml --cov-report term --cov
 
 .PHONY: test-resource
-test-resource: install ## run resource tests only (for validation plan)
-	@echo "Run resource tests"
-	@rm -f tests/resource_tests/.pymon
-	@${PANDORA2D_VENV}/bin/pytest -m "resource_tests and not metrics" --db tests/resource_tests/.pymon
-	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/.pymon  --html=resource-test-report.html
+test-resource: install test-resource-estimation test-resource-matching-cost test-resource-refinement ## run resource tests only (for validation plan)
+
+.PHONY: test-resource-estimation
+test-resource-estimation: install ## run resource tests only (for validation plan)
+	@echo "Run estimation resource tests"
+	@rm -f tests/resource_tests/estimation/.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "estimation_resource_tests and not metrics" --db tests/resource_tests/estimation/.pymon -vv
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/estimation/.pymon  --html=resource-test-report.html
+
+.PHONY: test-resource-matching-cost
+test-resource-matching-cost: install ## run resource tests only (for validation plan)
+	@echo "Run matching-cost resource tests"
+	@rm -f tests/resource_tests/matching_cost/.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "matching_cost_resource_tests and not metrics" --db tests/resource_tests/matching_cost/.pymon -vv
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/matching_cost/.pymon  --html=resource-test-report.html
+
+.PHONY: test-resource-refinement
+test-resource-refinement: install test-resource-refinement-dichotomy test-resource-refinement-optical-flow ## run resource tests only (for validation plan)
+
+.PHONY: test-resource-refinement-dichotomy
+test-resource-refinement-dichotomy: install ## run resource tests only (for validation plan)
+	@echo "Run dichotomy resource tests"
+	@rm -f tests/resource_tests/refinement/dicho.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "dichotomy_resource_tests and not metrics" --db tests/resource_tests/refinement/dicho.pymon -vv
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/refinement/dicho.pymon  --html=resource-test-report.html
+
+.PHONY: test-resource-refinement-optical-flow
+test-resource-refinement-optical-flow: install ## run resource tests only (for validation plan)
+	@echo "Run optical flow resource tests"
+	@rm -f tests/resource_tests/refinement/optical-flow.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "optical_flow_resource_tests and not metrics" --db tests/resource_tests/refinement/optical-flow.pymon -vv
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/refinement/optical-flow.pymon  --html=resource-test-report.html
 
 .PHONY: test-performance
 test-performance: install ## run performance tests only (for validation plan)
