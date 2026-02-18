@@ -254,15 +254,26 @@ def get_min_max_disp_from_dicts(
         window = Window(cols[0], rows[0], cols.size, rows.size)
 
         # Get disparity data
-        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=disparity_dtype, window=window)
+        reader = pandora_img_tools.rasterio_open(disparity["init"])
+        disp_data = reader.read(1, out_dtype=disparity_dtype, window=window)
         # When using disparity maps from a previous execution as ROI,
         # the initial disparity grids can be smaller than the image window.
         # In this case, we use the entire initial disparity grid and ROI margins are included in disp_min_max.
         if disp_data.shape < dataset["im"].data.shape:
-            disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=disparity_dtype)
+            disp_data = reader.read(1, out_dtype=disparity_dtype)
             # If disp_min_max corresponds to a ROI, we need to convert origin coordinates as index
             row_offset -= rows[0]
             col_offset -= cols[0]
+
+        # Work on disp_data to avoid transformation on nodata
+        is_data_mask = np.isfinite(disp_data)
+        nodata = reader.meta.get("nodata", None)
+        if nodata is not None:
+            is_data_mask &= disp_data != nodata
+        disp_interval = [
+            np.min(disp_data[is_data_mask] * pow(-1, right) - disparity["range"]),
+            np.max(disp_data[is_data_mask] * pow(-1, right) + disparity["range"]),
+        ]
 
         last_row_index = row_offset + disp_data.shape[0] * step.row
         last_col_index = col_offset + disp_data.shape[1] * step.col
@@ -273,8 +284,9 @@ def get_min_max_disp_from_dicts(
         disp_min_max[0, row_slice, col_slice] = disp_data * pow(-1, right) - disparity["range"]
         disp_min_max[1, row_slice, col_slice] = disp_data * pow(-1, right) + disparity["range"]
 
-        # Invalid disparities will be filtered in a future ticket.
-        disp_interval = [np.nanmin(disp_min_max[0, ::]), np.nanmax(disp_min_max[1, ::])]
+        # Restore nodata
+        disp_min_max[0, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
+        disp_min_max[1, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
 
     return disp_min_max, disp_interval
 

@@ -32,6 +32,7 @@ import pytest
 import rasterio
 import xarray as xr
 from pandora.common import write_data_array
+from pytest import DoctestItem
 
 import pandora2d
 
@@ -95,6 +96,8 @@ def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
     Parse test docstrings and retrieve strings in EX_*.
     """
     outcome = yield
+    if isinstance(item, DoctestItem):
+        return
     report = outcome.get_result()
     pattern = r"(EX_\w*)"
     report.requirement = re.findall(pattern, str(item.function.__doc__))
