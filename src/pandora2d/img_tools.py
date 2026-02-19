@@ -188,21 +188,24 @@ def add_disparity_grid(
         user_invalid_disp = attributes["invalid_disp"]
 
     # Creates min and max disparity grids
-    col_disp_min_max, col_disp_interval = get_min_max_disp_from_dicts(
+    col_disp_min_max, col_disp_interval, col_no_data = get_min_max_disp_from_dicts(
         dataset, col_disparity, origin, step, user_invalid_disp, right=right
     )
-    row_disp_min_max, row_disp_interval = get_min_max_disp_from_dicts(
+    row_disp_min_max, row_disp_interval, row_no_data = get_min_max_disp_from_dicts(
         dataset, row_disparity, origin, step, user_invalid_disp, right=right
     )
 
     # Add disparity grids to dataset
-    for key, disparity_data, source in zip(
-        ["col_disparity", "row_disparity"], [col_disp_min_max, row_disp_min_max], [col_disp_interval, row_disp_interval]
+    for key, disparity_data, source, no_data in zip(
+        ["col_disparity", "row_disparity"], [col_disp_min_max, row_disp_min_max], [col_disp_interval,
+                                                                                   row_disp_interval], [col_no_data,
+                                                                                                        row_no_data]
     ):
         dataset[key] = xr.DataArray(
             disparity_data,
             dims=["band_disp", "row", "col"],
             coords={"band_disp": ["min", "max"]},
+            attrs={"no_data": no_data},
         )
 
         dataset.attrs[f"{key}_source"] = source
@@ -216,7 +219,7 @@ def get_min_max_disp_from_dicts(
     step: Step,
     user_invalid_disp: int | float,
     right: bool = False,
-) -> tuple[NDArray, list]:
+) -> tuple[NDArray, list, float | None]:
     """
     Transforms input disparity dicts with constant init into min/max disparity grids
 
@@ -231,6 +234,7 @@ def get_min_max_disp_from_dicts(
 
     disparity_dtype = np.float32
     disp_min_max = np.full((2, dataset.sizes["row"], dataset.sizes["col"]), user_invalid_disp, dtype=disparity_dtype)
+    nodata = None
 
     # Creates min and max disparity grids if initial disparity is constant (int)
     if isinstance(disparity["init"], int):
@@ -288,7 +292,7 @@ def get_min_max_disp_from_dicts(
         disp_min_max[0, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
         disp_min_max[1, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
 
-    return disp_min_max, disp_interval
+    return disp_min_max, disp_interval, nodata
 
 
 def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:

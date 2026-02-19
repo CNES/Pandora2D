@@ -589,6 +589,37 @@ class TestReturnedValue:
             second_correct_grid_data,
         )
 
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "correct_grid"},
+                id="Correct disparity grids",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize("no_data_disp", [69])
+    def test_no_data_disp(self, result, no_data_disp):
+        """no_data_disp should be present in attributes."""
+        assert result.left["col_disparity"].attrs["no_data"] == no_data_disp
+        assert result.left["row_disparity"].attrs["no_data"] == no_data_disp
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "correct_grid"},
+                id="Correct disparity grids",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize("no_data_disp", [np.nan])
+    def test_no_data_disp_is_nan(self, result, no_data_disp):
+        """no_data_disp should be present in attributes."""
+        assert np.isnan(result.left["col_disparity"].attrs["no_data"])
+        assert np.isnan(result.left["row_disparity"].attrs["no_data"])
 
 class TestDisparityChecking:
     """Test checks done on disparities."""
@@ -815,7 +846,7 @@ class TestGetMinMaxDispFromDicts:
         dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"])
 
         # We test for row_disparity, the behavior for col_disparity is the same.
-        disp_min_max, disp_interval = img_tools.get_min_max_disp_from_dicts(
+        disp_min_max, disp_interval, nodata = img_tools.get_min_max_disp_from_dicts(
             dataset,
             make_input_cfg["row_disparity"],
             Origin(origin_coordinates["row"], origin_coordinates["col"]),
@@ -831,6 +862,7 @@ class TestGetMinMaxDispFromDicts:
         np.testing.assert_equal(disp_min_max[1, :: step[0], :: step[1]], correct_grid_max)
         assert disp_interval[0] == np.nanmin(correct_grid_min)
         assert disp_interval[1] == np.nanmax(correct_grid_max)
+        assert nodata is None
 
     @pytest.mark.parametrize(
         [
@@ -987,7 +1019,7 @@ class TestGetMinMaxDispFromDicts:
         dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"], roi=roi)
 
         # We test for row_disparity, the behavior for col_disparity is the same.
-        disp_min_max, disp_interval = img_tools.get_min_max_disp_from_dicts(
+        disp_min_max, disp_interval, nodata = img_tools.get_min_max_disp_from_dicts(
             dataset,
             make_input_cfg["row_disparity"],
             Origin(origin_coordinates["row"], origin_coordinates["col"]),
@@ -1003,6 +1035,7 @@ class TestGetMinMaxDispFromDicts:
         np.testing.assert_equal(disp_min_max[1, :, :], gt_disparity_max)
         assert disp_interval[0] == np.nanmin(correct_grid_min)
         assert disp_interval[1] == np.nanmax(correct_grid_max)
+        assert nodata is None
 
     @pytest.mark.parametrize(
         [
@@ -1045,7 +1078,7 @@ class TestGetMinMaxDispFromDicts:
         dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"], roi=roi)
 
         # We test for row_disparity, the behavior for col_disparity is the same.
-        disp_min_max, disp_interval = img_tools.get_min_max_disp_from_dicts(
+        disp_min_max, disp_interval, no_data = img_tools.get_min_max_disp_from_dicts(
             dataset,
             make_input_cfg["row_disparity"],
             Origin(0, 0),
@@ -1066,6 +1099,7 @@ class TestGetMinMaxDispFromDicts:
         np.testing.assert_equal(disp_min_max[1, :, :], correct_grid_max)
         assert disp_interval[0] == np.nanmin(correct_grid_min)
         assert disp_interval[1] == np.nanmax(correct_grid_max)
+        assert no_data is None
 
 
 class TestGetMinMaxDispFromDictsNoData:
@@ -1167,7 +1201,7 @@ class TestGetMinMaxDispFromDictsNoData:
         dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"], roi=roi)
 
         # We test for col_disparity, the behavior for row_disparity is the same.
-        disp_min_max, disp_interval = img_tools.get_min_max_disp_from_dicts(
+        disp_min_max, disp_interval, nodata = img_tools.get_min_max_disp_from_dicts(
             dataset,
             make_input_cfg["col_disparity"],
             Origin(origin_coordinates["row"], origin_coordinates["col"]),
@@ -1180,6 +1214,7 @@ class TestGetMinMaxDispFromDictsNoData:
         assert (
             disp_min_max[:, margins.up : -margins.down, margins.left + 3 : -margins.right : 4] == no_data_disp
         ).all()
+        assert nodata == no_data_disp
 
     @pytest.mark.parametrize(
         [
@@ -1263,7 +1298,7 @@ class TestGetMinMaxDispFromDictsNoData:
         dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"], roi=roi)
 
         # We test for col_disparity, the behavior for row_disparity is the same.
-        disp_min_max, disp_interval = img_tools.get_min_max_disp_from_dicts(
+        disp_min_max, disp_interval, nodata = img_tools.get_min_max_disp_from_dicts(
             dataset,
             make_input_cfg["col_disparity"],
             Origin(origin_coordinates["row"], origin_coordinates["col"]),
@@ -1277,3 +1312,4 @@ class TestGetMinMaxDispFromDictsNoData:
         assert (
             disp_min_max[:, margins.up : -margins.down, margins.left + 3 : -margins.right : 4] == no_data_disp
         ).all()
+        assert nodata == no_data_disp
