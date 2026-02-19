@@ -163,10 +163,10 @@ disparity_map repository
 - | *row_map.tif*, *col_map.tif* : disparity maps for rows and columns,
   | **or** *row_deformation_map.tif*, *col_deformation_map.tif* : deformation grids  for rows and columns if the associated mode is enabled.
 - *correlation_score.tif* : correlation score map.
-- *validity.tif* : validity map containing several bands:
+- *validity.tif* : validity map containing several bands, each band encoded in 1 bit:
 
-    - a global validity map 'validity_mask' indicating whether each point is valid (value 0) or invalid when any criterion is raised (value 1).
-    - a global partial validity map 'partial_validity_mask' indicating whether each point is valid (value 0) or invalid when all criteria are raised (value 1).
+    - a global validity map 'validity_mask', indicating whether each point is valid (value 0) or invalid (value 1) when at least one requested disparity can not be computed.
+    - a global partial validity map 'partial_validity_mask', indicating whether each point is partially valid (value 0) or invalid (value 1) when all requested disparity can not be computed.
     - a band for each criteria indicating whether the corresponding criteria is raised at the point or not.
 
 .. warning::

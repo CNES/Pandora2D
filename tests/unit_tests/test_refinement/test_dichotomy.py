@@ -433,9 +433,7 @@ class TestRefinementMethod:
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 1, "col": 0}] = np.nan
         disp_map["col_map"][{"row": 1, "col": 0}] = np.nan
-        # provide both validity_mask and partial_validity mask:
-        #  the partial is required for peak on edges and validity for valid pixels
-        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 1
+        # provide partial_validity mask to compute peak on edges method
         disp_map["validity"].loc[{"criteria": "partial_validity_mask"}][{"row": 1, "col": 0}] = 1
 
         copy_disp_map = copy.deepcopy(disp_map)
@@ -473,10 +471,8 @@ class TestRefinementMethod:
         dichotomy_instance = dichotomy_class(config_dichotomy)
         # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
         disp_map["row_map"][{"row": 1, "col": 0}] = invalid_disparity
-        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 1, "col": 0}] = 1
         disp_map["validity"].loc[{"criteria": "partial_validity_mask"}][{"row": 1, "col": 0}] = 1
         disp_map["col_map"][{"row": 0, "col": 1}] = invalid_disparity
-        disp_map["validity"].loc[{"criteria": "validity_mask"}][{"row": 0, "col": 1}] = 1
         disp_map["validity"].loc[{"criteria": "partial_validity_mask"}][{"row": 0, "col": 1}] = 1
 
         copy_disp_map = copy.deepcopy(disp_map)

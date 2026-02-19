@@ -18,7 +18,7 @@
 #
 
 """
-Test that the validity mask band obtained with the criteria dataarray is correct.
+Test that the partial validity mask band obtained with the criteria dataarray is correct.
 """
 
 import numpy as np
@@ -44,12 +44,12 @@ from pandora2d.margins import Margins
             },
             np.array(
                 [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
                 ]
             ),
             id="No mask and window_size=1",
@@ -67,10 +67,10 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 0, 0, 1, 1, 1],
-                    [1, 1, 1, 0, 0, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             ),
@@ -89,8 +89,8 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1],
-                    [1, 0, 1],
-                    [1, 1, 1],
+                    [1, 0, 0],
+                    [1, 0, 0],
                 ]
             ),
             id="No mask, window_size=3, step=[2,3]",
@@ -109,8 +109,8 @@ from pandora2d.margins import Margins
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
@@ -138,12 +138,12 @@ from pandora2d.margins import Margins
             },
             np.array(
                 [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 0, 0, 1, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 1, 0, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 1, 0, 1],
+                    [0, 0, 0, 0, 0, 1, 0, 0],
                 ]
             ),
             id="Left mask, window_size=1",
@@ -170,10 +170,10 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 0, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 0, 0, 0, 1],
+                    [1, 0, 1, 1, 1, 0, 1, 1],
+                    [1, 0, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             ),
@@ -220,7 +220,7 @@ from pandora2d.margins import Margins
                 "subpix": 1,
                 "window_size": 1,
             },
-            np.full((6, 8), 1),
+            np.full((6, 8), 0),
             id="Right mask, window_size=1",
         ),
         pytest.param(
@@ -244,7 +244,7 @@ from pandora2d.margins import Margins
                 "subpix": 2,
                 "window_size": 1,
             },
-            np.full((6, 8), 1),
+            np.full((6, 8), 0),
             id="Right mask, window_size=1, subpix=2",
         ),
         pytest.param(
@@ -269,10 +269,10 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             ),
@@ -300,8 +300,8 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 0, 0, 0, 1],
                 ]
             ),
             id="Right mask, window_size=3, step=[2,1]",
@@ -328,10 +328,10 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1],
-                    [1, 1, 1, 1],
-                    [1, 1, 1, 1],
-                    [1, 1, 1, 1],
-                    [1, 1, 1, 1],
+                    [1, 0, 0, 0],
+                    [1, 0, 0, 0],
+                    [1, 1, 0, 0],
+                    [1, 1, 0, 0],
                     [1, 1, 1, 1],
                 ]
             ),
@@ -359,8 +359,8 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1],
-                    [1, 1, 1, 1],
-                    [1, 1, 1, 1],
+                    [1, 0, 0, 0],
+                    [1, 1, 0, 0],
                 ]
             ),
             id="Right mask, window_size=3, step=[2,2]",
@@ -387,8 +387,8 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1],
-                    [1, 1, 1],
-                    [1, 1, 1],
+                    [1, 0, 0],
+                    [1, 0, 0],
                 ]
             ),
             id="Right mask, window_size=3, step=[2,3]",
@@ -415,10 +415,10 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             ),
@@ -446,10 +446,10 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 0, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             ),
@@ -486,9 +486,9 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 0, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
@@ -526,9 +526,9 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 0, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
@@ -566,9 +566,9 @@ from pandora2d.margins import Margins
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 0, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
@@ -580,7 +580,7 @@ from pandora2d.margins import Margins
 )
 def test_validity_mask(make_cost_volumes, expected):
     """
-    Test that the produced validity mask bands are correct according to:
+    Test that the produced partial validity mask bands are correct according to:
         - disparities
         - window size
         - left and right masks
@@ -594,10 +594,10 @@ def test_validity_mask(make_cost_volumes, expected):
         disp_col=slice(cost_volumes.attrs["col_disparity_source"][0], cost_volumes.attrs["col_disparity_source"][1]),
     )
 
-    validity_mask_band = criteria.get_validity_mask_band(subset)
+    partial_validity_mask_band = criteria.get_partial_validity_mask_band(subset)
 
-    # Check value = 1 when all disparities can not be computed, or value = 0 for a valid pixel
-    np.testing.assert_array_equal(validity_mask_band, expected)
+    # A value = 0 corresponds to partially valid pixel, value = 1 has all disparity not computed for this point
+    np.testing.assert_array_equal(partial_validity_mask_band, expected)
 
 
 @pytest.mark.parametrize(
@@ -617,12 +617,12 @@ def test_validity_mask(make_cost_volumes, expected):
             False,
             np.array(
                 [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
                 ]
             ),
             id="No mask, subpix=1, step=[1,1], window_size=1 and bicubic margins",
@@ -650,12 +650,12 @@ def test_validity_mask(make_cost_volumes, expected):
             False,
             np.array(
                 [
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 0, 0, 0, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 1, 0, 1],
+                    [0, 0, 0, 0, 0, 1, 0, 0],
                 ]
             ),
             id="Left mask, subpix=1, step=[1,1], window_size=1 and cardinal sine margins",
@@ -684,10 +684,10 @@ def test_validity_mask(make_cost_volumes, expected):
             np.array(
                 [
                     [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 0, 0, 0, 1],
+                    [1, 0, 1, 1, 1, 0, 1, 1],
+                    [1, 0, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             ),
@@ -742,7 +742,7 @@ def test_validity_mask(make_cost_volumes, expected):
                 (
                     [
                         [1, 1, 1, 1],
-                        [1, 1, 1, 1],
+                        [1, 0, 0, 0],
                     ]
                 )
             ),
@@ -768,7 +768,7 @@ def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, re
         disp_col=slice(col_disparity[0], col_disparity[1]),
     )
 
-    validity_mask_band_without_margins = criteria.get_validity_mask_band(subset_without_margins)
+    partial_validity_mask_band_without_margins = criteria.get_partial_validity_mask_band(subset_without_margins)
 
     cost_volumes_with_margins = make_cost_volumes(refinement_margins)
     if reset_first_point:
@@ -783,8 +783,8 @@ def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, re
         disp_col=slice(col_disparity[0], col_disparity[1]),
     )
 
-    validity_mask_band_with_margins = criteria.get_validity_mask_band(subset_with_margins)
+    partial_validity_mask_band_with_margins = criteria.get_partial_validity_mask_band(subset_with_margins)
 
-    # Check valitity band, '0' if the pixel is valid, '1' if at least one disparity cannot be computed
-    np.testing.assert_array_equal(validity_mask_band_without_margins, expected)
-    np.testing.assert_array_equal(validity_mask_band_with_margins, expected)
+    # Check if value = 1 corresponds to invalid pixels (all disparity not computed) and value = 0 is a partially valid pixel
+    np.testing.assert_array_equal(partial_validity_mask_band_without_margins, expected)
+    np.testing.assert_array_equal(partial_validity_mask_band_with_margins, expected)

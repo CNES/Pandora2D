@@ -207,10 +207,7 @@ band is set to ``1``; otherwise, it is set to ``0``.
 Validity
 ^^^^^^^^
 
-If at least one criterion is present in the cost surface mask of a pixel, this pixel is considered as ``PARTIALLY_INVALID``
-except if all the disparity pairs contain a criterion: in this case, the pixel is considered as ``INVALID``.
+If at least one requested disparity can be computed in the cost surface mask of a pixel, this pixel is considered as ``PARTIALLY_INVALID``, and encoded by a ``0`` in the ``partial_validity_mask``.
+If all the required disparity pairs can not be computed: in this case, the pixel is considered as ``INVALID`` and encoded as ``1``.
 
-In the validity band, ``VALID`` pixels are encoded as ``0``, any criterion raised identify the corresponding as an
-``INVALID`` pixels, encoded as ``1``.
-
-In the partial validity band, ``VALID`` pixels are encoded as ``0``, it includes valid pixels and pixels where not all criteria are raised, ``INVALID`` pixels are encoded as ``1``.
+In the ``validity_mask`` band, ``VALID`` pixels are encoded as ``0`` when all requested disparities can be computed, otherwise ``INVALID`` pixels are encoded as ``1``.
