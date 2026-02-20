@@ -621,6 +621,7 @@ class TestReturnedValue:
         assert np.isnan(result.left["col_disparity"].attrs["no_data"])
         assert np.isnan(result.left["row_disparity"].attrs["no_data"])
 
+
 class TestDisparityChecking:
     """Test checks done on disparities."""
 
@@ -1313,3 +1314,69 @@ class TestGetMinMaxDispFromDictsNoData:
             disp_min_max[:, margins.up : -margins.down, margins.left + 3 : -margins.right : 4] == no_data_disp
         ).all()
         assert nodata == no_data_disp
+
+
+@pytest.mark.parametrize(
+    ["disp_data", "nodata", "expected"],
+    [
+        pytest.param(np.array([1, 2]), None, [True, True], id="Nothing to filter"),
+        pytest.param(np.array([1, np.inf]), None, [True, False], id="inf"),
+        pytest.param(np.array([-np.inf, 2]), None, [False, True], id="-inf"),
+        pytest.param(np.array([np.nan, 2]), None, [False, True], id="nan"),
+        pytest.param(np.array([3, 2]), 3, [False, True], id="value"),
+        pytest.param(np.array([3, np.inf, np.nan, 2]), 3, [False, False, False, True], id="mix"),
+    ],
+)
+def test_build_usable_data_mask(disp_data, nodata, expected):
+    """Unusable values are masked to False."""
+    result = img_tools.build_usable_data_mask(disp_data, nodata)
+    assert (result == expected).all()
+
+
+@pytest.mark.parametrize(
+    ["init_value", "range_value", "expected"],
+    [
+        pytest.param(1, 3, (-2, 4), id="int"),
+        pytest.param(1.0, 3, (-2, 4), id="float"),
+        pytest.param(np.array([3, 0]), 7, (-7, 10), id="no nan"),
+        pytest.param(np.array([3, np.nan, 0]), 7, (-7, 10), id="nan"),
+    ],
+)
+def test_get_extrema_disparity(init_value, range_value, expected):
+    """NaNs are filtered."""
+    result = img_tools.get_extrema_disparity(init_value, range_value)
+    assert result == expected
+
+
+class TestNodataFiltering:
+    """Nodata in disparity grids should not influence margin determination."""
+
+    @pytest.fixture
+    def second_correct_grid_data(self, second_correct_grid_shape):
+        """second_correct_grid_data override to include inf and nan."""
+        data = np.full(second_correct_grid_shape, 5.0)
+        data[:, 1::4] = -21
+        data[:, 2::4] = -np.inf
+        data[:, 3::4] = np.nan
+        return data
+
+    @pytest.mark.parametrize(
+        ["second_correct_grid_shape", "nodata", "expected"], [((1, 5), None, [[[5, -21, np.nan, np.nan, 5]]])]
+    )
+    def test_get_initial_disparity_str(
+        self, create_disparity_grid_fixture, second_correct_grid_data, second_correct_grid_shape, nodata, expected
+    ):
+        """Test invalid values are replaced by NaNs"""
+        disparity = create_disparity_grid_fixture(second_correct_grid_data, 2, "disparity.tiff", nodata=nodata)
+
+        result = img_tools.get_initial_disparity(disparity)
+
+        np.testing.assert_array_equal(result, expected)
+
+    def test_get_initial_disparity_int(self):
+        """Test init is returned"""
+        disparity = {"init": 1, "range": 2}
+
+        result = img_tools.get_initial_disparity(disparity)
+
+        assert result == 1
