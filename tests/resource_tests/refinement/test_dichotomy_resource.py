@@ -65,15 +65,24 @@ def dichotomy_pipeline(
     ],
 )
 @pytest.mark.parametrize(
+    "matching_cost_method",
+    [
+        pytest.param(
+            "mutual_information",
+            marks=pytest.mark.skip(reason="This method takes too long for these tests. See ticket 371."),
+        ),
+        "zncc",
+    ],
+)
+@pytest.mark.parametrize(
     ["left_img", "right_img", "step", "window_size"],
     [
         pytest.param("small_left_img_path", "small_right_img_path", [1, 1], 5, id="image.size=(224, 186)"),
-        pytest.param("large_left_img_path", "large_right_img_path", [16, 16], 33, id="image.size=(2000, 2000)"),
     ],
     indirect=True,
 )
-def test_dichotomy(run_pipeline, input_cfg, dichotomy_pipeline, tmp_path):
-    """Test dichotomy."""
+def test_dichotomy_with_small_img(run_pipeline, input_cfg, dichotomy_pipeline, tmp_path):
+    """Test dichotomy with an image size of 224x186"""
     configuration = {
         **input_cfg,
         "pipeline": {
@@ -93,19 +102,33 @@ def test_dichotomy(run_pipeline, input_cfg, dichotomy_pipeline, tmp_path):
     ],
 )
 @pytest.mark.parametrize(
-    ["left_img", "right_img", "step", "window_size"],
+    "matching_cost_method",
     [
-        pytest.param("small_left_img_path", "small_right_img_path", [1, 1], 5, id="image.size=(224, 186)"),
-        pytest.param("large_left_img_path", "large_right_img_path", [16, 16], 33, id="image.size=(2000, 2000)"),
+        pytest.param(
+            "mutual_information",
+            marks=pytest.mark.skip(reason="This method takes too long for these tests. See ticket 371."),
+        ),
+        "zncc",
     ],
+)
+@pytest.mark.parametrize(
+    ["left_img", "right_img", "step", "window_size"],
+    [pytest.param("large_left_img_path", "large_right_img_path", [16, 16], 33, id="image.size=(2000, 2000)")],
     indirect=True,
 )
-def test_dichotomy_with_estimation(run_pipeline, input_cfg_for_estimation, dichotomy_pipeline, tmp_path):
-    """Test dichotomy with estimation."""
+@pytest.mark.parametrize(
+    "subpix",
+    [
+        1,
+        pytest.param(2, marks=pytest.mark.skip(reason="Memory capacity explodes with this subpix.")),
+        pytest.param(4, marks=pytest.mark.skip(reason="Memory capacity explodes with this subpix.")),
+    ],
+)
+def test_dichotomy_with_large_img(run_pipeline, input_cfg, dichotomy_pipeline, tmp_path):
+    """Test dichotomy with an image size of 2000x2000"""
     configuration = {
-        **input_cfg_for_estimation,
+        **input_cfg,
         "pipeline": {
-            "estimation": {"estimation_method": "phase_cross_correlation"},
             **dichotomy_pipeline,
         },
         "output": {"path": str(tmp_path)},

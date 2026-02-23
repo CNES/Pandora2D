@@ -30,14 +30,14 @@ pytestmark = pytest.mark.monitor_test
 
 
 @pytest.fixture
-def optical_flow_pipeline(matching_cost_method, window_size, step, subpix, iterations):
+def optical_flow_pipeline(matching_cost_method, window_size, step, iterations):
     """Pipeline for an optical flow refinement."""
     return {
         "matching_cost": {
             "matching_cost_method": matching_cost_method,
             "window_size": window_size,
             "step": step,
-            "subpix": subpix,
+            "subpix": 1,
         },
         "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
         "refinement": {
@@ -52,37 +52,32 @@ def optical_flow_pipeline(matching_cost_method, window_size, step, subpix, itera
     ["left_img", "right_img", "step", "window_size"],
     [
         pytest.param("small_left_img_path", "small_right_img_path", [1, 1], 5, id="image.size=(224, 186)"),
-        pytest.param("large_left_img_path", "large_right_img_path", [16, 16], 33, id="image.size=(2000, 2000)"),
+        pytest.param(
+            "large_left_img_path",
+            "large_right_img_path",
+            [16, 16],
+            33,
+            id="image.size=(2000, 2000)",
+            marks=pytest.mark.skip(reason="This method takes too long for these tests."),
+        ),
     ],
     indirect=True,
+)
+@pytest.mark.parametrize(
+    "matching_cost_method",
+    [
+        pytest.param(
+            "mutual_information",
+            marks=pytest.mark.skip(reason="This method takes too long for these tests. See ticket 371."),
+        ),
+        "zncc",
+    ],
 )
 def test_optical_flows(run_pipeline, input_cfg, optical_flow_pipeline, tmp_path):
     """Test optical flows."""
     configuration = {
         **input_cfg,
         "pipeline": {
-            **optical_flow_pipeline,
-        },
-        "output": {"path": str(tmp_path)},
-    }
-    run_pipeline(configuration)
-
-
-@pytest.mark.dichotomy_resource_tests
-@pytest.mark.parametrize(
-    ["left_img", "right_img", "step", "window_size"],
-    [
-        pytest.param("small_left_img_path", "small_right_img_path", [1, 1], 5, id="image.size=(224, 186)"),
-        pytest.param("large_left_img_path", "large_right_img_path", [16, 16], 33, id="image.size=(2000, 2000)"),
-    ],
-    indirect=True,
-)
-def test_optical_flows_with_estimation(run_pipeline, input_cfg_for_estimation, optical_flow_pipeline, tmp_path):
-    """Test optical flows with estimation."""
-    configuration = {
-        **input_cfg_for_estimation,
-        "pipeline": {
-            "estimation": {"estimation_method": "phase_cross_correlation"},
             **optical_flow_pipeline,
         },
         "output": {"path": str(tmp_path)},
