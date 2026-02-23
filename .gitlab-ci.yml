@@ -6,6 +6,7 @@
 #  |_ notebook-test (notebook tests)
 #  |_ unit-cpp-test (C++ unit tests)
 #  |_ plugin-mccnn-test (MCCNN plugin tests)
+#  |_ resource-test (resource tests)
 #  |_ py-black (Python code formatting)
 #  |_ py-lint (static analysis with Pylint)
 #  |_ py-mypy (static type checking with Mypy)
@@ -27,16 +28,19 @@ spec:
       default: true
     test-performance:
       type: boolean
-      default: false
+      default: true
     test-functional:
       type: boolean
-      default: true
+      default: false
     test-mccnn:
       type: boolean
-      default: false
+      default: true
     test-notebook:
       type: boolean
-      default: false
+      default: true
+    test-resource:
+      type: boolean
+      default: true
 ---
 include:
   - component: $CI_SERVER_FQDN/to-be-continuous/python/gitlab-ci-python@8.6.0  # TBC Python component version
@@ -89,6 +93,7 @@ variables:
   TEST_PERFORMANCE: $[[ inputs.test-performance ]]
   TEST_MCCNN: $[[ inputs.test-mccnn ]]
   TEST_NOTEBOOK: $[[ inputs.test-notebook ]]
+  TEST_RESOURCE: $[[ inputs.test-resource ]]
 
 # Default configuration for all jobs
 default:
@@ -171,9 +176,9 @@ functional-test:
 # Performance Test
 performance-test:
   extends: py-pytest
-  variables:
-    # Run performance tests without computing coverage
-    PYTEST_ARGS: -m performance_tests --html=reports/performance-test-report.html --no-cov
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} test-performance
   rules:
     # exclude if $TEST_PERFORMANCE not set
     - if: '$TEST_PERFORMANCE != "true"'
@@ -184,10 +189,9 @@ performance-test:
 # MCCNN unit Test
 plugin-mccnn-test:
   extends: py-pytest
-  variables:
-    PYTHON_EXTRA_DEPS: test,mccnn
-    # Run plugin tests without computing coverage
-    PYTEST_ARGS: -m plugin_tests --html=reports/plugin-test-report.html --no-cov
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} test-plugin
   rules:
     # exclude if $TEST_MCCNN not set
     - if: '$TEST_MCCNN != "true"'
@@ -198,13 +202,64 @@ plugin-mccnn-test:
 # Notebook Test
 notebook-test:
   extends: py-pytest
-  variables:
-    PYTHON_EXTRA_DEPS: test,notebook
-    # Run notebook tests without computing coverage
-    PYTEST_ARGS: -m notebook_tests --html=reports/notebook-test-report.html --no-cov
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} test-notebook
   rules:
     # exclude if $TEST_NOTEBOOK not set
     - if: '$TEST_NOTEBOOK != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Estimation Resource Test
+estimation-resource-test:
+  extends: py-pytest
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} test-resource-estimation
+  rules:
+    # exclude if $TEST_RESOURCE not set
+    - if: '$TEST_RESOURCE != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Matching-cost Resource Test
+matching-resource-test:
+  extends: py-pytest
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} test-resource-matching-cost
+  rules:
+    # exclude if $TEST_RESOURCE not set
+    - if: '$TEST_RESOURCE != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Dichotomy Resource Test
+dichotomy-resource-test:
+  extends: py-pytest
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} test-resource-refinement-dichotomy
+  rules:
+    # exclude if $TEST_RESOURCE not set
+    - if: '$TEST_RESOURCE != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Optical-flow Resource Test
+optical-flow-resource-test:
+  extends: py-pytest
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} test-resource-refinement-optical-flow
+  rules:
+    # exclude if $TEST_RESOURCE not set
+    - if: '$TEST_RESOURCE != "true"'
       when: manual
       allow_failure: true
     - !reference [.test-policy, rules]
