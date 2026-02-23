@@ -235,13 +235,7 @@ class BaseMatchingCost(ABC):
         :return: a Tuple of np.ndarray that contains the right coordinates for disparities
         """
 
-        # Get min/max col disparity grids
-        grid_min_col = img_left["col_disparity"].sel(band_disp="min").data
-        grid_max_col = img_left["col_disparity"].sel(band_disp="max").data
-
-        # Obtain absolute min and max col disparities
-        min_col, max_col = pandora_matching_cost.AbstractMatchingCost.get_min_max_from_grid(grid_min_col, grid_max_col)
-
+        min_col, max_col = img_left.attrs["col_disparity_source"]
         # Add refinement margins to disparity grids if needed.
         if margins is not None:
             min_col -= margins.left

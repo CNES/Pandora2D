@@ -29,6 +29,7 @@ import sys
 from copy import deepcopy
 
 import numpy as np
+import pandora
 import pytest
 import xarray as xr
 from pytest_mock import MockerFixture
@@ -1840,6 +1841,79 @@ class TestDisparityMargins:
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].shape, gt_cv_shape)
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].disp_col, gt_disp_col)
         np.testing.assert_array_equal(cost_volumes["cost_volumes"].disp_row, gt_disp_row)
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "correct_grid",
+                    "col_disparity": "second_correct_grid",
+                }
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "no_data_disp",
+            "expected_min_row_disp",
+            "expected_max_row_disp",
+        ],
+        [
+            pytest.param(0, -3, 8, id="Row min"),
+            pytest.param(3, -5, 7, id="Row max"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        [
+            "second_no_data_disp",
+            "expected_min_col_disp",
+            "expected_max_col_disp",
+        ],
+        [
+            pytest.param(-21, -6, 10, id="Col min"),
+            pytest.param(5, -26, 4, id="Col max"),
+        ],
+    )
+    def test_allocation_with_disparity_grids_and_nodata(
+        self,
+        create_datasets,
+        make_input_cfg,
+        no_data_disp,
+        second_no_data_disp,
+        expected_min_row_disp,
+        expected_max_row_disp,
+        expected_min_col_disp,
+        expected_max_col_disp,
+    ):
+        """
+        When a disparity in the grid is a nodata and an extremum, it should not be used to compute disparity
+        coordinates. Thus, another extremum should be used.
+        """
+        cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "zncc", "window_size": 1, "subpix": 1}}}
+        margins = Margins(0, 0, 0, 0)
+
+        # Initialize matching_cost
+        matching_cost_object = matching_cost.MatchingCostRegistry.get(
+            cfg["pipeline"]["matching_cost"]["matching_cost_method"]
+        )
+        matching_cost_matcher = matching_cost_object(cfg["pipeline"]["matching_cost"])
+
+        left, right = create_datasets_from_inputs(make_input_cfg)
+
+        matching_cost_matcher.allocate(
+            img_left=left,
+            img_right=right,
+            cfg=cfg,
+            margins=margins,
+        )
+        assert matching_cost_matcher.cost_volumes["disp_row"].data.min() == expected_min_row_disp
+        assert matching_cost_matcher.cost_volumes["disp_row"].data.max() == expected_max_row_disp
+        assert matching_cost_matcher.cost_volumes["disp_col"].data.min() == expected_min_col_disp
+        assert matching_cost_matcher.cost_volumes["disp_col"].data.max() == expected_max_col_disp
 
 
 # we want to ignore warnings indicating that our images are “low contrast images”.
