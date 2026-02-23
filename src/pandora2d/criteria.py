@@ -565,10 +565,6 @@ def get_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
 
     This validity mask shows which points of the image are valid and which are not:
 
-    A point marked 1 is invalid, wether not calculated (masked or out of range)
-    or not all disparity range resquested by the user have been computed
-    A point marked 0 is valid, all the disparity range requested
-
     A point marked 0 is valid, all the disparity range requested
     by the user have been computed.
     All other points are marked 1.
@@ -589,7 +585,7 @@ def get_partial_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
     """
     This method fills the partial validity mask band according to the criteria dataarray given as a parameter.
 
-    This partial validity mask shows which points of the image are partial or completely invalid :
+    This partial validity mask shows which points of the image are partial or completely invalid:
 
     A point marked 1 is invalid, all disparity range requested
     by the user can not be computed
