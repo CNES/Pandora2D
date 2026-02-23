@@ -163,7 +163,7 @@ The *Disparity computation* step generates two disparity maps in cost volume geo
 vertical disparity and one named **col_map** for the horizontal disparity. These maps are 2D xarray.DataArray of the same type as cost volumes,
 stored in a xarray.Dataset. 
 
-This xr.Dataset also contains the **validity maps** stored in uint 8: 
+This xr.Dataset also contains the **validity maps** stored in uint8:
 
     * A global validity map 'validity_mask', indicating whether each point is valid (value 0) or invalid (value 1) when at least one requested disparity can not be computed.
     * A global partial validity map 'partial_validity_mask', indicating whether each point is partially valid (value 0) or invalid (value 1) when all requested disparity can not be computed.
