@@ -498,7 +498,7 @@ def allocate_validity_dataset(criteria_dataarray: xr.DataArray) -> xr.Dataset:
     """
 
     # Get criteria names to stock them in the 'criteria' coordinate in the allocated xr.Dataset
-    # We use every Criteria except the first one which corresponds to valid points
+    # We use all the criteria, to which we add a band for valid points and a second band for partially valid points
     criteria_names = ["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:]
 
     coords = {
@@ -568,7 +568,10 @@ def get_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
     A point marked 1 is invalid, wether not calculated (masked or out of range)
     or not all disparity range resquested by the user have been computed
     A point marked 0 is valid, all the disparity range requested
+
+    A point marked 0 is valid, all the disparity range requested
     by the user have been computed.
+    All other points are marked 1.
 
     :param criteria_dataarray: 4D DataArray containing the criteria
     :return: validity mask band
@@ -586,12 +589,10 @@ def get_partial_validity_mask_band(criteria_dataarray: xr.DataArray) -> NDArray:
     """
     This method fills the partial validity mask band according to the criteria dataarray given as a parameter.
 
-    This validity mask shows which points of the image are valid and which are not:
+    This partial validity mask shows which points of the image are partial or completely invalid :
 
     A point marked 1 is invalid, all disparity range requested
     by the user can not be computed
-    A point marked 0 is partially valid, not all the disparity range requested
-    by the user have been computed
 
     :param criteria_dataarray: 4D DataArray containing the criteria
     :return: partial validity mask band
