@@ -235,23 +235,29 @@ def _save_dataset(dataset: xr.Dataset, output: Path) -> None:
         data = np.moveaxis(np.atleast_3d(data_array.data), -1, 0)
         count, row, col = data.shape
 
-        band_descriptions = list(dataset.criteria.values) if name == "validity" else [name]
         nodata = dataset.attrs["invalid_disp"] if name in ("row_map", "col_map", "correlation_score") else None
 
-        with rasterio.open(
-            (output / str(name)).with_suffix(".tif"),
-            mode="w+",
-            driver="GTiff",
-            width=col,
-            height=row,
-            count=count,
-            dtype=data.dtype,
-            crs=dataset.attrs["crs"],
-            transform=dataset.attrs["transform"],
-            nodata=nodata,
-        ) as source_ds:
+        output_args = {
+            "driver": "GTiff",
+            "dtype": data.dtype,
+            "width": col,
+            "height": row,
+            "count": count,
+            "crs": dataset.attrs["crs"],
+            "transform": dataset.attrs["transform"],
+            "nodata": nodata,
+        }
+
+        if name == "validity":
+            output_args["nbits"] = 1  # <= GDAL option to save as true binary for less disk usage
+            band_descriptions = list(dataset.criteria.values)
+        else:
+            band_descriptions = [name]
+
+        with rasterio.open((output / str(name)).with_suffix(".tif"), mode="w+", **output_args) as source_ds:
             source_ds.write(data)
             source_ds.descriptions = band_descriptions
+
     save_attributes(dataset, output)
 
 
