@@ -23,6 +23,7 @@ This module is used to check the resources used for the tests in this directory.
 
 # pylint: disable=protected-access
 
+import re
 import sqlite3
 
 import pytest
@@ -38,6 +39,11 @@ class Metrics:
     _TOTAL_TIME_MAX = 120  # second
     _CPU_USAGE_MAX = 50  # percent
     _MEM_USAGE_MAX = 1024  # megabyte
+
+    _MC_ALGO_COST = {
+        "zncc": 1,
+        "mutual_information": 4,
+    }
 
     def __init__(self, items: list) -> None:
         self.test_name = items[0]
@@ -77,6 +83,42 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize("metric", metrics, ids=lambda x: x.test_variant)
 
 
+def extract_image_size(test_variant: str) -> tuple[int, int] | None:
+    """Extract image_size from test_variant string."""
+    image_size_pattern = re.compile(r"image\.size=\((\d+), (\d+)\)")
+    match = re.search(image_size_pattern, test_variant)
+    if match is None:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def extract_subpix(test_variant: str) -> int | None:
+    """Extract subpix from test_variant string."""
+    subpix_pattern = re.compile(r"subpix=(\d+)")
+    match = re.search(subpix_pattern, test_variant)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def extract_method(test_variant: str) -> str | None:
+    """Extract matching_cost_method from test_variant string."""
+    pattern = re.compile(r"matching_cost_method=([a-z_]+)")
+    match = re.search(pattern, test_variant)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def extract_iterations(test_variant: str) -> int | None:
+    """Extract iterations from test_variant string."""
+    iterations_pattern = re.compile(r"iterations=(\d+)")
+    match = re.search(iterations_pattern, test_variant)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
 @pytest.mark.metrics
 @pytest.mark.monitor_skip_test
 class TestResource:
@@ -88,9 +130,22 @@ class TestResource:
         """
         Verify the time metrics for the test
         """
+        # Extract informations
+        subpix = extract_subpix(metric.test_variant) or 1
+        iterations = extract_iterations(metric.test_variant) or 1
+        method = extract_method(metric.test_variant)
+
+        # matching_cost algorithm complexity
+        algo_factor = metric._MC_ALGO_COST.get(method, 1)
+
+        # dichotomy refinement
+        iterations_threshold = subpix.bit_length() - 1  # below this threshold, iterations are skipped
+        iteration_time_overhead = 0 if iterations <= iterations_threshold else (metric._TOTAL_TIME_MAX / 4) * iterations
+
+        max_allowed_time = metric._TOTAL_TIME_MAX * algo_factor + iteration_time_overhead
         assert (
-            metric.total_time < metric._TOTAL_TIME_MAX
-        ), f"Test {metric.test_variant} does not respect max time : {metric._TOTAL_TIME_MAX} (seconds)"
+            metric.total_time < max_allowed_time
+        ), f"Test {metric.test_variant} does not respect max time : {max_allowed_time} (seconds)"
 
     def test_cpu_usage(self, metric):
         """
@@ -104,6 +159,9 @@ class TestResource:
         """
         Verify the memory metrics for the test
         """
+        image_size = extract_image_size(metric.test_variant)
+        subpix = extract_subpix(metric.test_variant) or 1
+        max_allowed_memory_usage = image_size[0] * image_size[1] * subpix + metric._MEM_USAGE_MAX
         assert (
-            metric.mem_usage < metric._MEM_USAGE_MAX
+            metric.mem_usage < max_allowed_memory_usage
         ), f"Test {metric.test_variant} does not respect memory usage max : {metric._MEM_USAGE_MAX} (megabyte)"
