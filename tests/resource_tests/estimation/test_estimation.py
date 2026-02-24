@@ -16,15 +16,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 """
 Test used resources during execution of a configuration.
 """
+
+# pylint: disable=redefined-outer-name
 
 import pytest
 
 # Mark all test of the module with monitor_test
 pytestmark = pytest.mark.monitor_test
+
+
+@pytest.fixture(params=[1, 20, 50, 100])
+def sample_factor(request):
+    return request.param
+
+
+@pytest.fixture(params=[3, 5, 9, 11])
+def range_col(request):
+    return request.param
+
+
+@pytest.fixture(params=[3, 5, 9, 11])
+def range_row(request):
+    return request.param
 
 
 @pytest.mark.estimation_resource_tests
@@ -36,12 +52,17 @@ pytestmark = pytest.mark.monitor_test
     ],
     indirect=True,
 )
-def test_estimation(run_pipeline, input_cfg_for_estimation, tmp_path):
+def test_estimation(run_pipeline, input_cfg_for_estimation, tmp_path, sample_factor, range_col, range_row):
     """Test a configuration with only an estimation in the pipeline."""
     configuration = {
         **input_cfg_for_estimation,
         "pipeline": {
-            "estimation": {"estimation_method": "phase_cross_correlation"},
+            "estimation": {
+                "estimation_method": "phase_cross_correlation",
+                "range_col": range_col,
+                "range_row": range_row,
+                "sample_factor": sample_factor,
+            },
         },
         "output": {"path": str(tmp_path)},
     }
