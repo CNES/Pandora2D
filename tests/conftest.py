@@ -32,6 +32,7 @@ import pytest
 import rasterio
 import xarray as xr
 from pandora.common import write_data_array
+from pytest import DoctestItem
 
 import pandora2d
 
@@ -95,6 +96,8 @@ def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
     Parse test docstrings and retrieve strings in EX_*.
     """
     outcome = yield
+    if isinstance(item, DoctestItem):
+        return
     report = outcome.get_result()
     pattern = r"(EX_\w*)"
     report.requirement = re.findall(pattern, str(item.function.__doc__))
@@ -361,21 +364,27 @@ def create_disparity_grid_fixture(tmp_path):
     Creates initial disparity grid and save it in tmp.
     """
 
-    def create_disparity_grid(data, disp_range, suffix_path, band=False, disp_type=rasterio.dtypes.float32):
+    def create_disparity_grid(
+        data, disp_range, suffix_path, band=False, disp_type=rasterio.dtypes.float32, nodata=None
+    ):
 
-        if not band:
-            disparity_grid = xr.DataArray(data, dims=["row", "col"])
-        else:
-            disparity_grid = xr.DataArray(data, dims=["row", "col", "band"])
+        disparity_grid = xr.DataArray(data, dims=["row", "col", "band"] if band else ["row", "col"])
 
         path = tmp_path / suffix_path
         path.parent.mkdir(parents=True, exist_ok=True)
 
         write_data_array(data_array=disparity_grid, filename=str(path), dtype=disp_type)
+        with rasterio.open(path, "r+") as src:
+            src.nodata = nodata
 
         return {"init": str(path), "range": disp_range}
 
     return create_disparity_grid
+
+
+@pytest.fixture
+def no_data_disp():
+    return None
 
 
 @pytest.fixture
@@ -393,9 +402,14 @@ def correct_grid_data(correct_grid_shape):
 
 
 @pytest.fixture
-def correct_grid(correct_grid_data, create_disparity_grid_fixture):
+def correct_grid(correct_grid_data, create_disparity_grid_fixture, no_data_disp):
     """Create a correct initial disparity grid and save it in tmp"""
-    return create_disparity_grid_fixture(correct_grid_data, 5, "disparity.tif")
+    return create_disparity_grid_fixture(
+        correct_grid_data,
+        5,
+        "disparity.tif",
+        nodata=no_data_disp,
+    )
 
 
 @pytest.fixture
@@ -413,9 +427,14 @@ def second_correct_grid_data(second_correct_grid_shape):
 
 
 @pytest.fixture
-def second_correct_grid(second_correct_grid_data, create_disparity_grid_fixture):
+def second_correct_grid(second_correct_grid_data, create_disparity_grid_fixture, no_data_disp):
     """Create a correct initial disparity grid and save it in tmp"""
-    return create_disparity_grid_fixture(second_correct_grid_data, 5, "tata/second_disparity.tif")
+    return create_disparity_grid_fixture(
+        second_correct_grid_data,
+        5,
+        "tata/second_disparity.tif",
+        nodata=no_data_disp,
+    )
 
 
 @pytest.fixture
@@ -458,11 +477,6 @@ def disparity_range():
 
 
 @pytest.fixture
-def no_data_disp():
-    return None
-
-
-@pytest.fixture
 def same_sized_grid_directory(
     tmp_path,
     correct_grid_data,
@@ -477,15 +491,12 @@ def same_sized_grid_directory(
     directory.mkdir()
     # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
     # instead of being prefixed:
-    create_disparity_grid_fixture(correct_grid_data, disparity_range, directory / "row_map.tif")
-    create_disparity_grid_fixture(second_correct_grid_data, disparity_range, directory / "col_map.tif")
+    create_disparity_grid_fixture(correct_grid_data, disparity_range, directory / "row_map.tif", nodata=no_data_disp)
+    create_disparity_grid_fixture(
+        second_correct_grid_data, disparity_range, directory / "col_map.tif", nodata=no_data_disp
+    )
     with (directory / "attributes.json").open("w") as fd:
         json.dump(attributes, fd)
-
-    with rasterio.open(directory / "row_map.tif", "r+") as src:
-        src.nodata = no_data_disp
-    with rasterio.open(directory / "col_map.tif", "r+") as src:
-        src.nodata = no_data_disp
 
     return {"init": str(directory), "range": disparity_range}
 

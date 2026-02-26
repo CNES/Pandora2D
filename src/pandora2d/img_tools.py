@@ -41,7 +41,6 @@ import numpy as np
 import pandora.img_tools as pandora_img_tools
 import xarray as xr
 from numpy.typing import NDArray
-from rasterio.io import DatasetReader
 from rasterio.windows import Window
 from scipy.ndimage import shift, zoom
 
@@ -188,21 +187,25 @@ def add_disparity_grid(
         user_invalid_disp = attributes["invalid_disp"]
 
     # Creates min and max disparity grids
-    col_disp_min_max, col_disp_interval = get_min_max_disp_from_dicts(
+    col_disp_min_max, col_disp_interval, col_no_data = get_min_max_disp_from_dicts(
         dataset, col_disparity, origin, step, user_invalid_disp, right=right
     )
-    row_disp_min_max, row_disp_interval = get_min_max_disp_from_dicts(
+    row_disp_min_max, row_disp_interval, row_no_data = get_min_max_disp_from_dicts(
         dataset, row_disparity, origin, step, user_invalid_disp, right=right
     )
 
     # Add disparity grids to dataset
-    for key, disparity_data, source in zip(
-        ["col_disparity", "row_disparity"], [col_disp_min_max, row_disp_min_max], [col_disp_interval, row_disp_interval]
+    for key, disparity_data, source, no_data in zip(
+        ["col_disparity", "row_disparity"],
+        [col_disp_min_max, row_disp_min_max],
+        [col_disp_interval, row_disp_interval],
+        [col_no_data, row_no_data],
     ):
         dataset[key] = xr.DataArray(
             disparity_data,
             dims=["band_disp", "row", "col"],
             coords={"band_disp": ["min", "max"]},
+            attrs={"no_data": no_data},
         )
 
         dataset.attrs[f"{key}_source"] = source
@@ -216,7 +219,7 @@ def get_min_max_disp_from_dicts(
     step: Step,
     user_invalid_disp: int | float,
     right: bool = False,
-) -> tuple[NDArray, list]:
+) -> tuple[NDArray, list, float | None]:
     """
     Transforms input disparity dicts with constant init into min/max disparity grids
 
@@ -231,6 +234,7 @@ def get_min_max_disp_from_dicts(
 
     disparity_dtype = np.float32
     disp_min_max = np.full((2, dataset.sizes["row"], dataset.sizes["col"]), user_invalid_disp, dtype=disparity_dtype)
+    nodata = None
 
     # Creates min and max disparity grids if initial disparity is constant (int)
     if isinstance(disparity["init"], int):
@@ -254,15 +258,24 @@ def get_min_max_disp_from_dicts(
         window = Window(cols[0], rows[0], cols.size, rows.size)
 
         # Get disparity data
-        disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=disparity_dtype, window=window)
+        reader = pandora_img_tools.rasterio_open(disparity["init"])
+        disp_data = reader.read(1, out_dtype=disparity_dtype, window=window)
         # When using disparity maps from a previous execution as ROI,
         # the initial disparity grids can be smaller than the image window.
         # In this case, we use the entire initial disparity grid and ROI margins are included in disp_min_max.
         if disp_data.shape < dataset["im"].data.shape:
-            disp_data = pandora_img_tools.rasterio_open(disparity["init"]).read(1, out_dtype=disparity_dtype)
+            disp_data = reader.read(1, out_dtype=disparity_dtype)
             # If disp_min_max corresponds to a ROI, we need to convert origin coordinates as index
             row_offset -= rows[0]
             col_offset -= cols[0]
+
+        nodata = reader.meta.get("nodata")
+        # Work on disp_data to avoid transformation on nodata
+        is_data_mask = build_usable_data_mask(disp_data, nodata)
+        disp_interval = [
+            np.min(disp_data[is_data_mask] * pow(-1, right) - disparity["range"]),
+            np.max(disp_data[is_data_mask] * pow(-1, right) + disparity["range"]),
+        ]
 
         last_row_index = row_offset + disp_data.shape[0] * step.row
         last_col_index = col_offset + disp_data.shape[1] * step.col
@@ -273,10 +286,30 @@ def get_min_max_disp_from_dicts(
         disp_min_max[0, row_slice, col_slice] = disp_data * pow(-1, right) - disparity["range"]
         disp_min_max[1, row_slice, col_slice] = disp_data * pow(-1, right) + disparity["range"]
 
-        # Invalid disparities will be filtered in a future ticket.
-        disp_interval = [np.nanmin(disp_min_max[0, ::]), np.nanmax(disp_min_max[1, ::])]
+        # Restore nodata
+        disp_min_max[0, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
+        disp_min_max[1, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
 
-    return disp_min_max, disp_interval
+    return disp_min_max, disp_interval, nodata
+
+
+def build_usable_data_mask(disp_data: NDArray, nodata: float | None) -> NDArray[np.bool_]:
+    """
+    Build a boolean mask indicating which elements of the input array are usable.
+
+    An element is considered usable if it is finite (not NaN or infinite) and,
+    when a ``nodata`` value is provided, different from that value.
+
+    :param disp_data: Input array containing the data to be tested.
+    :param nodata: Value representing missing or invalid data.
+                   If ``None``, only finiteness is checked.
+    :return: A boolean array with the same shape as ``disp_data``, where
+             ``True`` indicates usable data.
+    """
+    mask = np.isfinite(disp_data)
+    if nodata is not None:
+        mask &= disp_data != nodata
+    return mask
 
 
 def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
@@ -568,23 +601,25 @@ def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> l
     return img_right_shift_2d
 
 
-def get_initial_disparity(disparity: dict) -> DatasetReader | int:
+def get_initial_disparity(disparity: dict) -> NDArray | int:
     """
-    Return initial disparity
+    Return initial disparity.
+
+    When initial disparity is read from a file, nodata and infinite values are replaced by NaNs.
 
     :param disparity: init and range for disparities in columns.
     :return: initial disparity
     """
 
     if isinstance(disparity["init"], str):
-        disparity_init = pandora_img_tools.rasterio_open(disparity["init"]).read()
-    else:
-        disparity_init = disparity["init"]
+        reader = pandora_img_tools.rasterio_open(disparity["init"])
+        disparity_init = reader.read()
+        nodata = reader.meta.get("nodata")
+        return np.where(build_usable_data_mask(disparity_init, nodata), disparity_init, np.nan)
+    return disparity["init"]
 
-    return disparity_init
 
-
-def get_extrema_disparity(init_value: DatasetReader | int, range_value: int) -> tuple[int, int]:
+def get_extrema_disparity(init_value: NDArray | float, range_value: int) -> tuple[int, int]:
     """
     Returns [min, max] disparity
 
@@ -593,8 +628,8 @@ def get_extrema_disparity(init_value: DatasetReader | int, range_value: int) -> 
     :return: [min disparity, max disparity]
     """
 
-    disp_min = int(np.min(init_value)) - range_value
-    disp_max = int(np.max(init_value)) + range_value
+    disp_min = int(np.nanmin(init_value)) - range_value
+    disp_max = int(np.nanmax(init_value)) + range_value
 
     return disp_min, disp_max
 
