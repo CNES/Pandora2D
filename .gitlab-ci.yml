@@ -67,7 +67,7 @@ variables:
   # default integration ref name (pattern)
   # Decomment to add new branch TickerNumber-XXX
   #INTEG_REF: /^(develop|release|TickerNumber-XXX)$/
-  INTEG_REF: /^(develop|release)$/
+  INTEG_REF: /^(develop|release|419-fix-ci-github)$/
 
   # Pandora's branch to integrate with
   # Override from pipeline GUI/Schedule if needed
