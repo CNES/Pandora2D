@@ -20,6 +20,7 @@ Module for Dichotomy refinement method (cpp version).
 """
 
 import logging
+import sys
 
 import numpy as np
 import xarray as xr
@@ -123,6 +124,29 @@ class Dichotomy(refinement.AbstractRefinement):
             compute_dichotomy = refinement_bind.compute_dichotomy_double
         else:
             raise TypeError("Cost volume must be in np.float32 or np.float64")
+
+        assert col_map.size == row_map.size
+        assert col_map.size == cost_values.size
+        assert col_map.size == criteria_map.size
+
+        for name, arr in [
+            ("cost_volume", cost_volumes.cost_volumes.data),
+            ("col_map", col_map),
+            ("row_map", row_map),
+            ("cost_values", cost_values),
+            ("criteria_map", criteria_map),
+        ]:
+            print(
+                name,
+                "dtype=",
+                arr.dtype,
+                "shape=",
+                arr.shape,
+                "contiguous=",
+                arr.flags["C_CONTIGUOUS"],
+                file=sys.stderr,
+                flush=True,
+            )
 
         compute_dichotomy(
             cost_volumes.cost_volumes.data,
