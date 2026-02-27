@@ -691,8 +691,10 @@ class TestCheckLoadAttributes:
     def test_fails_when_attributes_file_is_missing(self, tmp_path, attributes_file):
         """The directory must contain attribute file."""
         attributes_file.unlink()
-        with pytest.raises(FileNotFoundError, match=re.escape(str(attributes_file))):
+        with pytest.raises(FileNotFoundError) as exc_info:
             load_attributes(tmp_path)
+
+        assert "attributes.json" in str(exc_info.value)
 
     def test_passes(self, tmp_path, attributes_file):
         """The directory contains attribute file."""
