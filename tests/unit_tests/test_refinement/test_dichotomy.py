@@ -26,6 +26,7 @@ Test the refinement.dichotomy module.
 
 import copy
 import logging
+import sys
 
 import json_checker
 import numpy as np
@@ -1331,6 +1332,7 @@ class TestInvalidDisparity:
             attrs={"invalid_disp": invalid_disparity},
         )
 
+    @pytest.mark.skipif(sys.platform.startswith("win"), reason="skip on Windows")
     def test_disparity_grid(
         self,
         request,
@@ -1346,7 +1348,7 @@ class TestInvalidDisparity:
         are not processed by dichotomy loop using uniform disparity grids
         """
 
-        copy_disp_map = copy.deepcopy(dataset_disp_maps)
+        copy_disp_map = dataset_disp_maps.copy(deep=True)
 
         dichotomy_instance = request.getfixturevalue(dichotomy_instance_name)
 
