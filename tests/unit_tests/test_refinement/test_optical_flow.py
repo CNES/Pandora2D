@@ -1,4 +1,4 @@
-# Copyright (c) 2025 CS GROUP France
+# Copyright (c) 2026 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -20,8 +20,6 @@
 """
 Test refinement step
 """
-
-from typing import Dict
 
 # pylint: disable=redefined-outer-name, protected-access, unused-argument
 # mypy: disable-error-code=attr-defined
@@ -625,21 +623,13 @@ class TestDisparityGrids:
         Create random image dataset with disparity grids with a range of 3 or 7.
 
         :param random_generator:
-        :type random_generator: np.random.Generator
         :param nb_rows: number of rows in the image
-        :type nb_rows: int
         :param nb_cols: number of cols in the image
-        :type nb_cols: int
         :param min_row: if True, row min disparities will be a mix of 1 and 3 else will be all 1.
-        :type min_row: bool
         :param max_row: if True, row max disparities will be a mix of 6 and 8 else will be all 6.
-        :type max_row: bool
         :param min_col: if True, col min disparities will be a mix of 1 and 3 else will be all 1.
-        :type min_col: bool
         :param max_col: if True, col max disparities will be a mix of 6 and 8 else will be all 6.
-        :type max_col: bool
         :return: image dataset
-        :rtype: xr.Dataset
         """
         shape = (nb_rows, nb_cols)
         data = random_generator.integers(0, 255, shape, endpoint=True)
@@ -673,7 +663,7 @@ class TestDisparityGrids:
         )
 
     @pytest.fixture()
-    def cfg(self) -> Dict:
+    def cfg(self) -> dict:
         return {
             "pipeline": {
                 "matching_cost": {
@@ -690,7 +680,7 @@ class TestDisparityGrids:
         return -99
 
     @pytest.fixture()
-    def disparities(self, image: xr.Dataset, cfg: Dict, invalid_value) -> Dict:
+    def disparities(self, image: xr.Dataset, cfg: dict, invalid_value) -> dict:
         """Execute refinement method and return disparities."""
         matching_cost_ = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 

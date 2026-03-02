@@ -27,7 +27,7 @@ ifeq (, $(PYTHON))
 endif
 
 # Check Python version supported globally
-PYTHON_VERSION_MIN = 3.9
+PYTHON_VERSION_MIN = 3.10
 PYTHON_VERSION_CUR=$(shell $(PYTHON) -c 'import sys; print("%d.%d"% sys.version_info[0:2])')
 PYTHON_VERSION_OK=$(shell $(PYTHON) -c 'import sys; cur_ver = sys.version_info[0:2]; min_ver = tuple(map(int, "$(PYTHON_VERSION_MIN)".split("."))); print(int(cur_ver >= min_ver))')
 ifeq ($(PYTHON_VERSION_OK), 0)
@@ -36,6 +36,9 @@ endif
 
 # We can not get easily the build-dir that meson-python will use, so we build the name with the same code:
 CPP_BUILD_DIR=$(shell $(PYTHON) -c "import sys; interpreters = {'python': 'py', 'cpython': 'cp', 'pypy': 'pp', 'ironpython': 'ip', 'jython': 'jy'}; version = sys.version_info;name = sys.implementation.name; name = interpreters.get(name, name); print(f'build/{name}{version[0]}{version[1]}')")
+
+# Directory containing source files for coverage analysis.
+COVERAGE_SOURCE="src/pandora2d"
 
 ################ MAKE targets by sections ######################
 
@@ -79,9 +82,9 @@ test: install test-unit test-functional ## run unit tests and functional tests
 test-all: install test-unit test-functional test-resource test-performance test-notebook test-plugin ## run all tests
 
 .PHONY: test-unit
-test-unit: install ## run unit tests only (for dev) + coverage (source venv before)
+test-unit: install reports_dir ## run unit tests only (for dev) + coverage (source venv before)
 	@echo "Run unit tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml --cov
+	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage.cobertura.xml --cov-report term --cov
 
 .PHONY: test-unit-cpp
 test-unit-cpp: install ## run unit cpp tests only for dev
@@ -89,9 +92,9 @@ test-unit-cpp: install ## run unit cpp tests only for dev
 	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
 
 .PHONY: test-functional
-test-functional: install ## run functional tests only (for dev and validation plan)
+test-functional: install reports_dir ## run functional tests only (for dev and validation plan)
 	@echo "Run functional tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html
+	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage-functional.cobertura.xml --cov-report term --cov
 
 .PHONY: test-resource
 test-resource: install ## run resource tests only (for validation plan)
@@ -127,7 +130,7 @@ format: install format/black  ## run black formatting (depends install)
 .PHONY: format/black
 format/black: install  ## run black formatting (depends install) (source venv before)
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/black pandora2d tests notebooks/snippets/*.py
+	@${PANDORA2D_VENV}/bin/black src/pandora2d tests notebooks/snippets/*.py
 
 ### Check code quality and linting : black, mypy, pylint
 
@@ -137,17 +140,17 @@ lint: install lint/black lint/mypy lint/pylint ## check code quality and linting
 .PHONY: lint/black
 lint/black: ## check global style with black
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/black --check pandora2d tests notebooks/snippets/*.py
+	@${PANDORA2D_VENV}/bin/black --check src/pandora2d tests notebooks/snippets/*.py
 
 .PHONY: lint/mypy
 lint/mypy: ## check linting with mypy
 	@echo "+ $@"
-	@${PANDORA2D_VENV}/bin/mypy pandora2d tests
+	@${PANDORA2D_VENV}/bin/mypy
 
 .PHONY: lint/pylint
 lint/pylint: ## check linting with pylint
 	@echo "+ $@"
-	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint pandora2d tests --recursive=true --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
+	@set -o pipefail; ${PANDORA2D_VENV}/bin/pylint src/pandora2d tests --recursive=true --rcfile=.pylintrc --output-format=parseable --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" # | tee pylint-report.txt # pipefail to propagate pylint exit code in bash
 
 
 ## Check cpp code quality
@@ -157,14 +160,14 @@ coverage-cpp: install reports_dir ## Gcovr (depends on gcovr in venv)
 	@# We need to configure with coverage in order to make the ninja coverage
 	@# target available and execute tests compiled with coverage info needed by
 	@# gcovr.
-	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=true > /dev/null
+	@. ${PANDORA2D_VENV}/bin/activate; meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=true > /dev/null
 	@# Before running coverage, we need to run tests:
 	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
 	@# We call ninja direclty because the meson wrapper arround ninja does not detect the target:
 	@. ${PANDORA2D_VENV}/bin/activate; ninja coverage-xml -C "${CPP_BUILD_DIR}"
 	@cp "${CPP_BUILD_DIR}/meson-logs/coverage.xml" reports/gcovr-report.xml
 	@# Coverage makes execution slow so we unset this option
-	@meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=false > /dev/null
+	@. ${PANDORA2D_VENV}/bin/activate; meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=false > /dev/null
 
 .PHONY: cppcheck
 cppcheck: install reports_dir ## C++ cppcheck for CI (depends cppcheck)

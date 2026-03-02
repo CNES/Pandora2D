@@ -16,15 +16,15 @@ doctest_dep = dependency('doctest', required: get_option('build_cpp_tests'))
 python_dep = py.dependency(embed: true, required: get_option('build_cpp_tests'))
 
 install_subdir(
-    'pandora2d',
+    'src/pandora2d',
     install_dir: py.get_install_dir() / 'pandora2d',
     strip_directory: true,
 )
 
-subdir('pandora2d/common_cpp')
-subdir('pandora2d/interpolation_filter_cpp')
-subdir('pandora2d/matching_cost_cpp')
-subdir('pandora2d/refinement_cpp')
+subdir('src/pandora2d/common_cpp')
+subdir('src/pandora2d/interpolation_filter_cpp')
+subdir('src/pandora2d/matching_cost_cpp')
+subdir('src/pandora2d/refinement_cpp')
 
 if get_option('build_cpp_tests').enabled()
     subdir('tests/unit_tests/test_cpp')

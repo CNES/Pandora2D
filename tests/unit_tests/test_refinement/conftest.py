@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -28,7 +28,7 @@ import pytest
 import xarray as xr
 
 from pandora2d import refinement
-from pandora2d.matching_cost import PandoraMatchingCostMethods
+from pandora2d.matching_cost import MatchingCostRegistry
 
 
 @pytest.fixture()
@@ -191,7 +191,10 @@ def right_img(left_img):
 
 @pytest.fixture()
 def zeros_cost_volumes(matching_cost_config, left_img, right_img):
-    matching_cost = PandoraMatchingCostMethods(matching_cost_config)
+    MatchingCost = MatchingCostRegistry.get(
+        matching_cost_config["matching_cost_method"]
+    )  # pylint:disable=invalid-name # NOSONAR
+    matching_cost = MatchingCost(matching_cost_config)
     matching_cost.allocate(left_img, right_img, matching_cost_config)
     return matching_cost.cost_volumes
 

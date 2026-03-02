@@ -1,4 +1,4 @@
-#  Copyright (c) 2025. Centre National d'Etudes Spatiales (CNES).
+#  Copyright (c) 2026. Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -19,6 +19,7 @@
 """
 Test methods from criteria.py file
 """
+
 # pylint: disable=redefined-outer-name
 
 import numpy as np

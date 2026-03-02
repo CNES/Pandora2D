@@ -15,7 +15,8 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     import pandora2d
 
     from pandora2d.state_machine import Pandora2DMachine
-    from pandora2d import check_configuration, common
+    from pandora2d.check_configuration import check_conf
+    from pandora2d.common import save_disparity_maps
     from pandora2d.img_tools import create_datasets_from_inputs
 
     # Paths to left and right images
@@ -162,9 +163,10 @@ The *Disparity computation* step generates two disparity maps in cost volume geo
 vertical disparity and one named **col_map** for the horizontal disparity. These maps are 2D xarray.DataArray of the same type as cost volumes,
 stored in a xarray.Dataset. 
 
-This xr.Dataset also contains the **validity maps** stored in uint8: 
+This xr.Dataset also contains the **validity maps** stored in uint8:
 
-    * A global validity map 'validity_mask' indicating whether each point is valid (value 0), partially valid (value 1) or invalid (value 2).
+    * A global validity map 'validity_mask', indicating whether each point is valid (value 0) or invalid (value 1) when at least one requested disparity can not be computed.
+    * A global partial validity map 'partial_validity_mask', indicating whether each point is partially valid (value 0) or invalid (value 1) when all requested disparity can not be computed.
     * A map for each criteria, indicating for each point whether the corresponding criteria has been raised at that point (value 0) or not (value 1).
 
 ::
@@ -179,9 +181,9 @@ This xr.Dataset also contains the **validity maps** stored in uint8:
         row_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         col_map  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
         correlation_score  (row, col) float32 nan nan nan nan nan nan ... nan nan nan nan nan
-        validity  (row, col, criteria) uint8 0 1 0 0 2 0 ... 0 1 0 0 0
+        validity  (row, col, criteria) uint8 0 1 0 0 1 0 ... 0 1 0 0 0
     Attributes:
-        offset:       {'row': 0, 'col': 0}
+        origin_coordinates:       {'row': 0, 'col': 0}
         step:         {'row': 1, 'col': 1}
         invalid_disp: -9999
         crs:          None

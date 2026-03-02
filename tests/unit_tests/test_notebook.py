@@ -1,7 +1,7 @@
 # pylint:disable=line-too-long
 #!/usr/bin/env python
 #
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -22,6 +22,7 @@
 """
 This module contains functions to test the Pandora2D notebooks.
 """
+
 import subprocess
 import tempfile
 
@@ -52,8 +53,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0
@@ -74,8 +74,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0
@@ -96,8 +95,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0
@@ -118,8 +116,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0
@@ -142,8 +139,7 @@ class TestNotebooks:
                 shell=True,
                 check=False,
                 cwd="notebooks/advanced_examples",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
 
             assert out.returncode == 0

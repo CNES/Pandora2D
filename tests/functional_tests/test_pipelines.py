@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -25,7 +25,6 @@ Run pandora2d configurations from end to end.
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 import pytest
@@ -36,16 +35,13 @@ from pandora2d.check_configuration import check_conf
 from pandora2d.img_tools import create_datasets_from_inputs
 
 
-def remove_extra_keys(extended: dict, reference: dict):
+def remove_extra_keys(extended: dict, reference: dict) -> dict:
     """
     Removes the extra keys in the `extended` dictionary that are not present in the `reference` dictionary.
 
     :param extended: The dictionary that may contain extra keys.
-    :type extended: dict
     :param reference: The reference dictionary that contains the desired keys.
-    :type reference: dict
     :return: A copy of the `extended` dictionary with only the keys present in the `reference` dictionary.
-    :rtype: dict
 
     :Example:
 
@@ -189,7 +185,7 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
     - Right image : cones/multibands/right.tif
     Requirement : EX_CONF_00, EX_CONF_06, EX_CONF_12
     """
-    configuration: Dict[str, Dict] = {
+    configuration: dict[str, dict] = {
         **correct_multiband_input_cfg,
         **correct_pipeline_without_refinement,
         **{"output": {"path": str(tmp_path / "output")}},
@@ -216,7 +212,7 @@ def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pip
     - Right image : cones/monoband/right.png
     Requirement : EX_CONF_00, EX_CONF_06
     """
-    configuration: Dict[str, Dict] = {
+    configuration: dict[str, dict] = {
         **correct_input_cfg,
         **correct_pipeline_with_optical_flow,
         **{"output": {"path": str(tmp_path / "output")}},
@@ -274,6 +270,11 @@ def test_configuration_with_mask(run_pipeline, input_cfg, correct_pipeline_witho
             {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
             "correct_pipeline_without_refinement",
             id="Pipeline with disparity grids",
+        ),
+        pytest.param(
+            {"row_disparity": "same_sized_grid_directory", "col_disparity": "same_sized_grid_directory"},
+            "correct_pipeline_without_refinement",
+            id="Pipeline with disparity grid directory",
         ),
         pytest.param(
             {"row_disparity": "correct_grid", "col_disparity": "second_correct_grid"},
@@ -421,8 +422,8 @@ class TestAttributes:
             attrs = json.load(attrs_file)
             attrs["transform"] = rasterio.Affine(*attrs["transform"])
 
-        assert attrs["offset"]["row"] == 0
-        assert attrs["offset"]["col"] == 0
+        assert attrs["origin_coordinates"]["row"] == 0
+        assert attrs["origin_coordinates"]["col"] == 0
         assert attrs["step"]["row"] == step[0]
         assert attrs["step"]["col"] == step[1]
         assert attrs["crs"] == left_crs
@@ -469,8 +470,8 @@ class TestAttributes:
             attrs = json.load(attrs_file)
             attrs["transform"] = rasterio.Affine(*attrs["transform"])
 
-        assert attrs["offset"]["row"] == roi["row"]["first"]
-        assert attrs["offset"]["col"] == roi["col"]["first"]
+        assert attrs["origin_coordinates"]["row"] == roi["row"]["first"]
+        assert attrs["origin_coordinates"]["col"] == roi["col"]["first"]
         assert attrs["step"]["row"] == step[0]
         assert attrs["step"]["col"] == step[1]
         assert attrs["crs"] == left_crs
@@ -504,8 +505,8 @@ class TestAttributes:
         with open(tmp_path / "disparity_map" / "attributes.json", encoding="utf8") as attrs_file:
             attrs = json.load(attrs_file)
 
-        assert attrs["offset"]["row"] == 0
-        assert attrs["offset"]["col"] == 0
+        assert attrs["origin_coordinates"]["row"] == 0
+        assert attrs["origin_coordinates"]["col"] == 0
         assert attrs["step"]["row"] == 1
         assert attrs["step"]["col"] == 1
         assert attrs["crs"] is None
@@ -771,5 +772,35 @@ class TestCostVolumeConfidence:
             confidence_map = src.read(1)
 
         # Checking that resulting confidence map is not full of nans
-        with np.testing.assert_raises(AssertionError):
-            assert np.all(np.isnan(confidence_map))
+        assert not np.all(np.isnan(confidence_map))
+
+
+class TestDeformationGridMode:
+    """
+    Test deformation grid mode
+    """
+
+    @pytest.fixture()
+    def configuration(self, correct_input_cfg, correct_pipeline_without_refinement, init_pixel_conv_grid, tmp_path):
+        return {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            **{"output": {"path": str(tmp_path), "deformation_grid": {"init_pixel_conv_grid": init_pixel_conv_grid}}},
+        }
+
+    @pytest.mark.parametrize("init_pixel_conv_grid", [[0, 0], [0.5, 0.5]])
+    def test_deformation_grid_pipeline(self, configuration, run_pipeline, tmp_path):
+        """
+        Test execution of a pipeline with deformation grid mode enabled
+        """
+
+        run_pipeline(configuration)
+
+        with rasterio.open(tmp_path / "disparity_map" / "row_deformation_map.tif") as src:
+            row_deformation_map = src.read(1)
+        with rasterio.open(tmp_path / "disparity_map" / "col_deformation_map.tif") as src:
+            col_deformation_map = src.read(1)
+
+        # Checking that resulting deformation grids are not full of nans
+        assert not np.all(np.isnan(row_deformation_map))
+        assert not np.all(np.isnan(col_deformation_map))

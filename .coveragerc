@@ -1,5 +1,11 @@
+[paths]
+source =
+    src
+    */site-packages
+
 [run]
-source = pandora2d
-omit =
-    # Omit tests
-    /tests/*
+# Directories to include in coverage analysis
+source = ${COVERAGE_SOURCE}
+
+# Files and directories to omit from coverage analysis
+omit = */build/*,tests/*

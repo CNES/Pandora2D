@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -21,7 +21,6 @@
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 
-from typing import Tuple
 
 import numpy as np
 import pytest
@@ -36,7 +35,7 @@ def remove_edges():
 
     def inner(
         medicis_map: NDArray[np.floating], pandora2d_map: NDArray[np.floating]
-    ) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """
         Get reduced disparity maps after removing medicis edges full of nans (greater than pandora2d edges)
         on both pandora2d and medicis disparity maps.

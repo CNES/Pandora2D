@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -227,3 +227,35 @@ def test_roi_with_negative_and_positive_disparities_grids(default_roi, col_dispa
 
     assert test_roi_column["margins"] == expected
     assert test_roi_column == default_roi
+
+
+class TestNodataFiltering:
+    """Nodata in disparity grids should not influence margin determination."""
+
+    @pytest.fixture
+    def second_correct_grid_data(self, second_correct_grid_shape):
+        """second_correct_grid_data override to include inf and nan."""
+        data = np.full(second_correct_grid_shape, 5.0)
+        data[:, 1::4] = -21
+        data[:, 2::4] = -np.inf
+        data[:, 3::4] = np.nan
+        return data
+
+    @pytest.mark.parametrize(
+        ["no_data_disp", "expected"],
+        [
+            (
+                None,
+                (28, 7, 12, 10),
+            ),
+            (
+                -21,  # Use a value from second_correct_grid as no_data_disp
+                (2, 7, 12, 10),
+            ),
+        ],
+    )
+    def test_nodata_filtering(self, default_roi, correct_grid, second_correct_grid, expected):
+        """Nodata in disparity grids should not influence margin determination."""
+        result = img_tools.get_roi_processing(default_roi, second_correct_grid, correct_grid)
+
+        assert result["margins"] == expected

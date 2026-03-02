@@ -1,4 +1,4 @@
-#  Copyright (c) 2025. Centre National d'Etudes Spatiales (CNES).
+#  Copyright (c) 2026. Centre National d'Etudes Spatiales (CNES).
 #
 #  This file is part of PANDORA2D
 #
@@ -506,9 +506,9 @@ def test_roi(make_cost_volumes, criteria_name, expected):
             },
             np.array(
                 [
-                    [0, 0, 1, 0, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 1, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -538,9 +538,9 @@ def test_roi(make_cost_volumes, criteria_name, expected):
             },
             np.array(
                 [
+                    [0, 0, 0, 0, 1, 1, 1, 1],
                     [0, 0, 0, 0, 0, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1],
                     [0, 0, 0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0, 0, 0],

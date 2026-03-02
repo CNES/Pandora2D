@@ -1,4 +1,4 @@
-#  Copyright (c) 2025. Centre National d'Etudes Spatiales (CNES).
+#  Copyright (c) 2026. Centre National d'Etudes Spatiales (CNES).
 #
 #  This file is part of PANDORA2D
 #
@@ -19,7 +19,6 @@
 """Memory estimation tests."""
 
 import json
-from typing import List
 
 import pytest
 
@@ -36,7 +35,7 @@ class TestEstimateTotalMemoryConsumption:
     @pytest.fixture(scope="class")
     def result_store(self, request, tmp_path_factory):
         """Yield a list of objects that will be dumped to JSON file."""
-        store: List = []
+        store: list = []
 
         yield store
 
@@ -70,9 +69,11 @@ class TestEstimateTotalMemoryConsumption:
         window_size,
         step,
         subpix,
+        deformation_grid_mode,
     ):
         """Config."""
-        return {
+
+        config = {
             "input": {
                 "left": {
                     "img": left_img_path,
@@ -102,6 +103,11 @@ class TestEstimateTotalMemoryConsumption:
             },
         }
 
+        if deformation_grid_mode:
+            config["output"]["deformation_grid"] = {"init_pixel_conv_grid": [0, 0]}
+
+        return config
+
     @pytest.fixture
     def add_roi_to_config(self, config, roi):
         """Add roi to config."""
@@ -110,22 +116,32 @@ class TestEstimateTotalMemoryConsumption:
 
     # Warning: we must stay in a case where we are not above max memory to measure the same thing that we estimate
     @pytest.fixture
-    def measured_consumption(self, config, run_pipeline, MemoryTracer):
+    def measured_consumption(self, checked_config, run_pipeline, MemoryTracer):
         """Run pandora2d with config and measure memory consumption."""
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
-            run_pipeline(config)
+            run_pipeline(checked_config)
         return memory_tracer
 
     @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information", "sad"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
+    @pytest.mark.parametrize("deformation_grid_mode", [True, False])
     def test(
-        self, checked_config, state_machine, measured_consumption, result_store, matching_cost_method, step, subpix
+        self,
+        checked_config,
+        state_machine,
+        measured_consumption,
+        result_store,
+        matching_cost_method,
+        step,
+        subpix,
     ):
         """Test estimate_total_consumption without ROI."""
+
         height, width = memory_estimation.compute_effective_image_size(
             checked_config, state_machine.margins_img.global_margins
         )
+
         estimation = memory_estimation.estimate_total_consumption(
             checked_config, height, width, state_machine.margins_disp.global_margins
         )
@@ -149,6 +165,7 @@ class TestEstimateTotalMemoryConsumption:
     @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information", "sad", "zncc"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 4])
+    @pytest.mark.parametrize("deformation_grid_mode", [True, False])
     @pytest.mark.parametrize(
         "roi",
         [

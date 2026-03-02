@@ -1,7 +1,7 @@
 # pylint: skip-file
 #
 # coding: utf8
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.abspath("."))
 # -- Project information -----------------------------------------------------
 
 project = "Pandora2D"
-copyright = "2025, CNES"
+copyright = "2026, CNES"
 author = "CNES"
 version = "0.3.0"
 # The full version, including alpha/beta/rc tags
@@ -62,7 +62,7 @@ extensions = [
     "sphinx_tabs.tabs",
 ]
 
-autoapi_dirs = ["../../pandora2d"]
+autoapi_dirs = ["../../src/pandora2d"]
 autoapi_root = "api_reference"
 autoapi_keep_files = True
 autoapi_options = [

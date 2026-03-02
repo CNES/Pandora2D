@@ -4,7 +4,6 @@ build-backend = "mesonpy"
 
 [tool.meson-python.args]
 setup = ["-Dbuild_cpp_tests=disabled"]
-compile = ['-j0']
 install = ['--skip-subprojects=eigen']
 
 [tool.setuptools_scm]
@@ -15,7 +14,7 @@ dynamic = ["version"]
 authors = [{ name = "CNES" }]
 description = "A coregistration tool."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -28,7 +27,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -47,7 +45,7 @@ dependencies = [
     "scikit-image",
     "scipy",
     "transitions",
-    "typing_extensions",
+    "typing_extensions;python_version<'3.11'",
     "xarray",
 ]
 
@@ -56,7 +54,6 @@ dev = [
     "pandora2d[test]",
     "black>=21.5b0",  # PEP8 format code
     "cppcheck",
-    "isort>=5.8.0",   # Check imports
     "mypy",           # static type checker
     "pandas-stubs",
     "pre-commit",
@@ -94,7 +91,7 @@ pandora2d = "pandora2d.Pandora2d:main"
 [tool.black]
 # https://github.com/psf/black
 line-length = 120
-exclude = "(.eggs|.git|.mypy_cache|.nox|.tox|_build|build|dist|venv)"
+exclude = "(.eggs|.git|.mypy_cache|.nox|.tox|_build|build|dist|venv|subprojects|docs)"
 
 [tool.cibuildwheel]
 archs = "auto64"

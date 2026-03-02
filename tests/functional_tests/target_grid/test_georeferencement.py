@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -19,6 +19,7 @@
 """
 Run pandora2d configurations with ROI from end to end.
 """
+
 from pathlib import Path
 
 # Make pylint happy with fixtures:

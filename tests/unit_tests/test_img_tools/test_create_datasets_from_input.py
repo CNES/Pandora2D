@@ -1,5 +1,5 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2025 CS GROUP France
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -22,15 +22,50 @@
 Test create_dataset_from_inputs function.
 """
 
-# Make pylint happy with fixtures:
-# pylint: disable=redefined-outer-name
+from collections.abc import Iterable
+from pathlib import Path
 
+# Make pylint happy with fixtures:
+# pylint: disable=redefined-outer-name,unused-argument,too-many-arguments,too-many-positional-arguments, too-many-lines
 import numpy as np
 import pandora
 import pytest
 import xarray as xr
+from numpy.typing import DTypeLike
 
 from pandora2d import img_tools
+from pandora2d.margins import Margins
+from pandora2d.types import Origin, Step
+
+
+def build_data(
+    shape: tuple[int, ...],
+    default_value: int | float,
+    assignments: Iterable[tuple[tuple[slice, ...], int | float]],
+    dtype: DTypeLike = np.float32,
+):
+    """
+    Build numpy array with default value and assign slices with others.
+
+    :param shape: shape of the returned array
+    :param default_value: fill array with ``default_value`` where assignments are not defined.
+    :param assignments: couples of slice value where to fill array with.
+    :param dtype: dtype of the returned array.
+    :return: numpy array build with ``default_value`` and ``assignments``
+
+    example:
+    >>> build_data((6, 5), np.nan, ((np.s_[0, 0], 10.898), (np.s_[1:5:2, 1:4], 7.0), (np.s_[2:5:2, 1:4], 5.0)))
+    array([[10.898,    nan,    nan,    nan,    nan],
+           [   nan,  7.   ,  7.   ,  7.   ,    nan],
+           [   nan,  5.   ,  5.   ,  5.   ,    nan],
+           [   nan,  7.   ,  7.   ,  7.   ,    nan],
+           [   nan,  5.   ,  5.   ,  5.   ,    nan],
+           [   nan,    nan,    nan,    nan,    nan]], dtype=float32)
+    """
+    result = np.full(shape, default_value, dtype)
+    for indices, value in assignments:
+        result[indices] = value
+    return result
 
 
 class TestReturnedValue:
@@ -445,6 +480,147 @@ class TestReturnedValue:
         np.testing.assert_array_equal(datasets.right["col_disparity"], expected_right_col_disparity)
         np.testing.assert_array_equal(datasets.right["row_disparity"], expected_right_row_disparity)
 
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+        ],
+        [
+            [(10, 10), (10, 10), {"row": 11, "col": 11}, [2, 2]],
+            [(13, 15), (13, 15), {"row": 14, "col": 15}, [2, 2]],
+        ],
+    )
+    def test_disparities_from_roi(
+        self,
+        attributes,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        disparity_range,
+        left_img_shape,
+        correct_grid_data,
+        second_correct_grid_data,
+        make_input_cfg,
+    ):
+        """
+        Test disparities generated from a previous run with ROI (smaller than image with a step)
+
+        We expect that attributes with step exists and was integrated into the input section.
+        """
+        # We need to transform directory path to grid path:
+        make_input_cfg["row_disparity"]["init"] = str(Path(make_input_cfg["row_disparity"]["init"]) / "row_map.tif")
+        make_input_cfg["col_disparity"]["init"] = str(Path(make_input_cfg["col_disparity"]["init"]) / "col_map.tif")
+
+        # Margins value is arbitrary
+        roi = {
+            "col": {
+                "first": origin_coordinates["col"],
+                "last": origin_coordinates["col"] + correct_grid_shape[1] * step[1],
+            },
+            "row": {
+                "first": origin_coordinates["row"],
+                "last": origin_coordinates["row"] + correct_grid_shape[0] * step[0],
+            },
+            "margins": (1, 1, 1, 1),
+        }
+
+        result = img_tools.create_datasets_from_inputs(make_input_cfg, roi=roi, attributes=attributes)
+
+        row_offset = origin_coordinates["row"] - result.left.row.data[0]
+        col_offset = origin_coordinates["col"] - result.left.col.data[0]
+
+        assert result.left.sizes["row"], result.left.sizes["col"] == left_img_shape
+        assert result.right.sizes["row"], result.right.sizes["col"] == left_img_shape
+        np.testing.assert_equal(
+            result.left["row_disparity"]
+            .sel(band_disp="min")
+            .data[
+                row_offset : row_offset + correct_grid_shape[0] * step[0] : step[0],
+                col_offset : col_offset + correct_grid_shape[1] * step[1] : step[1],
+            ]
+            + disparity_range,
+            correct_grid_data,
+        )
+        np.testing.assert_equal(
+            result.left["row_disparity"]
+            .sel(band_disp="max")
+            .data[
+                row_offset : row_offset + correct_grid_shape[0] * step[0] : step[0],
+                col_offset : col_offset + correct_grid_shape[1] * step[1] : step[1],
+            ]
+            - disparity_range,
+            correct_grid_data,
+        )
+        np.testing.assert_equal(
+            result.left["col_disparity"]
+            .sel(band_disp="min")
+            .data[
+                row_offset : row_offset + second_correct_grid_shape[0] * step[0] : step[0],
+                col_offset : col_offset + second_correct_grid_shape[1] * step[1] : step[1],
+            ]
+            + disparity_range,
+            second_correct_grid_data,
+        )
+        np.testing.assert_equal(
+            result.left["col_disparity"]
+            .sel(band_disp="max")
+            .data[
+                row_offset : row_offset + second_correct_grid_shape[0] * step[0] : step[0],
+                col_offset : col_offset + second_correct_grid_shape[1] * step[1] : step[1],
+            ]
+            - disparity_range,
+            second_correct_grid_data,
+        )
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "correct_grid"},
+                id="Correct disparity grids",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize("no_data_disp", [69])
+    def test_no_data_disp(self, result, no_data_disp):
+        """no_data_disp should be present in attributes."""
+        assert result.left["col_disparity"].attrs["no_data"] == no_data_disp
+        assert result.left["row_disparity"].attrs["no_data"] == no_data_disp
+
+    @pytest.mark.parametrize(
+        ["make_input_cfg"],
+        [
+            pytest.param(
+                {"row_disparity": "correct_grid", "col_disparity": "correct_grid"},
+                id="Correct disparity grids",
+            ),
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize("no_data_disp", [np.nan])
+    def test_no_data_disp_is_nan(self, result, no_data_disp):
+        """no_data_disp should be present in attributes."""
+        assert np.isnan(result.left["col_disparity"].attrs["no_data"])
+        assert np.isnan(result.left["row_disparity"].attrs["no_data"])
+
 
 class TestDisparityChecking:
     """Test checks done on disparities."""
@@ -600,3 +776,607 @@ class TestDisparityChecking:
         assert result.left.attrs["row_disparity_source"] == [-9999, -9999]
         assert result.right.attrs["col_disparity_source"] == [9999, 9999]
         assert result.right.attrs["row_disparity_source"] == [9999, 9999]
+
+
+class TestGetMinMaxDispFromDicts:
+    """
+    Test the get_min_max_disp_from_dicts method
+    """
+
+    # Other invalid disparity values will be tested
+    # after the tickets for processing invalid disp have been done
+    @pytest.fixture()
+    def invalid_disp(self):
+        """
+        Invalid disparity value
+        """
+        return np.nan
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "same_sized_grid_directory",
+                    "col_disparity": "same_sized_grid_directory",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        ["correct_grid_shape", "second_correct_grid_shape", "origin_coordinates", "step", "invalid_init_disp"],
+        [
+            pytest.param(
+                (375, 450),
+                (375, 450),
+                {"row": 0, "col": 0},
+                [1, 1],
+                np.nan,
+                id="Step=[1,1]",
+            ),
+            pytest.param(
+                (63, 113),
+                (63, 113),
+                {"row": 0, "col": 0},
+                [6, 4],
+                np.nan,
+                id="Step=[6,4]",
+            ),
+        ],
+    )
+    def test_str_disparity_without_roi(
+        self,
+        make_input_cfg,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        invalid_init_disp,
+        correct_grid_data,
+    ):
+        """
+        Test the get_min_max_disp_from_dicts method with string initial disparity
+        """
+
+        # We need to transform directory path to grid path:
+        make_input_cfg["row_disparity"]["init"] = str(Path(make_input_cfg["row_disparity"]["init"]) / "row_map.tif")
+
+        dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"])
+
+        # We test for row_disparity, the behavior for col_disparity is the same.
+        disp_min_max, disp_interval, nodata = img_tools.get_min_max_disp_from_dicts(
+            dataset,
+            make_input_cfg["row_disparity"],
+            Origin(origin_coordinates["row"], origin_coordinates["col"]),
+            Step(step[0], step[1]),
+            invalid_init_disp,
+        )
+
+        # Preparation of data for a more readable comparison in the assertion
+        correct_grid_min = correct_grid_data - make_input_cfg["row_disparity"]["range"]
+        correct_grid_max = correct_grid_data + make_input_cfg["row_disparity"]["range"]
+
+        np.testing.assert_equal(disp_min_max[0, :: step[0], :: step[1]], correct_grid_min)
+        np.testing.assert_equal(disp_min_max[1, :: step[0], :: step[1]], correct_grid_max)
+        assert disp_interval[0] == np.nanmin(correct_grid_min)
+        assert disp_interval[1] == np.nanmax(correct_grid_max)
+        assert nodata is None
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "correct_grid",
+                    "col_disparity": "second_correct_grid",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+            "invalid_init_disp",
+            "roi",
+            "gt_disparity_min",
+            "gt_disparity_max",
+        ],
+        [
+            pytest.param(
+                (5, 5),
+                (5, 5),
+                {"row": 11, "col": 11},
+                [1, 1],
+                np.nan,
+                {"col": {"first": 11, "last": 15}, "row": {"first": 11, "last": 15}, "margins": (2, 1, 1, 2)},
+                np.array(
+                    [
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, -3.0, -3.0, -3.0, -3.0, -3.0, np.nan],
+                        [np.nan, np.nan, -5.0, -5.0, -5.0, -5.0, -5.0, np.nan],
+                        [np.nan, np.nan, -2.0, -2.0, -2.0, -2.0, -2.0, np.nan],
+                        [np.nan, np.nan, -3.0, -3.0, -3.0, -3.0, -3.0, np.nan],
+                        [np.nan, np.nan, -5.0, -5.0, -5.0, -5.0, -5.0, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                    ]
+                ),
+                np.array(
+                    [
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, 7.0, 7.0, 7.0, 7.0, 7.0, np.nan],
+                        [np.nan, np.nan, 5.0, 5.0, 5.0, 5.0, 5.0, np.nan],
+                        [np.nan, np.nan, 8.0, 8.0, 8.0, 8.0, 8.0, np.nan],
+                        [np.nan, np.nan, 7.0, 7.0, 7.0, 7.0, 7.0, np.nan],
+                        [np.nan, np.nan, 5.0, 5.0, 5.0, 5.0, 5.0, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                    ]
+                ),
+                id="Step=[1,1] - Equivalent of directory disparity",
+            ),
+            pytest.param(
+                (2, 3),
+                (2, 3),
+                {"row": 16, "col": 31},
+                [3, 2],
+                np.nan,
+                {"col": {"first": 31, "last": 37}, "row": {"first": 16, "last": 22}, "margins": (1, 2, 1, 2)},
+                np.array(
+                    [
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, -3.0, np.nan, -3.0, np.nan, -3.0, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, -5.0, np.nan, -5.0, np.nan, -5.0, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                    ]
+                ),
+                np.array(
+                    [
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, 7.0, np.nan, 7.0, np.nan, 7.0, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, 5.0, np.nan, 5.0, np.nan, 5.0, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                    ]
+                ),
+                id="Step=[3,2] - Equivalent of directory disparity",
+            ),
+            pytest.param(
+                (375, 450),
+                (375, 450),
+                {"row": 0, "col": 0},
+                [1, 1],
+                np.nan,
+                {"col": {"first": 11, "last": 15}, "row": {"first": 11, "last": 15}, "margins": (2, 1, 1, 2)},
+                np.array(
+                    [
+                        [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0],
+                        [-2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0],
+                        [-3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0],
+                        [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0],
+                        [-2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0],
+                        [-3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0],
+                        [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0],
+                        [-2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0],
+                    ]
+                ),
+                np.array(
+                    [
+                        [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0],
+                        [8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0],
+                        [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0],
+                        [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0],
+                        [8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0],
+                        [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0],
+                        [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0],
+                        [8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0],
+                    ]
+                ),
+                id="Step=[1,1] - Equivalent of tif file disparity",
+            ),
+        ],
+    )
+    def test_str_disparity_with_roi(
+        self,
+        make_input_cfg,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        invalid_init_disp,
+        roi,
+        gt_disparity_min,
+        gt_disparity_max,
+        correct_grid_data,
+    ):
+        """
+        Test the get_min_max_disp_from_dicts method with string initial disparity and roi
+        """
+
+        make_input_cfg["ROI"] = roi
+
+        dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"], roi=roi)
+
+        # We test for row_disparity, the behavior for col_disparity is the same.
+        disp_min_max, disp_interval, nodata = img_tools.get_min_max_disp_from_dicts(
+            dataset,
+            make_input_cfg["row_disparity"],
+            Origin(origin_coordinates["row"], origin_coordinates["col"]),
+            Step(step[0], step[1]),
+            invalid_init_disp,
+        )
+
+        # Preparation of data for a more readable comparison in the assertion
+        correct_grid_min = correct_grid_data - make_input_cfg["row_disparity"]["range"]
+        correct_grid_max = correct_grid_data + make_input_cfg["row_disparity"]["range"]
+
+        np.testing.assert_equal(disp_min_max[0, :, :], gt_disparity_min)
+        np.testing.assert_equal(disp_min_max[1, :, :], gt_disparity_max)
+        assert disp_interval[0] == np.nanmin(correct_grid_min)
+        assert disp_interval[1] == np.nanmax(correct_grid_max)
+        assert nodata is None
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "constant_initial_disparity",
+                    "col_disparity": "second_constant_initial_disparity",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        ["roi"],
+        [
+            pytest.param(
+                None,
+                id="Without ROI",
+            ),
+            pytest.param(
+                {"col": {"first": 11, "last": 20}, "row": {"first": 11, "last": 20}, "margins": (2, 3, 4, 2)},
+                id="With ROI",
+            ),
+        ],
+    )
+    def test_int_initial_disparity(
+        self,
+        make_input_cfg,
+        roi,
+    ):
+        """
+        Test the get_min_max_disp_from_dicts method with int initial disparity
+        """
+
+        make_input_cfg["ROI"] = roi
+
+        dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"], roi=roi)
+
+        # We test for row_disparity, the behavior for col_disparity is the same.
+        disp_min_max, disp_interval, no_data = img_tools.get_min_max_disp_from_dicts(
+            dataset,
+            make_input_cfg["row_disparity"],
+            Origin(0, 0),
+            Step(1, 1),
+            np.nan,  # When a directory is not used as input disparity, the invalid initial disparity value is np.nan.
+        )
+
+        correct_grid_min = (
+            np.full(dataset["im"].data.shape, make_input_cfg["row_disparity"]["init"])
+            - make_input_cfg["row_disparity"]["range"]
+        )
+        correct_grid_max = (
+            np.full(dataset["im"].data.shape, make_input_cfg["row_disparity"]["init"])
+            + make_input_cfg["row_disparity"]["range"]
+        )
+
+        np.testing.assert_equal(disp_min_max[0, :, :], correct_grid_min)
+        np.testing.assert_equal(disp_min_max[1, :, :], correct_grid_max)
+        assert disp_interval[0] == np.nanmin(correct_grid_min)
+        assert disp_interval[1] == np.nanmax(correct_grid_max)
+        assert no_data is None
+
+
+class TestGetMinMaxDispFromDictsNoData:
+    """
+    Test the gestion of nodata in get_min_max_disp_from_dicts method
+    """
+
+    @pytest.fixture
+    def second_correct_grid_data(self, second_correct_grid_shape, second_min, second_max, no_data_disp):
+        """Override second_correct_grid_data to use new values"""
+        return build_data(
+            second_correct_grid_shape,
+            np.mean([second_max, second_min], dtype=int),
+            [
+                (np.s_[:, 0::4], second_min),
+                (np.s_[:, 1::4], second_max),
+                (np.s_[:, 2::4], -np.inf),
+                (np.s_[:, 3::4], no_data_disp),
+            ],
+        )
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "correct_grid",
+                    "col_disparity": "second_correct_grid",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+            "invalid_init_disp",
+            "roi",
+        ],
+        [
+            pytest.param(
+                (5, 5),
+                (5, 5),
+                {"row": 11, "col": 11},
+                [1, 1],
+                np.nan,
+                {"col": {"first": 11, "last": 15}, "row": {"first": 11, "last": 15}, "margins": (2, 1, 1, 2)},
+                id="Step=[1,1] - Equivalent of directory disparity",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        [
+            "second_min",
+            "second_max",
+            "no_data_disp",
+        ],
+        [
+            pytest.param(
+                -34,
+                999,
+                -999,
+            ),
+            pytest.param(
+                -34,
+                11,
+                700,
+            ),
+        ],
+    )
+    def test_no_data_value_does_not_influence_disp_interval_computation(
+        self,
+        make_input_cfg,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        invalid_init_disp,
+        roi,
+        correct_grid_data,
+        second_min,
+        second_max,
+        no_data_disp,
+        second_correct_grid_data,
+    ):
+        """
+        When the extreme values of a disparity grid are flagged as nodata in the grid metadata they must not be
+        used to compute disp_interval, and they must remain untouched in the grid.
+        """
+
+        make_input_cfg["ROI"] = roi
+        margins = Margins(*roi["margins"])
+
+        dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"], roi=roi)
+
+        # We test for col_disparity, the behavior for row_disparity is the same.
+        disp_min_max, disp_interval, nodata = img_tools.get_min_max_disp_from_dicts(
+            dataset,
+            make_input_cfg["col_disparity"],
+            Origin(origin_coordinates["row"], origin_coordinates["col"]),
+            Step(step[0], step[1]),
+            invalid_init_disp,
+        )
+        disparity_range = make_input_cfg["col_disparity"]["range"]
+        assert disp_interval == [second_min - disparity_range, second_max + disparity_range]
+        # According to second_correct_grid_data, check that no_disp_data values are still in place.
+        assert (
+            disp_min_max[:, margins.up : -margins.down, margins.left + 3 : -margins.right : 4] == no_data_disp
+        ).all()
+        assert nodata == no_data_disp
+
+    @pytest.mark.parametrize(
+        [
+            "make_input_cfg",
+        ],
+        [
+            pytest.param(
+                {
+                    "row_disparity": "correct_grid",
+                    "col_disparity": "second_correct_grid",
+                },
+            )
+        ],
+        indirect=["make_input_cfg"],
+    )
+    @pytest.mark.parametrize(
+        [
+            "correct_grid_shape",
+            "second_correct_grid_shape",
+            "origin_coordinates",
+            "step",
+            "invalid_init_disp",
+            "roi",
+        ],
+        [
+            pytest.param(
+                (5, 5),
+                (5, 5),
+                {"row": 11, "col": 11},
+                [1, 1],
+                np.nan,
+                {"col": {"first": 11, "last": 15}, "row": {"first": 11, "last": 15}, "margins": (2, 1, 1, 2)},
+                id="Step=[1,1] - Equivalent of directory disparity",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize(
+        [
+            "second_min",
+            "second_max",
+            "no_data_disp",
+        ],
+        [
+            pytest.param(
+                -34,
+                999,
+                -999,
+            ),
+            pytest.param(
+                -34,
+                11,
+                700,
+            ),
+        ],
+    )
+    def test_no_data_value_does_not_influence_disp_interval_computation_with_right_image(
+        self,
+        make_input_cfg,
+        correct_grid_shape,
+        second_correct_grid_shape,
+        origin_coordinates,
+        step,
+        invalid_init_disp,
+        roi,
+        correct_grid_data,
+        second_min,
+        second_max,
+        no_data_disp,
+        second_correct_grid_data,
+    ):
+        """
+        When the extreme values of a disparity grid are flagged as nodata in the grid metadata they must not be
+        used to compute disp_interval and they must remain untouched in the grid.
+
+        When right argument of get_min_max_disp_from_dicts is set to True, oposite of min and max are used.
+        """
+
+        make_input_cfg["ROI"] = roi
+        margins = Margins(*roi["margins"])
+
+        dataset = pandora.img_tools.create_dataset_from_inputs(make_input_cfg["left"], roi=roi)
+
+        # We test for col_disparity, the behavior for row_disparity is the same.
+        disp_min_max, disp_interval, nodata = img_tools.get_min_max_disp_from_dicts(
+            dataset,
+            make_input_cfg["col_disparity"],
+            Origin(origin_coordinates["row"], origin_coordinates["col"]),
+            Step(step[0], step[1]),
+            invalid_init_disp,
+            right=True,
+        )
+        disparity_range = make_input_cfg["col_disparity"]["range"]
+        assert disp_interval == [-second_max - disparity_range, -second_min + disparity_range]
+        # According to second_correct_grid_data, check that no_disp_data values are still in place.
+        assert (
+            disp_min_max[:, margins.up : -margins.down, margins.left + 3 : -margins.right : 4] == no_data_disp
+        ).all()
+        assert nodata == no_data_disp
+
+
+@pytest.mark.parametrize(
+    ["disp_data", "nodata", "expected"],
+    [
+        pytest.param(np.array([1, 2]), None, [True, True], id="Nothing to filter"),
+        pytest.param(np.array([1, np.inf]), None, [True, False], id="inf"),
+        pytest.param(np.array([-np.inf, 2]), None, [False, True], id="-inf"),
+        pytest.param(np.array([np.nan, 2]), None, [False, True], id="nan"),
+        pytest.param(np.array([3, 2]), 3, [False, True], id="value"),
+        pytest.param(np.array([3, np.inf, np.nan, 2]), 3, [False, False, False, True], id="mix"),
+    ],
+)
+def test_build_usable_data_mask(disp_data, nodata, expected):
+    """Unusable values are masked to False."""
+    result = img_tools.build_usable_data_mask(disp_data, nodata)
+    assert (result == expected).all()
+
+
+@pytest.mark.parametrize(
+    ["init_value", "range_value", "expected"],
+    [
+        pytest.param(1, 3, (-2, 4), id="int"),
+        pytest.param(1.0, 3, (-2, 4), id="float"),
+        pytest.param(np.array([3, 0]), 7, (-7, 10), id="no nan"),
+        pytest.param(np.array([3, np.nan, 0]), 7, (-7, 10), id="nan"),
+    ],
+)
+def test_get_extrema_disparity(init_value, range_value, expected):
+    """NaNs are filtered."""
+    result = img_tools.get_extrema_disparity(init_value, range_value)
+    assert result == expected
+
+
+class TestNodataFiltering:
+    """Nodata in disparity grids should not influence margin determination."""
+
+    @pytest.fixture
+    def second_correct_grid_data(self, second_correct_grid_shape):
+        """second_correct_grid_data override to include inf and nan."""
+        data = np.full(second_correct_grid_shape, 5.0)
+        data[:, 1::4] = -21
+        data[:, 2::4] = -np.inf
+        data[:, 3::4] = np.nan
+        return data
+
+    @pytest.mark.parametrize(
+        ["second_correct_grid_shape", "nodata", "expected"], [((1, 5), None, [[[5, -21, np.nan, np.nan, 5]]])]
+    )
+    def test_get_initial_disparity_str(
+        self, create_disparity_grid_fixture, second_correct_grid_data, second_correct_grid_shape, nodata, expected
+    ):
+        """Test invalid values are replaced by NaNs"""
+        disparity = create_disparity_grid_fixture(second_correct_grid_data, 2, "disparity.tiff", nodata=nodata)
+
+        result = img_tools.get_initial_disparity(disparity)
+
+        np.testing.assert_array_equal(result, expected)
+
+    def test_get_initial_disparity_int(self):
+        """Test init is returned"""
+        disparity = {"init": 1, "range": 2}
+
+        result = img_tools.get_initial_disparity(disparity)
+
+        assert result == 1

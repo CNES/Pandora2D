@@ -1,5 +1,5 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2025 CS GROUP France
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 CS GROUP France
 #
 # This file is part of PANDORA2D
 #
@@ -929,16 +929,13 @@ class TestDisparityGrid:
         return "used"
 
     @pytest.fixture()
-    def mock_set_out_of_disparity_range_to_nan(self, mock_type, mocker: MockerFixture):
+    def mock_set_out_of_disparity_range_to_nan(self, mock_type: str, mocker: MockerFixture):
         """
         Used or bypass set_out_of_row_disparity_range_to_other_value.
 
         :param mock_type: `used` or `not used`
-        :type mock_type: str
         :param mocker:
-        :type mocker:
         :return: Mock if mock_type is `use`
-        :rtype: Mock or None
         :raises: ValueError if mock_type is neither `used` or `not used`
         """
         if mock_type == "not used":

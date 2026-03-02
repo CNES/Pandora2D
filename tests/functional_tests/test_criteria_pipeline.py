@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -19,6 +19,7 @@
 """
 Test that criteria datarray and validity mask are correct on different pandora2d pipeline
 """
+
 # pylint: disable=too-many-lines
 # pylint: disable=redefined-outer-name
 
@@ -141,14 +142,14 @@ def test_validity_mask_saved(
 
     # band names correspond to criteria names (except for the first, which corresponds to valid points)
     # and to the global “validity_mask” band
-    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:])
+    expected_band_names = tuple(["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:])
 
     # Check that validity_mask.tif exists
     assert (validity_mask_path).exists()
 
     # Check that validity_mask.tif contains eight bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 8
+        assert dataset.count == 9
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names
 
@@ -206,13 +207,13 @@ def test_validity_mask_saved_with_roi(
 
     # band names correspond to criteria names (except for the first, which corresponds to valid points)
     # and to the global “validity_mask” band
-    expected_band_names = tuple(["validity_mask"] + list(Criteria.__members__.keys())[1:])
+    expected_band_names = tuple(["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:])
 
     # Check that validity_mask.tif exists
     assert (validity_mask_path).exists()
 
     # Check that validity_mask.tif contains eight bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 8
+        assert dataset.count == 9
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names

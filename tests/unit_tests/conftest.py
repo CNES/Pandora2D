@@ -1,5 +1,5 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
-# Copyright (c) 2025 CS GROUP France.
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 CS GROUP France.
 #
 # This file is part of PANDORA2D
 #
@@ -22,8 +22,9 @@
 # Make pylint happy with fixtures:
 # pylint: disable=redefined-outer-name
 
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import Tuple
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -54,16 +55,13 @@ def make_empty_image(tmp_path):
     give a different name for each one.
     """
 
-    def make(name="empty.tiff", shape=(450, 450)):
+    def make(name: str = "empty.tiff", shape: Sequence[int] = (450, 450)) -> Path:
         """
         Make an empty image and return its path.
 
         :param name: name of the image
-        :type name: str
         :param shape: shape of the image
-        :type shape: Tuple[int, int]
         :return: image path
-        :rtype: pathlib.Path
         """
         path = tmp_path / name
         imsave(path, np.empty(shape))
@@ -117,7 +115,7 @@ def false_input_path_image(right_img_path):
 def correct_pipeline_fixture():
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+            "matching_cost": {"matching_cost_method": "zncc", "window_size": 5, "step": [1, 1]},
             "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
             "refinement": {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2},
         }
@@ -185,7 +183,7 @@ def correct_segment_mode():
 
 
 @pytest.fixture()
-def image_size() -> Tuple[int, int]:
+def image_size() -> tuple[int, int]:
     return 1000, 1000
 
 

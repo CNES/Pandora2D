@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -25,12 +25,14 @@ import json
 import pathlib
 import re
 import tracemalloc
+from copy import deepcopy
 
 import numpy as np
 import pytest
 import rasterio
 import xarray as xr
 from pandora.common import write_data_array
+from pytest import DoctestItem
 
 import pandora2d
 
@@ -94,6 +96,8 @@ def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
     Parse test docstrings and retrieve strings in EX_*.
     """
     outcome = yield
+    if isinstance(item, DoctestItem):
+        return
     report = outcome.get_result()
     pattern = r"(EX_\w*)"
     report.requirement = re.findall(pattern, str(item.function.__doc__))
@@ -249,6 +253,30 @@ def correct_input_with_left_right_mask(left_img_path, right_img_path, mask_path)
     }
 
 
+@pytest.fixture
+def false_input_path_left_mask(left_img_path, right_img_path):
+    return {
+        "input": {
+            "left": {"img": left_img_path, "mask": "./tests/data/lt.png"},
+            "right": {"img": right_img_path},
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
+        }
+    }
+
+
+@pytest.fixture
+def false_input_path_right_mask(left_img_path, right_img_path):
+    return {
+        "input": {
+            "left": {"img": left_img_path},
+            "right": {"img": right_img_path, "mask": "./tests/data/lt.png"},
+            "col_disparity": {"init": 0, "range": 2},
+            "row_disparity": {"init": 0, "range": 2},
+        }
+    }
+
+
 @pytest.fixture()
 def random_seed():
     """
@@ -308,8 +336,10 @@ def make_input_cfg(left_img_path, right_img_path, request):
             "nodata": -9999,
         },
         "right": {"img": right_img_path, "nodata": -9999},
-        "col_disparity": request.getfixturevalue(request.param["col_disparity"]),
-        "row_disparity": request.getfixturevalue(request.param["row_disparity"]),
+        # As disparities can be dicts and because of pytest caching, if those originate from the same fixture we need
+        # to do a deepcopy so that we can modify them separately:
+        "col_disparity": deepcopy(request.getfixturevalue(request.param["col_disparity"])),
+        "row_disparity": deepcopy(request.getfixturevalue(request.param["row_disparity"])),
     }
 
     return input_cfg
@@ -334,16 +364,18 @@ def create_disparity_grid_fixture(tmp_path):
     Creates initial disparity grid and save it in tmp.
     """
 
-    def create_disparity_grid(data, disp_range, suffix_path, band=False, disp_type=rasterio.dtypes.int64):
+    def create_disparity_grid(
+        data, disp_range, suffix_path, band=False, disp_type=rasterio.dtypes.float32, nodata=None
+    ):
 
-        if not band:
-            disparity_grid = xr.DataArray(data, dims=["row", "col"])
-        else:
-            disparity_grid = xr.DataArray(data, dims=["row", "col", "band"])
+        disparity_grid = xr.DataArray(data, dims=["row", "col", "band"] if band else ["row", "col"])
 
         path = tmp_path / suffix_path
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         write_data_array(data_array=disparity_grid, filename=str(path), dtype=disp_type)
+        with rasterio.open(path, "r+") as src:
+            src.nodata = nodata
 
         return {"init": str(path), "range": disp_range}
 
@@ -351,27 +383,138 @@ def create_disparity_grid_fixture(tmp_path):
 
 
 @pytest.fixture
-def correct_grid(left_img_shape, create_disparity_grid_fixture):
-    """Create a correct initial disparity grid and save it in tmp"""
-
-    height, width = left_img_shape
-
-    # Array of size (height, width) with alternating rows of 2, 0 and 3
-    init_band = np.tile([[2], [0], [3]], (height // 3 + 1, width))[:height, :]
-
-    return create_disparity_grid_fixture(init_band, 5, "disparity.tif")
+def no_data_disp():
+    return None
 
 
 @pytest.fixture
-def second_correct_grid(left_img_shape, create_disparity_grid_fixture):
+def correct_grid_shape(left_img_shape):
+    return left_img_shape
+
+
+@pytest.fixture
+def correct_grid_data(correct_grid_shape):
+    """Array of size left_img_shape with alternating rows of 2, 0 and 3"""
+    data = np.full(correct_grid_shape, 2)
+    data[1::3] = 0
+    data[2::3] = 3
+    return data
+
+
+@pytest.fixture
+def correct_grid(correct_grid_data, create_disparity_grid_fixture, no_data_disp):
     """Create a correct initial disparity grid and save it in tmp"""
+    return create_disparity_grid_fixture(
+        correct_grid_data,
+        5,
+        "disparity.tif",
+        nodata=no_data_disp,
+    )
 
-    height, width = left_img_shape
 
-    # Array of size (height, width) with alternating columns of 5, -21 and -1
-    init_band = np.tile([[5, -21, -1]], (height, width // 3 + 1))[:, :width]
+@pytest.fixture
+def second_correct_grid_shape(left_img_shape):
+    return left_img_shape
 
-    return create_disparity_grid_fixture(init_band, 5, "second_disparity.tif")
+
+@pytest.fixture
+def second_correct_grid_data(second_correct_grid_shape):
+    """Array of size left_img_shape with alternating columns of 5, -21 and -1"""
+    data = np.full(second_correct_grid_shape, 5)
+    data[:, 1::3] = -21
+    data[:, 2::3] = -1
+    return data
+
+
+@pytest.fixture
+def second_correct_grid(second_correct_grid_data, create_disparity_grid_fixture, no_data_disp):
+    """Create a correct initial disparity grid and save it in tmp"""
+    return create_disparity_grid_fixture(
+        second_correct_grid_data,
+        5,
+        "tata/second_disparity.tif",
+        nodata=no_data_disp,
+    )
+
+
+@pytest.fixture
+def step():
+    return [1, 1]
+
+
+@pytest.fixture
+def origin_coordinates():
+    """Coordinates of upper-left corner of ROI in attributes.json"""
+    return {"row": 0, "col": 0}
+
+
+@pytest.fixture
+def invalid_disp():
+    """
+    Invalid disparity value
+    """
+    return -9999
+
+
+@pytest.fixture
+def attributes(left_img_path, step, origin_coordinates, invalid_disp):
+    """Return attributes dictionary from some left_img properties."""
+    with rasterio.open(left_img_path) as src:
+        crs = src.crs
+        transform = src.transform
+    return {
+        "origin_coordinates": origin_coordinates,
+        "step": {"row": step[0], "col": step[1]},
+        "crs": crs,
+        "transform": transform * rasterio.Affine.scale(*step),
+        "invalid_disp": invalid_disp,
+    }
+
+
+@pytest.fixture
+def disparity_range():
+    return 5
+
+
+@pytest.fixture
+def same_sized_grid_directory(
+    tmp_path,
+    correct_grid_data,
+    second_correct_grid_data,
+    create_disparity_grid_fixture,
+    disparity_range,
+    attributes,
+    no_data_disp,
+):
+    """Create a directory with row_map and col_map of same sizes."""
+    directory = tmp_path / "input_disparities"
+    directory.mkdir()
+    # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
+    # instead of being prefixed:
+    create_disparity_grid_fixture(correct_grid_data, disparity_range, directory / "row_map.tif", nodata=no_data_disp)
+    create_disparity_grid_fixture(
+        second_correct_grid_data, disparity_range, directory / "col_map.tif", nodata=no_data_disp
+    )
+    with (directory / "attributes.json").open("w") as fd:
+        json.dump(attributes, fd)
+
+    return {"init": str(directory), "range": disparity_range}
+
+
+@pytest.fixture
+def different_sized_grid_directory(
+    tmp_path, correct_grid_data, second_correct_grid_data, create_disparity_grid_fixture, attributes
+):
+    """Create a directory with row_map and col_map of different sizes."""
+    directory = tmp_path / "input_disparities"
+    directory.mkdir()
+    # When an absolute path is provided as `suffix_path` to `create_disparity_fixture`, it is used directly
+    # instead of being prefixed:
+    create_disparity_grid_fixture(correct_grid_data[::2, ::2], 5, directory / "row_map.tif")
+    create_disparity_grid_fixture(second_correct_grid_data, 5, directory / "col_map.tif")
+    with (directory / "attributes.json").open("w") as fd:
+        json.dump(attributes, fd)
+    return {"init": str(directory), "range": 5}
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Centre National d'Etudes Spatiales (CNES).
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
 #
 # This file is part of PANDORA2D
 #
@@ -18,11 +18,11 @@
 """
 Test the refinement.dichotomy pipeline.
 """
+
 # Make pylint happy with fixtures:
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 
 from pathlib import Path
-from typing import Tuple
 
 import numpy as np
 import pytest
@@ -46,7 +46,7 @@ class TestComparisonMedicis:
 
     def compute_mean_errors(
         self, run_pipeline, remove_edges, cfg_dichotomy, medicis_maps_path, row_shift, col_shift
-    ) -> Tuple[float, float, float, float]:
+    ) -> tuple[float, float, float, float]:
         """
         Compute mean errors of medicis and pandora2d disparity maps
         """

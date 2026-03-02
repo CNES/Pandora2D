@@ -106,6 +106,10 @@ P2D_RIGHT_NODATA
 This criterion is raised when a pixel within the matching cost window of the
 explored pixel in the right image is marked as ``NO DATA`` in the right mask.
 
+.. note:: 
+    The criterion is raised for sub-pixel disparities if a no-data value from 
+    the input mask was used to interpolate the corresponding point.
+
 .. container:: html-image
 
     .. raw:: html
@@ -150,6 +154,9 @@ P2D_INVALID_MASK_RIGHT
 ^^^^^^^^^^^^^^^^^^^^^^
 
 This criterion is raised when the explored pixel in the right image is marked as INVALID in the right mask.
+
+.. note:: 
+    Ignore invalid pixels from the input mask used in interpolation to raise the criterion.
 
 .. container:: html-image
 
@@ -200,9 +207,7 @@ band is set to ``1``; otherwise, it is set to ``0``.
 Validity
 ^^^^^^^^
 
-If at least one criterion is present in the cost surface mask of a pixel, this pixel is considered as ``PARTIALLY_INVALID``
-except if all the disparity pairs contain a criterion: in this case, the pixel is considered as ``INVALID``.
+If at least one requested disparity can be computed in the cost surface mask of a pixel, this pixel is considered as ``PARTIALLY_VALID``, and encoded by a ``0`` in the ``partial_validity_mask``.
+If all the required disparity pairs can not be computed: in this case, the pixel is considered as ``INVALID`` and encoded as ``1``.
 
-In the validity band, ``VALID`` pixels (those without any raised criterion) are
-encoded as ``0``, ``PARTIALLY_INVALID`` pixels are encoded as ``1``, and
-``INVALID`` pixels are encoded as ``2``.
+In the ``validity_mask`` band, ``VALID`` pixels are encoded as ``0`` when all requested disparities can be computed, otherwise ``INVALID`` pixels are encoded as ``1``.

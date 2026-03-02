@@ -1,4 +1,4 @@
-#  Copyright (c) 2025. Centre National d'Etudes Spatiales (CNES).
+#  Copyright (c) 2026. Centre National d'Etudes Spatiales (CNES).
 #
 #  This file is part of PANDORA2D
 #
@@ -73,8 +73,19 @@ def window_size():
 
 
 @pytest.fixture()
-def matching_cost_cfg(window_size, subpix, step):
-    return {"matching_cost_method": "ssd", "window_size": window_size, "subpix": subpix, "step": step}
+def spline_order():
+    return 1
+
+
+@pytest.fixture()
+def matching_cost_cfg(window_size, subpix, step, spline_order):
+    return {
+        "matching_cost_method": "ssd",
+        "window_size": window_size,
+        "subpix": subpix,
+        "step": step,
+        "spline_order": spline_order,
+    }
 
 
 @pytest.fixture()
