@@ -49,6 +49,10 @@ class Criteria(IntFlag):
     The pixel is invalid : The correlation peak is at the edge of disparity range.
     The calculations stopped at the pixellic stage.
     """
+    P2D_INVALID_INIT_DISPARITY = auto()
+    """
+    The pixel is invalid : initial disparity of the pixel is invalid.
+    """
 
     def is_in(self, array: NDArray):
         """Returns a bool array, where True if Criteria value is part of array element."""
