@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.1.0a1 (March 2026)
+
+### Added
+
+- Added origin coordinate attribute. [#347]
+- Added CI on Gitlab.
+- Added subpixel disparity processing with masks. [#325]
+- Added an option on Gitlab CI to fail if a warning is raised.
+- Added a pandora branch parameter for Gitlab CI.
+- Added deformation grid on configuration. [#395]
+- Added deformation grid computation. [#396]
+- Added possibility to use disparity grids as ROI. [#352]
+- Added deformation grid documentation and example notebook. [#397]
+
+### Fixed
+
+- Fixed code smells on sonaqube. [#363]
+- Fixed typo doc API. [#386]
+- Fixed Github CI (cibuildwheel version). [#387]
+- Fixed opening ROI grid handling. [#414]
+- Fixed disparity interval computation when nodata values are present. [#405]
+
+### Changed
+
+- Dichotomy: tolerate NaN / invalid disparities in the cost_surface. [#312]
+- Move files to src directory. 
+- Update of the configuration for the reintroduction of disparity grids. [#348]
+- Removing type information from docstrings. [#392]
+- Disparity grid displacement. [#351]
+- Refactored check_conf logic and attribute loading. [#411]
+- Updated minimal Python version from 3.9 to 3.10. [#420]
+- Process invalid_disp in the check conf. [#404]
+- Updated Python syntax to Python 3.10. [#388]
+- Modification of the writing of the bands of the file ‘outfolder/disparity/validity.tif’ at output. [#415]
+
+
 ## 1.0.0 (September 2025)
 
 ### Added
