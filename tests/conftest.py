@@ -427,18 +427,13 @@ def second_correct_grid_data(second_correct_grid_shape):
 
 
 @pytest.fixture
-def second_no_data_disp(no_data_disp):
-    return no_data_disp
-
-
-@pytest.fixture
-def second_correct_grid(second_correct_grid_data, create_disparity_grid_fixture, second_no_data_disp):
+def second_correct_grid(second_correct_grid_data, create_disparity_grid_fixture, no_data_disp):
     """Create a correct initial disparity grid and save it in tmp"""
     return create_disparity_grid_fixture(
         second_correct_grid_data,
         5,
         "tata/second_disparity.tif",
-        nodata=second_no_data_disp,
+        nodata=no_data_disp,
     )
 
 
