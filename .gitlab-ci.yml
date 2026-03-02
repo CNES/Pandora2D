@@ -241,7 +241,7 @@ github-sync:
     entrypoint: [""]
   variables:
     # Ensure we fetch enough history before pushing it
-    GIT_DEPTH: 100
+    GIT_DEPTH: 150
   before_script:
     # Add Cnes certificates
     - mkdir /usr/local/share/ca-certificates/
