@@ -20,6 +20,8 @@
 
 # pylint: disable=redefined-outer-name
 
+import copy
+
 import numpy as np
 import pytest
 import xarray as xr
@@ -112,6 +114,113 @@ def image(img_size, disparity_cfg, valid_pixels, no_data_mask, start_point):
             "invalid_disparity": np.nan,
         },
     ).pipe(add_disparity_grid, col_disparity, row_disparity)
+
+
+@pytest.fixture()
+def image_variable_disp(image, img_size):
+    """Make image with variable disparity grids"""
+
+    # Make so when we change image_variable_disp mask it
+    # does not change image mask
+    img = copy.copy(image)
+    row, col = img_size
+
+    nb_col_set = int(col / 2)
+    nb_row_set = int(row / 2)
+
+    # Get variable col disparities
+
+    # Minimal col disparity grid is equal to:
+    # [[-3, -3, -5, -5, -5]
+    #  [-3, -3, -5, -5, -5]
+    #  [-3, -3, -5, -5, -5]
+    #  [-3, -3, -5, -5, -5]]
+    img["col_disparity"].sel(band_disp="min")[:, :nb_col_set] = -3
+
+    # Maximal col disparity grid is equal to:
+    # [[ 3,  3,  1,  1,  1]
+    #  [ 3,  3,  1,  1,  1]
+    #  [ 3,  3,  1,  1,  1]
+    #  [ 3,  3,  1,  1,  1]]
+    img["col_disparity"].sel(band_disp="max")[:, nb_col_set:] = 1
+
+    # Get variable row disparities
+
+    # Minimal row disparity grid is equal to:
+    # [[ 0,  0,  0,  0,  0]
+    #  [ 0,  0,  0,  0,  0]
+    #  [-1, -1, -1, -1, -1]
+    #  [-1, -1, -1, -1, -1]]
+    img["row_disparity"].sel(band_disp="min")[:nb_row_set, :] = 0
+
+    # Maximal row disparity grid is equal to:
+    # [[ 3,  3,  3,  3,  3]
+    #  [ 3,  3,  3,  3,  3]
+    #  [ 2,  2,  2,  2,  2]
+    #  [ 2,  2,  2,  2,  2]]
+
+    img["row_disparity"].sel(band_disp="max")[nb_row_set:, :] = 2
+
+    return img
+
+
+@pytest.fixture()
+def image_nan_disp(image, img_size):
+    """Make image with disparity grids containing nans values"""
+
+    # Make so when we change image_nan_disp mask it
+    # does not change image mask
+    img = copy.copy(image)
+    row, col = img_size
+
+    nb_col_set = int(col / 2)
+    nb_row_set = int(row / 2)
+
+    # Minimal col disparity grid is equal to:
+    # [[np.nan, np.nan, -5, -5, -5]
+    #  [np.nan, np.nan, -5, -5, -5]
+    #  [np.nan, np.nan, -5, -5, -5]
+    #  [np.nan, np.nan, -5, -5, -5]]
+    img["col_disparity"].sel(band_disp="min")[:, :nb_col_set] = np.nan
+
+    # Maximal row disparity grid is equal to:
+    # [[ 3,  3,  3,  3,  3]
+    #  [ 3,  3,  3,  3,  3]
+    #  [ np.nan,  np.nan,  np.nan,  np.nan,  np.nan]
+    #  [ np.nan,  np.nan,  np.nan,  np.nan,  np.nan]]
+
+    img["row_disparity"].sel(band_disp="max")[nb_row_set:, :] = np.nan
+
+    return img
+
+
+@pytest.fixture()
+def image_inf_disp(image, img_size):
+    """Make image with variable disparity grids containing inf values"""
+
+    # Make so when we change image_inf_disp mask it
+    # does not change image mask
+    img = copy.copy(image)
+    row, col = img_size
+
+    nb_col_set = int(col / 2)
+    nb_row_set = int(row / 2)
+
+    # Maximal col disparity grid is equal to:
+    # [[ 3,  3,  np.inf,  np.inf,  np.inf]
+    #  [ 3,  3,  np.inf,  np.inf,  np.inf]
+    #  [ 3,  3,  np.inf,  np.inf,  np.inf]
+    #  [ 3,  3,  np.inf,  np.inf,  np.inf]]
+    img["col_disparity"].sel(band_disp="max")[:, nb_col_set:] = np.inf
+
+    # Minimal row disparity grid is equal to:
+    # [[ np.inf,  np.inf,  np.inf,  np.inf,  np.inf]
+    #  [ np.inf,  np.inf,  np.inf,  np.inf,  np.inf]
+    #  [-1, -1, -1, -1, -1]
+    #  [-1, -1, -1, -1, -1]]
+    img["row_disparity"].sel(band_disp="min")[:nb_row_set, :] = np.inf
+
+    return img
 
 
 @pytest.fixture()
