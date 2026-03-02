@@ -112,7 +112,7 @@ def monoband_image():
             "col": np.arange(data.shape[1]),
             "band_disp": ["min", "max"],
         },
-    ).assign_attrs({"no_data_img": -9999})
+    ).assign_attrs({"no_data_img": -9999, "row_disparity_source": [1, 3], "col_disparity_source": [1, 3]})
 
 
 @pytest.fixture()
