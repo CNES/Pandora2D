@@ -195,16 +195,16 @@ inline void compute_right_integrals(const P2d::Matrixf& left,
  * @return T
  */
 template <typename T>
-inline T calculate_zncc(const P2d::MatrixX<T>& integral_left,
-                        const P2d::MatrixX<T>& integral_left_sq,
-                        const P2d::MatrixX<T>& integral_right,
-                        const P2d::MatrixX<T>& integral_right_sq,
-                        const P2d::MatrixX<T>& integral_cross,
-                        int top_row,
-                        int left_col,
-                        int bottom_row,
-                        int right_col,
-                        int window_size) {
+inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
+			     const P2d::MatrixX<T>& integral_left_sq,
+			     const P2d::MatrixX<T>& integral_right,
+			     const P2d::MatrixX<T>& integral_right_sq,
+			     const P2d::MatrixX<T>& integral_cross,
+			     int top_row,
+			     int left_col,
+			     int bottom_row,
+			     int right_col,
+			     int window_size) {
   const int window_area = window_size * window_size;
 
   T sum_left = sum_window(integral_left, top_row, left_col, bottom_row, right_col);
@@ -226,6 +226,57 @@ inline T calculate_zncc(const P2d::MatrixX<T>& integral_left,
   }
 
   return ((sum_cross / window_area) - (mean_left * mean_right)) / (std_left * std_right);
+}
+
+/**
+ * @brief Compute ZNCC within a loop
+ *
+ * @param left image
+ * @param right image
+ * @return T ZNCC value
+ */
+template <typename T>
+inline T calculate_zncc_opt2(const P2d::MatrixX<T>& left_image,
+			     const P2d::MatrixX<T>& right_image) {
+  const int window_area = left_image.size();
+
+  T left_value, right_value;
+  T std_left, std_right;
+  T cov_left_right;
+  
+
+  T mean_left = 0;
+  T mean_right = 0;
+  
+  T sum_left_sq = 0;
+  T sum_right_sq = 0;
+  T sum_cross = 0;
+
+  for (int idx = 0; idx < window_area; ++idx) {
+    left_value = left_image(idx);
+    right_value = right_image(idx);
+    
+    mean_left += left_value;
+    mean_right += right_value;
+    
+    sum_left_sq += left_value * left_value;
+    sum_right_sq += right_value * right_value;
+    sum_cross += left_value * right_value;
+  }
+
+  mean_left /= window_area;
+  mean_right /= window_area;
+
+  std_left = std::sqrt(sum_left_sq / window_area - mean_left * mean_left);
+  std_right = std::sqrt(sum_right_sq / window_area - mean_right * mean_right);
+
+  cov_left_right = sum_cross / window_area - mean_left * mean_right;
+
+  if (std_left <= STD_EPSILON || std_right <= STD_EPSILON) {
+    return 0.0;
+  }
+
+  return cov_left_right / (std_left * std_right);
 }
 
 #endif

@@ -37,6 +37,7 @@ from .base import BaseMatchingCost
 
 @MatchingCostRegistry.add("mutual_information")
 @MatchingCostRegistry.add("zncc")
+@MatchingCostRegistry.add("zncc-optim-2")
 class CorrelationMethods(BaseMatchingCost):
     """
     Mutual Information class
@@ -53,7 +54,7 @@ class CorrelationMethods(BaseMatchingCost):
 
         schema.update(
             {
-                "matching_cost_method": And(str, lambda x: x in ["zncc", "mutual_information"]),
+                "matching_cost_method": And(str, lambda x: x in ["zncc", "zncc-optim-2", "mutual_information"]),
                 "float_precision": And(str, lambda x: np.dtype(x) in [np.float32, np.float64]),
             }
         )
