@@ -236,47 +236,51 @@ inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
  * @return T ZNCC value
  */
 template <typename T>
-inline T calculate_zncc_opt2(const P2d::MatrixX<T>& left_image,
-			     const P2d::MatrixX<T>& right_image) {
+inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
+			     const P2d::Matrixf& right_image) {
   const int window_area = left_image.size();
+  // Use de-referenced pointers to read the left and right images
+  const float *left_value, *right_value;
 
-  T left_value, right_value;
+  T mean_left;
+  T mean_right;
   T std_left, std_right;
-  T cov_left_right;
-  
+  int idx;
 
-  T mean_left = 0;
-  T mean_right = 0;
-  
-  T sum_left_sq = 0;
-  T sum_right_sq = 0;
-  T sum_cross = 0;
+  float sum_left = 0;
+  float sum_right = 0;
+  float sum_left_sq = 0;
+  float sum_right_sq = 0;
+  float sum_cross = 0;
 
-  for (int idx = 0; idx < window_area; ++idx) {
-    left_value = left_image(idx);
-    right_value = right_image(idx);
+  // Compute mean and variance, variance uses the following formula: E(X^2) - E(X)^2
+  // It is computed in float as the input image
+  for (idx = 0, left_value = &left_image(0, 0), right_value = &right_image(0, 0);
+       idx < window_area; ++idx) {    
+    sum_left += *left_value;
+    sum_right += *right_value;
     
-    mean_left += left_value;
-    mean_right += right_value;
-    
-    sum_left_sq += left_value * left_value;
-    sum_right_sq += right_value * right_value;
-    sum_cross += left_value * right_value;
+    sum_left_sq += *left_value * *left_value;
+    sum_right_sq += *right_value * *right_value;
+    sum_cross += *left_value * *right_value;
+
+    // Increase addresses to the next matrix element to use
+    left_value++;
+    right_value++;
   }
 
-  mean_left /= window_area;
-  mean_right /= window_area;
+  // Then we cast to T type to keep or increase precision (float32/64)
+  mean_left = static_cast<T>(sum_left) / window_area;
+  mean_right = static_cast<T>(sum_right) / window_area;
 
-  std_left = std::sqrt(sum_left_sq / window_area - mean_left * mean_left);
-  std_right = std::sqrt(sum_right_sq / window_area - mean_right * mean_right);
-
-  cov_left_right = sum_cross / window_area - mean_left * mean_right;
+  std_left = std::sqrt(static_cast<T>(sum_left_sq) / window_area - mean_left * mean_left);
+  std_right = std::sqrt(static_cast<T>(sum_right_sq) / window_area - mean_right * mean_right); 
 
   if (std_left <= STD_EPSILON || std_right <= STD_EPSILON) {
     return 0.0;
   }
 
-  return cov_left_right / (std_left * std_right);
+  return ( static_cast<T>(sum_cross) / window_area - mean_left * mean_right ) / (std_left * std_right);
 }
 
 #endif

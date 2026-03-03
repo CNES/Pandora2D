@@ -27,6 +27,40 @@ This module contains functions associated to the computation of cost volumes in 
 #include "mutual_information.hpp"
 
 /**
+ * @brief Get the matching cost window
+ *
+ * @param image image
+ * @param window_size size of the matching cost window
+ * @param index_row row index of the center of the window
+ * @param index_col col index of the center of the window
+ * @return P2d::Matrixf
+ */
+P2d::Matrixf get_window(const P2d::Matrixf& image,
+			int window_size,
+			int index_row,
+			int index_col) {
+  const int offset = window_size / 2;
+
+  // Get first row and column of the window
+  int start_row = std::max(0, index_row - offset);
+  int start_col = std::max(0, index_col - offset);
+
+  // Get last row and column of the window
+  int nb_rows_img = image.rows();
+  int nb_cols_img = image.cols();
+  int end_row = std::min(nb_rows_img - 1, index_row + offset);
+  int end_col = std::min(nb_cols_img - 1, index_col + offset);
+
+  // if the window is out of the image,
+  // nb_rows_window or nb_cols_window are < 0
+  // in this case we return an empty window
+  int nb_rows_window = std::max(0, end_row - start_row + 1);
+  int nb_cols_window = std::max(0, end_col - start_col + 1);
+
+  return image.block(start_row, start_col, nb_rows_window, nb_cols_window);
+}
+
+/**
  * @brief Get the index corresponding to the correct interpolated right image
  * according to subpix value
  *

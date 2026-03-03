@@ -39,33 +39,10 @@ This module contains functions associated to the computation of cost volumes in 
  * @param window_size size of the matching cost window
  * @param index_row row index of the center of the window
  * @param index_col col index of the center of the window
- * @return P2d::MatrixD or P2d::Matrixf
+ * @return P2d::Matrixf
  */
-template <typename T>
-P2d::MatrixX<T> get_window(const P2d::Matrixf& image,
-                           int window_size,
-                           int index_row,
-                           int index_col) {
-  int offset = static_cast<int>(window_size / 2);
-
-  // Get first row and column of the window
-  int start_row = std::max(0, index_row - offset);
-  int start_col = std::max(0, index_col - offset);
-
-  // Get last row and column of the window
-  int nb_rows_img = static_cast<int>(image.rows());
-  int nb_cols_img = static_cast<int>(image.cols());
-  int end_row = std::min(nb_rows_img - 1, index_row + offset);
-  int end_col = std::min(nb_cols_img - 1, index_col + offset);
-
-  // if the window is out of the image,
-  // nb_rows_window or nb_cols_window are < 0
-  // in this case we return an empty window
-  int nb_rows_window = std::max(0, end_row - start_row + 1);
-  int nb_cols_window = std::max(0, end_col - start_col + 1);
-
-  return image.block(start_row, start_col, nb_rows_window, nb_cols_window).template cast<T>();
-}
+P2d::Matrixf get_window(const P2d::Matrixf& image,
+			int window_size, int index_row, int index_col);
 
 /**
  * @brief Get the index corresponding to the correct interpolated right image
@@ -96,9 +73,9 @@ bool all_non_zero_elements(const P2d::MatrixUI& mat);
  */
 template <typename T>
 T calculate_correlation(const std::string& method,
-                        const P2d::MatrixX<T>& left_image,
-                        const P2d::MatrixX<T>& right_image) {
-  std::map<std::string, std::function<T(const P2d::MatrixX<T>&, const P2d::MatrixX<T>&)>>
+                        const P2d::Matrixf& left_image,
+                        const P2d::Matrixf& right_image) {
+  std::map<std::string, std::function<T(const P2d::Matrixf&, const P2d::Matrixf&)>>
       method_map = {{"mutual_information", calculate_mutual_information<T>},
                     {"zncc-optim-2", calculate_zncc_opt2<T>}};
   auto it = method_map.find(method);
@@ -138,8 +115,8 @@ void compute_cost_volumes_loop(const P2d::Matrixf& left,
 			       int window_size,
 			       const Eigen::Vector2i& step,
 			       const std::string matching_cost_method) {
-  P2d::MatrixX<T> left_window;
-  P2d::MatrixX<T> right_window;
+  P2d::Matrixf left_window;
+  P2d::Matrixf right_window;
 
   int subpix = sqrt(right.size());
 
@@ -165,8 +142,8 @@ void compute_cost_volumes_loop(const P2d::Matrixf& left,
       }
 
       // Window computation for left image for point (row,col)
-      left_window = get_window<T>(left, window_size, offset_cv_img_row + row * step[0],
-                                  offset_cv_img_col + col * step[1]);
+      left_window = get_window(left, window_size, offset_cv_img_row + row * step[0],
+			       offset_cv_img_col + col * step[1]);
 
       for (std::size_t d_row = 0; d_row < cv_size.nb_disp_row; ++d_row) {
         for (std::size_t d_col = 0; d_col < cv_size.nb_disp_col; ++d_col, ind_cv++) {
@@ -185,9 +162,9 @@ void compute_cost_volumes_loop(const P2d::Matrixf& left,
 
           // Window computation for right image for point (row+d_row,col+d_col)
           right_window =
-              get_window<T>(right[index_right], window_size,
-                            offset_cv_img_row + row * step[0] + floor(disp_range_row[d_row]),
-                            offset_cv_img_col + col * step[1] + floor(disp_range_col[d_col]));
+              get_window(right[index_right], window_size,
+			 offset_cv_img_row + row * step[0] + floor(disp_range_row[d_row]),
+			 offset_cv_img_col + col * step[1] + floor(disp_range_col[d_col]));
 
           cv_mutable_view(row, col, d_row, d_col) =
 	    calculate_correlation<T>(matching_cost_method, left_window, right_window);

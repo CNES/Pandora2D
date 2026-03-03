@@ -44,13 +44,33 @@ typedef enum bin_method {
  *
  */
 template <typename T>
-T get_bins_width_scott(const P2d::MatrixX<T>& image) {
-  auto standard_deviation = std_dev(image);
+T get_bins_width_scott(const P2d::Matrixf& image) {
+  float sum = 0;
+  float sum_sq = 0;
+
+  // Use de-referenced pointer to read matrix element
+  const float *value;
+  
+  int idx;
+  T num_elem = static_cast<T>(image.size());
+
+  // Compute variance according to the formula: E(X^2) - E(X)^2
+  // The sum is computed in float as the input image
+  for (idx = 0, value = &image(0); idx < image.size(); ++idx) {
+    sum += *value;
+    sum_sq += *value * *value;
+    value++;
+  }
+
+  // Then we cast to T type to keep or increase precision (float32/64)
+  T mean = static_cast<T>(sum) / num_elem;
+  
+  T standard_deviation = static_cast<T>(sum_sq) / num_elem - (mean * mean);
   if (standard_deviation == 0.)
     return 1.;
 
-  T size = static_cast<T>(image.size());
-  return static_cast<T>(SCOTT_FACTOR) * standard_deviation * pow(size, -1. / 3.);
+  T pow_size = static_cast<T>(std::pow(static_cast<double>(num_elem), -1. / 3.));
+  return static_cast<T>(SCOTT_FACTOR) * standard_deviation * pow_size;
 }
 
 /**
@@ -61,10 +81,10 @@ T get_bins_width_scott(const P2d::MatrixX<T>& image) {
  * @throws std::invalid_argument if provided method is not known
  */
 template <typename T>
-T get_bins_width(const P2d::MatrixX<T>& image, bin_method method = bin_method::scott) {
+T get_bins_width(const P2d::Matrixf& image, bin_method method = bin_method::scott) {
   switch (method) {
     case bin_method::scott:
-      return get_bins_width_scott(image);
+      return get_bins_width_scott<T>(image);
     default:
       throw std::invalid_argument("method to compute bins width does not exist");
   }

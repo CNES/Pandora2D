@@ -184,7 +184,7 @@ TEST_CASE_TEMPLATE("ZNCC", Matrix, P2d::Matrixf, P2d::MatrixD) {
     // and the window size is 3.
     auto zncc_opt1 = calculate_zncc_opt1(integral_left, integral_left_sq, integral_right, integral_right_sq,
 				    integral_cross, 0, 0, 2, 2, 3);
-    auto zncc_opt2 = calculate_zncc_opt2(image, image);
+    auto zncc_opt2 = calculate_zncc_opt2<float>(image, image);
 
     CHECK(zncc_opt1 == doctest::Approx(1));
     CHECK(zncc_opt2 == doctest::Approx(1));
@@ -209,7 +209,7 @@ TEST_CASE_TEMPLATE("ZNCC", Matrix, P2d::Matrixf, P2d::MatrixD) {
       // and the window size is 3.
       auto zncc_opt1 = calculate_zncc_opt1(integral_left, integral_left_sq, integral_right, integral_right_sq,
 					   integral_cross, 0, 0, 2, 2, 3);
-      auto zncc_opt2 = calculate_zncc_opt2(left_image, right_image);
+      auto zncc_opt2 = calculate_zncc_opt2<float>(left_image, right_image);
       
       CHECK(zncc_opt1 == 0);
       CHECK(zncc_opt2 == 0);
@@ -233,7 +233,7 @@ TEST_CASE_TEMPLATE("ZNCC", Matrix, P2d::Matrixf, P2d::MatrixD) {
       // and the window size is 3.
       auto zncc_opt1 = calculate_zncc_opt1(integral_left, integral_left_sq, integral_right, integral_right_sq,
 					   integral_cross, 0, 0, 2, 2, 3);
-      auto zncc_opt2 = calculate_zncc_opt2(left_image, right_image);
+      auto zncc_opt2 = calculate_zncc_opt2<float>(left_image, right_image);
       
       CHECK(zncc_opt1 == 0);
       CHECK(zncc_opt2 == 0);
@@ -260,7 +260,7 @@ TEST_CASE_TEMPLATE("ZNCC", Matrix, P2d::Matrixf, P2d::MatrixD) {
       // and the window size is 3.
       auto zncc_opt1 = calculate_zncc_opt1(integral_left, integral_left_sq, integral_right, integral_right_sq,
 					   integral_cross, 0, 0, 2, 2, 3);
-      auto zncc_opt2 = calculate_zncc_opt2(left_image, right_image);
+      auto zncc_opt2 = calculate_zncc_opt2<float>(left_image, right_image);
       
       CHECK(zncc_opt1 == 0);
       CHECK(zncc_opt2 == 0);
@@ -285,7 +285,7 @@ TEST_CASE_TEMPLATE("ZNCC", Matrix, P2d::Matrixf, P2d::MatrixD) {
       // and the window size is 3.
       auto zncc_opt1 = calculate_zncc_opt1(integral_left, integral_left_sq, integral_right, integral_right_sq,
 					   integral_cross, 0, 0, 2, 2, 3);
-      auto zncc_opt2 = calculate_zncc_opt2(left_image, right_image);
+      auto zncc_opt2 = calculate_zncc_opt2<float>(left_image, right_image);
       
       CHECK(zncc_opt1 == 0);
       CHECK(zncc_opt2 == 0);
@@ -311,7 +311,7 @@ TEST_CASE_TEMPLATE("ZNCC", Matrix, P2d::Matrixf, P2d::MatrixD) {
     // and the window size is 3.
     auto zncc_opt1 = calculate_zncc_opt1(integral_left, integral_left_sq, integral_right, integral_right_sq,
 					 integral_cross, 0, 0, 2, 2, 3);
-    auto zncc_opt2 = calculate_zncc_opt2(left_image, right_image);
+    auto zncc_opt2 = calculate_zncc_opt2<float>(left_image, right_image);
     
     CHECK(zncc_opt1 == doctest::Approx(0.78699100).epsilon(1e-7));
     CHECK(zncc_opt2 == doctest::Approx(0.78699100).epsilon(1e-7));
@@ -336,7 +336,7 @@ TEST_CASE_TEMPLATE("ZNCC", Matrix, P2d::Matrixf, P2d::MatrixD) {
     // and the window size is 5.
     auto zncc_opt1 = calculate_zncc_opt1(integral_left, integral_left_sq, integral_right, integral_right_sq,
 					 integral_cross, 0, 0, 4, 4, 5);
-    auto zncc_opt2 = calculate_zncc_opt2(left_image, right_image);
+    auto zncc_opt2 = calculate_zncc_opt2<float>(left_image, right_image);
 
     CHECK(zncc_opt1 == doctest::Approx(-1));
     CHECK(zncc_opt2 == doctest::Approx(-1));

@@ -89,8 +89,8 @@ class Histogram2D {
  * @return Histogram2D
  */
 template <typename T>
-Histogram2D<T> calculate_histogram2D(const P2d::MatrixX<T>& left_image,
-                                     const P2d::MatrixX<T>& right_image) {
+Histogram2D<T> calculate_histogram2D(const P2d::Matrixf& left_image,
+                                     const P2d::Matrixf& right_image) {
   auto hist_l = Histogram1D<T>(left_image);
   auto hist_r = Histogram1D<T>(right_image);
   P2d::MatrixX<T> values = P2d::MatrixX<T>::Zero(hist_l.nb_bins(), hist_r.nb_bins());
