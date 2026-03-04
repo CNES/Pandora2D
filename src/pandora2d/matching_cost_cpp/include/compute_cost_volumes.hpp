@@ -322,7 +322,8 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
                               const std::string& method) {
   static const std::map<std::string, ComputeFunction<T>> method_map = {
       {"mutual_information", compute_cost_volumes_loop<T>},
-      {"zncc", compute_zncc_cv_opt1<T>},
+      {"zncc", compute_zncc_cv_opt1<T>},        // Default ZNCC is currently optim-1 version
+      {"zncc-optim-1", compute_zncc_cv_opt1<T>},
       {"zncc-optim-2", compute_cost_volumes_loop<T>}
   };
 
