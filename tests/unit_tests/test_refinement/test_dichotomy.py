@@ -26,7 +26,6 @@ Test the refinement.dichotomy module.
 
 import copy
 import logging
-import sys
 
 import json_checker
 import numpy as np
@@ -1296,17 +1295,17 @@ class TestInvalidDisparity:
 
         row = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 4.0)
         row[:, 2] = invalid_disparity
-        row_criteria[:, 2, 0] = 1  # Invalid
+        row_criteria[:, 2, 1] = 1  # Invalid
         row[1, 1] = invalid_disparity
-        row_criteria[1, 1, 0] = 1  # Invalid
+        row_criteria[1, 1, 1] = 1  # Invalid
 
         col_criteria = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size, 3), 0, dtype=np.uint8)
 
         col = np.full((row_coordinates_with_step.size, col_coordinates_with_step.size), 0.0)
         col[0, 0] = invalid_disparity
-        col_criteria[0, 0, 0] = 1  # Invalid
+        col_criteria[0, 0, 1] = 1  # Invalid
         col[1, -2:] = invalid_disparity
-        col_criteria[1, -2:, 0] = 1  # Invalid
+        col_criteria[1, -2:, 1] = 1  # Invalid
 
         # Update criteria_dataarray
         # This test is not intended to test the criteria_dataarray.
@@ -1332,7 +1331,6 @@ class TestInvalidDisparity:
             attrs={"invalid_disp": invalid_disparity},
         )
 
-    @pytest.mark.skipif(sys.platform.startswith("win"), reason="skip on Windows")
     def test_disparity_grid(
         self,
         request,
