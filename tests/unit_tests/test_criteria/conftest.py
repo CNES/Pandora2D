@@ -233,20 +233,42 @@ def cost_volumes(matching_cost_cfg, image):
 
 
 @pytest.fixture()
-def criteria_dataarray(img_size, subpix, step, start_point):
+def row_disparity_source():
+    """
+    Row disparity source for criteria dataarray fixture
+    """
+    return [-1, 3]
+
+
+@pytest.fixture()
+def col_disparity_source():
+    """
+    Column disparity source for criteria dataarray fixture
+    """
+    return [-5, 3]
+
+
+@pytest.fixture()
+def criteria_dataarray(img_size, subpix, step, start_point, row_disparity_source, col_disparity_source):
     """
     Create a criteria dataarray
     """
+
     row = np.arange(start_point[0], img_size[0], step[0])
     col = np.arange(start_point[1], img_size[1], step[1])
-    shape = (len(row), len(col), len(np.arange(-1, 3.25, 1 / subpix)), len(np.arange(-5, 3.25, 1 / subpix)))
+    shape = (
+        len(row),
+        len(col),
+        len(np.arange(row_disparity_source[0], row_disparity_source[1] + 0.25, 1 / subpix)),
+        len(np.arange(col_disparity_source[0], col_disparity_source[1] + 0.25, 1 / subpix)),
+    )
     return xr.DataArray(
         np.full(shape, Criteria.VALID),
         coords={
             "row": row,
             "col": col,
-            "disp_row": np.arange(-1, 3.25, 1 / subpix),
-            "disp_col": np.arange(-5, 3.25, 1 / subpix),
+            "disp_row": np.arange(row_disparity_source[0], row_disparity_source[1] + 0.25, 1 / subpix),
+            "disp_col": np.arange(col_disparity_source[0], col_disparity_source[1] + 0.25, 1 / subpix),
         },
         dims=["row", "col", "disp_row", "disp_col"],
     )
