@@ -38,6 +38,10 @@ ZNCC between two image patches I, J is:
 .. math::
     ZNCC(I, J) = \frac{E(IJ) - E(I)E(J)}{\sqrt{V(I) \, V(J)}}
 
+.. note::
+   The expectations can be computed in different ways.
+   Two optimization are proposed to speed up computation of the mean and the variance.
+    
 
 Mutual Information
 ------------------

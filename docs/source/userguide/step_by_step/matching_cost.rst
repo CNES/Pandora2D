@@ -30,6 +30,8 @@ Configuration and parameters
      - * "ssd"
        * "sad"
        * "zncc"
+       * "zncc-optim-1"
+       * "zncc-optim-2"
        * "zncc_python"
        * "mc_cnn"
        * "mutual_information"
@@ -59,7 +61,7 @@ Configuration and parameters
      - string
      - "float32"
      - | "float32", "f4", "f" for all methods
-       | "float64", "f8", "d" for "zncc" or "mutual_information"
+       | "float64", "f8", "d" for "zncc" (including "zncc-optim-1" and "zncc-optim-2") or "mutual_information"
      - No
    * - spline_order
      - Spline order used for interpolation when subpix > 1
@@ -73,9 +75,17 @@ Configuration and parameters
     The order of steps should be [row, col].
 
 .. note::
-    Two implementations of zncc are available for matching cost method: one in C++ and one in Python. 
-    By default, the C++ zncc is used when using the “zncc” matching cost method. 
-    To use the Python version, enter “zncc_python” as the matching cost method in the configuration file.
+    Many implementations of zncc are available for matching cost method: two in C++ and one in Python. 
+    By default, the C++ zncc is used when using the “zncc” matching cost method, it targets the first kind of optimization. 
+    To use either the second kind of optimization or the Python version, enter “zncc-optim-2“ or “zncc_python” respectively as the matching cost method in the configuration file.
+
+.. note::
+    In C++, two versions of the “zncc” method are proposed.
+    We recommend to use the first optimization “zncc-optim-1” when all pixels are computed (step is small) and when the disparity range is small.
+    We recommend the second optimization “zncc-optim-2” when an important step is provided and disparity ranges are large.
+
+.. note::
+    Current “zncc” version links to “zncc-optim-1”.
 
 .. note::
     To use ``mc_cnn`` as ``matching_cost_method``, the MCCNN plugin must be installed first.
