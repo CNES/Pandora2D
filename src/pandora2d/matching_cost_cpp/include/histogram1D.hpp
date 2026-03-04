@@ -121,37 +121,40 @@ class Histogram1D {
    * @param image
    */
   void create(const P2d::Matrixf& image) {
-    m_bins_width = get_bins_width<float>(image);
+    m_bins_width = get_bins_width<T>(image);
     float sum_sq = 0, sum = 0; // Initilialization for the variance E(X^2) - E(X)^2
-    float moment, mean;   // Variance is stored within the moment
     const float *reader; // Use a de-referenced pointer to read the matrix
-    int idx, num_elem;
-    float min_coeff = image.minCoeff();
-    float max_coeff = image.maxCoeff();
-    T dynamic_range = static_cast<T>(max_coeff - min_coeff);
+    int idx;
+    T num_elem;
+    
+    T min_coeff = static_cast<T>(image.minCoeff());
+    T max_coeff = static_cast<T>(image.maxCoeff());
+    T dynamic_range = max_coeff - min_coeff;
+    T moment, mean;   // Variance is stored within the moment
+    
     m_nb_bins = static_cast<int>(1. + (dynamic_range / m_bins_width));
 
     // check nb_bins > NB_BINS_MAX
     if (m_nb_bins > NB_BINS_MAX) {
       m_nb_bins = NB_BINS_MAX;
       
-      num_elem = image.size();
-      for (idx = 0, reader = &image(0); idx < num_elem; ++idx) {
+      num_elem = static_cast<T>(image.size());
+      for (idx = 0, reader = &image(0, 0); idx < num_elem; ++idx) {
 	sum += *reader;
 	sum_sq += *reader * *reader;
 
 	// Get to the next matrix element
 	reader++;
       }
-      mean = sum / num_elem;
-      moment = sum_sq / num_elem - mean * mean;
+      mean = static_cast<T>(sum) / num_elem;
+      moment = static_cast<T>(sum_sq) / num_elem - mean * mean;
       // Use float precision
-      max_coeff = std::min<float>(4. * moment, max_coeff);
-      min_coeff = std::max<float>(-4. * moment, min_coeff);
+      max_coeff = std::min(static_cast<T>(4.) * moment, max_coeff);
+      min_coeff = std::max(static_cast<T>(-4.) * moment, min_coeff);
       dynamic_range = max_coeff - min_coeff;
     }
 
-    m_low_bound = static_cast<T>(min_coeff - (static_cast<float>(m_nb_bins) * m_bins_width - dynamic_range)) / 2.;
+    m_low_bound = min_coeff - (static_cast<T>(m_nb_bins) * m_bins_width - dynamic_range) / 2.;
   };
 
   P2d::VectorX<T> m_values;  ///< values on histogram
