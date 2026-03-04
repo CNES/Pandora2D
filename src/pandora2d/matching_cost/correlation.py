@@ -37,6 +37,7 @@ from .base import BaseMatchingCost
 
 @MatchingCostRegistry.add("mutual_information")
 @MatchingCostRegistry.add("zncc")
+@MatchingCostRegistry.add("zncc-optim-1")
 @MatchingCostRegistry.add("zncc-optim-2")
 class CorrelationMethods(BaseMatchingCost):
     """
