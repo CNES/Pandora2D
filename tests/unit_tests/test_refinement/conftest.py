@@ -157,12 +157,14 @@ def left_img(
         np.array([d_min_col, d_max_col]),
         dims=["band_disp", "row", "col"],
         coords={"band_disp": ["min", "max"]},
+        attrs={"no_data": None},
     )
 
     img["row_disparity"] = xr.DataArray(
         np.array([d_min_row, d_max_row]),
         dims=["band_disp", "row", "col"],
         coords={"band_disp": ["min", "max"]},
+        attrs={"no_data": None},
     )
 
     img.attrs.update(
