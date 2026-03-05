@@ -30,7 +30,7 @@ from numpy.typing import ArrayLike, DTypeLike, NDArray
 from scipy.ndimage import binary_dilation
 
 from pandora2d.constants import Criteria
-from pandora2d.img_tools import build_usable_data_mask
+from pandora2d.common import build_usable_data_mask
 
 DISPARITY_INDEPENDENT_CRITERIA = {
     Criteria.P2D_LEFT_BORDER,

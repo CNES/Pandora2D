@@ -30,6 +30,7 @@ from copy import deepcopy
 from os import PathLike
 from pathlib import Path
 from typing import Generic, TypeVar
+from numpy.typing import NDArray
 
 import numpy as np
 import rasterio
@@ -456,3 +457,22 @@ def resolve_path_in_config(config: dict, config_path: Path) -> dict:
 def all_same(iterable: Iterable) -> bool:
     """Return True if all items in sequence are equals."""
     return len(set(iterable)) == 1
+
+
+def build_usable_data_mask(disp_data: NDArray, nodata: float | None) -> NDArray[np.bool_]:
+    """
+    Build a boolean mask indicating which elements of the input array are usable.
+
+    An element is considered usable if it is finite (not NaN or infinite) and,
+    when a ``nodata`` value is provided, different from that value.
+
+    :param disp_data: Input array containing the data to be tested.
+    :param nodata: Value representing missing or invalid data.
+                   If ``None``, only finiteness is checked.
+    :return: A boolean array with the same shape as ``disp_data``, where
+             ``True`` indicates usable data.
+    """
+    mask = np.isfinite(disp_data)
+    if nodata is not None:
+        mask &= disp_data != nodata
+    return mask

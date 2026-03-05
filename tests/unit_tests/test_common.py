@@ -24,7 +24,7 @@
 Test common
 """
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, too-many-lines
 
 import json
 from copy import deepcopy
@@ -985,3 +985,20 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
     result = common.resolve_path_in_config(config, config_path)
 
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["disp_data", "nodata", "expected"],
+    [
+        pytest.param(np.array([1, 2]), None, [True, True], id="Nothing to filter"),
+        pytest.param(np.array([1, np.inf]), None, [True, False], id="inf"),
+        pytest.param(np.array([-np.inf, 2]), None, [False, True], id="-inf"),
+        pytest.param(np.array([np.nan, 2]), None, [False, True], id="nan"),
+        pytest.param(np.array([3, 2]), 3, [False, True], id="value"),
+        pytest.param(np.array([3, np.inf, np.nan, 2]), 3, [False, False, False, True], id="mix"),
+    ],
+)
+def test_build_usable_data_mask(disp_data, nodata, expected):
+    """Unusable values are masked to False."""
+    result = common.build_usable_data_mask(disp_data, nodata)
+    assert (result == expected).all()
