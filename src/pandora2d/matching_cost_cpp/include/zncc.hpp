@@ -27,7 +27,7 @@ This module contains functions associated to the zncc in cpp.
 #include "operation.hpp"
 #include "pandora2d_type.hpp"
 
-const double STD_EPSILON = 1e-8;  ///< is 1e-16 for the variance.
+const double VAR_EPSILON = 1e-16;  ///< is 1e-16 for the variance.
 
 /**
  * @brief Shift image according to row and columns disparities.
@@ -221,7 +221,7 @@ inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
   T std_left = std::sqrt(var_left);
   T std_right = std::sqrt(var_right);
 
-  if (std_left <= STD_EPSILON || std_right <= STD_EPSILON) {
+  if (var_left <= VAR_EPSILON || var_right <= VAR_EPSILON) {
     return 0.0;
   }
 
@@ -229,7 +229,7 @@ inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
 }
 
 /**
- * @brief Compute ZNCC within a loop
+ * @brief Compute ZNCC within a loop, computed for images of same size
  *
  * @param left image
  * @param right image
@@ -242,9 +242,9 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
   // Use de-referenced pointers to read the left and right images
   const float *left_value, *right_value;
 
-  T mean_left;
-  T mean_right;
-  T std_left, std_right;
+  T sum_left_T, sum_right_T;
+  // var_wa as window_area * variance is stored, it avoids very small values
+  T var_left_wa, var_right_wa;
   int idx;
 
   float sum_left = 0;
@@ -256,7 +256,7 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
   // Compute mean and variance, variance uses the following formula: E(X^2) - E(X)^2
   // It is computed in float as the input image
   for (idx = 0, left_value = &left_image(0, 0), right_value = &right_image(0, 0);
-       idx < window_area; ++idx) {    
+       idx < window_area; ++idx) {
     sum_left += *left_value;
     sum_right += *right_value;
     
@@ -269,18 +269,23 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
     right_value++;
   }
 
-  // Then we cast to T type to keep or increase precision (float32/64)
-  mean_left = static_cast<T>(sum_left) / window_area;
-  mean_right = static_cast<T>(sum_right) / window_area;
+  // Cast to T type to keep or increase precision (float32/64)
+  sum_left_T = static_cast<T>(sum_left);
+  sum_right_T = static_cast<T>(sum_right);
+  // Here it is straightforward that variance = sum.^2 / num_elem - (sum / num_elem )^2
+  //   num_elem * variance = sum.^2 - sum*sum / num_elem
+  // NOTE: sum.^2 is the sum of the squared elements, sum*sum is the final sum squared.  
+  var_left_wa = static_cast<T>(sum_left_sq) - sum_left_T * sum_left_T / window_area;
+  var_right_wa = static_cast<T>(sum_right_sq) - sum_right_T * sum_right_T / window_area; 
 
-  std_left = std::sqrt(static_cast<T>(sum_left_sq) / window_area - mean_left * mean_left);
-  std_right = std::sqrt(static_cast<T>(sum_right_sq) / window_area - mean_right * mean_right); 
-
-  if (std_left <= STD_EPSILON || std_right <= STD_EPSILON) {
+  if (var_left_wa <= (VAR_EPSILON * window_area) || var_right_wa <= (VAR_EPSILON * window_area)) {
     return 0.0;
   }
 
-  return ( static_cast<T>(sum_cross) / window_area - mean_left * mean_right ) / (std_left * std_right);
+  // We compute here : num_elem * covariance / (num_elem * sqrt( variance1 * variance2 )
+  // num_elem * covariance is strictly equal to sum_cross - sum_left * sum_right / num_elem,
+  // num_elem * variances are provided previously, sqrt(num_elem * var1 * num_elem * var2) = num_elem*sqrt(var1*var2).
+  return ( static_cast<T>(sum_cross) - sum_left_T * sum_right_T / window_area ) / std::sqrt(var_left_wa * var_right_wa);
 }
 
 #endif
