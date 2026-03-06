@@ -40,7 +40,7 @@ ZNCC between two image patches I, J is:
 
 .. note::
    The expectations can be computed in different ways.
-   Two optimization are proposed to speed up computation of the mean and the variance.
+   Two optimizations are proposed to speed up computation of the mean and the variance.
     
 
 Mutual Information
