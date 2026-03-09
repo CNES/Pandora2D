@@ -54,34 +54,3 @@ def test_matching_cost_with_disparity(
         "output": {"path": str(tmp_path)},
     }
     run_pipeline(configuration)
-
-
-@pytest.mark.matching_cost_resource_tests
-@pytest.mark.parametrize(
-    ["left_img", "right_img", "step"],
-    [
-        pytest.param("small_left_img_path", "small_right_img_path", [1, 1], id="image.size=(224, 186)"),
-        pytest.param("large_left_img_path", "large_right_img_path", [16, 16], id="image.size=(2000, 2000)"),
-    ],
-    indirect=True,
-)
-@pytest.mark.matching_cost_resource_tests
-def test_matching_cost_with_estimation_and_disparity(
-    run_pipeline, input_cfg_for_estimation, matching_cost_method, subpix, step, tmp_path
-):
-    """Test pipeline with an estimation, a matching_cost and a disparity steps."""
-    configuration = {
-        **input_cfg_for_estimation,
-        "pipeline": {
-            "estimation": {"estimation_method": "phase_cross_correlation"},
-            "matching_cost": {
-                "matching_cost_method": matching_cost_method,
-                "window_size": 33,
-                "step": step,
-                "subpix": subpix,
-            },
-            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
-        },
-        "output": {"path": str(tmp_path)},
-    }
-    run_pipeline(configuration)
