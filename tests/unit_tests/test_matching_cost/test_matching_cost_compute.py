@@ -99,6 +99,8 @@ def test_compute_cv_ssd(left_stereo_object, right_stereo_object):
     left_stereo_object["col_disparity"][0, :, :] = np.full((3, 3), -1)
     left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 0)
     left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
+    left_stereo_object.attrs["col_disparity_source"] = [-1, 0]
+    left_stereo_object.attrs["row_disparity_source"] = [-1, 0]
     # sum of squared difference images left, right, window_size=1
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "ssd", "window_size": 1}}}
     # sum of squared difference ground truth for the images left, right, window_size=1
@@ -190,6 +192,8 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     left_stereo_object["col_disparity"][0, :, :] = np.full((3, 3), -1)
     left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 0)
     left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
+    left_stereo_object.attrs["col_disparity_source"] = [-1, 0]
+    left_stereo_object.attrs["row_disparity_source"] = [-1, 0]
     # sum of squared difference images left, right, window_size=1
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 1}}}
     # sum of absolute difference ground truth for the images left, right, window_size=1

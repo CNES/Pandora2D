@@ -30,6 +30,7 @@ from rasterio import Affine
 
 from pandora2d import matching_cost
 from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.margins import Margins
 
 
 def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
@@ -111,7 +112,7 @@ def monoband_image():
             "col": np.arange(data.shape[1]),
             "band_disp": ["min", "max"],
         },
-    ).assign_attrs({"no_data_img": -9999})
+    ).assign_attrs({"no_data_img": -9999, "row_disparity_source": [1, 3], "col_disparity_source": [1, 3]})
 
 
 @pytest.fixture()
@@ -554,3 +555,120 @@ class TestCvFloatPrecision:
         matching_cost_test.allocate(img_left=img_left, img_right=img_right, cfg=cfg)
 
         assert matching_cost_test.cost_volumes["cost_volumes"].dtype == np.float64
+
+
+class TestGetDispCoordinates:
+    """
+    Test get_disp_row_coords and get_disp_col_coords methods.
+    """
+
+    @pytest.fixture
+    def row_disparity_source(self):
+        """
+        Row disparity source for testing get_disp_row_coords method.
+        """
+        return [-2, 2]
+
+    @pytest.fixture
+    def col_disparity_source(self):
+        """
+        Column disparity source for testing get_disp_col_coords method.
+        """
+        return [-2, 2]
+
+    @pytest.fixture
+    def left_image(self, row_disparity_source, col_disparity_source):
+        """
+        Left image dataset for testing get_disp_row_coords and get_disp_col_coords methods.
+        """
+
+        data = np.zeros((5, 5))
+
+        row_disp = np.stack(
+            [
+                np.full(data.shape, row_disparity_source[0]),
+                np.full(data.shape, row_disparity_source[1]),
+            ]
+        )
+
+        col_disp = np.stack(
+            [
+                np.full(data.shape, col_disparity_source[0]),
+                np.full(data.shape, col_disparity_source[1]),
+            ]
+        )
+
+        img_left = xr.Dataset(
+            {
+                "im": (["row", "col"], data),
+                "row_disparity": (["band_disp", "row", "col"], row_disp),
+                "col_disparity": (["band_disp", "row", "col"], col_disp),
+            },
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1]), "band_disp": ["min", "max"]},
+        ).assign_attrs({"row_disparity_source": row_disparity_source, "col_disparity_source": col_disparity_source})
+
+        return img_left
+
+    @pytest.mark.parametrize(
+        ["row_disparity_source", "margins", "expected"],
+        [
+            pytest.param(
+                [-2, 2], Margins(0, 0, 0, 0), np.array([-2, -1, 0, 1, 2]), id="Centered on 0 row disparity source"
+            ),
+            pytest.param(
+                [0, 1], Margins(1, 3, 0, 2), np.array([-3, -2, -1, 0, 1, 2, 3]), id="Positive row disparity source"
+            ),
+            pytest.param(
+                [-6, -4], Margins(0, 1, 0, 2), np.array([-7, -6, -5, -4, -3, -2]), id="Negative row disparity source"
+            ),
+        ],
+    )
+    def test_get_disp_row_coords(
+        self,
+        matching_cost_object,
+        matching_cost_config,
+        left_image,
+        row_disparity_source,
+        margins,
+        expected,  # pylint: disable=unused-argument
+    ):
+        """
+        Test get_disp_row_coords method.
+        """
+
+        matching_cost_test = matching_cost_object(matching_cost_config)
+        disp_row_coords = matching_cost_test.get_disp_row_coords(left_image, margins)
+
+        # check that the generated row coordinates are equal to the expected ones
+        np.testing.assert_array_equal(disp_row_coords, expected)
+
+    @pytest.mark.parametrize(
+        ["col_disparity_source", "margins", "expected"],
+        [
+            pytest.param(
+                [-2, 2], Margins(1, 2, 0, 0), np.array([-3, -2, -1, 0, 1, 2]), id="Centered on 0 col disparity source"
+            ),
+            pytest.param([4, 6], Margins(2, 3, 1, 0), np.array([2, 3, 4, 5, 6, 7]), id="Positive col disparity source"),
+            pytest.param(
+                [-12, -11], Margins(0, 1, 3, 2), np.array([-12, -11, -10, -9, -8]), id="Negative col disparity source"
+            ),
+        ],
+    )
+    def test_get_disp_col_coords(
+        self,
+        matching_cost_object,
+        matching_cost_config,
+        left_image,
+        col_disparity_source,
+        margins,
+        expected,  # pylint: disable=unused-argument
+    ):
+        """
+        Test get_disp_col_coords method.
+        """
+
+        matching_cost_test = matching_cost_object(matching_cost_config)
+        disp_col_coords = matching_cost_test.get_disp_col_coords(left_image, margins)
+
+        # check that the generated column coordinates are equal to the expected ones
+        np.testing.assert_array_equal(disp_col_coords, expected)

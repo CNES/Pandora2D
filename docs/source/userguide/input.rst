@@ -117,6 +117,13 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
     - Both *init* values for the disparities must reference the same directory. Mixing grids from different runs is not allowed.
     - The step value defined in the pipeline configuration must match the one declared in the `attributes.json` file.
 
+.. note::
+    When using a string initial disparity (i.e., a path to a grid or an output directory),
+    it is possible to enter a no data value in the metadata of the initial disparity grid so that points with this value are ignored in Pandora2d calculations.
+    
+    If a disparity map calculated by Pandora2D is used as the initial variable disparity grid, the *invalid_disp* value used in the Pandora2D disparity step configuration 
+    that calculated these disparity maps is automatically saved as no data in the metadata of the the row_map.tif and col_map.tif files.
+
 .. warning::
   If an output directory path is specified as input disparities and 
   it contains disparity maps smaller than the image, these maps will serve as the ROI (see :ref:`roi`). 
