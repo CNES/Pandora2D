@@ -557,15 +557,21 @@ def subpix():
 
 
 @pytest.fixture()
-def correct_pipeline_without_refinement(window_size, matching_cost_method, subpix):
+def invalid_disparity_mask():
+    return -99
+
+
+@pytest.fixture()
+def correct_pipeline_without_refinement(window_size, matching_cost_method, subpix, step, invalid_disparity_mask):
     return {
         "pipeline": {
             "matching_cost": {
                 "matching_cost_method": matching_cost_method,
                 "window_size": window_size,
                 "subpix": subpix,
+                "step": step,
             },
-            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": invalid_disparity_mask},
         }
     }
 
@@ -582,11 +588,16 @@ def correct_pipeline_with_dichotomy_python(matching_cost_method, subpix):
 
 
 @pytest.fixture()
-def correct_pipeline_with_dichotomy_cpp(matching_cost_method, subpix):
+def correct_pipeline_with_dichotomy_cpp(matching_cost_method, subpix, step, invalid_disparity_mask):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 5, "subpix": subpix},
-            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "matching_cost": {
+                "matching_cost_method": matching_cost_method,
+                "window_size": 5,
+                "subpix": subpix,
+                "step": step,
+            },
+            "disparity": {"disparity_method": "wta", "invalid_disparity": invalid_disparity_mask},
             "refinement": {"refinement_method": "dichotomy", "iterations": 2, "filter": {"method": "bicubic"}},
         }
     }
