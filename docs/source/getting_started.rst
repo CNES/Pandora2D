@@ -4,8 +4,8 @@ Getting started
 Overview
 ########
 
-Pandora2d  is a coregistration tool that provide disparity maps for images pairs with a combination in both direction.
-It uses `Pandora <https://github.com/CNES/Pandora>`__ who works with stereo pair of images only.
+Pandora2d  is a coregistration tool that provides disparity maps for image pairs with a combination in both directions.
+It uses `Pandora <https://github.com/CNES/Pandora>`__ which works with stereo pair of images only.
 
 
 Install
