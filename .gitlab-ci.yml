@@ -28,19 +28,19 @@ spec:
       default: true
     test-performance:
       type: boolean
-      default: true
+      default: false
     test-functional:
       type: boolean
-      default: false
+      default: true
     test-mccnn:
       type: boolean
-      default: true
+      default: false
     test-notebook:
       type: boolean
-      default: true
+      default: false
     test-resource:
       type: boolean
-      default: true
+      default: false
 ---
 include:
   - component: $CI_SERVER_FQDN/to-be-continuous/python/gitlab-ci-python@8.6.0  # TBC Python component version
@@ -64,7 +64,22 @@ include:
       image: ${UL_ARTIFACTORY_HOST}/ghcr.io/sphinx-doc/sphinx-ci:latest
       project-dir: docs
       build-args: --fail-on-warning  # fail if a warning is raised
-    
+
+stages:
+  # ToBe Continuous stages (we need to redeclare them in order to add our owns)
+  - build
+  - test
+  - package-build
+  - package-test
+  - infra
+  - deploy
+  - acceptance
+  - publish
+  - infra-prod
+  - production
+  # Our stages
+  - test-resource
+
 variables:
   # default production ref name (pattern)
   PROD_REF: /^(master|main)$/
@@ -214,6 +229,7 @@ notebook-test:
 
 # Estimation Resource Test
 estimation-resource-test:
+  stage: test-resource
   extends: py-pytest
   script:
     # ${TRACE+-d} define the log level
@@ -227,6 +243,7 @@ estimation-resource-test:
 
 # Matching-cost Resource Test
 matching-resource-test:
+  stage: test-resource
   extends: py-pytest
   script:
     # ${TRACE+-d} define the log level
@@ -240,6 +257,7 @@ matching-resource-test:
 
 # Dichotomy Resource Test
 dichotomy-resource-test:
+  stage: test-resource
   extends: py-pytest
   script:
     # ${TRACE+-d} define the log level
@@ -253,6 +271,7 @@ dichotomy-resource-test:
 
 # Optical-flow Resource Test
 optical-flow-resource-test:
+  stage: test-resource
   extends: py-pytest
   script:
     # ${TRACE+-d} define the log level
