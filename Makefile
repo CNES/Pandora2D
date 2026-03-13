@@ -273,7 +273,7 @@ clean-test:
 	@rm -f pylint-report.txt
 	@rm -f debug.log
 	@rm -f .pymon
-	@rm -f tests/resource_tests/.pymon
+	@rm -f tests/resource_tests/**/*.pymon
 	@rm -f *-test-report.html
 	@rm -rf reports
 
