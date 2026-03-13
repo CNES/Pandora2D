@@ -67,50 +67,83 @@ install: venv ## install pandora2D (pip editable mode) without plugins
 	@echo "PANDORA2D venv usage : source ${PANDORA2D_VENV}/bin/activate; pandora2d -h"
 
 .PHONY: install-plugin
-install-plugin: venv ## install pandora2D (pip editable mode) without plugins
-	@test -f ${PANDORA2D_VENV}/bin/pandora-plugin-mccnn || ${PANDORA2D_VENV}/bin/pip install pandora-plugin-mccnn
-	@test -f .git/hooks/pre-commit || echo echo "  Install pre-commit hook"
-	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
-	@echo "PANDORA2D installed in dev mode in virtualenv ${PANDORA2D_VENV}"
-	@echo "PANDORA2D venv usage : source ${PANDORA2D_VENV}/bin/activate; pandora2d -h"
+install-plugin: install ## install pandora2D (pip editable mode) with MCCNN plugins
+	@test -f ${PANDORA2D_VENV}/bin/pandora-plugin-mccnn || { . ${PANDORA2D_VENV}/bin/activate; ${PANDORA2D_VENV}/bin/pip install pandora-plugin-mccnn; }
+	@echo "MCCNN plugin installed in virtualenv ${PANDORA2D_VENV}"
+
 ## Test section
 
+.PHONY: install-test
+install-test: venv ## install pandora2D (pip editable mode) without plugins, notebook and docs
+	@test -f ${PANDORA2D_VENV}/bin/pandora2d || { . ${PANDORA2D_VENV}/bin/activate; ${PANDORA2D_VENV}/bin/pip install --no-build-isolation --config-settings=editable-verbose=true --editable .[dev] --config-settings=setup-args=-Dbuild_cpp_tests=enabled ; }
+	@test -f .git/hooks/pre-commit || echo "  Install pre-commit hook"
+	@test -f .git/hooks/pre-commit || ${PANDORA2D_VENV}/bin/pre-commit install
+	@echo "PANDORA2D installed in development mode with only dependencies for testing in virtualenv ${PANDORA2D_VENV}"
+	@echo "PANDORA2D venv usage : source ${PANDORA2D_VENV}/bin/activate; pandora2d -h"
+
 .PHONY: test
-test: install test-unit test-functional ## run unit tests and functional tests
+test: install-test test-unit test-functional ## run unit tests and functional tests
 
 .PHONY: test-all
 test-all: install test-unit test-functional test-resource test-performance test-notebook test-plugin ## run all tests
 
 .PHONY: test-unit
-test-unit: install reports_dir ## run unit tests only (for dev) + coverage (source venv before)
+test-unit: install-test reports_dir ## run unit tests only (for dev) + coverage (source venv before)
 	@echo "Run unit tests"
 	@${PANDORA2D_VENV}/bin/pytest -m "unit_tests and not notebook_tests and not plugin_tests" --html=unit-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage.cobertura.xml --cov-report term --cov
 
 .PHONY: test-unit-cpp
-test-unit-cpp: install ## run unit cpp tests only for dev
+test-unit-cpp: install-test ## run unit cpp tests only for dev
 	@echo "Run unit cpp tests"
 	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
 
 .PHONY: test-functional
-test-functional: install reports_dir ## run functional tests only (for dev and validation plan)
+test-functional: install-test reports_dir ## run functional tests only (for dev and validation plan)
 	@echo "Run functional tests"
 	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage-functional.cobertura.xml --cov-report term --cov
 
 .PHONY: test-resource
-test-resource: install ## run resource tests only (for validation plan)
-	@echo "Run resource tests"
-	@rm -f tests/resource_tests/.pymon
-	@${PANDORA2D_VENV}/bin/pytest -m "resource_tests and not metrics" --db tests/resource_tests/.pymon
-	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/.pymon  --html=resource-test-report.html
+test-resource: install-test test-resource-estimation test-resource-matching-cost test-resource-refinement ## run resource tests only (for validation plan)
+
+.PHONY: test-resource-estimation
+test-resource-estimation: install-test ## run resource tests only (for validation plan)
+	@echo "Run estimation resource tests"
+	@rm -f tests/resource_tests/estimation/.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "estimation_resource_tests and not metrics" --db tests/resource_tests/estimation/.pymon -vv
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/estimation/.pymon  --html=resource-test-report.html
+
+.PHONY: test-resource-matching-cost
+test-resource-matching-cost: install-test ## run resource tests only (for validation plan)
+	@echo "Run matching-cost resource tests"
+	@rm -f tests/resource_tests/matching_cost/.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "matching_cost_resource_tests and not metrics" --db tests/resource_tests/matching_cost/.pymon -vv
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/matching_cost/.pymon  --html=resource-test-report.html
+
+.PHONY: test-resource-refinement
+test-resource-refinement: install-test test-resource-refinement-dichotomy test-resource-refinement-optical-flow ## run resource tests only (for validation plan)
+
+.PHONY: test-resource-refinement-dichotomy
+test-resource-refinement-dichotomy: install-test ## run resource tests only (for validation plan)
+	@echo "Run dichotomy resource tests"
+	@rm -f tests/resource_tests/refinement/dicho.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "dichotomy_resource_tests and not metrics" --db tests/resource_tests/refinement/dicho.pymon -vv
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/refinement/dicho.pymon  --html=resource-test-report.html
+
+.PHONY: test-resource-refinement-optical-flow
+test-resource-refinement-optical-flow: install-test ## run resource tests only (for validation plan)
+	@echo "Run optical flow resource tests"
+	@rm -f tests/resource_tests/refinement/optical-flow.pymon
+	@${PANDORA2D_VENV}/bin/pytest -m "optical_flow_resource_tests and not metrics" --db tests/resource_tests/refinement/optical-flow.pymon -vv
+	@${PANDORA2D_VENV}/bin/pytest tests/resource_tests/test_metrics.py --database tests/resource_tests/refinement/optical-flow.pymon  --html=resource-test-report.html
 
 .PHONY: test-performance
-test-performance: install ## run performance tests only (for validation plan)
+test-performance: install-test ## run performance tests only (for validation plan)
 	@echo "Run performance tests"
 	@${PANDORA2D_VENV}/bin/pytest -m "performance_tests" --html=performance-test-report.html
 
 .PHONY: test-notebook
 test-notebook: install ## run notebook tests only
-	@${PANDORA2D_VENV}/bin/pytest -m "notebook_tests" --html=notebook-test-report.html
+	@. ${PANDORA2D_VENV}/bin/activate; pytest -m "notebook_tests" --html=notebook-test-report.html
 
 .PHONY: test-plugin
 test-plugin: install-plugin ## run plugins tests only
@@ -156,7 +189,7 @@ lint/pylint: ## check linting with pylint
 ## Check cpp code quality
 
 .PHONY: coverage-cpp 
-coverage-cpp: install reports_dir ## Gcovr (depends on gcovr in venv)
+coverage-cpp: install-test reports_dir ## Gcovr (depends on gcovr in venv)
 	@# We need to configure with coverage in order to make the ninja coverage
 	@# target available and execute tests compiled with coverage info needed by
 	@# gcovr.
@@ -240,7 +273,7 @@ clean-test:
 	@rm -f pylint-report.txt
 	@rm -f debug.log
 	@rm -f .pymon
-	@rm -f tests/resource_tests/.pymon
+	@rm -f tests/resource_tests/**/*.pymon
 	@rm -f *-test-report.html
 	@rm -rf reports
 
