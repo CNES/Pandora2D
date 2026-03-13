@@ -196,7 +196,7 @@ coverage-cpp: install-test reports_dir ## Gcovr (depends on gcovr in venv)
 	@. ${PANDORA2D_VENV}/bin/activate; meson setup --reconfigure "${CPP_BUILD_DIR}" -Db_coverage=true > /dev/null
 	@# Before running coverage, we need to run tests:
 	@. ${PANDORA2D_VENV}/bin/activate; meson test -C "${CPP_BUILD_DIR}" -v
-	@# We call ninja direclty because the meson wrapper arround ninja does not detect the target:
+	@# We call ninja directly because the meson wrapper around ninja does not detect the target:
 	@. ${PANDORA2D_VENV}/bin/activate; ninja coverage-xml -C "${CPP_BUILD_DIR}"
 	@cp "${CPP_BUILD_DIR}/meson-logs/coverage.xml" reports/gcovr-report.xml
 	@# Coverage makes execution slow so we unset this option

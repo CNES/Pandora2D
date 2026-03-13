@@ -117,7 +117,7 @@ class AllPrimitiveEncoder(json.JSONEncoder):
 
 def convert_disp_to_grid(dataset: xr.Dataset, pixel_convention: list[int]) -> xr.Dataset:
     """
-    Convet disparity maps to deformation grids
+    Convert disparity maps to deformation grids
 
     :param dataset: disparity maps dataset
     :param pixel_convention: initial pixel convention for grid
@@ -134,7 +134,7 @@ def convert_disp_to_grid(dataset: xr.Dataset, pixel_convention: list[int]) -> xr
 
 def convert_grid_to_disp(dataset: xr.Dataset, pixel_convention: list[int]) -> xr.Dataset:
     """
-    Convet deformation grids to disparity maps
+    Convert deformation grids to disparity maps
 
     :param dataset: deformation maps dataset
     :param pixel_convention: initial pixel convention for grid
@@ -292,7 +292,7 @@ def adjust_georeferencement(dataset: xr.Dataset, cfg: dict) -> None:
 
 def get_step(cfg: dict) -> tuple[int, int]:
     """
-    Get step from matching cost or retun default value.
+    Get step from matching cost or return default value.
     :param cfg: configuration
     :return: row_step, col_step
     """
@@ -324,7 +324,7 @@ def dataset_disp_maps(
     """
     Create the dataset containing disparity maps and score maps
     :param coords: disparity maps coordinates
-    :param dataset_validity: xr.Dataset containing validity informations
+    :param dataset_validity: xr.Dataset containing validity information
     :param attributes: disparity map for col
     :param dtype: dtype of the dataset
     :return: dataset: Dataset with the empty disparity maps and score with the data variables :
