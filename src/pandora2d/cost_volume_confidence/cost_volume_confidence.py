@@ -92,6 +92,6 @@ class CostVolumeConfidence(ABC):
         :param left_image: left Dataset image
         :param right_image: right Dataset image
         :param cost_volumes: cost volume dataset
-        :param dataset_disp_maps: dataset containg row and col disparity maps
+        :param dataset_disp_maps: dataset containing row and col disparity maps
         :return: the disparity map and the cost volume updated with the confidence measure
         """

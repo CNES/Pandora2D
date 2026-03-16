@@ -577,7 +577,7 @@ class TestEstimation:
         with open(tmp_path / "config.json", encoding="utf8") as output_file:
             output_config = json.load(output_file)
 
-        # Check output configuration informations about estimation
+        # Check output configuration information about estimation
         estimation_cfg = output_config["pipeline"]["estimation"]
         assert "estimated_shifts" in estimation_cfg
         assert "error" in estimation_cfg

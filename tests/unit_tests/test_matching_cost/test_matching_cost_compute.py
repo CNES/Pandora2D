@@ -940,7 +940,7 @@ class TestDisparityGrid:
         :param mock_type: `used` or `not used`
         :param mocker:
         :return: Mock if mock_type is `use`
-        :raises: ValueError if mock_type is neither `used` or `not used`
+        :raises: ValueError if mock_type is neither `used` nor `not used`
         """
         if mock_type == "not used":
             return mocker.patch(

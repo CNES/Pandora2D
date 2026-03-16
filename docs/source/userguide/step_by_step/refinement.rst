@@ -12,7 +12,7 @@ Optical_flow method
 
 Inspired by [Lucas-Kanade]_'s algorithm 
 
-    * We first need to suppose that pixel's shifting are subpixel between left and right images.
+    * We first need to suppose that pixel shifts are subpixel between left and right images.
     * Second, we need to suppose brightness constancy between left and right images. (2)
     * Now, we can write :
 
@@ -39,7 +39,7 @@ Inspired by [Lucas-Kanade]_'s algorithm
 
         v = (A^T A)^{-1}A^T B
 
-    * Lucas & Kanade works on a pixel and his neighbourhood so :
+    * Lucas & Kanade works on a pixel and its neighbourhood so:
 
     .. math::
 
@@ -70,7 +70,7 @@ Inspired by [Lucas-Kanade]_'s algorithm
             -I_t(qn)
             \end{array}\right)
 
-The following diagram presents the different steps implemented in Pandora2d to enable
+The following diagram presents the different steps implemented in Pandora2D to enable
 the refinement of the disparity map with optical flow.
 
 .. [Lucas-Kanade]  An iterative image registration technique with an application to stereo vision.
@@ -85,14 +85,14 @@ Dichotomy method
 ----------------
 
 It’s an iterative process that will, at each iteration:
-    * compute the half way positions between each best candidate in the cost volume and its nearest neighbours.
+    * compute the halfway positions between each best candidate in the cost volume and its nearest neighbours.
     * compute the similarity coefficients at those positions using the given filter method.
     * find the new best candidate from those computed coefficients.
 
 Available filters are described in :ref:`interpolation_filters`.
 
 .. note::
-    Two dichotomy implementations are available in Pandora2d: one in C++ and one in Python. 
+    Two dichotomy implementations are available in Pandora2D: one in C++ and one in Python. 
     By default, the C++ dichotomy is used when using the “dichotomy” refinement method. 
     To use the Python version, enter “dichotomy_python” as the refinement method in the configuration file. 
 

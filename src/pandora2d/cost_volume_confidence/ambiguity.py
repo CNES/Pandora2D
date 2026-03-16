@@ -18,7 +18,7 @@
 #
 
 """
-This module contains functions associated to the cost volume condifence computation step
+This module contains functions associated to the cost volume confidence computation step
 with ambiguity method.
 """
 
@@ -83,13 +83,13 @@ class Ambiguity(CostVolumeConfidence):
         :param left_image: left Dataset image
         :param right_image: right Dataset image
         :param cost_volumes: cost volume dataset
-        :param dataset_disp_maps: dataset containg row and col disparity maps
+        :param dataset_disp_maps: dataset containing row and col disparity maps
         :return: the disparity map and the cost volume updated with the confidence measure
         """
 
         logging.warning("The ambiguity method has not yet been implemented")
 
-        # Fill confidence_measure data variables with zeros to test cost volume confidence ouput is correct
+        # Fill confidence_measure data variables with zeros to test cost volume confidence output is correct
         if len(dataset_disp_maps.data_vars) != 0:
             confidence = xr.DataArray(
                 np.zeros(

@@ -165,8 +165,8 @@ stored in a xarray.Dataset.
 
 This xr.Dataset also contains the **validity maps** stored in uint8:
 
-    * A global validity map 'validity_mask', indicating whether each point is valid (value 0) or invalid (value 1) when at least one requested disparity can not be computed.
-    * A global partial validity map 'partial_validity_mask', indicating whether each point is partially valid (value 0) or invalid (value 1) when all requested disparity can not be computed.
+    * A global validity map 'validity_mask', indicating whether each point is valid (value 0) or invalid (value 1) when at least one requested disparity cannot be computed.
+    * A global partial validity map 'partial_validity_mask', indicating whether each point is partially valid (value 0) or invalid (value 1) when all requested disparities cannot be computed.
     * A map for each criteria, indicating for each point whether the corresponding criteria has been raised at that point (value 0) or not (value 1).
 
 ::

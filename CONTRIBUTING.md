@@ -10,7 +10,7 @@
 
 Any proven or suspected malfunction should be traced in a bug report, the latter being an issue in the PANDORA2D github repository.
 
-**Don't hesitate to do so: It is best to open a bug report and quickly resolve it than to let a problem remains in the project.**
+**Don't hesitate to do so: It is best to open a bug report and quickly resolve it than to let a problem remain in the project.**
 **Notifying the potential bugs is the first way for contributing to a software.**
 
 In the problem description, be as accurate as possible. Include:
@@ -30,7 +30,7 @@ The Merge Request shall have a short description of the proposed changes. If it 
 Likewise, if you work on a branch (which is recommended), prefix the branch's name by `xx-` in order to link it to the xx issue.
 
 PANDORA2D Classical workflow is :
-* Check Licence and sign [Contributor Licence Agrement](#contribution-license-agreement) (Individual or Corporate)
+* Check Licence and sign [Contributor Licence Agreement](#contribution-license-agreement) (Individual or Corporate)
 * Create an issue (or begin from an existing one)
 * Create a Merge Request from the issue: a MR is created accordingly with "WIP:", "Closes xx" and associated "xx-name-issue" branch
 * Modify PANDORA2D code from a local working directory or from the forge (less possibilities)
@@ -95,7 +95,7 @@ It is possible to run only pylint tool to check code modifications:
 ```
 * cd PANDORA_HOME
 * pylint *.py pandora/*.py tests/*.py        # Run all pylint tests
-* pylint --list-msgs                      # Get pylint detailed errors informations
+* pylint --list-msgs                      # Get pylint detailed error information
 ```
 
 Pylint messages can be avoided (in particular cases !) adding "#pylint: disable=error-message-name" in the file or line.

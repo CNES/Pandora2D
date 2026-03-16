@@ -347,7 +347,7 @@ class TestCheckDisparity:
     )
     def test_fails_when_disparity_is_not_dictionnary(self, image_metadata, make_input_cfg, user_cfg):
         """
-        Test check_disparity method with incorrect input disparities : not a dictionnary
+        Test check_disparity method with incorrect input disparities : not a dictionary
         """
 
         with pytest.raises(AttributeError, match="The disparities in rows and columns must be given as 2 dictionaries"):

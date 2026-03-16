@@ -45,7 +45,7 @@ PYBIND11_MODULE(interpolation_filter_bind, m) {
             :param fractional_shift:
                 positive fractional shift of the subpixel position to be interpolated
             :type fractional_shift: float
-            :return: a array of interpolator coefficients whose size depends on the filter margins
+            :return: an array of interpolator coefficients whose size depends on the filter margins
             :rtype: np.ndarray
             )mydelimiter")
       .def("apply", &abstractfilter::AbstractFilter::apply, "resampling_area"_a, "row_coeff"_a,
@@ -121,7 +121,7 @@ PYBIND11_MODULE(interpolation_filter_bind, m) {
             :param fractional_shift:
                 positive fractional shift of the subpixel position to be interpolated.
             :type fractional_shift: float
-            :return: a array of interpolator coefficients whose size depends on the filter margins
+            :return: an array of interpolator coefficients whose size depends on the filter margins
             :rtype: np.ndarray
             )mydelimiter");
 

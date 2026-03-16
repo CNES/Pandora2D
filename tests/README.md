@@ -62,11 +62,11 @@ There are several options for launching the various tests:
     - `make test-unit` : run unit tests only
     - `make test-functional` : run functional tests only
     - `make test-resource` : run resource tests only
-    - `make test-performance` : run performance only
+    - `make test-performance` : run performance tests only
 
 2. Using the command line with pytest with virtual environment `venv` directory:
     ```shell
-    source venv/bin/active  ## active venv
+    source venv/bin/activate  ## active venv
     pytest -m "<target_1> or <target_2>" --parametrization-explicit -vv   ## Using a target defined in pytest.ini
     ```
 

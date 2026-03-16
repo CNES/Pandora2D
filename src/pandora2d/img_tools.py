@@ -151,7 +151,7 @@ def check_disparity_types(disparity: Any) -> None:
     if not isinstance(disparity["init"], (int, str)):
         raise ValueError("Disparity init should be an integer or a path to a grid")
 
-    # Check that range value is a postive integer
+    # Check that range value is a positive integer
     if disparity["range"] < 0 or not isinstance(disparity["range"], int):
         raise ValueError("Disparity range should be an integer greater or equal to 0")
 

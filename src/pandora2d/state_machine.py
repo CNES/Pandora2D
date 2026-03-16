@@ -315,7 +315,7 @@ class Pandora2DMachine(BaseMachine):
 
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :param img_right: left Dataset image containing :
+        :param img_right: right Dataset image containing :
 
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray

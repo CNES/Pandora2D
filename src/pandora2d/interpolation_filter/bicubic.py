@@ -63,7 +63,7 @@ class BicubicPython(AbstractFilter):
             - For a column shift, returned array size = left_margin + right_margin + 1
 
         :param fractional_shift: positive fractional shift of the subpixel position to be interpolated
-        :return: a array of interpolator coefficients whose size depends on the filter margins
+        :return: an array of interpolator coefficients whose size depends on the filter margins
         """
         tab_coeffs = np.empty(4)
         alpha = self._ALPHA

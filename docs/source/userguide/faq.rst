@@ -109,7 +109,7 @@ On which target platforms are wheels produced?
 **********************************************
 
 Wheel production is carried out using cibuildwheel. See `here <https://cibuildwheel.pypa.io/en/stable/#what-does-it-do>`_ for possible target platforms.
-However, a number of platforms have been removed from the list, such as :
+However, a number of platforms have been removed from the list, such as:
 
 - 32-bit platforms: SciPy is not available on them, and it is a necessary dependency for subpix input and multiscale.
 - musllinux: The rasterio library is not available on it, and it is a necessary dependency for the execution of pandora.

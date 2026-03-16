@@ -3,8 +3,8 @@
 Inputs
 ======
 
-Pandora2D needs a pair of image that `rasterio <https://github.com/mapbox/rasterio>`_ can open and information about
-the no_data's images and range disparities.
+Pandora2D needs a pair of images that `rasterio <https://github.com/mapbox/rasterio>`_ can open and information about
+the no_data of the images and range disparities.
 
 Configuration and parameters
 ****************************
@@ -129,12 +129,12 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
   it contains disparity maps smaller than the image, these maps will serve as the ROI (see :ref:`roi`). 
 
 .. warning::
-    With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`) , `nodata` only accepts `int` type.
+    With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`), `nodata` only accepts `int` type.
     
     In addition, when the `nodata` value entered is `NaN` or `inf`, it is replaced by -9999  in the image datasets to avoid disrupting processing.
 
 .. note::
-    Only one-band masks are accepted by pandora2d. Mask must comply with the following convention :
+    Only one-band masks are accepted by pandora2d. Mask must comply with the following convention:
      - Value equal to 0 for valid pixel
      - Value not equal to 0 for invalid pixel
 

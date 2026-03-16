@@ -30,7 +30,7 @@ The graphs are handled by the `generate_figure` function.
 
 
 
-Parameters and configuration :
+Parameters and configuration:
 ##############################
 
 Expert mode profiling section is composed of the following keys:
@@ -57,7 +57,7 @@ Expert mode profiling section is composed of the following keys:
     {
         "input":
         {
-            // inputs content
+            // inputs' content
         }
         ,
         "pipeline" :
@@ -69,7 +69,7 @@ Expert mode profiling section is composed of the following keys:
             "profiling":
             {
                 "folder_name": "profiling_output"
-        }
+        },
         "output": {
             "path": "expert_mode_output"
         }

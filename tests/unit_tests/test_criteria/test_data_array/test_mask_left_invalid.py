@@ -41,7 +41,7 @@ from pandora2d.constants import Criteria
 def test_mask_left_invalid(img_size, image, criteria_dataarray, invalid_position):
     """
     Test that mask_invalid_left method raises criteria P2D_INVALID_MASK_LEFT
-    for points whose value is neither valid_pixels or no_data_mask.
+    for points whose value is neither valid_pixels nor no_data_mask.
     """
     invalid_row_position, invalid_col_position = invalid_position
 

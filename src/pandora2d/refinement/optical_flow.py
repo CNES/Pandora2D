@@ -109,7 +109,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         :return: array containing reshaped image [window_size, window_size, nbcol*nbrow]
         """
 
-        # get numpy array datas for image
+        # get numpy array data for image
         img_data = img["im"].data
 
         # get general offset value
@@ -331,7 +331,7 @@ class OpticalFlow(refinement.AbstractRefinement):
         delta_row = disp_map_sub["row_map"].data.flatten()
         delta_col = disp_map_sub["col_map"].data.flatten()
 
-        # reshape left and right datas
+        # reshape left and right data
         # from (nbcol, nbrow) to (window_size, window_size, nbcol*nbrow)
         reshaped_left = self.reshape_to_matching_cost_window(
             img_left, cost_volumes, (row_extrema_coordinates, col_extrema_coordinates)
