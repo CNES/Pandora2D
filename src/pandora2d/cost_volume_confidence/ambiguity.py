@@ -22,12 +22,11 @@ This module contains functions associated to the cost volume confidence computat
 with ambiguity method.
 """
 
-import logging
-
 import numpy as np
 import xarray as xr
 from json_checker import And
-from pandora import cost_volume_confidence as pandora_confidence
+
+from pandora.cost_volume_confidence.ambiguity import Ambiguity as pandora_ambiguity
 from pandora2d.cost_volume_confidence.registry import CostVolumeConfidenceRegistry
 
 from .cost_volume_confidence import CostVolumeConfidence
@@ -88,101 +87,63 @@ class Ambiguity(CostVolumeConfidence):
         :param dataset_disp_maps: dataset containing row and col disparity maps
         :return: the disparity map and the cost volume updated with the confidence measure
         """
-        # en colonne uniquement
-        etas = np.arange(self._eta_min, self._eta_max, self._eta_step)
+        # Using Pandora to perform calculations on columns only
+        etas = np.arange(self._eta_min, self._eta_max, self._eta_step)  # type: np.ndarray
         nbr_etas = etas.shape[0]
         grids = left_image.col_disparity
         disparity_range_col = cost_volumes.disp_col
+        nbr_disparities = cost_volumes.sizes["disp_row"] * cost_volumes.sizes["disp_col"]
 
-        cv_4d = cost_volumes["cost_volumes"].data
-        cv_3d = cv_4d.reshape(
+        # Reverse cost_volume if matching_cost measure is "max"
+        type_measure_max = cost_volumes.attrs["type_measure"] == "max"
+        if type_measure_max:
+            cost_volumes["cost_volumes"].data *= -1
+
+        cost_volumes_4d = cost_volumes["cost_volumes"].data
+        cost_volumes_3d = cost_volumes_4d.reshape(
             cost_volumes.sizes["row"],
             cost_volumes.sizes["col"],
-            cost_volumes.sizes["disp_row"] * cost_volumes.sizes["disp_col"],
+            nbr_disparities,
         )
 
-        ambiguity_ = pandora_confidence.AbstractCostVolumeConfidence(
-            **{
-                "confidence_method": "ambiguity",
-                "eta_max": self._eta_max,
-                "eta_step": self._eta_step,
-                "normalization": False,
-            }
+        ambiguity_ = pandora_ambiguity(
+            confidence_method="ambiguity",
+            eta_max=self._eta_max,
+            eta_step=self._eta_step,
+            normalization=False,
         )
 
-        ambiguity = ambiguity_.compute_ambiguity(cv_3d, etas, nbr_etas, grids, disparity_range_col)
+        ambiguity = ambiguity_.compute_ambiguity(cost_volumes_3d, etas, nbr_etas, grids, disparity_range_col)
 
         if self._normalization:
-            if "global_disparity" in left_image.attrs:
-                ambiguity = self.normalize_with_extremum(
-                    ambiguity, left_image, nbr_etas=nbr_etas, subpix=cost_volumes.attrs["subpixel"]
-                )
-                logging.info(
-                    "You are not using ambiguity normalization by percentile; \n"
-                    "you are in a specific case with the instantiation of global_disparity."
-                )
-            # in case of cross correlation
-            elif "global_disparity" in right_image.attrs:
-                ambiguity = self.normalize_with_extremum(
-                    ambiguity, right_image, nbr_etas=nbr_etas, subpix=cost_volumes.attrs["subpixel"]
-                )
-            else:
-                ambiguity = self.normalize_with_percentile(ambiguity)
+            ambiguity = self.normalize_with_extremum(ambiguity, nbr_disparities, nbr_etas)
 
         # Conversion of ambiguity into a confidence measure
-        ambiguity = 1 - ambiguity
+        confidence_measure = 1 - ambiguity
 
         # Fill confidence_measure data variables with zeros to test cost volume confidence output is correct
-        if len(dataset_disp_maps.data_vars) != 0:
-            logging.info("save ambiguity in dataset")
-            confidence = xr.DataArray(
-                ambiguity,
-                coords={"row": dataset_disp_maps.row, "col": dataset_disp_maps.col},
-                dims=("row", "col"),
-            )
-            dataset_disp_maps["confidence_measure"] = confidence
+        confidence = xr.DataArray(
+            confidence_measure,
+            coords={"row": dataset_disp_maps.row, "col": dataset_disp_maps.col},
+            dims=("row", "col"),
+        )
+        dataset_disp_maps["confidence_measure"] = confidence
+
+        # Remove modification
+        if type_measure_max:
+            cost_volumes["cost_volumes"].data *= -1
 
         return cost_volumes, dataset_disp_maps
 
-    def normalize_with_percentile(self, ambiguity: np.ndarray) -> np.ndarray:
-        """
-        Normalize ambiguity with percentile .
-        Cost Volume must correspond to min similarity measure
-
-        :param ambiguity: ambiguity
-        :type ambiguity: 2D np.ndarray (row, col) dtype = float32
-        :return: the normalized ambiguity
-        :rtype: 2D np.ndarray (row, col) dtype = float32
-        """
-
-        norm_amb = np.copy(ambiguity)
-        perc_min = np.percentile(norm_amb, self._percentile)
-        perc_max = np.percentile(norm_amb, 100 - self._percentile)
-        np.clip(norm_amb, perc_min, perc_max, out=norm_amb)
-
-        return (norm_amb - np.min(norm_amb)) / (np.max(norm_amb) - np.min(norm_amb))
-
     @staticmethod
-    def normalize_with_extremum(
-        confidence: np.ndarray, dataset: xr.Dataset, nbr_etas: int, subpix: int = 1
-    ) -> np.ndarray:
+    def normalize_with_extremum(confidence: np.ndarray, nbr_disparities: int, nbr_etas: int) -> np.ndarray:
         """
         Normalize ambiguity with extremum
 
         :param confidence: confidence
-        :type confidence: 2D np.ndarray (row, col) dtype = float32
-        :param dataset: Dataset image
-        :tye dataset: xarray.Dataset
+        :param nbr_disparities: number of disparity (row_disparity * col_disparity)
         :param nbr_etas: size of etas
-        :type nbr_etas: int
-        :param subpix:  subpix used in matching cost
-        :type subpix: int
         :return: the normalized confidence
-        :rtype: 2D np.ndarray (row, col) dtype = float32
         """
-        norm_confidence = np.copy(confidence)
-        global_disp_max = dataset.attrs["global_disparity"][1]
-        global_disp_min = dataset.attrs["global_disparity"][0]
-        max_norm = (global_disp_max - global_disp_min) * nbr_etas * subpix
-
-        return norm_confidence / max_norm
+        max_norm = nbr_disparities * nbr_etas
+        return confidence / max_norm
