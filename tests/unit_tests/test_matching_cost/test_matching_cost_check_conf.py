@@ -105,7 +105,9 @@ class TestFactory:
 
 
 # /!\ "zncc" currently target "zncc-optim-1"
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "sad", "ssd", "mutual_information", "zncc", "zncc-optim-2"])
+@pytest.mark.parametrize(
+    "matching_cost_method", ["zncc_python", "sad", "ssd", "mutual_information", "zncc", "zncc-optim-2"]
+)
 class TestWindowSize:
     """
     Description : Test window_size parameter values.
