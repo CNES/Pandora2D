@@ -83,6 +83,19 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
         return schema
 
+    def check_conf(self, cfg: dict) -> dict[str, str]:
+        """
+        Check the matching cost configuration
+        and raise error if float precision is float64
+        """
+
+        if "float_precision" in cfg and np.dtype(cfg["float_precision"]) == np.float64:
+            raise ValueError(
+                "With sad, ssd, mc_cnn, and zncc_python methods, only the float32 type is accepted for float_precision"
+            )
+
+        return super().check_conf(cfg)
+
     @property
     def window_size(self) -> int:
         """
