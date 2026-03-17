@@ -791,14 +791,16 @@ class TestCheckDisparityGridsFromDirectoryWithinImage:
         [
             "correct_grid_shape",
             "second_correct_grid_shape",
+            "step",
             "origin_coordinates",
             "expected",
         ],
         [
-            pytest.param((375, 450), (375, 450), {"row": 0, "col": 0}, None, id="No ROI"),
+            pytest.param((375, 450), (375, 450), [1, 1], {"row": 0, "col": 0}, None, id="No ROI"),
             pytest.param(
                 (10, 10),
                 (10, 10),
+                [1, 1],
                 {"row": 0, "col": 0},
                 {"row": {"first": 0, "last": 9}, "col": {"first": 0, "last": 9}},
                 id="ROI without special origin",
@@ -806,9 +808,26 @@ class TestCheckDisparityGridsFromDirectoryWithinImage:
             pytest.param(
                 (5, 9),
                 (5, 9),
+                [1, 1],
                 {"row": 13, "col": 47},
                 {"row": {"first": 13, "last": 17}, "col": {"first": 47, "last": 55}},
                 id="ROI with special origin",
+            ),
+            pytest.param(
+                (3, 4),
+                (3, 4),
+                [2, 3],
+                {"row": 0, "col": 0},
+                {"row": {"first": 0, "last": 4}, "col": {"first": 0, "last": 9}},
+                id="No ROI with step",
+            ),
+            pytest.param(
+                (7, 10),
+                (7, 10),
+                [4, 2],
+                {"row": 2, "col": 3},
+                {"row": {"first": 2, "last": 26}, "col": {"first": 3, "last": 21}},
+                id="ROI with step",
             ),
         ],
     )
