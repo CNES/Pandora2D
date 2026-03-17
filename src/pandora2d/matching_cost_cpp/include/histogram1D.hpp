@@ -122,10 +122,11 @@ class Histogram1D {
    */
   void create(const P2d::Matrixf& image) {
     m_bins_width = get_bins_width<T>(image);
-    float sum_sq = 0, sum = 0; // Initilialization for the variance E(X^2) - E(X)^2
+    float sum_sq = 0;
+    float sum = 0;    // Initilializations for the variance E(X^2) - E(X)^2
     const float *reader; // Use a de-referenced pointer to read the matrix
-    int idx;
-    T num_elem;
+    std::size_t idx;
+    T num_elem = static_cast<T>(image.size());
     
     T min_coeff = static_cast<T>(image.minCoeff());
     T max_coeff = static_cast<T>(image.maxCoeff());
@@ -138,13 +139,9 @@ class Histogram1D {
     if (m_nb_bins > NB_BINS_MAX) {
       m_nb_bins = NB_BINS_MAX;
       
-      num_elem = static_cast<T>(image.size());
-      for (idx = 0, reader = &image(0, 0); idx < num_elem; ++idx) {
+      for (idx = 0, reader = &image(0, 0); idx < image.size(); ++idx, reader++) {
 	sum += *reader;
 	sum_sq += *reader * *reader;
-
-	// Get to the next matrix element
-	reader++;
       }
       mean = static_cast<T>(sum) / num_elem;
       moment = static_cast<T>(sum_sq) / num_elem - mean * mean;

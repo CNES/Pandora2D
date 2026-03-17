@@ -24,7 +24,6 @@ This module contains functions associated to bin (width, number).
 #ifndef BIN_HPP
 #define BIN_HPP
 
-#include "operation.hpp"
 #include "pandora2d_type.hpp"
 
 constexpr unsigned int NB_BINS_MAX = 100;  ///< Limit of number bins for histogram
@@ -48,18 +47,16 @@ T get_bins_width_scott(const P2d::Matrixf& image) {
   float sum = 0;
   float sum_sq = 0;
   // Use de-referenced pointer to read matrix element
-  const float *value;
+  const float *reader;
+  std::size_t idx;
   
-  int idx;
-  T num_elem = static_cast<T>(image.size());
+  auto num_elem = static_cast<T>(image.size());
 
   // Compute variance according to the formula: E(X^2) - E(X)^2
   // The sum is computed in float as the input image
-  for (idx = 0, value = &image(0, 0); idx < image.size(); ++idx) {
-    sum += *value;
-    sum_sq += *value * *value;
-    
-    value++;
+  for (idx = 0, reader = &image(0, 0); idx < image.size(); ++idx, reader++) {
+    sum += *reader;
+    sum_sq += *reader * *reader;
   }
 
   // Then we cast to T type to keep or increase precision (float32/64)

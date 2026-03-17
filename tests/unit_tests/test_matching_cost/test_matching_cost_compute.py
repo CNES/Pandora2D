@@ -235,7 +235,8 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     np.testing.assert_allclose(sad["cost_volumes"].data[valid_mask], ad_ground_truth[valid_mask], atol=1e-06)
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc"])
+# /!\ "zncc" currently target "zncc-optim-1"
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
 def test_compute_cv_zncc(matching_cost_config, matching_cost_object):
     """
     Test the cost volume product by zncc

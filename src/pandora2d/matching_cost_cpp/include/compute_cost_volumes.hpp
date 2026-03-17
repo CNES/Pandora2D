@@ -42,7 +42,9 @@ This module contains functions associated to the computation of cost volumes in 
  * @return P2d::Matrixf
  */
 P2d::Matrixf get_window(const P2d::Matrixf& image,
-			int window_size, int index_row, int index_col);
+			int window_size,
+			int index_row,
+			int index_col);
 
 /**
  * @brief Get the index corresponding to the correct interpolated right image
@@ -79,11 +81,9 @@ T calculate_correlation(const std::string& method,
       method_map = {{"mutual_information", calculate_mutual_information<T>},
                     {"zncc-optim-2", calculate_zncc_opt2<T>}};
   auto it = method_map.find(method);
-  if (it != method_map.end()) {
-    return it->second(left_image, right_image);
-  } else {
-    throw std::invalid_argument("Unknown correlation method: " + method);
-  }
+
+  // Compute correlation between left and right image
+  return it->second(left_image, right_image);
 }
 
 /**

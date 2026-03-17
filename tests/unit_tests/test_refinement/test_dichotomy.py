@@ -1365,7 +1365,8 @@ class TestInvalidDisparity:
         assert result_disp_col[1, 0] == dataset_disp_maps["col_map"][1, 0] - 0.25
 
 
-@pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python"])
+# /!\ "zncc" currently target "zncc-optim-1"
+@pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python", "zncc", "zncc-optim-2"])
 @pytest.mark.parametrize("invalid_disparity", [-9999, np.nan])
 @pytest.mark.parametrize(
     "dichotomy_instance_name",

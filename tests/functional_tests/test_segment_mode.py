@@ -136,10 +136,19 @@ class TestSegmentMode:
                 400,
                 id="Pipeline without refinement, zncc_python, mask and enough memory",
             ),
+            # /!\ "zncc" currently target "zncc-optim-1"
             pytest.param(
                 "correct_input_cfg",
                 "correct_pipeline_without_refinement",
                 "zncc",
+                2,
+                40,
+                id="Pipeline without refinement, zncc cpp, subpix=2 and no enough memory without segment mode",
+            ),
+            pytest.param(
+                "correct_input_cfg",
+                "correct_pipeline_without_refinement",
+                "zncc-optim-2",
                 2,
                 40,
                 id="Pipeline without refinement, zncc cpp, subpix=2 and no enough memory without segment mode",
@@ -223,11 +232,21 @@ class TestSegmentMode:
                 10,
                 id="151x151 ROI, 10 MB memory per work, zncc python without refinement",
             ),
+            # /!\ "zncc" currently target "zncc-optim-1"
             pytest.param(
                 "correct_input_with_left_mask",
                 "correct_pipeline_with_dichotomy_cpp",
                 {"col": {"first": 200, "last": 300}, "row": {"first": 100, "last": 200}},
                 "zncc",
+                1,
+                15,
+                id="101x101 ROI, 15 MB memory per work, mask, zncc cpp with refinement",
+            ),
+            pytest.param(
+                "correct_input_with_left_mask",
+                "correct_pipeline_with_dichotomy_cpp",
+                {"col": {"first": 200, "last": 300}, "row": {"first": 100, "last": 200}},
+                "zncc-optim-2",
                 1,
                 15,
                 id="101x101 ROI, 15 MB memory per work, mask, zncc cpp with refinement",

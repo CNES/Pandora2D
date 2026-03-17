@@ -61,7 +61,7 @@ T get_entropy(const T nb_pixel, const U& hist) {
  */
 template <typename T>
 T calculate_entropy1D(const P2d::Matrixf& image) {
-  T nb_pixel = static_cast<T>(image.size());
+  auto nb_pixel = static_cast<T>(image.size());
   auto hist_1D = calculate_histogram1D<T>(image);
 
   return get_entropy<T, Histogram1D<T>>(nb_pixel, hist_1D);
@@ -80,7 +80,7 @@ T calculate_entropy1D(const P2d::Matrixf& image) {
 template <typename T>
 T calculate_entropy2D(const P2d::Matrixf& left_image, const P2d::Matrixf& right_image) {
   // same size for left and right images
-  T nb_pixel = static_cast<T>(left_image.size());
+  auto nb_pixel = static_cast<T>(left_image.size());
   auto hist_2D = calculate_histogram2D<T>(left_image, right_image);
 
   return get_entropy<T, Histogram2D<T>>(nb_pixel, hist_2D);

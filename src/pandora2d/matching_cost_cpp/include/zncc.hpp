@@ -218,12 +218,12 @@ inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
   T var_left = sum_left_sq / window_area - mean_left * mean_left;
   T var_right = sum_right_sq / window_area - mean_right * mean_right;
 
-  T std_left = std::sqrt(var_left);
-  T std_right = std::sqrt(var_right);
-
   if (var_left <= VAR_EPSILON || var_right <= VAR_EPSILON) {
     return 0.0;
   }
+
+  T std_left = std::sqrt(var_left);
+  T std_right = std::sqrt(var_right);
 
   return ((sum_cross / window_area) - (mean_left * mean_right)) / (std_left * std_right);
 }
@@ -238,14 +238,15 @@ inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
 template <typename T>
 inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
 			     const P2d::Matrixf& right_image) {
-  const int window_area = left_image.size();
+  const std::size_t window_area = left_image.size();
   // Use de-referenced pointers to read the left and right images
-  const float *left_value, *right_value;
+  const float *left_value;
+  const float *right_value;
+  std::size_t idx;
 
-  T sum_left_T, sum_right_T;
   // var_wa as window_area * variance is stored, it avoids very small values
-  T var_left_wa, var_right_wa;
-  int idx;
+  T var_left_wa;
+  T var_right_wa;
 
   float sum_left = 0;
   float sum_right = 0;
@@ -256,22 +257,19 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
   // Compute mean and variance, variance uses the following formula: E(X^2) - E(X)^2
   // It is computed in float as the input image
   for (idx = 0, left_value = &left_image(0, 0), right_value = &right_image(0, 0);
-       idx < window_area; ++idx) {
+       idx < window_area;
+       ++idx, left_value++, right_value++) {
     sum_left += *left_value;
     sum_right += *right_value;
     
     sum_left_sq += *left_value * *left_value;
     sum_right_sq += *right_value * *right_value;
     sum_cross += *left_value * *right_value;
-
-    // Increase addresses to the next matrix element to use
-    left_value++;
-    right_value++;
   }
 
   // Cast to T type to keep or increase precision (float32/64)
-  sum_left_T = static_cast<T>(sum_left);
-  sum_right_T = static_cast<T>(sum_right);
+  auto sum_left_T = static_cast<T>(sum_left);
+  auto sum_right_T = static_cast<T>(sum_right);
   // Here it is straightforward that variance = sum.^2 / num_elem - (sum / num_elem )^2
   //   num_elem * variance = sum.^2 - sum*sum / num_elem
   // NOTE: sum.^2 is the sum of the squared elements, sum*sum is the final sum squared.  
