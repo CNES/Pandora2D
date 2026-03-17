@@ -18,8 +18,6 @@
 #
 """Test get_criteria_dataarray function."""
 
-import copy
-
 import numpy as np
 import pytest
 
@@ -30,53 +28,6 @@ from pandora2d.constants import Criteria
 @pytest.mark.parametrize("img_size", [(4, 5)])
 class TestGetCriteriaDataarray:
     """Test get_criteria_dataarray function."""
-
-    @pytest.fixture()
-    def image_variable_disp(self, image, img_size):
-        """Make image with variable disparity grids"""
-
-        # Make so when we change image_variable_disp mask it
-        # does not change image mask
-        img = copy.copy(image)
-        row, col = img_size
-
-        nb_col_set = int(col / 2)
-        nb_row_set = int(row / 2)
-
-        # Get variable col disparities
-
-        # Minimal col disparity grid is equal to:
-        # [[-3, -3, -5, -5, -5]
-        #  [-3, -3, -5, -5, -5]
-        #  [-3, -3, -5, -5, -5]
-        #  [-3, -3, -5, -5, -5]]
-        img["col_disparity"].sel(band_disp="min")[:, :nb_col_set] = -3
-
-        # Maximal col disparity grid is equal to:
-        # [[ 3,  3,  1,  1,  1]
-        #  [ 3,  3,  1,  1,  1]
-        #  [ 3,  3,  1,  1,  1]
-        #  [ 3,  3,  1,  1,  1]]
-        img["col_disparity"].sel(band_disp="max")[:, nb_col_set:] = 1
-
-        # Get variable row disparities
-
-        # Minimal row disparity grid is equal to:
-        # [[ 0,  0,  0,  0,  0]
-        #  [ 0,  0,  0,  0,  0]
-        #  [-1, -1, -1, -1, -1]
-        #  [-1, -1, -1, -1, -1]]
-        img["row_disparity"].sel(band_disp="min")[:nb_row_set, :] = 0
-
-        # Maximal row disparity grid is equal to:
-        # [[ 3,  3,  3,  3,  3]
-        #  [ 3,  3,  3,  3,  3]
-        #  [ 2,  2,  2,  2,  2]
-        #  [ 2,  2,  2,  2,  2]]
-
-        img["row_disparity"].sel(band_disp="max")[nb_row_set:, :] = 2
-
-        return img
 
     @pytest.mark.usefixtures("mask_image")
     @pytest.mark.parametrize(
@@ -316,11 +267,159 @@ class TestGetCriteriaDataarray:
     ):
         """
         Test get_criteria_dataarray method with
-        different disparities, window sizes and masks
+        different disparities, window sizes and masks.
         """
 
         image_variable_disp["msk"].data = left_msk
 
+        # image_variable_disp fixture is located in the file tests/unit_tests/test_criteria/conftest.py.
+        # Comments in the fixture show the minimum and maximum disparities for each point.
+        criteria_dataarray = criteria.get_criteria_dataarray(
+            left_image=image_variable_disp, right_image=image, cv=cost_volumes
+        )
+
+        np.testing.assert_array_equal(
+            criteria_dataarray.sel(disp_row=disp_row, disp_col=disp_col),
+            expected_criteria,
+        )
+
+    @pytest.mark.usefixtures("mask_image")
+    @pytest.mark.parametrize(
+        ["left_msk", "msk", "disp_col", "disp_row", "window_size", "no_data_disp", "expected_criteria"],
+        [
+            # pylint: disable=line-too-long
+            pytest.param(
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
+                0,  # disp_col
+                0,  # disp_row
+                1,  # window_size
+                -3,  # no_data_disp
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="No data disp is -3",
+            ),
+            pytest.param(
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
+                0,  # disp_col
+                0,  # disp_row
+                1,  # window_size
+                3,  # no_data_disp
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY],
+                        [Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY],
+                        [Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="No data disp is 3",
+            ),
+            pytest.param(
+                np.full((4, 5), 0),  # left msk
+                np.full((4, 5), 0),  # right msk
+                0,  # disp_col
+                0,  # disp_row
+                1,  # window_size
+                np.nan,  # no_data_disp
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        [Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID, Criteria.VALID],
+                        # fmt: on
+                    ]
+                ),
+                id="No data disp is np.nan",
+            ),
+            pytest.param(
+                np.full((4, 5), 0),  # left msk
+                np.array(  # right msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 1],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                1,  # disp_col
+                1,  # disp_row
+                3,  # window_size
+                0,  # no_data_disp
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        # fmt: on
+                    ]
+                ),
+                id="Right no data on the border, window_size=3 and no data disp is 0",
+            ),
+            pytest.param(
+                np.array(  # left msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 1, 0, 0, 0],
+                        [0, 0, 0, 2, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                np.array(  # right msk
+                    [
+                        [0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0],
+                        [0, 3, 0, 1, 0],
+                        [0, 0, 0, 0, 0],
+                    ]
+                ),
+                -1,  # disp_col
+                1,  # disp_row
+                3,  # window_size
+                -5,  # no_data_disp
+                np.array(
+                    [
+                        # fmt: off
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_NODATA | Criteria.P2D_INVALID_MASK_RIGHT | Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE, Criteria.P2D_LEFT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_RIGHT_NODATA | Criteria.P2D_RIGHT_DISPARITY_OUTSIDE | Criteria.P2D_INVALID_MASK_LEFT | Criteria.P2D_INVALID_INIT_DISPARITY, Criteria.P2D_LEFT_BORDER],
+                        [Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER , Criteria.P2D_LEFT_BORDER],
+                        # fmt: on
+                    ]
+                ),
+                id="Mix of criteria with window_size=3 and no data disp is -5",
+            ),
+            # pylint: enable=line-too-long
+        ],
+    )
+    def test_get_criteria_dataarray_with_no_data_disp(
+        self, image_variable_disp, image, left_msk, cost_volumes, disp_col, disp_row, no_data_disp, expected_criteria
+    ):
+        """
+        Test get_criteria_dataarray method with different no data disparity values
+        """
+
+        image_variable_disp["msk"].data = left_msk
+        image_variable_disp["row_disparity"].attrs["no_data"] = no_data_disp
+        image_variable_disp["col_disparity"].attrs["no_data"] = no_data_disp
+
+        # image_variable_disp fixture is located in the file tests/unit_tests/test_criteria/conftest.py.
+        # Comments in the fixture show the minimum and maximum disparities for each point.
         criteria_dataarray = criteria.get_criteria_dataarray(
             left_image=image_variable_disp, right_image=image, cv=cost_volumes
         )

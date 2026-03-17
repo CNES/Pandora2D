@@ -45,6 +45,7 @@ from rasterio.windows import Window
 from scipy.ndimage import shift, zoom
 
 from pandora2d.types import Origin, Step
+from pandora2d.common import build_usable_data_mask
 
 
 class Datasets(NamedTuple):
@@ -291,25 +292,6 @@ def get_min_max_disp_from_dicts(
         disp_min_max[1, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
 
     return disp_min_max, disp_interval, nodata
-
-
-def build_usable_data_mask(disp_data: NDArray, nodata: float | None) -> NDArray[np.bool_]:
-    """
-    Build a boolean mask indicating which elements of the input array are usable.
-
-    An element is considered usable if it is finite (not NaN or infinite) and,
-    when a ``nodata`` value is provided, different from that value.
-
-    :param disp_data: Input array containing the data to be tested.
-    :param nodata: Value representing missing or invalid data.
-                   If ``None``, only finiteness is checked.
-    :return: A boolean array with the same shape as ``disp_data``, where
-             ``True`` indicates usable data.
-    """
-    mask = np.isfinite(disp_data)
-    if nodata is not None:
-        mask &= disp_data != nodata
-    return mask
 
 
 def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:

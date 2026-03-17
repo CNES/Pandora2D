@@ -149,7 +149,7 @@ def test_validity_mask_saved(
 
     # Check that validity_mask.tif contains eight bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 9
+        assert dataset.count == 10
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names
 
@@ -214,6 +214,6 @@ def test_validity_mask_saved_with_roi(
 
     # Check that validity_mask.tif contains eight bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 9
+        assert dataset.count == 10
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names

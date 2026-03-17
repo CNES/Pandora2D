@@ -104,15 +104,29 @@ def monoband_image():
     return xr.Dataset(
         {
             "im": (["row", "col"], data),
-            "row_disparity": (["band_disp", "row", "col"], np.ones((2, *data.shape)) * [[[1]], [[3]]]),
-            "col_disparity": (["band_disp", "row", "col"], np.ones((2, *data.shape)) * [[[1]], [[3]]]),
+            "row_disparity": xr.DataArray(
+                np.ones((2, *data.shape)) * [[[1]], [[3]]],
+                dims=["band_disp", "row", "col"],
+                attrs={"no_data": None},
+            ),
+            "col_disparity": xr.DataArray(
+                np.ones((2, *data.shape)) * [[[1]], [[3]]],
+                dims=["band_disp", "row", "col"],
+                attrs={"no_data": None},
+            ),
         },
         coords={
             "row": np.arange(data.shape[0]),
             "col": np.arange(data.shape[1]),
             "band_disp": ["min", "max"],
         },
-    ).assign_attrs({"no_data_img": -9999, "row_disparity_source": [1, 3], "col_disparity_source": [1, 3]})
+    ).assign_attrs(
+        {
+            "no_data_img": -9999,
+            "row_disparity_source": [1, 3],
+            "col_disparity_source": [1, 3],
+        }
+    )
 
 
 @pytest.fixture()

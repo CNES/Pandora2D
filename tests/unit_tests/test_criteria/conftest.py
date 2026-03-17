@@ -20,6 +20,8 @@
 
 # pylint: disable=redefined-outer-name
 
+import copy
+
 import numpy as np
 import pytest
 import xarray as xr
@@ -115,6 +117,113 @@ def image(img_size, disparity_cfg, valid_pixels, no_data_mask, start_point):
 
 
 @pytest.fixture()
+def image_variable_disp(image, img_size):
+    """Make image with variable disparity grids"""
+
+    # Make so when we change image_variable_disp mask it
+    # does not change image mask
+    img = copy.copy(image)
+    row, col = img_size
+
+    nb_col_set = int(col / 2)
+    nb_row_set = int(row / 2)
+
+    # Get variable col disparities
+
+    # Minimal col disparity grid is equal to:
+    # [[-3, -3, -5, -5, -5]
+    #  [-3, -3, -5, -5, -5]
+    #  [-3, -3, -5, -5, -5]
+    #  [-3, -3, -5, -5, -5]]
+    img["col_disparity"].sel(band_disp="min")[:, :nb_col_set] = -3
+
+    # Maximal col disparity grid is equal to:
+    # [[ 3,  3,  1,  1,  1]
+    #  [ 3,  3,  1,  1,  1]
+    #  [ 3,  3,  1,  1,  1]
+    #  [ 3,  3,  1,  1,  1]]
+    img["col_disparity"].sel(band_disp="max")[:, nb_col_set:] = 1
+
+    # Get variable row disparities
+
+    # Minimal row disparity grid is equal to:
+    # [[ 0,  0,  0,  0,  0]
+    #  [ 0,  0,  0,  0,  0]
+    #  [-1, -1, -1, -1, -1]
+    #  [-1, -1, -1, -1, -1]]
+    img["row_disparity"].sel(band_disp="min")[:nb_row_set, :] = 0
+
+    # Maximal row disparity grid is equal to:
+    # [[ 3,  3,  3,  3,  3]
+    #  [ 3,  3,  3,  3,  3]
+    #  [ 2,  2,  2,  2,  2]
+    #  [ 2,  2,  2,  2,  2]]
+
+    img["row_disparity"].sel(band_disp="max")[nb_row_set:, :] = 2
+
+    return img
+
+
+@pytest.fixture()
+def image_nan_disp(image, img_size):
+    """Make image with disparity grids containing nans values"""
+
+    # Make so when we change image_nan_disp mask it
+    # does not change image mask
+    img = copy.copy(image)
+    row, col = img_size
+
+    nb_col_set = int(col / 2)
+    nb_row_set = int(row / 2)
+
+    # Minimal col disparity grid is equal to:
+    # [[np.nan, np.nan, -5, -5, -5]
+    #  [np.nan, np.nan, -5, -5, -5]
+    #  [np.nan, np.nan, -5, -5, -5]
+    #  [np.nan, np.nan, -5, -5, -5]]
+    img["col_disparity"].sel(band_disp="min")[:, :nb_col_set] = np.nan
+
+    # Maximal row disparity grid is equal to:
+    # [[ 3,  3,  3,  3,  3]
+    #  [ 3,  3,  3,  3,  3]
+    #  [ np.nan,  np.nan,  np.nan,  np.nan,  np.nan]
+    #  [ np.nan,  np.nan,  np.nan,  np.nan,  np.nan]]
+
+    img["row_disparity"].sel(band_disp="max")[nb_row_set:, :] = np.nan
+
+    return img
+
+
+@pytest.fixture()
+def image_inf_disp(image, img_size):
+    """Make image with variable disparity grids containing inf values"""
+
+    # Make so when we change image_inf_disp mask it
+    # does not change image mask
+    img = copy.copy(image)
+    row, col = img_size
+
+    nb_col_set = int(col / 2)
+    nb_row_set = int(row / 2)
+
+    # Maximal col disparity grid is equal to:
+    # [[ 3,  3,  np.inf,  np.inf,  np.inf]
+    #  [ 3,  3,  np.inf,  np.inf,  np.inf]
+    #  [ 3,  3,  np.inf,  np.inf,  np.inf]
+    #  [ 3,  3,  np.inf,  np.inf,  np.inf]]
+    img["col_disparity"].sel(band_disp="max")[:, nb_col_set:] = np.inf
+
+    # Minimal row disparity grid is equal to:
+    # [[ np.inf,  np.inf,  np.inf,  np.inf,  np.inf]
+    #  [ np.inf,  np.inf,  np.inf,  np.inf,  np.inf]
+    #  [-1, -1, -1, -1, -1]
+    #  [-1, -1, -1, -1, -1]]
+    img["row_disparity"].sel(band_disp="min")[:nb_row_set, :] = np.inf
+
+    return img
+
+
+@pytest.fixture()
 def cost_volumes(matching_cost_cfg, image):
     """Compute a cost_volumes"""
     matching_cost_ = matching_cost.PandoraMatchingCostMethods(matching_cost_cfg)
@@ -124,20 +233,42 @@ def cost_volumes(matching_cost_cfg, image):
 
 
 @pytest.fixture()
-def criteria_dataarray(img_size, subpix, step, start_point):
+def row_disparity_source():
+    """
+    Row disparity source for criteria dataarray fixture
+    """
+    return [-1, 3]
+
+
+@pytest.fixture()
+def col_disparity_source():
+    """
+    Column disparity source for criteria dataarray fixture
+    """
+    return [-5, 3]
+
+
+@pytest.fixture()
+def criteria_dataarray(img_size, subpix, step, start_point, row_disparity_source, col_disparity_source):
     """
     Create a criteria dataarray
     """
+
     row = np.arange(start_point[0], img_size[0], step[0])
     col = np.arange(start_point[1], img_size[1], step[1])
-    shape = (len(row), len(col), len(np.arange(-1, 3.25, 1 / subpix)), len(np.arange(-5, 3.25, 1 / subpix)))
+    shape = (
+        len(row),
+        len(col),
+        len(np.arange(row_disparity_source[0], row_disparity_source[1] + 0.25, 1 / subpix)),
+        len(np.arange(col_disparity_source[0], col_disparity_source[1] + 0.25, 1 / subpix)),
+    )
     return xr.DataArray(
         np.full(shape, Criteria.VALID),
         coords={
             "row": row,
             "col": col,
-            "disp_row": np.arange(-1, 3.25, 1 / subpix),
-            "disp_col": np.arange(-5, 3.25, 1 / subpix),
+            "disp_row": np.arange(row_disparity_source[0], row_disparity_source[1] + 0.25, 1 / subpix),
+            "disp_col": np.arange(col_disparity_source[0], col_disparity_source[1] + 0.25, 1 / subpix),
         },
         dims=["row", "col", "disp_row", "disp_col"],
     )

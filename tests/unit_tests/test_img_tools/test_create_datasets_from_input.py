@@ -1317,23 +1317,6 @@ class TestGetMinMaxDispFromDictsNoData:
 
 
 @pytest.mark.parametrize(
-    ["disp_data", "nodata", "expected"],
-    [
-        pytest.param(np.array([1, 2]), None, [True, True], id="Nothing to filter"),
-        pytest.param(np.array([1, np.inf]), None, [True, False], id="inf"),
-        pytest.param(np.array([-np.inf, 2]), None, [False, True], id="-inf"),
-        pytest.param(np.array([np.nan, 2]), None, [False, True], id="nan"),
-        pytest.param(np.array([3, 2]), 3, [False, True], id="value"),
-        pytest.param(np.array([3, np.inf, np.nan, 2]), 3, [False, False, False, True], id="mix"),
-    ],
-)
-def test_build_usable_data_mask(disp_data, nodata, expected):
-    """Unusable values are masked to False."""
-    result = img_tools.build_usable_data_mask(disp_data, nodata)
-    assert (result == expected).all()
-
-
-@pytest.mark.parametrize(
     ["init_value", "range_value", "expected"],
     [
         pytest.param(1, 3, (-2, 4), id="int"),

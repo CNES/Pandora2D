@@ -49,9 +49,10 @@ Below is a summary of each criterion (clic on criterion's name to jump to its de
    * - :ref:`P2D_PEAK_ON_EDGE_explanation`
      - 2⁶ = 64
      - | The correlation peak is at the edge of disparity range.
-       | The calculations stopped at the pixellic stage.
-
-
+       | The calculations stopped at the pixellic stage
+   * - :ref:`P2D_INVALID_INIT_DISPARITY_explanation`
+     - 2⁷ = 128
+     - | The initial disparity is invalid
 
 Detailed Criteria's explanations
 --------------------------------
@@ -181,6 +182,28 @@ or merely point of a trend cut off by the chosen disparity range.
 In this case, the P2D_PEAK_ON_EDGE criterion is raised.
 
 .. image:: ./Images/criteria/peak_on_edge_criteria.drawio.svg
+    :align: center
+
+|
+|
+
+.. _P2D_INVALID_INIT_DISPARITY_explanation:
+
+P2D_INVALID_INIT_DISPARITY
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This criterion is raised when the initial disparity of the pixel is invalid.
+
+This situation can arise when providing a variable initial disparity (see :ref:`inputs`) that contains points with a value of no data 
+in the metadata of the initial disparity grid.
+In particular, when using disparity maps previously calculated by pandora2d as initial disparity grids, 
+the invalid pixels in these initial disparity grids correspond to pixels that could not be calculated by pandora2d during the previous execution. 
+
+.. note:: 
+    This criterion results from invalid points in initial disparity grids and it does not depend on the disparity values of the current execution. 
+    As a result, this criterion will be assigned to all disparities associated to this pixel in the criteria data array.
+
+.. image:: ./Images/criteria/invalid_init_disparity_criteria.drawio.svg
     :align: center
 
 |
