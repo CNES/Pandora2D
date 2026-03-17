@@ -347,8 +347,8 @@ class TestComparisonZncc:
         mean_row_error_cpp_zncc2 = compute_mean_error(zncc_2_cpp_row_map, row_shift)
         mean_row_error_python = compute_mean_error(python_row_map, row_shift)
 
-        zncc_1_cpp_col_map = read_result(zncc_cpp_config_path, "disparity_map/col_map.tif")
-        zncc_2_cpp_col_map = read_result(zncc_cpp_config_path, "disparity_map/col_map.tif")
+        zncc_1_cpp_col_map = read_result(zncc_1_cpp_config_path, "disparity_map/col_map.tif")
+        zncc_2_cpp_col_map = read_result(zncc_2_cpp_config_path, "disparity_map/col_map.tif")
         python_col_map = read_result(zncc_python_config_path, "disparity_map/col_map.tif")
         mean_col_error_cpp_zncc1 = compute_mean_error(zncc_1_cpp_col_map, col_shift)
         mean_col_error_cpp_zncc2 = compute_mean_error(zncc_2_cpp_col_map, col_shift)
