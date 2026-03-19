@@ -129,6 +129,12 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
   it contains disparity maps smaller than the image, these maps will serve as the ROI (see :ref:`roi`). 
 
 .. warning::
+    If you provide a path to a disparity grid or an output directory as the initial disparity, 
+    and one of the initial disparity grids contains sub-pixel values, then these sub-pixel values are rounded to the nearest integer.
+
+    Values with a decimal of .5 are rounded to the nearest even integer (as is done in NumPy's `round` function)
+
+.. warning::
     With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`), `nodata` only accepts `int` type.
     
     In addition, when the `nodata` value entered is `NaN` or `inf`, it is replaced by -9999  in the image datasets to avoid disrupting processing.
