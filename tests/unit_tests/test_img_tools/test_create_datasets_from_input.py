@@ -783,8 +783,6 @@ class TestGetMinMaxDispFromDicts:
     Test the get_min_max_disp_from_dicts method
     """
 
-    # Other invalid disparity values will be tested
-    # after the tickets for processing invalid disp have been done
     @pytest.fixture()
     def invalid_disp(self):
         """
@@ -816,6 +814,14 @@ class TestGetMinMaxDispFromDicts:
                 [1, 1],
                 np.nan,
                 id="Step=[1,1]",
+            ),
+            pytest.param(
+                (375, 450),
+                (375, 450),
+                {"row": 0, "col": 0},
+                [1, 1],
+                -9999,
+                id="Step=[1,1] and invalid_disp = -9999",
             ),
             pytest.param(
                 (63, 113),
@@ -896,30 +902,30 @@ class TestGetMinMaxDispFromDicts:
                 (5, 5),
                 {"row": 11, "col": 11},
                 [1, 1],
-                np.nan,
+                np.inf,
                 {"col": {"first": 11, "last": 15}, "row": {"first": 11, "last": 15}, "margins": (2, 1, 1, 2)},
                 np.array(
                     [
-                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
-                        [np.nan, np.nan, -3.0, -3.0, -3.0, -3.0, -3.0, np.nan],
-                        [np.nan, np.nan, -5.0, -5.0, -5.0, -5.0, -5.0, np.nan],
-                        [np.nan, np.nan, -2.0, -2.0, -2.0, -2.0, -2.0, np.nan],
-                        [np.nan, np.nan, -3.0, -3.0, -3.0, -3.0, -3.0, np.nan],
-                        [np.nan, np.nan, -5.0, -5.0, -5.0, -5.0, -5.0, np.nan],
-                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
-                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf],
+                        [np.inf, np.inf, -3.0, -3.0, -3.0, -3.0, -3.0, np.inf],
+                        [np.inf, np.inf, -5.0, -5.0, -5.0, -5.0, -5.0, np.inf],
+                        [np.inf, np.inf, -2.0, -2.0, -2.0, -2.0, -2.0, np.inf],
+                        [np.inf, np.inf, -3.0, -3.0, -3.0, -3.0, -3.0, np.inf],
+                        [np.inf, np.inf, -5.0, -5.0, -5.0, -5.0, -5.0, np.inf],
+                        [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf],
+                        [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf],
                     ]
                 ),
                 np.array(
                     [
-                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
-                        [np.nan, np.nan, 7.0, 7.0, 7.0, 7.0, 7.0, np.nan],
-                        [np.nan, np.nan, 5.0, 5.0, 5.0, 5.0, 5.0, np.nan],
-                        [np.nan, np.nan, 8.0, 8.0, 8.0, 8.0, 8.0, np.nan],
-                        [np.nan, np.nan, 7.0, 7.0, 7.0, 7.0, 7.0, np.nan],
-                        [np.nan, np.nan, 5.0, 5.0, 5.0, 5.0, 5.0, np.nan],
-                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
-                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf],
+                        [np.inf, np.inf, 7.0, 7.0, 7.0, 7.0, 7.0, np.inf],
+                        [np.inf, np.inf, 5.0, 5.0, 5.0, 5.0, 5.0, np.inf],
+                        [np.inf, np.inf, 8.0, 8.0, 8.0, 8.0, 8.0, np.inf],
+                        [np.inf, np.inf, 7.0, 7.0, 7.0, 7.0, 7.0, np.inf],
+                        [np.inf, np.inf, 5.0, 5.0, 5.0, 5.0, 5.0, np.inf],
+                        [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf],
+                        [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf],
                     ]
                 ),
                 id="Step=[1,1] - Equivalent of directory disparity",
