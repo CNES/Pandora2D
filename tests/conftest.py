@@ -402,12 +402,34 @@ def correct_grid_data(correct_grid_shape):
 
 
 @pytest.fixture
+def subpix_grid_data(correct_grid_shape):
+    """
+    Array of size left_img_shape with alternating rows of 2.5, 0.75 and 3.25
+    """
+    data = np.full(correct_grid_shape, 2.5)
+    data[1::3] = 0.75
+    data[2::3] = 3.25
+    return data
+
+
+@pytest.fixture
 def correct_grid(correct_grid_data, create_disparity_grid_fixture, no_data_disp):
     """Create a correct initial disparity grid and save it in tmp"""
     return create_disparity_grid_fixture(
         correct_grid_data,
         5,
         "disparity.tif",
+        nodata=no_data_disp,
+    )
+
+
+@pytest.fixture
+def subpix_grid(subpix_grid_data, create_disparity_grid_fixture, no_data_disp):
+    """Create a subpix initial disparity grid with sub-pixel values and save it in tmp"""
+    return create_disparity_grid_fixture(
+        subpix_grid_data,
+        5,
+        "subpix_disparity.tif",
         nodata=no_data_disp,
     )
 
