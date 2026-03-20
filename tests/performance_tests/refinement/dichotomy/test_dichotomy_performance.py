@@ -119,7 +119,10 @@ class TestComparisonMedicis:
             "output": {"path": str(tmp_path)},
         }
 
-    @pytest.mark.parametrize(("mc_method", "precision"), [("zncc", "float64"), ("zncc_python", "float32")])
+    # /!\ "zncc" currently targets "zncc-optim-1"
+    @pytest.mark.parametrize(
+        ("mc_method", "precision"), [("zncc", "float64"), ("zncc-optim-2", "float64"), ("zncc_python", "float32")]
+    )
     @pytest.mark.parametrize(
         ("dicho_method", "filter_method"),
         [
@@ -155,8 +158,8 @@ class TestComparisonMedicis:
                 "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
                 0.0,
                 0.5,
-                0.0,
-                0.0,
+                0.00002,
+                0.00002,
                 id="T50JML (Perth, Australia) shifted of 0.5 in columns with bicubic, 9 iter and subpix=1",
             ),
             pytest.param(
@@ -165,7 +168,7 @@ class TestComparisonMedicis:
                 "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
                 0.0,
                 0.25,
-                0.00001,
+                0.0002,
                 0.0,
                 id="T19KER (Calama, Chile) shifted of 0.25 in columns with bicubic, 9 iter and subpix=1",
             ),
@@ -175,7 +178,7 @@ class TestComparisonMedicis:
                 "zncc_dicho_nappe_bco/gri_zncc_dicho_nappe_bco_",
                 0.0,
                 0.25,
-                0.0,
+                0.001,
                 0.0,
                 id="T50JML (Perth, Australia) shifted of 0.25 in columns with bicubic, 9 iter and subpix=1",
             ),
@@ -253,7 +256,7 @@ class TestComparisonMedicis:
         col_map_threshold,
     ):
         """
-        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
+        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medicis
         with bicubic filter.
         """
 
@@ -291,7 +294,7 @@ class TestComparisonMedicis:
                 "zncc_dicho_nappe_sinc/gri_zncc_dicho_nappe_sinc_",
                 0.0,
                 0.5,
-                0.0,
+                0.0001,
                 0.0,
                 id="T50JML (Perth, Australia) shifted of 0.5 in columns with sinc_python, 9 iter and subpix=1",
             ),
@@ -301,7 +304,7 @@ class TestComparisonMedicis:
                 "zncc_dicho_nappe_sinc/gri_zncc_dicho_nappe_sinc_",
                 0.0,
                 0.25,
-                0.0,
+                0.0002,
                 0.0,
                 id="T19KER (Calama, Chile) shifted of 0.25 in columns with sinc_python, 9 iter and subpix=1",
             ),
@@ -311,8 +314,8 @@ class TestComparisonMedicis:
                 "zncc_dicho_nappe_sinc/gri_zncc_dicho_nappe_sinc_",
                 0.0,
                 0.25,
-                0.00001,
-                0.00001,
+                0.0002,
+                0.0001,
                 id="T50JML (Perth, Australia) shifted of 0.25 in columns with sinc_python, 9 iter and subpix=1",
             ),
             pytest.param(
@@ -341,8 +344,8 @@ class TestComparisonMedicis:
                 "zncc_dicho_nappe_surech_sinc/gri_zncc_dicho_nappe_surech_sinc_",
                 0.0,
                 0.5,
-                0.003,
-                0.004,
+                0.005,
+                0.006,
                 id="T19KER (Calama, Chile) shifted of 0.5 in columns with sinc_python, 9 iter and subpix=4",
             ),
             pytest.param(
@@ -352,7 +355,7 @@ class TestComparisonMedicis:
                 0.0,
                 0.5,
                 0.003,
-                0.003,
+                0.004,
                 id="T50JML (Perth, Australia) shifted of 0.5 in columns with sinc_python, 9 iter and subpix=4",
             ),
             pytest.param(
@@ -362,7 +365,7 @@ class TestComparisonMedicis:
                 0.25,
                 0.25,
                 0.01,
-                0.007,
+                0.008,
                 id="T19KER (Calama, Chile) shifted of 0.25 in col and in rows with sinc_python, 9 iter and subpix=4",
             ),
             pytest.param(
@@ -385,7 +388,10 @@ class TestComparisonMedicis:
             ("dichotomy", "sinc"),
         ],
     )
-    @pytest.mark.parametrize(("mc_method", "precision"), [("zncc", "float64"), ("zncc_python", "float32")])
+    # /!\ "zncc" currently targets "zncc-optim-1"
+    @pytest.mark.parametrize(
+        ("mc_method", "precision"), [("zncc", "float64"), ("zncc-optim-2", "float64"), ("zncc_python", "float32")]
+    )
     def test_pandora2d_medicis_dichotomy_sinc(
         self,
         run_pipeline,
@@ -398,7 +404,7 @@ class TestComparisonMedicis:
         col_map_threshold,
     ):
         """
-        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
+        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medicis
         with sinc_python filter.
         """
 

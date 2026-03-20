@@ -36,12 +36,10 @@ struct TypePairWindow {
 };
 
 TYPE_TO_STRING_AS("Float", TypePairWindow<float, P2d::Matrixf>);
-// TYPE_TO_STRING_AS("Double", TypePairWindow<double, P2d::MatrixD>);
 
 TEST_CASE_TEMPLATE("Test get_window method",
                    T,
-                   TypePairWindow<float, P2d::Matrixf>// ,
-                   // TypePairWindow<double, P2d::MatrixD>
+                   TypePairWindow<float, P2d::Matrixf>
 		   ) {
   using WindowElementType = typename T::WindowElementType;
   using WindowMatrixType = typename T::WindowMatrixType;

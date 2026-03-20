@@ -35,12 +35,10 @@ struct VectorTypePair {
 };
 
 TYPE_TO_STRING_AS("Float", VectorTypePair<float, P2d::Vectorf>);
-// TYPE_TO_STRING_AS("Double", VectorTypePair<double, P2d::VectorD>);
 
 TEST_CASE_TEMPLATE("Test constructor",
                    T,
-                   VectorTypePair<float, P2d::Vectorf>// ,
-                   // VectorTypePair<double, P2d::VectorD>
+                   VectorTypePair<float, P2d::Vectorf>
 		   ) {
   using Type = typename T::Type;
   using VectorType = typename T::VectorType;
@@ -95,12 +93,10 @@ struct TypeStruct {
 };
 
 TYPE_TO_STRING_AS("Float", TypeStruct<float, P2d::Vectorf, P2d::Matrixf>);
-// TYPE_TO_STRING_AS("Double", TypeStruct<double, P2d::VectorD, P2d::MatrixD>);
 
 TEST_CASE_TEMPLATE("Test calculate_histogram1D function",
                    T,
-                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>// ,
-                   // TypeStruct<double, P2d::VectorD, P2d::MatrixD>
+                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>
 		   ) {
   using Type = typename T::Type;
   using VectorType = typename T::VectorType;

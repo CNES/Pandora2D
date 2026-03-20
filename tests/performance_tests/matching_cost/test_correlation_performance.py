@@ -179,7 +179,7 @@ class TestComparisonMedicis:
                 "zncc-optim-2",
                 4,
                 "zncc/gri_resultat_",
-                id="T19KER (Calama, Chile) shifted of -0.25 in columns with subpix=4, zncc",
+                id="T19KER (Calama, Chile) shifted of -0.25 in columns with subpix=4, zncc (optim-2)",
             ),
             pytest.param(
                 "T50JML/r+0.00c-0.25/",
@@ -312,53 +312,36 @@ class TestComparisonZncc:
         "cpp_float_precision",
         ["float64", "float32"],
     )
-    def test_compare_znccs(
-        self,
-        tmp_path,
-        configuration,
-        row_shift,
-        col_shift,
-        cpp_float_precision,
-    ):
+    @pytest.mark.parametrize(
+        "zncc_method",
+        ["zncc", "zncc-optim-2"],  # /!\ "zncc" currently targets "zncc-optim-1"
+    )
+    def test_compare_znccs(self, tmp_path, configuration, row_shift, col_shift, cpp_float_precision, zncc_method):
         """
         Tests that the pandora2d disparity maps from ZNCC in Python or C++ are similar.
         """
 
         zncc_python_config_path = save_config(configuration, tmp_path / "python")
 
-        # /!\ "zncc" currently target "zncc-optim-1"
-        zncc_1_cpp_config = deepcopy(configuration)
-        zncc_2_cpp_config = deepcopy(configuration)
-        zncc_1_cpp_config["pipeline"]["matching_cost"]["matching_cost_method"] = "zncc"
-        zncc_2_cpp_config["pipeline"]["matching_cost"]["matching_cost_method"] = "zncc-optim-2"
-        zncc_1_cpp_config["pipeline"]["matching_cost"]["float_precision"] = cpp_float_precision
-        zncc_2_cpp_config["pipeline"]["matching_cost"]["float_precision"] = cpp_float_precision
-        zncc_1_cpp_config_path = save_config(zncc_1_cpp_config, tmp_path / "cpp_zncc1")
-        zncc_2_cpp_config_path = save_config(zncc_2_cpp_config, tmp_path / "cpp_zncc2")
+        zncc_cpp_config = deepcopy(configuration)
+        zncc_cpp_config["pipeline"]["matching_cost"]["matching_cost_method"] = zncc_method
+        zncc_cpp_config["pipeline"]["matching_cost"]["float_precision"] = cpp_float_precision
+        zncc_cpp_config_path = save_config(zncc_cpp_config, tmp_path / "cpp")
 
         pandora2d.main(zncc_python_config_path, verbose=False)
-        pandora2d.main(zncc_1_cpp_config_path, verbose=False)
-        pandora2d.main(zncc_2_cpp_config_path, verbose=False)
+        pandora2d.main(zncc_cpp_config_path, verbose=False)
 
-        zncc_1_cpp_row_map = read_result(zncc_1_cpp_config_path, "disparity_map/row_map.tif")
-        zncc_2_cpp_row_map = read_result(zncc_2_cpp_config_path, "disparity_map/row_map.tif")
+        cpp_row_map = read_result(zncc_cpp_config_path, "disparity_map/row_map.tif")
         python_row_map = read_result(zncc_python_config_path, "disparity_map/row_map.tif")
-        mean_row_error_cpp_zncc1 = compute_mean_error(zncc_1_cpp_row_map, row_shift)
-        mean_row_error_cpp_zncc2 = compute_mean_error(zncc_2_cpp_row_map, row_shift)
-        mean_row_error_python = compute_mean_error(python_row_map, row_shift)
+        mean_row_error_python = compute_mean_error(cpp_row_map, row_shift)
+        mean_row_error_cpp = compute_mean_error(python_row_map, row_shift)
 
-        zncc_1_cpp_col_map = read_result(zncc_1_cpp_config_path, "disparity_map/col_map.tif")
-        zncc_2_cpp_col_map = read_result(zncc_2_cpp_config_path, "disparity_map/col_map.tif")
+        cpp_col_map = read_result(zncc_cpp_config_path, "disparity_map/col_map.tif")
         python_col_map = read_result(zncc_python_config_path, "disparity_map/col_map.tif")
-        mean_col_error_cpp_zncc1 = compute_mean_error(zncc_1_cpp_col_map, col_shift)
-        mean_col_error_cpp_zncc2 = compute_mean_error(zncc_2_cpp_col_map, col_shift)
-        mean_col_error_python = compute_mean_error(python_col_map, col_shift)
+        mean_col_error_python = compute_mean_error(cpp_col_map, col_shift)
+        mean_col_error_cpp = compute_mean_error(python_col_map, col_shift)
 
-        np.testing.assert_array_equal(zncc_1_cpp_row_map, python_row_map)
-        np.testing.assert_array_equal(zncc_1_cpp_col_map, python_col_map)
-        np.testing.assert_array_equal(zncc_2_cpp_row_map, python_row_map)
-        np.testing.assert_array_equal(zncc_2_cpp_col_map, python_col_map)
-        assert mean_row_error_cpp_zncc1 == pytest.approx(mean_row_error_python)
-        assert mean_col_error_cpp_zncc1 == pytest.approx(mean_col_error_python)
-        assert mean_row_error_cpp_zncc2 == pytest.approx(mean_row_error_python)
-        assert mean_col_error_cpp_zncc2 == pytest.approx(mean_col_error_python)
+        np.testing.assert_array_equal(cpp_row_map, python_row_map)
+        np.testing.assert_array_equal(cpp_col_map, python_col_map)
+        assert mean_row_error_cpp == pytest.approx(mean_row_error_python)
+        assert mean_col_error_cpp == pytest.approx(mean_col_error_python)

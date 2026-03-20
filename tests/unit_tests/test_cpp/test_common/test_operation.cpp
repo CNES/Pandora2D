@@ -86,3 +86,4 @@ TEST_CASE("all_same") {
     CHECK(all_same(data) == false);
   }
 }
+

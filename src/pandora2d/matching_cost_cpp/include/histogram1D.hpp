@@ -122,7 +122,6 @@ class Histogram1D {
    */
   void create(const P2d::Matrixf& image) {
     m_bins_width = get_bins_width<T>(image);
-    T num_elem = static_cast<T>(image.size());
     
     T min_coeff = static_cast<T>(image.minCoeff());
     T max_coeff = static_cast<T>(image.maxCoeff());
@@ -134,19 +133,14 @@ class Histogram1D {
     if (m_nb_bins > NB_BINS_MAX) {
       m_nb_bins = NB_BINS_MAX;
       
-      float sum_sq = 0.f;
-      float sum = 0.f;    // Initilializations for the variance E(X^2) - E(X)^2
-      const float *reader; // Use a de-referenced pointer to read the matrix
-      std::size_t idx;
+      float sum;    // Initilializations for the variance E(X^2) - E(X)^2
+      float sum_sq;
+      calculateSums(image, sum, sum_sq);
       
-      T moment, mean;   // Variance is stored within the moment
-      
-      for (idx = 0, reader = &image(0, 0); idx < image.size(); ++idx, reader++) {
-	sum += *reader;
-	sum_sq += *reader * *reader;
-      }
-      mean = static_cast<T>(sum) / num_elem;
-      moment = static_cast<T>(sum_sq) / num_elem - mean * mean;
+      // Variance is stored within the moment, forces T type for compilation
+      T num_elem = static_cast<T>(image.size());
+      T mean = static_cast<T>(sum) / num_elem;
+      T moment = static_cast<T>(sum_sq) / num_elem - mean * mean;
       // Use float precision
       max_coeff = std::min(static_cast<T>(4.) * moment, max_coeff);
       min_coeff = std::max(static_cast<T>(-4.) * moment, min_coeff);

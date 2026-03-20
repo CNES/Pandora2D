@@ -70,3 +70,26 @@ bool all_same(const P2d::VectorD& data) {
   }
   return true;
 }
+
+/**
+ * @brief Ccompute sum and sum of squares from Eigen matrix
+ *
+ * @param Eigen P2d::Matrixf
+ * @param sum : reference to store sum inside
+ * @param sum_sq : reference to store sum of squares inside
+ */
+void calculateSums(const P2d::Matrixf& image, float& sum, float& sum_sq) {
+  // Initialize sum and sum of squares
+  sum = 0.f;
+  sum_sq = 0.f;
+
+  // Use de-referenced pointer on image
+  const float* reader;
+  Eigen::Index idx;
+
+  // Compute sum and sum of squares
+  for (idx = 0, reader = &image(0, 0); idx < image.size(); ++idx, reader++) {
+    sum += *reader;
+    sum_sq += *reader * *reader;
+  }
+}

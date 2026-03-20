@@ -364,30 +364,18 @@ def python_matching_cost_instance(python_matching_cost_config):
     return matching_cost_class(python_matching_cost_config)
 
 
-@pytest.fixture
-def cpp_matching_cost_config_opt1(matching_cost_config):
+# /!\ "zncc" currently target "zncc-optim-1"
+@pytest.fixture(params=["zncc", "zncc-optim-2"])
+def cpp_matching_cost_config(matching_cost_config):
     config = deepcopy(matching_cost_config)
-    config["matching_cost_method"] = "zncc-optim-1"
+    config["matching_cost_method"] = "zncc"
     return config
 
 
 @pytest.fixture
-def cpp_matching_cost_config_opt2(matching_cost_config):
-    config = deepcopy(matching_cost_config)
-    config["matching_cost_method"] = "zncc-optim-2"
-    return config
-
-
-@pytest.fixture
-def cpp_matching_cost_instance_opt1(cpp_matching_cost_config_opt1):
-    matching_cost_class = matching_cost.MatchingCostRegistry.get(cpp_matching_cost_config_opt1["matching_cost_method"])
-    return matching_cost_class(cpp_matching_cost_config_opt1)
-
-
-@pytest.fixture
-def cpp_matching_cost_instance_opt2(cpp_matching_cost_config_opt2):
-    matching_cost_class = matching_cost.MatchingCostRegistry.get(cpp_matching_cost_config_opt2["matching_cost_method"])
-    return matching_cost_class(cpp_matching_cost_config_opt2)
+def cpp_matching_cost_instance(cpp_matching_cost_config):
+    matching_cost_class = matching_cost.MatchingCostRegistry.get(cpp_matching_cost_config["matching_cost_method"])
+    return matching_cost_class(cpp_matching_cost_config)
 
 
 @pytest.fixture
@@ -510,10 +498,8 @@ def right_dataset(make_dataset, right_data):
 def test_zncc_python_vs_cpp(
     python_matching_cost_config,
     python_matching_cost_instance,
-    cpp_matching_cost_config_opt1,
-    cpp_matching_cost_config_opt2,
-    cpp_matching_cost_instance_opt1,
-    cpp_matching_cost_instance_opt2,
+    cpp_matching_cost_config,
+    cpp_matching_cost_instance,
     left_dataset,
     right_dataset,
 ):
@@ -526,30 +512,16 @@ def test_zncc_python_vs_cpp(
         img_left=left_dataset, img_right=right_dataset
     )
 
-    cpp_matching_cost_instance_opt1.allocate(
-        img_left=left_dataset, img_right=right_dataset, cfg=cpp_matching_cost_config_opt1
-    )
-    cost_volume_cpp_opt1 = cpp_matching_cost_instance_opt1.compute_cost_volumes(
-        img_left=left_dataset, img_right=right_dataset
-    )
-
-    cpp_matching_cost_instance_opt2.allocate(
-        img_left=left_dataset, img_right=right_dataset, cfg=cpp_matching_cost_config_opt2
-    )
-    cost_volume_cpp_opt2 = cpp_matching_cost_instance_opt2.compute_cost_volumes(
-        img_left=left_dataset, img_right=right_dataset
-    )
+    cpp_matching_cost_instance.allocate(img_left=left_dataset, img_right=right_dataset, cfg=cpp_matching_cost_config)
+    cost_volume_cpp = cpp_matching_cost_instance.compute_cost_volumes(img_left=left_dataset, img_right=right_dataset)
 
     # In C++, invalid points are not computed, but in Python they are, so to compare results, we need to mask invalids:
-    validity_mask_cpp_opt1 = cost_volume_cpp_opt1["criteria"].data == Criteria.VALID
-    valid_cost_volume_cpp_opt1 = cost_volume_cpp_opt1["cost_volumes"].data[validity_mask_cpp_opt1]
-    validity_mask_cpp_opt2 = cost_volume_cpp_opt2["criteria"].data == Criteria.VALID
-    valid_cost_volume_cpp_opt2 = cost_volume_cpp_opt2["cost_volumes"].data[validity_mask_cpp_opt2]
+    validity_mask_cpp = cost_volume_cpp["criteria"].data == Criteria.VALID
+    valid_cost_volume_cpp = cost_volume_cpp["cost_volumes"].data[validity_mask_cpp]
     validity_mask_python = cost_volume_python["criteria"].data == Criteria.VALID
     valid_cost_volume_python = cost_volume_python["cost_volumes"].data[validity_mask_python]
 
-    np.testing.assert_array_almost_equal(valid_cost_volume_cpp_opt1, valid_cost_volume_python, decimal=7)
-    np.testing.assert_array_almost_equal(valid_cost_volume_cpp_opt2, valid_cost_volume_python, decimal=7)
+    np.testing.assert_array_almost_equal(valid_cost_volume_cpp, valid_cost_volume_python, decimal=7)
 
 
 @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "mutual_information"])

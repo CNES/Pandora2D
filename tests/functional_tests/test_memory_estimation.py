@@ -161,8 +161,11 @@ class TestEstimateTotalMemoryConsumption:
             rel=memory_estimation.RELATIVE_ESTIMATION_MARGIN,
         )
 
+    # /!\ "zncc" currently targets "zncc-optim-1"
     @pytest.mark.usefixtures("add_roi_to_config")
-    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information", "sad", "zncc"])
+    @pytest.mark.parametrize(
+        "matching_cost_method", ["zncc_python", "mutual_information", "sad", "zncc", "zncc-optim-2"]
+    )
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 4])
     @pytest.mark.parametrize("deformation_grid_mode", [True, False])

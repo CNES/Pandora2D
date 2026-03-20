@@ -60,7 +60,7 @@ def test_check_conf_zncc():
 
 def test_check_conf_zncc_optim_2():
     """
-    Description : test check_conf of matching cost pipeline with zncc
+    Description : test check_conf of matching cost pipeline with zncc (optim-2)
     """
     matching_cost.CorrelationMethods({"matching_cost_method": "zncc-optim-2", "window_size": 5})
 
