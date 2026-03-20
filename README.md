@@ -59,8 +59,8 @@ Download our data sample to start right away !
     # run Pandora2d
     pandora2d data_samples/json_conf_files/a_basic_pipeline.json
 
-    # The columns disparity map is saved in  "./output_dir/disparity_map/col_map.tif"
-    # The row disparity map is saved in  "./output_dir/disparity_map/row_map.tif"
+    # The columns disparity map is saved in  "./data_samples/json_conf_files/a_basic_pipeline_output/disparity_map/col_map.tif".
+    # The row disparity map is saved in  "./data_samples/json_conf_files/a_basic_pipeline_output/disparity_map/row_map.tif".
 ```
 
 ## To go further
