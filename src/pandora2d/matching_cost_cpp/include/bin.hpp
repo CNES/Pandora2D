@@ -44,14 +44,14 @@ typedef enum bin_method {
  */
 template <typename T>
 T get_bins_width_scott(const P2d::Matrixf& image) {
-  float sum = 0;
-  float sum_sq = 0;
-  // Use de-referenced pointer to read matrix element
-  const float *reader;
-  std::size_t idx;
+  float sum = 0.f;
+  float sum_sq = 0.f;
   
   auto num_elem = static_cast<T>(image.size());
 
+  // Use de-referenced pointer to read matrix element
+  const float *reader;
+  std::size_t idx;
   // Compute variance according to the formula: E(X^2) - E(X)^2
   // The sum is computed in float as the input image
   for (idx = 0, reader = &image(0, 0); idx < image.size(); ++idx, reader++) {

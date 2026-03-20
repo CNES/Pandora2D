@@ -122,22 +122,24 @@ class Histogram1D {
    */
   void create(const P2d::Matrixf& image) {
     m_bins_width = get_bins_width<T>(image);
-    float sum_sq = 0;
-    float sum = 0;    // Initilializations for the variance E(X^2) - E(X)^2
-    const float *reader; // Use a de-referenced pointer to read the matrix
-    std::size_t idx;
     T num_elem = static_cast<T>(image.size());
     
     T min_coeff = static_cast<T>(image.minCoeff());
     T max_coeff = static_cast<T>(image.maxCoeff());
     T dynamic_range = max_coeff - min_coeff;
-    T moment, mean;   // Variance is stored within the moment
     
     m_nb_bins = static_cast<int>(1. + (dynamic_range / m_bins_width));
 
     // check nb_bins > NB_BINS_MAX
     if (m_nb_bins > NB_BINS_MAX) {
       m_nb_bins = NB_BINS_MAX;
+      
+      float sum_sq = 0.f;
+      float sum = 0.f;    // Initilializations for the variance E(X^2) - E(X)^2
+      const float *reader; // Use a de-referenced pointer to read the matrix
+      std::size_t idx;
+      
+      T moment, mean;   // Variance is stored within the moment
       
       for (idx = 0, reader = &image(0, 0); idx < image.size(); ++idx, reader++) {
 	sum += *reader;

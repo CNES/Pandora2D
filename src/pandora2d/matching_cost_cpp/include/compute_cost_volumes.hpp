@@ -77,13 +77,14 @@ template <typename T>
 T calculate_correlation(const std::string& method,
                         const P2d::Matrixf& left_image,
                         const P2d::Matrixf& right_image) {
-  std::map<std::string, std::function<T(const P2d::Matrixf&, const P2d::Matrixf&)>>
-      method_map = {{"mutual_information", calculate_mutual_information<T>},
-                    {"zncc-optim-2", calculate_zncc_opt2<T>}};
-  auto it = method_map.find(method);
-
   // Compute correlation between left and right image
-  return it->second(left_image, right_image);
+  
+  if (method == "mutual_information") {
+    return calculate_mutual_information<T>(left_image, right_image);
+  }
+  else { // Default targets ZNCC
+    return calculate_zncc_opt2<T>(left_image, right_image);
+  }
 }
 
 /**

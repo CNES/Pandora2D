@@ -239,23 +239,23 @@ template <typename T>
 inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
 			     const P2d::Matrixf& right_image) {
   const std::size_t window_area = left_image.size();
+
+  float sum_left = 0.f;
+  float sum_right = 0.f;
+  float sum_left_sq = 0.f;
+  float sum_right_sq = 0.f;
+  float sum_cross = 0.f;
+
+  // Compute mean and variance, variance uses the following formula: E(X^2) - E(X)^2
+  // It is computed in float as the input image
   // Use de-referenced pointers to read the left and right images
   const float *left_value;
   const float *right_value;
   std::size_t idx;
 
-  // var_wa as window_area * variance is stored, it avoids very small values
-  T var_left_wa;
-  T var_right_wa;
-
-  float sum_left = 0;
-  float sum_right = 0;
-  float sum_left_sq = 0;
-  float sum_right_sq = 0;
-  float sum_cross = 0;
-
-  // Compute mean and variance, variance uses the following formula: E(X^2) - E(X)^2
-  // It is computed in float as the input image
+  // The use of double pointers is mandatory to compute all (co)variances
+  //  in one loop. It assumes that window_area is the same for both images
+  //  (also mandatory for ZNCC).
   for (idx = 0, left_value = &left_image(0, 0), right_value = &right_image(0, 0);
        idx < window_area;
        ++idx, left_value++, right_value++) {
@@ -272,9 +272,12 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
   auto sum_right_T = static_cast<T>(sum_right);
   // Here it is straightforward that variance = sum.^2 / num_elem - (sum / num_elem )^2
   //   num_elem * variance = sum.^2 - sum*sum / num_elem
-  // NOTE: sum.^2 is the sum of the squared elements, sum*sum is the final sum squared.  
-  var_left_wa = static_cast<T>(sum_left_sq) - sum_left_T * sum_left_T / window_area;
-  var_right_wa = static_cast<T>(sum_right_sq) - sum_right_T * sum_right_T / window_area; 
+  // NOTE: sum.^2 is the sum of the squared elements, sum*sum is the final sum squared.
+
+  // var_wa as window_area * variance is stored, it avoids very small values
+  // Type T imposed to not interpret the formula
+  T var_left_wa = static_cast<T>(sum_left_sq) - sum_left_T * sum_left_T / window_area;
+  T var_right_wa = static_cast<T>(sum_right_sq) - sum_right_T * sum_right_T / window_area; 
 
   if (var_left_wa <= (VAR_EPSILON * window_area) || var_right_wa <= (VAR_EPSILON * window_area)) {
     return 0.0;
