@@ -151,7 +151,8 @@ class TestSegmentMode:
                 "zncc-optim-2",
                 2,
                 40,
-                id="Pipeline without refinement, zncc cpp (optim-2), subpix=2 and no enough memory without segment mode",
+                id="Pipeline without refinement, zncc cpp (optim-2),"
+                + "subpix=2 and no enough memory without segment mode",
             ),
         ],
     )
@@ -249,7 +250,7 @@ class TestSegmentMode:
                 "zncc-optim-2",
                 1,
                 15,
-                id="101x101 ROI, 15 MB memory per work, mask, zncc cpp (optim-2) with refinement",
+                id="101x101 ROI, 15 MB memory per work, mask," + "zncc cpp (optim-2) with refinement",
             ),
             pytest.param(
                 "correct_input_cfg",
@@ -285,7 +286,7 @@ class TestSegmentMode:
                 "zncc-optim-2",
                 4,
                 15,
-                id="51x51 ROI, 15 MB memory per work, mask, subpix=4, zncc cpp (optim-2) without refinement",
+                id="51x51 ROI, 15 MB memory per work, mask, subpix=4," + "zncc cpp (optim-2) without refinement",
             ),
             pytest.param(
                 "correct_input_with_left_right_mask",
