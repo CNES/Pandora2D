@@ -39,7 +39,6 @@ from pandora2d.state_machine import Pandora2DMachine
 from .check_configuration import check_conf, get_tif_shape_list
 from .model_estimation import get_init_disparity_grids_with_mesh
 
-
 # Multiscale pipeline logger
 logger = logging.getLogger(__name__)
 
@@ -231,6 +230,7 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
 
     output_path = checked_cfg["multiscale"]["output"] + "/" + "iteration_"
 
+    pandora2d_machine = Pandora2DMachine()
     for resolution in range(1, len(tif_files_path_left) + 1):
 
         logger.info("--- Computation for iteration %d ---", resolution)
@@ -248,7 +248,6 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
             pandora2d_cfg["input"]["row_disparity"]["init"] = output_path + str(resolution) + "/init_grid_row.tif"
             pandora2d_cfg["input"]["col_disparity"]["init"] = output_path + str(resolution) + "/init_grid_col.tif"
 
-        pandora2d_machine = Pandora2DMachine()
         checked_pandora2d_cfg = pandora2d.check_configuration.check_conf(pandora2d_cfg, pandora2d_machine)
 
         # Run pandora2D machine
@@ -286,6 +285,7 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
         )
         # Save pandora2d configuration
         pandora2d.common.save_config(multiscale_completed_cfg)
+        pandora2d_machine.run_exit()
 
 
 def main():

@@ -77,12 +77,12 @@ def make_position_vectors(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArr
     col_coords = dataset_disp_maps["col"].values * COMPRESSION_FACTOR
     row_coords = dataset_disp_maps["row"].values * COMPRESSION_FACTOR
 
-    init_col_coords, init_row_coords = np.meshgrid(col_coords, row_coords)
+    init_col_2d_coords, init_row_2d_coords = np.meshgrid(col_coords, row_coords)
 
     # final positions are computed using initial positions
     # to which we add the disparities calculated by pandora2d
-    final_col_coords = init_col_coords + dataset_disp_maps["col_map"].data * COMPRESSION_FACTOR
-    final_row_coords = init_row_coords + dataset_disp_maps["row_map"].data * COMPRESSION_FACTOR
+    final_col_2d_coords = init_col_2d_coords + dataset_disp_maps["col_map"].data * COMPRESSION_FACTOR
+    final_row_2d_coords = init_row_2d_coords + dataset_disp_maps["row_map"].data * COMPRESSION_FACTOR
 
     # We remove the points that are invalid_disp either in row_map or in col_map
     # so as not to distort the calculation of the least squares coefficients
@@ -90,17 +90,15 @@ def make_position_vectors(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArr
         dataset_disp_maps["row_map"].data, dataset_disp_maps["col_map"].data, dataset_disp_maps.attrs["invalid_disp"]
     )
 
-    init_row_coords = init_row_coords[~mask_invalid]
-    init_col_coords = init_col_coords[~mask_invalid]
-    final_row_coords = final_row_coords[~mask_invalid]
-    final_col_coords = final_col_coords[~mask_invalid]
+    init_row_coords = init_row_2d_coords[~mask_invalid]
+    init_col_coords = init_col_2d_coords[~mask_invalid]
+    final_row_coords = final_row_2d_coords[~mask_invalid]
+    final_col_coords = final_col_2d_coords[~mask_invalid]
 
     return init_row_coords, init_col_coords, final_row_coords, final_col_coords
 
 
-def make_polynomial_design_matrix(
-    row_init_coords: NDArray, col_init_coords: NDArray, degree: int
-) -> Tuple[NDArray, List]:
+def make_polynomial_design_matrix(row_init_coords: NDArray, col_init_coords: NDArray, degree: int) -> NDArray:
     """
     Construct a 2D polynomial design matrix up to a given degree.
 
@@ -115,14 +113,14 @@ def make_polynomial_design_matrix(
     :type row_init_coords: NDArray
     :param degree: polynomial degree
     :type degree: int
-    :return: polynomial design matrix and exponent pairs list
+    :return: polynomial design matrix
     :rtype: Tuple[NDArray, List]
     """
 
     exponent_pairs = [(a, b) for a in range(degree + 1) for b in range(degree + 1 - a)]
 
     design_matrix = np.column_stack([col_init_coords**b * row_init_coords**a for (a, b) in exponent_pairs])
-    return design_matrix, exponent_pairs
+    return design_matrix
 
 
 def check_nb_observations(design_matrix: NDArray):
@@ -139,7 +137,7 @@ def check_nb_observations(design_matrix: NDArray):
         )
 
 
-def estimate_model(dataset_disp_maps: xr.Dataset, degree: int) -> Tuple[NDArray, NDArray, NDArray, NDArray, List]:
+def estimate_model(dataset_disp_maps: xr.Dataset, degree: int) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Estimate deformation model from initial positions to final positions
     by resolving y=Xb.
@@ -155,7 +153,7 @@ def estimate_model(dataset_disp_maps: xr.Dataset, degree: int) -> Tuple[NDArray,
     # Get initial and final position vectors
     row_init_coords, col_init_coords, row_final_coords, col_final_coords = make_position_vectors(dataset_disp_maps)
     # Get design matrix X
-    design_matrix, exponent_pairs = make_polynomial_design_matrix(row_init_coords, col_init_coords, degree)
+    design_matrix = make_polynomial_design_matrix(row_init_coords, col_init_coords, degree)
 
     # Check that we have enough observations compared to the number of parameters
     check_nb_observations(design_matrix)
@@ -164,12 +162,12 @@ def estimate_model(dataset_disp_maps: xr.Dataset, degree: int) -> Tuple[NDArray,
     coefficients_row, sum_sq_residuals_row, _, __ = np.linalg.lstsq(design_matrix, row_final_coords.ravel())
     coefficients_col, sum_sq_residuals_col, _, __ = np.linalg.lstsq(design_matrix, col_final_coords.ravel())
 
-    return coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, exponent_pairs
+    return coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col
 
 
 def estimate_model_cholesky(
     dataset_disp_maps: xr.Dataset, degree: int, lambda_ridge: Union[int, float, None] = None
-) -> Tuple[NDArray, NDArray, NDArray, NDArray, List]:
+) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Estimate deformation model from initial positions to final positions
     by resolving y=Xb using Cholesky decomposition.
@@ -186,13 +184,13 @@ def estimate_model_cholesky(
     :param lambda_ridge: Ridge regularization factor
     :type lambda_ridge: Union[int, float, None], None by default
     :return: least square solution and sum of residuals for rows and columns
-    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray, List]
+    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
     # Get initial and final position vectors
     row_init_coords, col_init_coords, row_final_coords, col_final_coords = make_position_vectors(dataset_disp_maps)
     # Get design matrix X
-    design_matrix, exponent_pairs = make_polynomial_design_matrix(row_init_coords, col_init_coords, degree)
+    design_matrix = make_polynomial_design_matrix(row_init_coords, col_init_coords, degree)
 
     # Check that we have enough observations compared to the number of parameters
     check_nb_observations(design_matrix)
@@ -218,7 +216,7 @@ def estimate_model_cholesky(
     sum_sq_residuals_row = np.sum((row_final_coords.ravel() - np.dot(design_matrix, coefficients_row)) ** 2)
     sum_sq_residuals_col = np.sum((col_final_coords.ravel() - np.dot(design_matrix, coefficients_col)) ** 2)
 
-    return coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, exponent_pairs
+    return coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col
 
 
 def estimate_init_disparity_grids(
@@ -276,7 +274,7 @@ def estimate_init_disparity_grids(
     scaled_col_2d, scaled_row_2d = np.meshgrid(scaled_col, scaled_row)
 
     # Get design matrix for resampled initial positions
-    design_matrix, _ = make_polynomial_design_matrix(scaled_row_2d.ravel(), scaled_col_2d.ravel(), degree)
+    design_matrix = make_polynomial_design_matrix(scaled_row_2d.ravel(), scaled_col_2d.ravel(), degree)
 
     # Compute the final position grids estimated using least squares coefficients
     estimated_final_row = np.dot(design_matrix, coefficients_row)
@@ -312,9 +310,9 @@ def get_next_shape_mesh_list(next_resolution_shape: int, nb_mesh: int) -> List[i
     :rtype: List[int]
     """
 
+    condition_add_one_pixel = nb_mesh - (next_resolution_shape % nb_mesh)
     next_shape_list = [
-        next_resolution_shape // nb_mesh + (1 if mesh >= nb_mesh - (next_resolution_shape % nb_mesh) else 0)
-        for mesh in range(nb_mesh)
+        next_resolution_shape // nb_mesh + (1 if mesh >= condition_add_one_pixel else 0) for mesh in range(nb_mesh)
     ]
 
     return next_shape_list
@@ -363,7 +361,7 @@ def get_init_disparity_grids(
     """
 
     # Estimate model
-    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, _ = estimate_model_cholesky(
+    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col = estimate_model_cholesky(
         dataset_disp_maps, multiscale_cfg["model"]["degree"], lambda_ridge=1.0e-6
     )
 
@@ -396,11 +394,14 @@ def get_init_disparity_grids_with_mesh(
     :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
+    # Tile size used to divide the disparty grid
     nb_row_mesh = multiscale_cfg["mesh"]["row"]
     nb_col_mesh = multiscale_cfg["mesh"]["col"]
 
+    # Disparity map shape
     rows, cols = dataset_disp_maps["row_map"].data.shape
 
+    # Euclidean division: integer part (quotient)
     rows_in_mesh = rows // nb_row_mesh
     cols_in_mesh = cols // nb_col_mesh
 
