@@ -132,8 +132,8 @@ def correct_multiscale_config(tmp_correct_repository, tmp_json_file):
     """
     return {
         "multiscale": {
-            "left": {"pyramid": str(tmp_correct_repository)},
-            "right": {"pyramid": str(tmp_correct_repository)},
+            "left": {"img_pyramid": str(tmp_correct_repository)},
+            "right": {"img_pyramid": str(tmp_correct_repository)},
             "model": {"type": "pol", "degree": 2},
             "output": "output_test",
         },
@@ -172,8 +172,8 @@ def incorrect_multiscale_config(request):
 
     return {
         "multiscale": {
-            "left": {"pyramid": str(request.getfixturevalue(request.param["left_path"]))},
-            "right": {"pyramid": str(request.getfixturevalue(request.param["right_path"]))},
+            "left": {"img_pyramid": str(request.getfixturevalue(request.param["left_path"]))},
+            "right": {"img_pyramid": str(request.getfixturevalue(request.param["right_path"]))},
             "model": {"type": request.param["model_type"], "degree": request.param["model_degree"]},
             "mesh": request.param["mesh"],
             "output": request.param["output"],
@@ -338,9 +338,9 @@ def test_fails_with_missing_keys(correct_multiscale_config, left_pyramid, right_
     """
 
     if left_pyramid:
-        del correct_multiscale_config["multiscale"]["left"]["pyramid"]
+        del correct_multiscale_config["multiscale"]["left"]["img_pyramid"]
     if right_pyramid:
-        del correct_multiscale_config["multiscale"]["right"]["pyramid"]
+        del correct_multiscale_config["multiscale"]["right"]["img_pyramid"]
 
     with pytest.raises(DictCheckerError):
         multiscale.check_configuration.check_conf(correct_multiscale_config)

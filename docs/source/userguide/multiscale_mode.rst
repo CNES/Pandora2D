@@ -64,12 +64,12 @@ Multiscale section is composed of the following keys:
       - Type
       - Default value
       - Required
-    * - *left["pyramid"]*
+    * - *left["img_pyramid"]*
       - Path to the pyramid for left image
       - string
       - None
       - Yes
-    * - *right["pyramid"]*
+    * - *right["img_pyramid"]*
       - Path to the pyramid for right image
       - string
       - None
@@ -120,8 +120,8 @@ Example of configuration
     {
         "multiscale": 
         {
-            "left" : {"pyramid": "../images/left_pyramid"},
-            "right" : {"pyramid": "../images/right_pyramid"},
+            "left" : {"img_pyramid": "../images/left_pyramid"},
+            "right" : {"img_pyramid": "../images/right_pyramid"},
             "model": {"type": "pol", "degree": 2},
             "mesh": {"row":3, "col":3},
             "output": 

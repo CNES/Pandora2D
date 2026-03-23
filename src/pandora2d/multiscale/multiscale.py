@@ -117,9 +117,11 @@ def resolve_path_in_config_multiscale(config: Dict, config_path: Path) -> Dict:
     """
     result = deepcopy(config)
     relative_to = config_path.parent
-    result["multiscale"]["left"]["pyramid"] = str(string_to_path(config["multiscale"]["left"]["pyramid"], relative_to))
-    result["multiscale"]["right"]["pyramid"] = str(
-        string_to_path(config["multiscale"]["right"]["pyramid"], relative_to)
+    result["multiscale"]["left"]["img_pyramid"] = str(
+        string_to_path(config["multiscale"]["left"]["img_pyramid"], relative_to)
+    )
+    result["multiscale"]["right"]["img_pyramid"] = str(
+        string_to_path(config["multiscale"]["right"]["img_pyramid"], relative_to)
     )
 
     if left_mask := config["multiscale"]["left"].get("mask"):
@@ -224,8 +226,8 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
     checked_cfg = check_conf(user_cfg)  # pylint: disable=unused-variable
 
     # Get lists of tif files and their shape
-    tif_files_path_left = checked_cfg["multiscale"]["left"]["pyramid"]
-    tif_files_path_right = checked_cfg["multiscale"]["right"]["pyramid"]
+    tif_files_path_left = checked_cfg["multiscale"]["left"]["img_pyramid"]
+    tif_files_path_right = checked_cfg["multiscale"]["right"]["img_pyramid"]
     tif_files_shape = get_tif_shape_list(tif_files_path_left)
 
     output_path = checked_cfg["multiscale"]["output"] + "/" + "iteration_"

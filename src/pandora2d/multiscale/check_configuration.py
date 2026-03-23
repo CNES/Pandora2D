@@ -182,7 +182,7 @@ def check_multiscale_section(user_cfg) -> Dict[str, dict]:
     checker = Checker(configuration_schema)
     checker.validate(cfg)
 
-    check_pyramid_repositories(cfg["multiscale"]["left"]["pyramid"], cfg["multiscale"]["right"]["pyramid"])
+    check_pyramid_repositories(cfg["multiscale"]["left"]["img_pyramid"], cfg["multiscale"]["right"]["img_pyramid"])
 
     return cfg
 
@@ -242,17 +242,17 @@ def check_conf(user_cfg: Dict) -> Dict[str, dict]:
     cfg_pandora2d = get_pandora2d_config(user_cfg)
     check_pandora2d_section(cfg_pandora2d)
 
-    cfg_multiscale["multiscale"]["left"]["pyramid"] = get_tif_files_list(
-        Path(cfg_multiscale["multiscale"]["left"]["pyramid"])
+    cfg_multiscale["multiscale"]["left"]["img_pyramid"] = get_tif_files_list(
+        Path(cfg_multiscale["multiscale"]["left"]["img_pyramid"])
     )
-    cfg_multiscale["multiscale"]["right"]["pyramid"] = get_tif_files_list(
-        Path(cfg_multiscale["multiscale"]["right"]["pyramid"])
+    cfg_multiscale["multiscale"]["right"]["img_pyramid"] = get_tif_files_list(
+        Path(cfg_multiscale["multiscale"]["right"]["img_pyramid"])
     )
 
     # If we have different pandora2d configurations,
     # we check that we have as many as there are resolutions to process.
     if isinstance(cfg_pandora2d["pandora2d"], list):
-        if len(cfg_multiscale["multiscale"]["left"]["pyramid"]) != len(cfg_pandora2d["pandora2d"]):
+        if len(cfg_multiscale["multiscale"]["left"]["img_pyramid"]) != len(cfg_pandora2d["pandora2d"]):
             raise ValueError(
                 "If you fill in several pandora2d configuration files, "
                 "you must have as many as there are images to process in the pyramid."
@@ -262,9 +262,12 @@ def check_conf(user_cfg: Dict) -> Dict[str, dict]:
 
 
 multiscale_configuration_schema = {
-    "left": {"pyramid": And(str, is_repository_with_tif_file), "mask": Or(None, And(str, is_repository_with_tif_file))},
+    "left": {
+        "img_pyramid": And(str, is_repository_with_tif_file),
+        "mask": Or(None, And(str, is_repository_with_tif_file)),
+    },
     "right": {
-        "pyramid": And(str, is_repository_with_tif_file),
+        "img_pyramid": And(str, is_repository_with_tif_file),
         "mask": Or(None, And(str, is_repository_with_tif_file)),
     },
     "model": {"type": And(str, lambda s: s == "pol"), "degree": And(int, lambda d: d >= 0)},
