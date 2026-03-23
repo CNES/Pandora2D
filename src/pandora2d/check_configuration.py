@@ -542,7 +542,7 @@ def check_disparity_ranges_are_inside_image(
     image_metadata: xr.Dataset, row_disparity: dict, col_disparity: dict
 ) -> None:
     """
-    Raise an error if disparity ranges are out off image.
+    Raise an error if disparity ranges are out of image.
 
     :param image_metadata: left image metadata
     :param row_disparity: row disparity configuration
