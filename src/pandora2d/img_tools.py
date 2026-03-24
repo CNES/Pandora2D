@@ -273,6 +273,11 @@ def get_min_max_disp_from_dicts(
         nodata = reader.meta.get("nodata")
         # Work on disp_data to avoid transformation on nodata
         is_data_mask = build_usable_data_mask(disp_data, nodata)
+
+        # We use np.round to ensure that disp_interval and disp_min_max contains
+        # integer disparity values in cases where sub-pixel disparity maps are reused as initial disparities
+        disp_data = np.round(disp_data)
+
         disp_interval = [
             np.min(disp_data[is_data_mask] * pow(-1, right) - disparity["range"]),
             np.max(disp_data[is_data_mask] * pow(-1, right) + disparity["range"]),

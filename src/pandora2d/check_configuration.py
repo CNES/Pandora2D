@@ -465,11 +465,13 @@ def check_disparity_grids_from_directory_within_image(
 
     # Get row coordinates
     row_min = attributes["origin_coordinates"]["row"]
-    row_max = row_min + disparity_row_reader.height * attributes["step"]["row"]
+    # Get row maximum coordinates according to step value
+    row_max = row_min + (disparity_row_reader.height - 1) * attributes["step"]["row"] + 1
 
     # Get col coordinates
     col_min = attributes["origin_coordinates"]["col"]
-    col_max = col_min + disparity_row_reader.width * attributes["step"]["col"]
+    # Get column maximum coordinates according to step value
+    col_max = col_min + (disparity_row_reader.width - 1) * attributes["step"]["col"] + 1
 
     image_height, image_width = image_metadata.sizes["row"], image_metadata.sizes["col"]
     if not (row_min >= 0 and col_min >= 0 and row_max <= image_height and col_max <= image_width):

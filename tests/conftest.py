@@ -402,12 +402,34 @@ def correct_grid_data(correct_grid_shape):
 
 
 @pytest.fixture
+def subpix_grid_data(correct_grid_shape):
+    """
+    Array of size left_img_shape with alternating rows of 2.5, 0.75 and 3.25
+    """
+    data = np.full(correct_grid_shape, 2.5)
+    data[1::3] = 0.75
+    data[2::3] = 3.25
+    return data
+
+
+@pytest.fixture
 def correct_grid(correct_grid_data, create_disparity_grid_fixture, no_data_disp):
     """Create a correct initial disparity grid and save it in tmp"""
     return create_disparity_grid_fixture(
         correct_grid_data,
         5,
         "disparity.tif",
+        nodata=no_data_disp,
+    )
+
+
+@pytest.fixture
+def subpix_grid(subpix_grid_data, create_disparity_grid_fixture, no_data_disp):
+    """Create a subpix initial disparity grid with sub-pixel values and save it in tmp"""
+    return create_disparity_grid_fixture(
+        subpix_grid_data,
+        5,
+        "subpix_disparity.tif",
         nodata=no_data_disp,
     )
 
@@ -557,15 +579,21 @@ def subpix():
 
 
 @pytest.fixture()
-def correct_pipeline_without_refinement(window_size, matching_cost_method, subpix):
+def invalid_disparity_mask():
+    return -99
+
+
+@pytest.fixture()
+def correct_pipeline_without_refinement(window_size, matching_cost_method, subpix, step, invalid_disparity_mask):
     return {
         "pipeline": {
             "matching_cost": {
                 "matching_cost_method": matching_cost_method,
                 "window_size": window_size,
                 "subpix": subpix,
+                "step": step,
             },
-            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "disparity": {"disparity_method": "wta", "invalid_disparity": invalid_disparity_mask},
         }
     }
 
@@ -582,11 +610,16 @@ def correct_pipeline_with_dichotomy_python(matching_cost_method, subpix):
 
 
 @pytest.fixture()
-def correct_pipeline_with_dichotomy_cpp(matching_cost_method, subpix):
+def correct_pipeline_with_dichotomy_cpp(matching_cost_method, subpix, step, invalid_disparity_mask):
     return {
         "pipeline": {
-            "matching_cost": {"matching_cost_method": matching_cost_method, "window_size": 5, "subpix": subpix},
-            "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            "matching_cost": {
+                "matching_cost_method": matching_cost_method,
+                "window_size": 5,
+                "subpix": subpix,
+                "step": step,
+            },
+            "disparity": {"disparity_method": "wta", "invalid_disparity": invalid_disparity_mask},
             "refinement": {"refinement_method": "dichotomy", "iterations": 2, "filter": {"method": "bicubic"}},
         }
     }
