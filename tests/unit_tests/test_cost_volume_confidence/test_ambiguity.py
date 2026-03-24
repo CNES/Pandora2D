@@ -21,6 +21,7 @@
 Test ambiguity cost volume confidence method
 """
 
+import copy
 import json_checker
 import numpy as np
 import pytest
@@ -203,7 +204,7 @@ def cost_volume_init_value():
 @pytest.fixture
 def cost_volume(row, col, disps_row, disps_col, cost_volume_init_value, subpix):
     """Create a cost_volume"""
-    np_data = np.full((row, col, len(disps_row), len(disps_col)), cost_volume_init_value)
+    np_data = np.full((row, col, len(disps_row), len(disps_col)), cost_volume_init_value, dtype=float)
 
     return xr.Dataset(
         {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np_data)},
@@ -358,6 +359,12 @@ class TestNormalizeWithExtremum:
         assert "confidence_measure" in dataset_disp_maps.data_vars
         assert np.all(dataset_disp_maps["confidence_measure"].values == 0)
 
+    @pytest.fixture()
+    def expected_value_with_one_peak(self, disps_row, disps_col):
+        """Compute expected ambiguity value for one peak"""
+        # return 1 - [1 / nbr_disparity]
+        return 1 - (1 / float(len(disps_col) * len(disps_row)))
+
     @pytest.mark.parametrize("cost_volume_init_value", [0])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     def test_with_one_peak(
@@ -367,6 +374,7 @@ class TestNormalizeWithExtremum:
         left_datasets,
         cost_volume,
         dataset_disp_maps,
+        expected_value_with_one_peak,
     ):
         """
         Test confidence_prediction method with monotonic surface
@@ -385,4 +393,49 @@ class TestNormalizeWithExtremum:
         )
 
         assert "confidence_measure" in dataset_disp_maps.data_vars
-        assert np.all(dataset_disp_maps["confidence_measure"].values == 1)
+        assert np.all(dataset_disp_maps["confidence_measure"].values == expected_value_with_one_peak)
+
+    @pytest.mark.parametrize("cost_volume_init_value", [0])
+    @pytest.mark.parametrize("subpix", [1, 2, 4])
+    def test_with_multiple_peak(
+        self,
+        cost_volume_confidence_instance,
+        empty_dataset,
+        left_datasets,
+        cost_volume,
+        dataset_disp_maps,
+        expected_value_with_one_peak,
+    ):
+        """
+        Test confidence_prediction method with multiple peak
+        i.e. cost_surface is filled with multiple max value and the remaining elements to cost_volume_init_value
+        Here we are checking whether the result is the same regardless of whether the peak is in the rows or the columns
+        """
+
+        cost_volume_row = copy.deepcopy(cost_volume)
+        cost_volume_column = copy.deepcopy(cost_volume)
+
+        # Add a peak every 2 row disparities
+        cost_volume_row["cost_volumes"].values[:, :, ::2, :] = 0.8
+        # Add a peak every 2 column disparities
+        cost_volume_column["cost_volumes"].values[:, :, :, ::2] = 0.8
+
+        _, dataset_disp_maps_row = cost_volume_confidence_instance.confidence_prediction(
+            left_image=left_datasets,
+            right_image=empty_dataset,
+            cost_volumes=cost_volume_row,
+            dataset_disp_maps=dataset_disp_maps,
+        )
+        _, dataset_disp_maps_column = cost_volume_confidence_instance.confidence_prediction(
+            left_image=left_datasets,
+            right_image=empty_dataset,
+            cost_volumes=cost_volume_column,
+            dataset_disp_maps=dataset_disp_maps,
+        )
+
+        assert "confidence_measure" in dataset_disp_maps_row.data_vars
+        assert "confidence_measure" in dataset_disp_maps_column.data_vars
+        np.testing.assert_array_equal(
+            dataset_disp_maps_row["confidence_measure"], dataset_disp_maps_column["confidence_measure"]
+        )
+        assert np.all(dataset_disp_maps_row["confidence_measure"].values < expected_value_with_one_peak)
