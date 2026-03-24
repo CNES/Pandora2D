@@ -171,7 +171,9 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: dict[st
 
         cfg["ROI"] = cast(dict, roi)
         dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
-        final_dataset_disp_maps = xr.merge([dataset_disp_maps, final_dataset_disp_maps])
+        final_dataset_disp_maps = xr.merge(
+            [dataset_disp_maps, final_dataset_disp_maps], join="outer", compat="no_conflicts"
+        )
 
     # Add correct ROI in output configuration
     if init_roi is not None:
