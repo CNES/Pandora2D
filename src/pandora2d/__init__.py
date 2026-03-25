@@ -172,6 +172,8 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: dict[st
         cfg["ROI"] = cast(dict, roi)
         dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
 
+        # If final_dataset_disp_maps is empty (computation of the first segment), initialize it directly,
+        # xr.concat() doesn't work with an empty xarray.
         if final_dataset_disp_maps.data_vars:
             final_dataset_disp_maps = xr.concat([final_dataset_disp_maps, dataset_disp_maps], dim="row")
         else:
