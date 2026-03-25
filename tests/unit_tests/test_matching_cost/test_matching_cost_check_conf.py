@@ -225,16 +225,36 @@ class TestFloatPrecision:
         )
 
     @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "sad", "ssd"])
-    def test_fails_with_float64_and_pandora_methods(self, matching_cost_method, matching_cost_object):
-        with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+    @pytest.mark.parametrize("float_precision", ["float64", "f8", "d"])
+    def test_fails_with_float64_precision_and_pandora_methods(
+        self, matching_cost_method, matching_cost_object, float_precision
+    ):
+        # With pandora matching cost methods, only float32 is accepted as float precision.
+        # We check that a ValueError is raised if a value equivalent to "float64" or another incorrect value is used.
+        with pytest.raises(
+            ValueError,
+            match="With sad, ssd, mc_cnn, and zncc_python methods, only the float32 type is accepted",
+        ):
             matching_cost_object(
-                {"matching_cost_method": matching_cost_method, "window_size": 5, "float_precision": "float64"}
+                {"matching_cost_method": matching_cost_method, "window_size": 5, "float_precision": float_precision}
             )
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "mutual_information", "zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc"])
     @pytest.mark.parametrize("float_precision", ["f32", "test", 3])
     def test_fails_with_incorrect_float_precision(self, matching_cost_method, matching_cost_object, float_precision):
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):
+            matching_cost_object(
+                {"matching_cost_method": matching_cost_method, "window_size": 5, "float_precision": float_precision}
+            )
+
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python"])
+    @pytest.mark.parametrize("float_precision", ["f32", "test", 3])
+    def test_fails_with_incorrect_float_precision_and_pandora_methods(
+        self, matching_cost_method, matching_cost_object, float_precision
+    ):
+        # With pandora matching cost methods, a TypeError is raised if the float_precision values is incorrect
+        # because it is the 'np.dtype' method that raises the error in the check_conf, not the JSON checker.
+        with pytest.raises(TypeError):
             matching_cost_object(
                 {"matching_cost_method": matching_cost_method, "window_size": 5, "float_precision": float_precision}
             )

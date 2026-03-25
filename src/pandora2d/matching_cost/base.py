@@ -82,7 +82,8 @@ class BaseMatchingCost(ABC):
         }
 
     def check_conf(self, cfg: dict) -> dict[str, str]:
-        """Check the matching cost configuration
+        """
+        Check the matching cost configuration
 
         :param cfg: user_config for matching cost
         :return: cfg: global configuration
