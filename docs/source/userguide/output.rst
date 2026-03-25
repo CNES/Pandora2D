@@ -173,6 +173,27 @@ disparity_map repository
         The output correlation_score map with optical flow refinement method contains the disparity
         step correlation score.
 
+Saved statistic report
+**********************
+
+- *output/path/disparity_map/report.json* : statistical report on the disparity values (row and col), saved as a JSON file.
+
+  The statistics are computed **only on valid pixels**: pixels whose value equals ``invalid_disparity``
+  (as defined in the user configuration json file) are excluded from all computations.
+  The ``minimal_valid_pixel_ratio`` field indicates the proportion of valid pixels that were used.
+
+  The ``quantiles`` field contains the following percentiles of the disparity distribution
+  among valid pixels:
+
+  - ``p10``: 10th percentile
+  - ``p25``: 25th percentile (first quartile)
+  - ``p50``: 50th percentile (median)
+  - ``p75``: 75th percentile (third quartile)
+  - ``p90``: 90th percentile
+
+  .. note::
+        All values in ``report.json`` are expressed in **pixels**, matching the unit of the disparity maps.
+
 Saved configuration
 *******************
 
