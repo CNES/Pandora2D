@@ -39,6 +39,8 @@ from pandora2d.state_machine import Pandora2DMachine
 from .check_configuration import check_conf, get_tif_shape_list
 from .model_estimation import get_init_disparity_grids_with_mesh
 
+# pylint: disable=too-many-positional-arguments,invalid-name,too-many-arguments
+
 # Multiscale pipeline logger
 logger = logging.getLogger(__name__)
 
@@ -124,10 +126,10 @@ def resolve_path_in_config_multiscale(config: Dict, config_path: Path) -> Dict:
         string_to_path(config["multiscale"]["right"]["img_pyramid"], relative_to)
     )
 
-    if left_mask := config["multiscale"]["left"].get("mask"):
-        result["multiscale"]["left"]["mask"] = str(string_to_path(left_mask, relative_to))
-    if right_mask := config["multiscale"]["right"].get("mask"):
-        result["multiscale"]["right"]["mask"] = str(string_to_path(right_mask, relative_to))
+    if left_mask := config["multiscale"]["left"].get("mask_pyramid"):
+        result["multiscale"]["left"]["mask_pyramid"] = str(string_to_path(left_mask, relative_to))
+    if right_mask := config["multiscale"]["right"].get("mask_pyramid"):
+        result["multiscale"]["right"]["mask_pyramid"] = str(string_to_path(right_mask, relative_to))
 
     pandora2d_cfg = config["pandora2d"]
     if isinstance(pandora2d_cfg, str):
@@ -139,7 +141,14 @@ def resolve_path_in_config_multiscale(config: Dict, config_path: Path) -> Dict:
     return result
 
 
-def get_pandora2d_cfg(user_cfg: Dict, path_left_image: Path, path_right_image: Path, resolution_index: int) -> Dict:
+def get_pandora2d_cfg(
+    user_cfg: Dict,
+    path_left_image: Path,
+    path_right_image: Path,
+    path_left_mask: Path,
+    path_right_mask: Path,
+    resolution_index: int,
+) -> Dict:
     """
     Returns pandora2d configuration for a given resolution to process
 
@@ -149,8 +158,12 @@ def get_pandora2d_cfg(user_cfg: Dict, path_left_image: Path, path_right_image: P
     :type path_left_image: Path
     :param path_right_image: path of right image
     :type path_right_image: Path
-    :param iteration_index: index of the current iteration
-    :type iteration_index: int
+    :param path_left_mask: path of left mask
+    :type path_left_mask: Path
+    :param path_right_mask: path of right mask
+    :type path_right_mask: Path
+    :param resolution_index: index of the current resolution
+    :type resolution_index: int
     :return: pandora2d configuration
     :rtype: Dict
     """
@@ -164,8 +177,15 @@ def get_pandora2d_cfg(user_cfg: Dict, path_left_image: Path, path_right_image: P
         raise ValueError("Pandora2d configuration must be a path to a json file or a list of path to json files")
 
     pandora2d_cfg = read_config_file(pandora2d_cfg_path)
+    # Update pandora2d configuration with paths of images for the current resolution
     pandora2d_cfg["input"]["left"]["img"] = path_left_image
     pandora2d_cfg["input"]["right"]["img"] = path_right_image
+    # Update pandora2d configuration with paths of masks for the current resolution
+    if path_left_mask is not None:
+        pandora2d_cfg["input"]["left"]["mask"] = path_left_mask
+    if path_right_mask is not None:
+        pandora2d_cfg["input"]["right"]["mask"] = path_right_mask
+
     pandora2d_cfg = resolve_path_in_config(pandora2d_cfg, pandora2d_cfg_path)
 
     return pandora2d_cfg
@@ -203,12 +223,105 @@ def write_initial_disparity_grid(
         dst.write(data, 1)
 
 
+def save_disparity_maps_and_config(
+    completed_cfg: Dict, dataset_disp_maps: xr.Dataset, output_path: str, resolution: int
+) -> None:
+    """
+    Save disparity maps and pandora2d configuration for a given resolution
+
+    :param completed_cfg: pandora2d configuration after pandora2d execution
+    :type completed_cfg: Dict
+    :param dataset_disp_maps: computed disparity maps
+    :type dataset_disp_maps: xr.Dataset
+    :param output_path: Path to output directory for disparity maps
+    :type output_path: str
+    :param resolution: current resolution index
+    :type resolution: int
+    :return: None
+    """
+
+    # Save disparity maps
+    multiscale_completed_cfg = deepcopy(completed_cfg)
+    multiscale_completed_cfg["output"]["path"] = output_path + str(resolution)
+    pandora2d.common.save_disparity_maps(dataset_disp_maps, multiscale_completed_cfg)
+    logger.info(
+        "Disparity maps for iteration %d are saved in %s", resolution, multiscale_completed_cfg["output"]["path"]
+    )
+    # Save pandora2d configuration
+    pandora2d.common.save_config(multiscale_completed_cfg)
+
+
+def process_one_resolution(
+    resolution: int,
+    left_image_path: Path,
+    right_image_path: Path,
+    left_mask_path: Path | None,
+    right_mask_path: Path | None,
+    image_shapes_list: list,
+    checked_cfg: Dict,
+    output_path: str,
+    pandora2d_machine: Pandora2DMachine,
+) -> None:
+    """
+    Process one resolution of the multiscale pipeline
+    by running pandora2d and estimating initial disparity grids for the next resolution.
+
+    :resolution: current resolution index
+    :left_image_path: path to left image for the current resolution
+    :right_image_path: path to right image for the current resolution
+    :left_mask_path: path to left mask for the current resolution
+    :right_mask_path: path to right mask for the current resolution
+    :image_shapes_list: list of image shapes for each resolution
+    :checked_cfg: checked user configuration
+    :output_path: str path to output directory for disparity maps and initial disparity grids
+    :pandora2d_machine: instance of Pandora2DMachine to run pandora2d for the current resolution
+    """
+
+    pandora2d_cfg = get_pandora2d_cfg(
+        checked_cfg, left_image_path, right_image_path, left_mask_path, right_mask_path, resolution - 1
+    )
+
+    # We use estimated initial disparity grids computed at the previous resolution
+    if resolution != 1:
+        pandora2d_cfg["input"]["row_disparity"]["init"] = output_path + str(resolution) + "/init_grid_row.tif"
+        pandora2d_cfg["input"]["col_disparity"]["init"] = output_path + str(resolution) + "/init_grid_col.tif"
+
+    checked_pandora2d_cfg = pandora2d.check_configuration.check_conf(pandora2d_cfg, pandora2d_machine)
+
+    # Run pandora2D machine
+    if checked_pandora2d_cfg.get("segment_mode", {}).get("enable") is True:
+        dataset_disp_maps, completed_cfg = run_pandora2d_segment_mode(pandora2d_machine, checked_pandora2d_cfg)
+    else:
+        dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, checked_pandora2d_cfg)
+
+    # We estimate initial disparity grids for next resolution
+    if resolution != len(image_shapes_list):
+
+        # Estimate initial disparity grids for next resolution
+        estimated_init_row_grid, estimated_init_col_grid, rmse_row, rmse_col = get_init_disparity_grids_with_mesh(
+            dataset_disp_maps, checked_cfg["multiscale"], image_shapes_list[resolution]
+        )
+
+        # Save initial disparity grids for next resolution
+        output_path_next_res = Path(str(output_path) + str(resolution + 1))
+        write_initial_disparity_grid(output_path_next_res, "init_grid_row", estimated_init_row_grid, dataset_disp_maps)
+        write_initial_disparity_grid(output_path_next_res, "init_grid_col", estimated_init_col_grid, dataset_disp_maps)
+
+        logger.info("RMSE for row disparities is: %f", rmse_row)
+        logger.info("RMSE for col disparities is: %f", rmse_col)
+
+    # Save disparity maps and config
+    save_disparity_maps_and_config(completed_cfg, dataset_disp_maps, output_path, resolution)
+    # Exit pandora2d machine
+    pandora2d_machine.run_exit()
+
+
 def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
     """
     Check config file and run multiscale pipeline accordingly
 
-    :param cfg_path: path to the json configuration file
-    :type cfg_path: PathLike|str
+    :param config_path: path to the json configuration file
+    :type config_path: PathLike|str
     :param verbose: verbose mode
     :type verbose: bool
     :return: None
@@ -223,71 +336,41 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
     user_cfg = read_config_file(config_path)
     user_cfg = resolve_path_in_config_multiscale(user_cfg, config_path)
 
-    checked_cfg = check_conf(user_cfg)  # pylint: disable=unused-variable
+    checked_cfg = check_conf(user_cfg)
 
-    # Get lists of tif files and their shape
-    tif_files_path_left = checked_cfg["multiscale"]["left"]["img_pyramid"]
-    tif_files_path_right = checked_cfg["multiscale"]["right"]["img_pyramid"]
-    tif_files_shape = get_tif_shape_list(tif_files_path_left)
+    # Get lists of image tif files and their shape
+    left_images_list = checked_cfg["multiscale"]["left"]["img_pyramid"]
+    right_images_list = checked_cfg["multiscale"]["right"]["img_pyramid"]
+    image_shapes_list = get_tif_shape_list(left_images_list)
+
+    # Get lists of mask tif files
+    left_masks_list = checked_cfg["multiscale"]["left"]["mask_pyramid"]
+    right_masks_list = checked_cfg["multiscale"]["right"]["mask_pyramid"]
 
     output_path = checked_cfg["multiscale"]["output"] + "/" + "iteration_"
 
     pandora2d_machine = Pandora2DMachine()
-    for resolution in range(1, len(tif_files_path_left) + 1):
+    for resolution in range(1, len(left_images_list) + 1):
 
         logger.info("--- Computation for iteration %d ---", resolution)
         logger.info(
             " scale factor = %d between this image and full resolution image",
-            tif_files_shape[-1][0] / tif_files_shape[resolution - 1][0],
+            image_shapes_list[-1][0] / image_shapes_list[resolution - 1][0],
         )
 
-        pandora2d_cfg = get_pandora2d_cfg(
-            checked_cfg, tif_files_path_left[resolution - 1], tif_files_path_right[resolution - 1], resolution - 1
+        # Estimate initial disparity grids for next resolution
+        # and save disparity maps and config for the current resolution
+        process_one_resolution(
+            resolution,
+            left_images_list[resolution - 1],
+            right_images_list[resolution - 1],
+            left_masks_list[resolution - 1] if left_masks_list is not None else None,
+            right_masks_list[resolution - 1] if right_masks_list is not None else None,
+            image_shapes_list,
+            checked_cfg,
+            output_path,
+            pandora2d_machine,
         )
-
-        # We use estimated initial disparity grids computed at the previous resolution
-        if resolution != 1:
-            pandora2d_cfg["input"]["row_disparity"]["init"] = output_path + str(resolution) + "/init_grid_row.tif"
-            pandora2d_cfg["input"]["col_disparity"]["init"] = output_path + str(resolution) + "/init_grid_col.tif"
-
-        checked_pandora2d_cfg = pandora2d.check_configuration.check_conf(pandora2d_cfg, pandora2d_machine)
-
-        # Run pandora2D machine
-        if checked_pandora2d_cfg.get("segment_mode", {}).get("enable") is True:
-            dataset_disp_maps, completed_cfg = run_pandora2d_segment_mode(pandora2d_machine, checked_pandora2d_cfg)
-        else:
-            dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, checked_pandora2d_cfg)
-
-        # We estimate initial disparity grids for next resolution
-        if resolution != len(tif_files_path_left):
-
-            # Estimate initial disparity grids for next resolution
-            estimated_init_row_grid, estimated_init_col_grid, rmse_row, rmse_col = get_init_disparity_grids_with_mesh(
-                dataset_disp_maps, checked_cfg["multiscale"], tif_files_shape[resolution]
-            )
-
-            # Save initial disparity grids for next resolution
-            output_path_next_res = Path(str(output_path) + str(resolution + 1))
-            write_initial_disparity_grid(
-                output_path_next_res, "init_grid_row", estimated_init_row_grid, dataset_disp_maps
-            )
-            write_initial_disparity_grid(
-                output_path_next_res, "init_grid_col", estimated_init_col_grid, dataset_disp_maps
-            )
-
-            logger.info("RMSE for row disparities is: %f", rmse_row)
-            logger.info("RMSE for col disparities is: %f", rmse_col)
-
-        # Save disparity maps
-        multiscale_completed_cfg = deepcopy(completed_cfg)
-        multiscale_completed_cfg["output"]["path"] = output_path + str(resolution)
-        pandora2d.common.save_disparity_maps(dataset_disp_maps, multiscale_completed_cfg)
-        logger.info(
-            "Disparity maps for iteration %d are saved in %s", resolution, multiscale_completed_cfg["output"]["path"]
-        )
-        # Save pandora2d configuration
-        pandora2d.common.save_config(multiscale_completed_cfg)
-        pandora2d_machine.run_exit()
 
 
 def main():
