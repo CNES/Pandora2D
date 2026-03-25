@@ -165,6 +165,29 @@ def correct_multiscale_config_with_json_list(correct_multiscale_config, tmp_json
 
 
 @pytest.fixture()
+def correct_multiscale_config_with_left_mask(correct_multiscale_config, tmp_correct_repository):
+    """
+    Correct multiscale configuration with left mask pyramid
+    """
+
+    cfg = deepcopy(correct_multiscale_config)
+    cfg["multiscale"]["left"]["mask_pyramid"] = str(tmp_correct_repository)
+    return cfg
+
+
+@pytest.fixture()
+def correct_multiscale_config_with_left_and_right_masks(correct_multiscale_config, tmp_correct_repository):
+    """
+    Correct multiscale configuration with left and right mask pyramids
+    """
+
+    cfg = deepcopy(correct_multiscale_config)
+    cfg["multiscale"]["left"]["mask_pyramid"] = str(tmp_correct_repository)
+    cfg["multiscale"]["right"]["mask_pyramid"] = str(tmp_correct_repository)
+    return cfg
+
+
+@pytest.fixture()
 def incorrect_multiscale_config(request):
     """
     Incorrect multiscale configuration
@@ -174,6 +197,29 @@ def incorrect_multiscale_config(request):
         "multiscale": {
             "left": {"img_pyramid": str(request.getfixturevalue(request.param["left_path"]))},
             "right": {"img_pyramid": str(request.getfixturevalue(request.param["right_path"]))},
+            "model": {"type": request.param["model_type"], "degree": request.param["model_degree"]},
+            "mesh": request.param["mesh"],
+            "output": request.param["output"],
+        },
+        "pandora2d": str(request.getfixturevalue(request.param["json_file"])),
+    }
+
+
+@pytest.fixture()
+def incorrect_multiscale_config_with_masks(request):
+    """
+    Incorrect multiscale configuration with masks
+    """
+    return {
+        "multiscale": {
+            "left": {
+                "img_pyramid": str(request.getfixturevalue(request.param["left_path"])),
+                "mask_pyramid": str(request.getfixturevalue(request.param["left_mask_path"])),
+            },
+            "right": {
+                "img_pyramid": str(request.getfixturevalue(request.param["right_path"])),
+                "mask_pyramid": str(request.getfixturevalue(request.param["right_mask_path"])),
+            },
             "model": {"type": request.param["model_type"], "degree": request.param["model_degree"]},
             "mesh": request.param["mesh"],
             "output": request.param["output"],
@@ -325,6 +371,49 @@ def test_fails_multiscale_check_conf(incorrect_multiscale_config):
 
 
 @pytest.mark.parametrize(
+    ["incorrect_multiscale_config_with_masks"],
+    [
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "left_mask_path": "tmp_repository_without_tif",
+                "right_mask_path": "tmp_correct_repository",
+                "model_type": "pol",
+                "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
+                "output": "output_test",
+                "json_file": "tmp_json_file",
+            },
+            id="Left mask pyramid with no tif file",
+        ),
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "left_mask_path": "tmp_correct_repository",
+                "right_mask_path": "tmp_repository_with_unreadable_tif",
+                "model_type": "pol",
+                "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
+                "output": "output_test",
+                "json_file": "tmp_json_file",
+            },
+            id="Right mask pyramid with unreadable tif file",
+        ),
+    ],
+    indirect=["incorrect_multiscale_config_with_masks"],
+)
+def test_fails_multiscale_check_conf_with_masks(incorrect_multiscale_config_with_masks):
+    """
+    Test that multiscale check_conf method fails when using wrong arguments related to masks
+    """
+
+    with pytest.raises(DictCheckerError):
+        multiscale.check_configuration.check_conf(incorrect_multiscale_config_with_masks)
+
+
+@pytest.mark.parametrize(
     ["left_pyramid", "right_pyramid"],
     [
         pytest.param(True, False, id="Remove left pyramid"),
@@ -373,7 +462,7 @@ def test_default_values(correct_multiscale_config):
                 "output": "output_test",
                 "json_file": "tmp_json_file",
             },
-            id="Repository without tif file",
+            id="Repositories with different number of tif files",
         ),
     ],
     indirect=["incorrect_multiscale_config"],
@@ -385,7 +474,69 @@ def test_fails_with_different_number_of_tif(incorrect_multiscale_config):
 
     with pytest.raises(ValueError) as exc_info:
         multiscale.check_configuration.check_conf(incorrect_multiscale_config)
-    assert str(exc_info.value) == "Left and right pyramid repositories must contain the same number of tif files."
+    # The error message is customized based on the paths being tested and varies depending on the test runs,
+    # so we only verify the consistency of the end of the error message.
+    assert "must contain the same number of tif files" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ["incorrect_multiscale_config_with_masks"],
+    [
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "left_mask_path": "tmp_repository_with_three_files",
+                "right_mask_path": "tmp_correct_repository",
+                "model_type": "pol",
+                "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
+                "output": "output_test",
+                "json_file": "tmp_json_file",
+            },
+            id="Different number of tif files in left mask pyramid",
+        ),
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "left_mask_path": "tmp_correct_repository",
+                "right_mask_path": "tmp_repository_with_three_files",
+                "model_type": "pol",
+                "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
+                "output": "output_test",
+                "json_file": "tmp_json_file",
+            },
+            id="Different number of tif files in right mask pyramid",
+        ),
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "left_mask_path": "tmp_repository_with_three_files",
+                "right_mask_path": "tmp_repository_with_three_files",
+                "model_type": "pol",
+                "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
+                "output": "output_test",
+                "json_file": "tmp_json_file",
+            },
+            id="Different number of tif files in left and right mask pyramids",
+        ),
+    ],
+    indirect=["incorrect_multiscale_config_with_masks"],
+)
+def test_fails_with_different_number_of_tif_with_masks(incorrect_multiscale_config_with_masks):
+    """
+    Test that check conf fails when image and mask pyramid repositories contain different number of tif files
+    """
+
+    with pytest.raises(ValueError) as exc_info:
+        multiscale.check_configuration.check_conf(incorrect_multiscale_config_with_masks)
+    # The error message is customized based on the paths being tested and varies depending on the test runs,
+    # so we only verify the consistency of the end of the error message.
+    assert "must contain the same number of tif files" in str(exc_info.value)
 
 
 @pytest.mark.parametrize(
