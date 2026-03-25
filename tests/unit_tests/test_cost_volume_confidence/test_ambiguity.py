@@ -202,14 +202,23 @@ def cost_volume_init_value():
 
 
 @pytest.fixture
-def cost_volume(row, col, disps_row, disps_col, cost_volume_init_value, subpix):
+def cost_volume(row, col, disps_row, disps_col, cost_volume_init_value, subpix, margins):
     """Create a cost_volume"""
     np_data = np.full((row, col, len(disps_row), len(disps_col)), cost_volume_init_value, dtype=float)
+
+    # Add margins
+    if margins != Margins(0, 0, 0, 0):
+        row_down_slice = slice(-margins.down, None) if margins.down else slice(0, 0)
+        col_right_slice = slice(-margins.right, None) if margins.right else slice(0, 0)
+        np_data[:, :, : margins.up, :] = 1
+        np_data[:, :, :, : margins.left] = 1
+        np_data[:, :, row_down_slice, :] = 1
+        np_data[:, :, :, col_right_slice] = 1
 
     return xr.Dataset(
         {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np_data)},
         coords={"row": np.arange(row), "col": np.arange(col), "disp_row": disps_row, "disp_col": disps_col},
-        attrs={"subpixel": subpix, "type_measure": "max"},
+        attrs={"subpixel": subpix, "type_measure": "max", "disparity_margins": margins},
     )
 
 
@@ -254,14 +263,19 @@ class TestConfidencePrediction:
         ).shape[0]
 
     @pytest.fixture()
-    def expected_value_with_monotonic_surface(self, nbr_etas, cost_volume):
+    def expected_value_with_monotonic_surface(self, nbr_etas, cost_volume, margins):
         """Compute expected ambiguity value for monotonic surface"""
         # default value computed if norm_extremum parameter is nan on ambiguity.cpp pandora file
-        nbr_disparities = cost_volume.sizes["disp_row"] * cost_volume.sizes["disp_col"]
+        row_disparity_size = cost_volume.sizes["disp_row"] - margins.up - margins.down
+        col_disparity_size = cost_volume.sizes["disp_col"] - margins.left - margins.right
+        nbr_disparities = row_disparity_size * col_disparity_size
         # return 1 - ambiguity
         return 1 - (nbr_etas * nbr_disparities)
 
     @pytest.mark.parametrize("cost_volume_init_value", [np.nan, np.inf, 0, -99, 0.1])
+    @pytest.mark.parametrize(
+        "margins", [Margins(0, 0, 0, 0), Margins(1, 0, 1, 0), Margins(0, 1, 0, 2), Margins(1, 2, 2, 1)]
+    )
     def test_with_monotonic_surface(
         self,
         cost_volume_confidence_instance,
@@ -294,6 +308,7 @@ class TestConfidencePrediction:
         return 1 - nbr_etas
 
     @pytest.mark.parametrize("cost_volume_init_value", [0])
+    @pytest.mark.parametrize("margins", [Margins(0, 0, 0, 0), Margins(1, 0, 1, 0), Margins(0, 1, 0, 2)])
     def test_with_one_peak(
         self,
         cost_volume_confidence_instance,
@@ -335,6 +350,9 @@ class TestNormalizeWithExtremum:
 
     @pytest.mark.parametrize("cost_volume_init_value", [np.nan, np.inf, 0, -99, 0.1])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
+    @pytest.mark.parametrize(
+        "margins", [Margins(0, 0, 0, 0), Margins(1, 0, 1, 0), Margins(0, 1, 0, 2), Margins(1, 2, 2, 1)]
+    )
     def test_with_monotonic_surface(
         self,
         cost_volume_confidence_instance,
@@ -397,6 +415,7 @@ class TestNormalizeWithExtremum:
 
     @pytest.mark.parametrize("cost_volume_init_value", [0])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
+    @pytest.mark.parametrize("margins", [Margins(0, 0, 0, 0), Margins(1, 0, 1, 0), Margins(0, 0, 0, 1)])
     def test_with_multiple_peak(
         self,
         cost_volume_confidence_instance,
