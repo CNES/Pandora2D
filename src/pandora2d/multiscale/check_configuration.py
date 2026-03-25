@@ -51,8 +51,8 @@ def get_tif_files_list(path: Path) -> List[Path]:
     Return list of tif files in pyramid repository
     sorted by file area
 
-    :param path_left: path to pyramid repository
-    :type path_left: Path
+    :param path: path to pyramid repository
+    :type path: Path
     :return: list of tif files sorted by size (width*height)
     :rtype: List[Path]
     """
@@ -91,6 +91,9 @@ def is_repository_with_tif_file(path: Union[PathLike, str]) -> bool:
     :rtype: bool
     """
 
+    if path is None:
+        return True
+
     user_path = Path(path)
     if not user_path.is_dir():
         return False
@@ -117,28 +120,53 @@ def is_json_file(path: Union[str, Path]) -> bool:
     return True
 
 
-def check_pyramid_repositories(path_left: Union[str, Path], path_right: Union[str, Path]):
+def check_pyramid_repositories(first_pyramid_path: Union[str, Path], second_pyramid_path: Union[str, Path]):
     """
-    Check if left and right repositories contain the same number of tif files.
+    Check if first and second pyramid repositories contain the same number of tif files.
     Check if tif files have correct suffix.
 
-    :param path_left: path to left pyramid repository
-    :type path_left: Union[str, Path]
-    :param path_right: path to right pyramid repository
-    :type path_right: Union[str, Path]
+    This method is used to check that the left and right image pyramids contain the same number of images,
+    and that, if masks are specified, there are as many masks as there are images in the pyramids.
+
+    :param first_pyramid_path: path to first pyramid repository
+    :type first_pyramid_path: Union[str, Path]
+    :param second_pyramid_path: path to second pyramid repository
+    :type second_pyramid_path: Union[str, Path]
     """
 
-    path_left = Path(path_left)
-    path_right = Path(path_right)
+    first_pyramid_path = Path(first_pyramid_path)
+    second_pyramid_path = Path(second_pyramid_path)
 
-    tif_files_path_left = get_tif_files_list(path_left)
-    tif_files_path_right = get_tif_files_list(path_right)
+    tif_files_first = get_tif_files_list(first_pyramid_path)
+    tif_files_second = get_tif_files_list(second_pyramid_path)
 
-    nb_tif_left = len(tif_files_path_left)
-    nb_tif_right = len(tif_files_path_right)
+    nb_tif_first = len(tif_files_first)
+    nb_tif_second = len(tif_files_second)
 
-    if nb_tif_left != nb_tif_right:
-        raise ValueError("Left and right pyramid repositories must contain the same number of tif files.")
+    if nb_tif_first != nb_tif_second:
+        raise ValueError(
+            f"Pyramid repositories '{first_pyramid_path}' ({nb_tif_first} tif files) and "
+            f"'{second_pyramid_path}' ({nb_tif_second} tif files) must contain the same number of tif files."
+        )
+
+
+def check_mask_pyramid_repositories(user_cfg: Dict) -> None:
+    """
+    Check if mask pyramid repository contains the same number of tif files as image pyramid repository.
+    Check if tif files have correct suffix.
+
+    :param user_cfg: user configuration
+    :type user_cfg: Dict
+    """
+
+    if user_cfg["multiscale"]["left"]["mask_pyramid"] is not None:
+        check_pyramid_repositories(
+            user_cfg["multiscale"]["left"]["mask_pyramid"], user_cfg["multiscale"]["left"]["img_pyramid"]
+        )
+    if user_cfg["multiscale"]["right"]["mask_pyramid"] is not None:
+        check_pyramid_repositories(
+            user_cfg["multiscale"]["right"]["mask_pyramid"], user_cfg["multiscale"]["right"]["img_pyramid"]
+        )
 
 
 def get_multiscale_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
@@ -178,11 +206,14 @@ def check_multiscale_section(user_cfg) -> Dict[str, dict]:
 
     configuration_schema = {"multiscale": multiscale_configuration_schema}
 
-    # check schema
+    # Check schema
     checker = Checker(configuration_schema)
     checker.validate(cfg)
 
     check_pyramid_repositories(cfg["multiscale"]["left"]["img_pyramid"], cfg["multiscale"]["right"]["img_pyramid"])
+
+    # Check that we have as many input masks as input images if we have mask pyramids
+    check_mask_pyramid_repositories(cfg)
 
     return cfg
 
@@ -211,7 +242,7 @@ def check_pandora2d_section(user_cfg) -> None:
 
     :param user_cfg: user configuration
     :type user_cfg: dict
-    :return: cfg: checked multiscale configuration
+    :return: cfg: checked pandora2d configuration
     :rtype: cfg: dict
     """
 
@@ -224,6 +255,33 @@ def check_pandora2d_section(user_cfg) -> None:
     # check schema
     checker = Checker(configuration_schema)
     checker.validate(user_cfg)
+
+
+def update_pyramid_configuration(cfg_multiscale: Dict) -> None:
+    """
+    Update pyramid configurations with list of tif files sorted by ascending size
+    instead of path to pyramid repository.
+
+    :param cfg_multiscale: multiscale configuration
+    :type cfg_multiscale: Dict
+    """
+
+    # Update image pyramid configurations
+    cfg_multiscale["multiscale"]["left"]["img_pyramid"] = get_tif_files_list(
+        Path(cfg_multiscale["multiscale"]["left"]["img_pyramid"])
+    )
+    cfg_multiscale["multiscale"]["right"]["img_pyramid"] = get_tif_files_list(
+        Path(cfg_multiscale["multiscale"]["right"]["img_pyramid"])
+    )
+    # Update mask pyramid configurations
+    if cfg_multiscale["multiscale"]["left"]["mask_pyramid"] is not None:
+        cfg_multiscale["multiscale"]["left"]["mask_pyramid"] = get_tif_files_list(
+            Path(cfg_multiscale["multiscale"]["left"]["mask_pyramid"])
+        )
+    if cfg_multiscale["multiscale"]["right"]["mask_pyramid"] is not None:
+        cfg_multiscale["multiscale"]["right"]["mask_pyramid"] = get_tif_files_list(
+            Path(cfg_multiscale["multiscale"]["right"]["mask_pyramid"])
+        )
 
 
 def check_conf(user_cfg: Dict) -> Dict[str, dict]:
@@ -242,12 +300,9 @@ def check_conf(user_cfg: Dict) -> Dict[str, dict]:
     cfg_pandora2d = get_pandora2d_config(user_cfg)
     check_pandora2d_section(cfg_pandora2d)
 
-    cfg_multiscale["multiscale"]["left"]["img_pyramid"] = get_tif_files_list(
-        Path(cfg_multiscale["multiscale"]["left"]["img_pyramid"])
-    )
-    cfg_multiscale["multiscale"]["right"]["img_pyramid"] = get_tif_files_list(
-        Path(cfg_multiscale["multiscale"]["right"]["img_pyramid"])
-    )
+    # Update pyramid configurations with list of tif files sorted by ascending size
+    # instead of path to pyramid repository
+    update_pyramid_configuration(cfg_multiscale)
 
     # If we have different pandora2d configurations,
     # we check that we have as many as there are resolutions to process.
@@ -264,11 +319,11 @@ def check_conf(user_cfg: Dict) -> Dict[str, dict]:
 multiscale_configuration_schema = {
     "left": {
         "img_pyramid": And(str, is_repository_with_tif_file),
-        "mask": Or(None, And(str, is_repository_with_tif_file)),
+        "mask_pyramid": And(Or(str, lambda input: input is None), is_repository_with_tif_file),
     },
     "right": {
         "img_pyramid": And(str, is_repository_with_tif_file),
-        "mask": Or(None, And(str, is_repository_with_tif_file)),
+        "mask_pyramid": And(Or(str, lambda input: input is None), is_repository_with_tif_file),
     },
     "model": {"type": And(str, lambda s: s == "pol"), "degree": And(int, lambda d: d >= 0)},
     "mesh": {"row": And(int, lambda x: x > 0), "col": And(int, lambda x: x > 0)},
@@ -282,8 +337,8 @@ pandora2d_configuration_schema = Or(
 
 default_configuration_multiscale = {
     "multiscale": {
-        "left": {"mask": None},
-        "right": {"mask": None},
+        "left": {"mask_pyramid": None},
+        "right": {"mask_pyramid": None},
         "model": {
             "type": "pol",
             "degree": 2,
