@@ -130,18 +130,13 @@ def test_make_position_vectors(dataset_disp_maps, gt_row_pos, gt_col_pos):
 
 
 @pytest.mark.parametrize(
-    ["init_row_pos", "init_col_pos", "degree", "design_matrix_gt", "exponent_pairs_gt"],
+    ["init_row_pos", "init_col_pos", "degree", "design_matrix_gt"],
     [
         pytest.param(
             np.array([0, 0, 1, 1, 2, 2]),
             np.array([0, 1, 0, 1, 0, 1]),
             1,
             np.array([[1, 0, 0], [1, 1, 0], [1, 0, 1], [1, 1, 1], [1, 0, 2], [1, 1, 2]]),
-            # The columns of the matrix above correspond
-            # to the product of positions in rows and columns with
-            # the following exponents:
-            # (r⁰,c⁰) (r⁰,c¹) (r¹,c⁰)
-            [(0, 0), (0, 1), (1, 0)],
             id="Degree=1",
         ),
         pytest.param(
@@ -158,24 +153,18 @@ def test_make_position_vectors(dataset_disp_maps, gt_row_pos, gt_col_pos):
                     [1, 11, 121, 4, 44, 16],
                 ]
             ),
-            # The columns of the matrix above correspond
-            # to the product of positions in rows and columns with
-            # the following exponents:
-            # (r⁰,c⁰) (r⁰,c¹) (r⁰,c²) (r¹,c⁰) (r¹,c¹) (r²,c⁰)
-            [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0)],
             id="Degree=2",
         ),
     ],
 )
-def test_make_polynomial_design_matrix(init_row_pos, init_col_pos, degree, design_matrix_gt, exponent_pairs_gt):
+def test_make_polynomial_design_matrix(init_row_pos, init_col_pos, degree, design_matrix_gt):
     """
     Test make_polynomial_design_matrix method
     """
 
-    design_matrix, exponent_pairs = model_estimation.make_polynomial_design_matrix(init_row_pos, init_col_pos, degree)
+    design_matrix = model_estimation.make_polynomial_design_matrix(init_row_pos, init_col_pos, degree)
 
     np.testing.assert_array_equal(design_matrix, design_matrix_gt)
-    assert exponent_pairs == exponent_pairs_gt
 
 
 @pytest.mark.parametrize(
@@ -210,9 +199,7 @@ def test_estimate_model(dataset_disp_maps, degree, gt_coeff, gt_resid, method):
     Test estimate_model and estimate_model_cholesky methods
     """
 
-    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, _ = method(
-        dataset_disp_maps, degree
-    )
+    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col = method(dataset_disp_maps, degree)
 
     np.testing.assert_array_almost_equal(coefficients_row, gt_coeff[0], decimal=8)
     np.testing.assert_array_almost_equal(coefficients_col, gt_coeff[1], decimal=8)
@@ -243,7 +230,7 @@ def test_estimate_model_cholesky_with_ridge(dataset_disp_maps, degree, gt_coeff,
     Test estimate_model_cholesky method with ridge regularization
     """
 
-    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col, _ = (
+    coefficients_row, coefficients_col, sum_sq_residuals_row, sum_sq_residuals_col = (
         model_estimation.estimate_model_cholesky(dataset_disp_maps, degree, lambda_ridge=2)
     )
 
@@ -367,7 +354,7 @@ def test_estimate_init_disparity_grids(dataset_disp_maps, degree, next_resolutio
     Test the estimate_init_disparity_grids method
     """
 
-    coefficients_row, coefficients_col, _, __, ___ = model_estimation.estimate_model(dataset_disp_maps, degree)
+    coefficients_row, coefficients_col, _, __ = model_estimation.estimate_model(dataset_disp_maps, degree)
 
     estimated_init_row_grid, estimated_init_col_grid = model_estimation.estimate_init_disparity_grids(
         dataset_disp_maps, coefficients_row, coefficients_col, degree, next_resolution_shape
