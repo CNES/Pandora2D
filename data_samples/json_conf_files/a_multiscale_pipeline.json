@@ -3,8 +3,8 @@
 {
 "multiscale": {
 
-        "left" : {"img_pyramid": "../images/maricopa_pyramid/left"},
-        "right" : {"img_pyramid": "../images/maricopa_pyramid/right"},
+        "left" : {"img_pyramid": "../images/maricopa_pyramid/left_image"},
+        "right" : {"img_pyramid": "../images/maricopa_pyramid/right_image"},
         "model": {"type": "pol", "degree": 2},
         "mesh": {"row":3, "col":3},
         "output": 
