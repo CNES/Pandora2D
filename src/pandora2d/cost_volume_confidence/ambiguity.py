@@ -27,7 +27,9 @@ import xarray as xr
 from json_checker import And
 
 from pandora.cost_volume_confidence.ambiguity import Ambiguity as pandora_ambiguity
+from pandora2d.common import get_cost_volume_without_margins
 from pandora2d.cost_volume_confidence.registry import CostVolumeConfidenceRegistry
+from pandora2d.margins import Margins
 
 from .cost_volume_confidence import CostVolumeConfidence
 
@@ -87,25 +89,33 @@ class Ambiguity(CostVolumeConfidence):
         :param dataset_disp_maps: dataset containing row and col disparity maps
         :return: the disparity map and the cost volume updated with the confidence measure
         """
-        # Using Pandora to perform calculations on columns only
-        etas = np.arange(self._eta_min, self._eta_max, self._eta_step)  # type: np.ndarray
-        nbr_etas = etas.shape[0]
-        grids = left_image.col_disparity
-        disparity_range_col = cost_volumes.disp_col
-        nbr_disparities = cost_volumes.sizes["disp_row"] * cost_volumes.sizes["disp_col"]
 
         # Reverse cost_volume if matching_cost measure is "max"
         type_measure_max = cost_volumes.attrs["type_measure"] == "max"
         if type_measure_max:
             cost_volumes["cost_volumes"].data *= -1
 
-        cost_volumes_4d = cost_volumes["cost_volumes"].data
-        cost_volumes_3d = cost_volumes_4d.reshape(
-            cost_volumes.sizes["row"],
-            cost_volumes.sizes["col"],
-            nbr_disparities,
-        )
+        # Check margins presence
+        disparity_margins = cost_volumes.attrs["disparity_margins"]
+        if disparity_margins is not None and disparity_margins != Margins(0, 0, 0, 0):
+            cost_volumes_to_use = get_cost_volume_without_margins(cost_volumes)
+        else:
+            cost_volumes_to_use = cost_volumes
 
+        # Using Pandora to perform calculations on columns only
+        etas = np.arange(self._eta_min, self._eta_max, self._eta_step)  # type: np.ndarray
+        nbr_etas = etas.shape[0]
+        nbr_row = cost_volumes_to_use.sizes["row"]
+        nbr_col = cost_volumes_to_use.sizes["col"]
+        nbr_disparities = cost_volumes_to_use.sizes["disp_row"] * cost_volumes_to_use.sizes["disp_col"]
+        disparity_range_col = cost_volumes_to_use.disp_col
+        cost_volumes_4d = cost_volumes_to_use["cost_volumes"].data
+        grids = left_image.col_disparity
+
+        # Reshape cost_volume 4D into cost_volume 3D (row, col, disp_row*disp_col) to use pandora ambiguity
+        cost_volumes_3d = cost_volumes_4d.reshape(nbr_row, nbr_col, nbr_disparities)
+
+        # Init pandora ambiguity instance
         ambiguity_ = pandora_ambiguity(
             confidence_method="ambiguity",
             eta_max=self._eta_max,
@@ -113,12 +123,14 @@ class Ambiguity(CostVolumeConfidence):
             normalization=False,
         )
 
+        # Compute ambiguity
         ambiguity = ambiguity_.compute_ambiguity(cost_volumes_3d, etas, nbr_etas, grids, disparity_range_col)
 
         if self._normalization:
             ambiguity = self.normalize_with_extremum(ambiguity, nbr_disparities, nbr_etas)
 
         # Conversion of ambiguity into a confidence measure
+        # Please note: this creates a new data structure the size of an image, which increases memory usage
         confidence_measure = 1 - ambiguity
 
         # Fill confidence_measure data variables with zeros to test cost volume confidence output is correct

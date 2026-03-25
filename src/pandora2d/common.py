@@ -476,3 +476,21 @@ def build_usable_data_mask(disp_data: NDArray, nodata: float | None) -> NDArray[
     if nodata is not None:
         mask &= disp_data != nodata
     return mask
+
+
+def get_cost_volume_without_margins(cost_volumes: xr.Dataset) -> xr.Dataset:
+    """
+    Getting cost_volume without the margins on the disparities
+
+    :param cost_volumes: the cost volumes dataset with the data variables:
+        - cost_volume 4D xarray.DataArray (row, col, disp_row, disp_col)
+    :return: cost_volumes without margins
+    """
+    margins = cost_volumes.attrs["disparity_margins"].asdict()
+    for key in margins.keys():
+        margins[key] *= cost_volumes.attrs["subpixel"]
+
+    return cost_volumes.isel(
+        disp_row=slice(margins["up"], -margins["down"] or None),
+        disp_col=slice(margins["left"], -margins["right"] or None),
+    )
