@@ -27,6 +27,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
+from pandora import matching_cost as pandora_matching_cost
 from pandora2d import cost_volume_confidence
 from pandora2d.img_tools import add_disparity_grid
 from pandora2d.margins import Margins
@@ -171,7 +172,7 @@ def disps_row(row_disparity, margins, subpix):
     """Range of row disparity"""
     disp_min = row_disparity["init"] - row_disparity["range"] - margins.up
     disp_max = row_disparity["init"] + row_disparity["range"] + margins.down
-    return np.arange(disp_min, disp_max + 1, 1 / float(subpix))
+    return pandora_matching_cost.AbstractMatchingCost.get_disparity_range(disp_min, disp_max, subpix)
 
 
 @pytest.fixture
@@ -179,7 +180,7 @@ def disps_col(col_disparity, margins, subpix):
     """Range of column disparity"""
     disp_min = col_disparity["init"] - col_disparity["range"] - margins.left
     disp_max = col_disparity["init"] + col_disparity["range"] + margins.right
-    return np.arange(disp_min, disp_max + 1, 1 / float(subpix))
+    return pandora_matching_cost.AbstractMatchingCost.get_disparity_range(disp_min, disp_max, subpix)
 
 
 @pytest.fixture()
@@ -210,6 +211,8 @@ def cost_volume(row, col, disps_row, disps_col, cost_volume_init_value, subpix, 
     if margins != Margins(0, 0, 0, 0):
         row_down_slice = slice(-margins.down, None) if margins.down else slice(0, 0)
         col_right_slice = slice(-margins.right, None) if margins.right else slice(0, 0)
+        # Adding these margins with a value of 1 creates artificial correlation peaks in order to verify
+        # that they are not included in the ambiguity computation
         np_data[:, :, : margins.up, :] = 1
         np_data[:, :, :, : margins.left] = 1
         np_data[:, :, row_down_slice, :] = 1
@@ -324,7 +327,7 @@ class TestConfidencePrediction:
         Tests run without normalization
         """
 
-        # For all points, there is only one peak where row = 0 and col = 0
+        # For all points, there is only one peak where disps_row = 0 and disps_col = 0
         cost_volume["cost_volumes"].values[:, :, 1, 3] = 1
 
         _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
@@ -397,10 +400,10 @@ class TestNormalizeWithExtremum:
         """
         Test confidence_prediction method with monotonic surface
         i.e. cost_surface is filled only with one peak (value = 1) and the remaining elements to cost_volume_init_value
-        Confidence is at its highest, i.e. 1
+        Confidence is at its highest, i.e. close to 1
         """
 
-        # For all points, there is only one peak where row = 0 and col = 0
+        # For all points, there is only one peak where disps_row = 0 and disps_col = 0
         cost_volume["cost_volumes"].values[:, :, 1, 3] = 1
 
         _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
