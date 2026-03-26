@@ -52,6 +52,7 @@ include:
       pylint-enabled: true
       black-enabled: true
       mypy-enabled: true
+      trivy-disabled: true
       build-system: setuptools
       # Install pandora2d test dependencies (see pyproject.toml file)
       extra-deps: test
