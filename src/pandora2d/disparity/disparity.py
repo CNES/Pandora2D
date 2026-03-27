@@ -240,6 +240,7 @@ class Disparity:
         cost_volumes_user["cost_volumes"].data[invalid_index] = np.nan
 
         if cost_volumes["cost_volumes"].data.dtype != disp_map_col.dtype:
+            # Using .astype() creates a memory copy
             disp_map_col = disp_map_col.astype(cost_volumes["cost_volumes"].data.dtype)
             disp_map_row = disp_map_row.astype(cost_volumes["cost_volumes"].data.dtype)
             score_map = score_map.astype(cost_volumes["cost_volumes"].data.dtype)
