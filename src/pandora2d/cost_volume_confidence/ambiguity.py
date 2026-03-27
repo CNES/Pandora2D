@@ -76,7 +76,6 @@ class Ambiguity(CostVolumeConfidence):
     def confidence_prediction(
         self,
         left_image: xr.Dataset,
-        right_image: xr.Dataset,
         cost_volumes: xr.Dataset,
         dataset_disp_maps: xr.Dataset,
     ) -> tuple[xr.Dataset, xr.Dataset]:

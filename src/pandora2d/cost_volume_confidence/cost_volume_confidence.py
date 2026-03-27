@@ -82,7 +82,6 @@ class CostVolumeConfidence(ABC):
     def confidence_prediction(
         self,
         left_image: xr.Dataset,
-        right_image: xr.Dataset,
         cost_volumes: xr.Dataset,
         dataset_disp_maps: xr.Dataset,
     ) -> tuple[xr.Dataset, xr.Dataset]:
@@ -90,7 +89,6 @@ class CostVolumeConfidence(ABC):
         Compute a confidence prediction.
 
         :param left_image: left Dataset image
-        :param right_image: right Dataset image
         :param cost_volumes: cost volume dataset
         :param dataset_disp_maps: dataset containing row and col disparity maps
         :return: the disparity map and the cost volume updated with the confidence measure

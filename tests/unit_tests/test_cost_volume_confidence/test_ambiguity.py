@@ -236,15 +236,6 @@ def dataset_disp_maps(row, col):
     )
 
 
-@pytest.fixture()
-def empty_dataset():
-    """
-    Empty dataset to check that the warning is printed when the confidence_prediction method is called.
-    Fixture to be deleted when the ambiguity has been implemented.
-    """
-    return xr.Dataset()
-
-
 class TestConfidencePrediction:
     """
     Test confidence_prediction method
@@ -282,7 +273,6 @@ class TestConfidencePrediction:
     def test_with_monotonic_surface(
         self,
         cost_volume_confidence_instance,
-        empty_dataset,
         left_datasets,
         cost_volume,
         dataset_disp_maps,
@@ -296,7 +286,6 @@ class TestConfidencePrediction:
 
         _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
             left_image=left_datasets,
-            right_image=empty_dataset,
             cost_volumes=cost_volume,
             dataset_disp_maps=dataset_disp_maps,
         )
@@ -315,7 +304,6 @@ class TestConfidencePrediction:
     def test_with_one_peak(
         self,
         cost_volume_confidence_instance,
-        empty_dataset,
         left_datasets,
         cost_volume,
         dataset_disp_maps,
@@ -332,7 +320,6 @@ class TestConfidencePrediction:
 
         _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
             left_image=left_datasets,
-            right_image=empty_dataset,
             cost_volumes=cost_volume,
             dataset_disp_maps=dataset_disp_maps,
         )
@@ -359,7 +346,6 @@ class TestNormalizeWithExtremum:
     def test_with_monotonic_surface(
         self,
         cost_volume_confidence_instance,
-        empty_dataset,
         left_datasets,
         cost_volume,
         dataset_disp_maps,
@@ -372,7 +358,6 @@ class TestNormalizeWithExtremum:
 
         _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
             left_image=left_datasets,
-            right_image=empty_dataset,
             cost_volumes=cost_volume,
             dataset_disp_maps=dataset_disp_maps,
         )
@@ -391,7 +376,6 @@ class TestNormalizeWithExtremum:
     def test_with_one_peak(
         self,
         cost_volume_confidence_instance,
-        empty_dataset,
         left_datasets,
         cost_volume,
         dataset_disp_maps,
@@ -408,7 +392,6 @@ class TestNormalizeWithExtremum:
 
         _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
             left_image=left_datasets,
-            right_image=empty_dataset,
             cost_volumes=cost_volume,
             dataset_disp_maps=dataset_disp_maps,
         )
@@ -422,7 +405,6 @@ class TestNormalizeWithExtremum:
     def test_with_multiple_peak(
         self,
         cost_volume_confidence_instance,
-        empty_dataset,
         left_datasets,
         cost_volume,
         dataset_disp_maps,
@@ -444,13 +426,11 @@ class TestNormalizeWithExtremum:
 
         _, dataset_disp_maps_row = cost_volume_confidence_instance.confidence_prediction(
             left_image=left_datasets,
-            right_image=empty_dataset,
             cost_volumes=cost_volume_row,
             dataset_disp_maps=dataset_disp_maps,
         )
         _, dataset_disp_maps_column = cost_volume_confidence_instance.confidence_prediction(
             left_image=left_datasets,
-            right_image=empty_dataset,
             cost_volumes=cost_volume_column,
             dataset_disp_maps=dataset_disp_maps,
         )
