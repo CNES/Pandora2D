@@ -154,8 +154,6 @@ cost_volumes repository
 
 - *confidence_measure.tif*: confidence measure map (this file is present only if a cost_volume_confidence step is specified in the user pipeline). 
 
-.. warning::
-        Pending implementation of ambiguity (:ref:`cost_volume_confidence`), the confidence_measure.tif file currently contains a single band filled with zeros. 
 
 disparity_map repository
 ------------------------
