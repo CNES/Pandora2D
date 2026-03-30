@@ -135,7 +135,7 @@ class Histogram1D {
       
       float sum;    // Initilializations for the variance E(X^2) - E(X)^2
       float sum_sq;
-      calculateSums(image, sum, sum_sq);
+      calculate_sums(image, sum, sum_sq);
       
       // Variance is stored within the moment, forces T type for compilation
       T num_elem = static_cast<T>(image.size());

@@ -78,18 +78,19 @@ bool all_same(const P2d::VectorD& data) {
  * @param sum : reference to store sum inside
  * @param sum_sq : reference to store sum of squares inside
  */
-void calculateSums(const P2d::Matrixf& image, float& sum, float& sum_sq) {
-  // Initialize sum and sum of squares
+void calculate_sums(const P2d::Matrixf& image, float& sum, float& sum_sq) {
+  // Initialize sum and sum of squares values (through references)
   sum = 0.f;
   sum_sq = 0.f;
 
   // Use de-referenced pointer on image
-  const float* reader;
+  const float *reader;
   Eigen::Index idx;
-
+  
   // Compute sum and sum of squares
   for (idx = 0, reader = &image(0, 0); idx < image.size(); ++idx, reader++) {
     sum += *reader;
     sum_sq += *reader * *reader;
   }
+  // Values are returned in sum and sum_sq variables
 }

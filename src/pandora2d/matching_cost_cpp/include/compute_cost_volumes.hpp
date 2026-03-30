@@ -66,7 +66,8 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
 bool all_non_zero_elements(const P2d::MatrixUI& mat);
 
 /**
- * @brief
+ * @brief Compute correlation between two images (left_image and right_image)
+ * The method is provided by "method" string
  *
  * @param method correlation method
  * @param left_image left image

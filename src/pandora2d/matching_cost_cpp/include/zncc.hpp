@@ -252,7 +252,7 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
   const float *left_value;
   const float *right_value;
   std::size_t idx;
-
+  
   // The use of double pointers is mandatory to compute all (co)variances
   //  in one loop. It assumes that window_area is the same for both images
   //  (also mandatory for ZNCC).

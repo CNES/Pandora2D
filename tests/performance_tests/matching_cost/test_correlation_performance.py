@@ -186,7 +186,7 @@ class TestComparisonMedicis:
                 "zncc-optim-2",
                 4,
                 "zncc/gri_resultat_",
-                id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, zncc",
+                id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, zncc (optim-2)",
             ),
         ],
     )
