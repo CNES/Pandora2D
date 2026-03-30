@@ -23,13 +23,18 @@ Test method on check_configuration file
 
 import random
 import string
-
 import numpy as np
 import pytest
 import xarray as xr
 from json_checker import DictCheckerError
 
-from pandora2d.check_configuration import check_conf, check_datasets, check_right_nodata_condition, get_section_config
+from pandora2d.check_configuration import (
+    check_conf,
+    check_datasets,
+    check_right_nodata_condition,
+    check_window_size_limit,
+    get_section_config,
+)
 from pandora2d.img_tools import add_disparity_grid, create_datasets_from_inputs
 
 
@@ -185,6 +190,55 @@ class TestCheckConfMatchingCostNodataCondition:
     def test_zncc_passes_with(self, input_configuration, pipeline_configuration):
         """Right nodata can be inf or nan with zncc matching_cost_method."""
         check_right_nodata_condition(input_configuration["input"], pipeline_configuration["pipeline"])
+
+
+class TestCheckWindowSizeLimit:
+    """Tests for check_window_size_limit.
+    Test image (cones/monoband/left.png): 375 rows x 450 cols
+    """
+
+    @pytest.mark.parametrize(
+        "window_size",
+        [
+            pytest.param(5, id="standard window size"),
+            pytest.param(375, id="equals n_rows boundary"),
+        ],
+    )
+    def test_passes_with_valid_window_size(self, window_size, left_img_path):
+        """
+        Description : Should not raise when window_size does not exceed either image dimension.
+        Data :
+        - Left image : cones/monoband/left.png (375 rows x 450 cols)
+        """
+        cfg = {
+            "input": {"left": {"img": left_img_path}},
+            "pipeline": {"matching_cost": {"window_size": window_size}},
+        }
+        check_window_size_limit(cfg)
+
+    @pytest.mark.parametrize(
+        "window_size",
+        [
+            pytest.param(377, id="first odd integer strictly above n_rows"),
+            pytest.param(451, id="first odd integer strictly above n_cols"),
+        ],
+    )
+    def test_raises_when_window_size_exceeds_image(self, window_size, left_img_path):
+        """
+        Description : Should raise ValueError when window_size exceeds at least one image dimension.
+        Values are the smallest odd integers above each dimension (matching_cost requires odd window_size).
+        Data :
+        - Left image : cones/monoband/left.png (375 rows x 450 cols)
+        """
+        cfg = {
+            "input": {"left": {"img": left_img_path}},
+            "pipeline": {"matching_cost": {"window_size": window_size}},
+        }
+        with pytest.raises(ValueError) as exc_info:
+            check_window_size_limit(cfg)
+        assert str(exc_info.value) == (
+            f"window_size ({window_size}) is larger than image dimensions (rows=375, cols=450)"
+        )
 
 
 @pytest.mark.parametrize(

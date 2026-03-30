@@ -84,7 +84,6 @@ def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> dict:
     # Check sections without dependencies
     check_segment_mode_section(user_cfg)
     check_pipeline_section(user_cfg, pandora2d_machine)
-    check_window_size_vs_image(user_cfg)
     check_output_section(user_cfg)
     check_expert_mode_section(user_cfg)
 
@@ -100,6 +99,7 @@ def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> dict:
     # The nodata value must be checked after the input section because the parameter is optional.
     if "matching_cost" in user_cfg["pipeline"]:
         check_right_nodata_condition(user_cfg["input"], user_cfg["pipeline"])
+        check_window_size_limit(user_cfg)
 
     return user_cfg
 
@@ -235,19 +235,17 @@ def check_matching_cost_method_with_ambiguity(matching_cost_method: str) -> None
         )
 
 
-def check_window_size_vs_image(user_cfg: dict) -> None:
+def check_window_size_limit(user_cfg: dict) -> None:
     """
-    Check that window_size does not exceed image dimensions.
+    Check that matching_cost window_size does not exceed left image dimensions.
+
+    Expected call order within check_conf: after check_pipeline_section (completed
+    matching_cost including window_size) and check_input_section (left image path).
 
     :param user_cfg: user configuration dictionary
     :raises ValueError: if window_size is larger than image rows or columns
     """
-    if "matching_cost" not in user_cfg.get("pipeline", {}):
-        return
-
-    window_size = user_cfg["pipeline"]["matching_cost"].get("window_size")
-    if window_size is None:
-        return
+    window_size = user_cfg["pipeline"]["matching_cost"]["window_size"]
     img_path = user_cfg["input"]["left"]["img"]
 
     metadata = get_metadata(img_path)
