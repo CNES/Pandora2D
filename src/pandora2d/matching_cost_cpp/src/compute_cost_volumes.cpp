@@ -46,8 +46,8 @@ P2d::Matrixf get_window(const P2d::Matrixf& image,
   int start_col = std::max(0, index_col - offset);
 
   // Get last row and column of the window
-  int nb_rows_img = image.rows();
-  int nb_cols_img = image.cols();
+  int nb_rows_img = static_cast<int>(image.rows());
+  int nb_cols_img = static_cast<int>(image.cols());
   int end_row = std::min(nb_rows_img - 1, index_row + offset);
   int end_col = std::min(nb_cols_img - 1, index_col + offset);
 

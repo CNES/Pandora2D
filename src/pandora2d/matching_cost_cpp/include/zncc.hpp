@@ -238,8 +238,6 @@ inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
 template <typename T>
 inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
 			     const P2d::Matrixf& right_image) {
-  const std::size_t window_area = left_image.size();
-
   float sum_left = 0.f;
   float sum_right = 0.f;
   float sum_left_sq = 0.f;
@@ -248,23 +246,24 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
 
   // Compute mean and variance, variance uses the following formula: E(X^2) - E(X)^2
   // It is computed in float as the input image
-  // Use de-referenced pointers to read the left and right images
-  const float *left_value;
-  const float *right_value;
-  std::size_t idx;
+  // Use Eigen de-referenced pointers to read the left and right images
+  auto left_reader = left_image.data();
+  auto right_reader = right_image.data();
   
   // The use of double pointers is mandatory to compute all (co)variances
-  //  in one loop. It assumes that window_area is the same for both images
-  //  (also mandatory for ZNCC).
-  for (idx = 0, left_value = &left_image(0, 0), right_value = &right_image(0, 0);
-       idx < window_area;
-       ++idx, left_value++, right_value++) {
-    sum_left += *left_value;
-    sum_right += *right_value;
+  //  in one loop. It uses the smallest matrix's size (used outside the loop).
+  const Eigen::Index min_window_area = std::min(left_image.size(), right_image.size());
+  
+  for (Eigen::Index idx = 0; idx < min_window_area; ++idx) {
+    auto left_value = left_reader[idx];
+    auto right_value = right_reader[idx];
     
-    sum_left_sq += *left_value * *left_value;
-    sum_right_sq += *right_value * *right_value;
-    sum_cross += *left_value * *right_value;
+    sum_left += left_value;
+    sum_right += right_value;
+    
+    sum_left_sq += left_value * left_value;
+    sum_right_sq += right_value * right_value;
+    sum_cross += left_value * right_value;
   }
 
   // Cast to T type to keep or increase precision (float32/64)
@@ -276,6 +275,7 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
 
   // var_wa as window_area * variance is stored, it avoids very small values
   // Type T imposed to not interpret the formula
+  auto window_area = static_cast<std::size_t>(min_window_area);
   T var_left_wa = static_cast<T>(sum_left_sq) - sum_left_T * sum_left_T / window_area;
   T var_right_wa = static_cast<T>(sum_right_sq) - sum_right_T * sum_right_T / window_area; 
 

@@ -664,7 +664,8 @@ def test_cost_volume_coordinates_with_roi(
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc"])
+# /!\ "zncc" currently target "zncc-optim-1"
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
 @pytest.mark.parametrize(
     ["step", "col_expected", "row_expected"],
     [
@@ -1676,7 +1677,10 @@ class TestDisparityMargins:
 
         return left, right
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc"])
+    # /!\ "zncc" currently target "zncc-optim-1"
+    @pytest.mark.parametrize(
+        "matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc", "zncc-optim-2"]
+    )
     @pytest.mark.parametrize(
         ["margins", "subpix", "gt_cv_shape", "gt_disp_col", "gt_disp_row"],
         [
