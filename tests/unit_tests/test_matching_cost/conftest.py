@@ -28,17 +28,11 @@ from typing import NamedTuple
 import numpy as np
 import pytest
 import xarray as xr
-from pandora import import_plugin
 from rasterio import Affine
 from skimage.io import imsave
 
 from pandora2d import matching_cost
 from pandora2d.img_tools import add_disparity_grid, create_datasets_from_inputs
-
-
-@pytest.fixture()
-def import_plugins():
-    import_plugin()
 
 
 @pytest.fixture()

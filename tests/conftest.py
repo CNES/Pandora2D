@@ -32,6 +32,7 @@ import pytest
 import rasterio
 import xarray as xr
 from pandora.common import write_data_array
+from pandora import import_plugin
 from pytest import DoctestItem
 
 import pandora2d
@@ -101,6 +102,11 @@ def pytest_runtest_makereport(item, call):  # pylint: disable=unused-argument
     report = outcome.get_result()
     pattern = r"(EX_\w*)"
     report.requirement = re.findall(pattern, str(item.function.__doc__))
+
+
+@pytest.fixture()
+def import_plugins():
+    import_plugin()
 
 
 @pytest.fixture(scope="session")
@@ -593,6 +599,34 @@ def correct_pipeline_without_refinement(window_size, matching_cost_method, subpi
                 "subpix": subpix,
                 "step": step,
             },
+            "disparity": {"disparity_method": "wta", "invalid_disparity": invalid_disparity_mask},
+        }
+    }
+
+
+@pytest.fixture()
+def eta_max():
+    return 0.7
+
+
+@pytest.fixture()
+def eta_step():
+    return 0.01
+
+
+@pytest.fixture()
+def correct_pipeline_with_ambiguity(
+    window_size, matching_cost_method, subpix, step, invalid_disparity_mask, eta_max, eta_step
+):
+    return {
+        "pipeline": {
+            "matching_cost": {
+                "matching_cost_method": matching_cost_method,
+                "window_size": window_size,
+                "subpix": subpix,
+                "step": step,
+            },
+            "cost_volume_confidence": {"confidence_method": "ambiguity", "eta_max": eta_max, "eta_step": eta_step},
             "disparity": {"disparity_method": "wta", "invalid_disparity": invalid_disparity_mask},
         }
     }

@@ -21,6 +21,8 @@
 Test check pipeline step configuration
 """
 
+from copy import deepcopy
+import importlib.util
 import pytest
 import transitions
 from json_checker import DictCheckerError
@@ -131,6 +133,44 @@ class TestCheckPipelineSection:
         assert (
             "To avoid aliasing, it is strongly recommended to set the subpix parameter of the matching cost step"
             " to a value greater than 1 when using dichotomy." in caplog.messages
+        )
+
+    @pytest.mark.parametrize("matching_cost_method", ["ssd", "sad", "zncc_python"])
+    @pytest.mark.parametrize("pipeline_cfg", ["correct_pipeline_with_ambiguity"])
+    def test_check_matching_cost_method_with_ambiguity(
+        self, matching_cost_method, pipeline_cfg, pandora2d_machine, caplog, request
+    ):
+        """
+        Check the correlation method used in relation to ambiguity.
+        """
+        check_pipeline_section(request.getfixturevalue(pipeline_cfg), pandora2d_machine)
+
+        assert (
+            "This initial version, available in Pandora2d 1.1.0, should not be used with Pandora measurements"
+            "(ssd, sad, zncc_python, mc_cnn). An update in a future version will resolve this issue."
+            "In the meantime, it is recommended to filter the confidence_measure map using the validity_mask"
+            in caplog.messages
+        )
+
+    @pytest.mark.usefixtures("import_plugins")
+    @pytest.mark.plugin_tests
+    @pytest.mark.skipif(importlib.util.find_spec("mc_cnn") is None, reason="MCCNN plugin not installed")
+    @pytest.mark.parametrize("matching_cost_method", ["mc_cnn"])
+    @pytest.mark.parametrize("window_size", [11])
+    @pytest.mark.parametrize("pipeline_cfg", ["correct_pipeline_with_ambiguity"])
+    def test_check_mccnn_with_ambiguity(
+        self, matching_cost_method, window_size, pipeline_cfg, pandora2d_machine, caplog, request
+    ):
+        """
+        Check the correlation method used in relation to ambiguity.
+        """
+        check_pipeline_section(request.getfixturevalue(pipeline_cfg), pandora2d_machine)
+
+        assert (
+            "This initial version, available in Pandora2d 1.1.0, should not be used with Pandora measurements"
+            "(ssd, sad, zncc_python, mc_cnn). An update in a future version will resolve this issue."
+            "In the meantime, it is recommended to filter the confidence_measure map using the validity_mask"
+            in caplog.messages
         )
 
 

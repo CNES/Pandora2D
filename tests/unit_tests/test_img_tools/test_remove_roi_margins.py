@@ -45,6 +45,7 @@ def create_dataset(row, col):
             "row_map": xr.DataArray(data, dims=dims, coords=coords),
             "col_map": xr.DataArray(data, dims=dims, coords=coords),
             "correlation_score": xr.DataArray(data, dims=dims, coords=coords),
+            "confidence_measure": xr.DataArray(data, dims=dims, coords=coords),
             "validity": xr.DataArray(
                 data_validity, dims=("row", "col", "criteria"), coords={**coords, "criteria": criteria_values}
             ),

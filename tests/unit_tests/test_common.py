@@ -42,6 +42,7 @@ from pandora2d import common, criteria, disparity, matching_cost, refinement, ru
 from pandora2d.check_configuration import check_conf
 from pandora2d.constants import Criteria
 from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.margins import Margins
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -1002,3 +1003,55 @@ def test_build_usable_data_mask(disp_data, nodata, expected):
     """Unusable values are masked to False."""
     result = common.build_usable_data_mask(disp_data, nodata)
     assert (result == expected).all()
+
+
+@pytest.mark.parametrize(
+    ["shape", "margins", "subpixel", "expected_shape"],
+    [
+        pytest.param(
+            (5, 5),  # disp_row, disp_col
+            Margins(1, 1, 1, 1),  # {"left": 1, "up": 1, "right": 1, "down": 1}
+            1,
+            (3, 3),
+            id="simple margins",
+        ),
+        pytest.param(
+            (6, 6),  # disp_row, disp_col
+            Margins(1, 2, 1, 2),  # {"left": 1, "up": 2, "right": 1, "down": 2}
+            1,
+            (2, 4),
+            id="asymmetric margins",
+        ),
+        pytest.param(
+            (6, 6),
+            Margins(1, 1, 1, 1),  # {"left": 1, "up": 1, "right": 1, "down": 1}
+            2,  # subpixel scaling
+            (2, 2),
+            id="with subpixel",
+        ),
+        pytest.param(
+            (4, 4),
+            Margins(1, 1, 0, 0),  # {"left": 1, "up": 1, "right": 0, "down": 0}
+            1,
+            (3, 3),
+            id="no bottom/right margin",
+        ),
+    ],
+)
+def test_get_cost_volume_without_margins(shape, margins, subpixel, expected_shape):
+    """Margins should be correctly removed from cost volume."""
+
+    disp_row, disp_col = shape
+    data = xr.Dataset(
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np.full((1, 1, disp_row, disp_col), 0))},
+        coords={
+            "row": np.arange(1),
+            "col": np.arange(1),
+            "disp_row": np.arange(disp_row),
+            "disp_col": np.arange(disp_col),
+        },
+        attrs={"subpixel": subpixel, "disparity_margins": margins},
+    )
+
+    result = common.get_cost_volume_without_margins(data)
+    assert result.cost_volumes.shape[2:] == expected_shape

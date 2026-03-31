@@ -195,6 +195,13 @@ def check_pipeline_section(user_cfg: dict[str, dict], pandora2d_machine: Pandora
             user_cfg["pipeline"]["matching_cost"]["subpix"],
         )
 
+    # Check the correlation metric if there is a ambiguity step
+    if (
+        "cost_volume_confidence" in user_cfg["pipeline"]
+        and "ambiguity" in user_cfg["pipeline"]["cost_volume_confidence"]["confidence_method"]
+    ):
+        check_matching_cost_method_with_ambiguity(user_cfg["pipeline"]["matching_cost"]["matching_cost_method"])
+
 
 def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> None:
     """
@@ -209,6 +216,21 @@ def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> No
         logging.warning(
             "To avoid aliasing, it is strongly recommended to set the subpix parameter of the matching cost step"
             " to a value greater than 1 when using dichotomy."
+        )
+
+
+def check_matching_cost_method_with_ambiguity(matching_cost_method: str) -> None:
+    """
+    Check the correlation method used in relation to ambiguity
+
+    :param matching_cost_method: matching_cost method in user configuration
+    """
+
+    if matching_cost_method in ("ssd", "sad", "zncc_python", "mc_cnn"):
+        logging.warning(
+            "This initial version, available in Pandora2d 1.1.0, should not be used with Pandora measurements"
+            "(ssd, sad, zncc_python, mc_cnn). An update in a future version will resolve this issue."
+            "In the meantime, it is recommended to filter the confidence_measure map using the validity_mask"
         )
 
 

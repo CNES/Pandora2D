@@ -22,13 +22,14 @@ This module contains functions associated to the cost volume confidence computat
 with ambiguity method.
 """
 
-import logging
-
 import numpy as np
 import xarray as xr
 from json_checker import And
 
+from pandora.cost_volume_confidence.ambiguity import Ambiguity as pandora_ambiguity
+from pandora2d.common import get_cost_volume_without_margins
 from pandora2d.cost_volume_confidence.registry import CostVolumeConfidenceRegistry
+from pandora2d.margins import Margins
 
 from .cost_volume_confidence import CostVolumeConfidence
 
@@ -50,8 +51,10 @@ class Ambiguity(CostVolumeConfidence):
         super().__init__(cfg)
 
         self._normalization = self._cfg["normalization"]
+        self._eta_min = 0.0
         self._eta_max = self._cfg["eta_max"]
         self._eta_step = self._cfg["eta_step"]
+        self._percentile = 1
 
     @property
     def schema(self):
@@ -73,7 +76,6 @@ class Ambiguity(CostVolumeConfidence):
     def confidence_prediction(
         self,
         left_image: xr.Dataset,
-        right_image: xr.Dataset,
         cost_volumes: xr.Dataset,
         dataset_disp_maps: xr.Dataset,
     ) -> tuple[xr.Dataset, xr.Dataset]:
@@ -87,18 +89,72 @@ class Ambiguity(CostVolumeConfidence):
         :return: the disparity map and the cost volume updated with the confidence measure
         """
 
-        logging.warning("The ambiguity method has not yet been implemented")
+        # Reverse cost_volume if matching_cost measure is "max"
+        type_measure_max = cost_volumes.attrs["type_measure"] == "max"
+        if type_measure_max:
+            cost_volumes["cost_volumes"].data *= -1
+
+        # Check margins presence
+        disparity_margins = cost_volumes.attrs["disparity_margins"]
+        if disparity_margins is not None and disparity_margins != Margins(0, 0, 0, 0):
+            cost_volumes_to_use = get_cost_volume_without_margins(cost_volumes)
+        else:
+            cost_volumes_to_use = cost_volumes
+
+        # Using Pandora to perform calculations on columns only
+        etas = np.arange(self._eta_min, self._eta_max, self._eta_step)  # type: np.ndarray
+        nbr_etas = etas.shape[0]
+        nbr_row = cost_volumes_to_use.sizes["row"]
+        nbr_col = cost_volumes_to_use.sizes["col"]
+        nbr_disparities = cost_volumes_to_use.sizes["disp_row"] * cost_volumes_to_use.sizes["disp_col"]
+        disparity_range_col = cost_volumes_to_use.disp_col
+        cost_volumes_4d = cost_volumes_to_use["cost_volumes"].data
+        grids = left_image.col_disparity
+
+        # Reshape cost_volume 4D into cost_volume 3D (row, col, disp_row*disp_col) to use pandora ambiguity
+        cost_volumes_3d = cost_volumes_4d.reshape(nbr_row, nbr_col, nbr_disparities)
+
+        # Init pandora ambiguity instance
+        ambiguity_ = pandora_ambiguity(
+            confidence_method="ambiguity",
+            eta_max=self._eta_max,
+            eta_step=self._eta_step,
+            normalization=False,
+        )
+
+        # Compute ambiguity
+        ambiguity = ambiguity_.compute_ambiguity(cost_volumes_3d, etas, nbr_etas, grids, disparity_range_col)
+
+        if self._normalization:
+            ambiguity = self.normalize_with_extremum(ambiguity, nbr_disparities, nbr_etas)
+
+        # Conversion of ambiguity into a confidence measure
+        # Please note: this creates a new data structure the size of an image, which increases memory usage
+        confidence_measure = 1 - ambiguity
 
         # Fill confidence_measure data variables with zeros to test cost volume confidence output is correct
-        if len(dataset_disp_maps.data_vars) != 0:
-            confidence = xr.DataArray(
-                np.zeros(
-                    (len(dataset_disp_maps.row), len(dataset_disp_maps.col)),
-                    dtype=dataset_disp_maps["row_map"].data.dtype,
-                ),
-                coords={"row": dataset_disp_maps.row, "col": dataset_disp_maps.col},
-                dims=("row", "col"),
-            )
-            dataset_disp_maps["confidence_measure"] = confidence
+        confidence = xr.DataArray(
+            confidence_measure,
+            coords={"row": dataset_disp_maps.row, "col": dataset_disp_maps.col},
+            dims=("row", "col"),
+        )
+        dataset_disp_maps["confidence_measure"] = confidence
+
+        # Remove modification
+        if type_measure_max:
+            cost_volumes["cost_volumes"].data *= -1
 
         return cost_volumes, dataset_disp_maps
+
+    @staticmethod
+    def normalize_with_extremum(confidence: np.ndarray, nbr_disparities: int, nbr_etas: int) -> np.ndarray:
+        """
+        Normalize ambiguity with extremum
+
+        :param confidence: confidence
+        :param nbr_disparities: number of disparity (row_disparity * col_disparity)
+        :param nbr_etas: size of etas
+        :return: the normalized confidence
+        """
+        max_norm = nbr_disparities * nbr_etas
+        return confidence / max_norm

@@ -438,6 +438,13 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: dict):
         "validity": (("row", "col", "criteria"), dataset["validity"].data[up:down, left:right, :]),
     }
 
+    # Check if the confidence measure exists
+    if "confidence_measure" in dataset:
+        data_variables["confidence_measure"] = (
+            ("row", "col"),
+            dataset["confidence_measure"].data[up:down, left:right],
+        )
+
     coords = {"row": row[up:down], "col": col[left:right], "criteria": dataset.criteria.values}
 
     new_dataset = xr.Dataset(data_variables, coords)
