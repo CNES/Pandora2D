@@ -79,17 +79,13 @@ Configuration and parameters
 
 .. note::
     To use ``mc_cnn`` as ``matching_cost_method``, the MCCNN plugin must be installed first.
-    Run:
-
-    .. code-block:: bash
-
-        make install-plugin
-
-    Or install it manually with:
+    Install it with:
 
     .. code-block:: bash
 
         pip install pandora-plugin-mccnn
+
+    See `Pandora plugin documentation <https://pandora.readthedocs.io/en/stable/userguide/plugins/plugin_mccnn.html>`_.
 
 .. warning::
     The subpix parameter can only take values 1, 2 and 4.

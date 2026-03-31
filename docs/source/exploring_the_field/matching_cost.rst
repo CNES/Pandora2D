@@ -23,9 +23,7 @@ Different measures of similarity are available in Pandora2D to compute these coe
 - SSD (Sum of Squared Differences)
 - ZNCC (Zero mean Normalized Cross Correlation)
 - MI (Mutual Information)
-- MCCNN (Neural network which computes a similarity measure) — requires ``pandora_plugin_mccnn``
-  (install with ``make install-plugin`` or ``pip install pandora-plugin-mccnn``,
-  see `pandora documentation <https://pandora.readthedocs.io/en/stable/userguide/plugins/plugin_mccnn.html>`_)
+- MCCNN (Neural network which computes a similarity measure)
 
 Let's see in following sections how they work.
 
