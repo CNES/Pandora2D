@@ -197,6 +197,14 @@ class TestCheckWindowSizeLimit:
     Test image (cones/monoband/left.png): 375 rows x 450 cols
     """
 
+    @pytest.fixture
+    def configuration(self, left_img_path, window_size):
+        """Build minimal configuration for window size limit checks."""
+        return {
+            "input": {"left": {"img": left_img_path}},
+            "pipeline": {"matching_cost": {"window_size": window_size}},
+        }
+
     @pytest.mark.parametrize(
         "window_size",
         [
@@ -204,17 +212,13 @@ class TestCheckWindowSizeLimit:
             pytest.param(375, id="equals n_rows boundary"),
         ],
     )
-    def test_passes_with_valid_window_size(self, window_size, left_img_path):
+    def test_passes_with_valid_window_size(self, configuration):
         """
         Description : Should not raise when window_size does not exceed either image dimension.
         Data :
         - Left image : cones/monoband/left.png (375 rows x 450 cols)
         """
-        cfg = {
-            "input": {"left": {"img": left_img_path}},
-            "pipeline": {"matching_cost": {"window_size": window_size}},
-        }
-        check_window_size_limit(cfg)
+        check_window_size_limit(configuration)
 
     @pytest.mark.parametrize(
         "window_size",
@@ -223,19 +227,15 @@ class TestCheckWindowSizeLimit:
             pytest.param(451, id="first odd integer strictly above n_cols"),
         ],
     )
-    def test_raises_when_window_size_exceeds_image(self, window_size, left_img_path):
+    def test_raises_when_window_size_exceeds_image(self, window_size, configuration):
         """
         Description : Should raise ValueError when window_size exceeds at least one image dimension.
         Values are the smallest odd integers above each dimension (matching_cost requires odd window_size).
         Data :
         - Left image : cones/monoband/left.png (375 rows x 450 cols)
         """
-        cfg = {
-            "input": {"left": {"img": left_img_path}},
-            "pipeline": {"matching_cost": {"window_size": window_size}},
-        }
         with pytest.raises(ValueError) as exc_info:
-            check_window_size_limit(cfg)
+            check_window_size_limit(configuration)
         assert str(exc_info.value) == (
             f"window_size ({window_size}) is larger than image dimensions (rows=375, cols=450)"
         )
