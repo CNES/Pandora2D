@@ -77,6 +77,16 @@ Configuration and parameters
     By default, the C++ zncc is used when using the “zncc” matching cost method. 
     To use the Python version, enter “zncc_python” as the matching cost method in the configuration file.
 
+.. note::
+    To use ``mc_cnn`` as ``matching_cost_method``, the MCCNN plugin must be installed first.
+    Install it with:
+
+    .. code-block:: bash
+
+        pip install pandora-plugin-mccnn
+
+    See `Pandora plugin documentation <https://pandora.readthedocs.io/en/stable/userguide/plugins/plugin_mccnn.html>`_.
+
 .. warning::
     The subpix parameter can only take values 1, 2 and 4.
 

@@ -17,6 +17,14 @@ Pandora2D is available on Github and can be installed by:
     #install pandora2d latest release
     pip install pandora2d
 
+If you want to use ``matching_cost_method=mc_cnn``, install the MCCNN plugin:
+
+.. code-block:: bash
+
+    pip install pandora-plugin-mccnn
+
+See `Pandora plugin documentation <https://pandora.readthedocs.io/en/stable/userguide/plugins/plugin_mccnn.html>`_.
+
 First step
 ##########
 
