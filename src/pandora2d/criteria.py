@@ -358,11 +358,11 @@ def apply_invalid_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_cri
 
         row_dsp_int, col_dsp_int = int(row_disp), int(col_disp)
         # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
-        msk_row_slice = np.s_[:row_dsp_int] if row_dsp_int < 0 else np.s_[row_dsp_int:]  # type: ignore[index]
-        msk_col_slice = np.s_[:col_dsp_int] if col_dsp_int < 0 else np.s_[col_dsp_int:]  # type: ignore[index]
+        msk_row_slice = np.s_[:row_dsp_int] if row_dsp_int < 0 else np.s_[row_dsp_int:]
+        msk_col_slice = np.s_[:col_dsp_int] if col_dsp_int < 0 else np.s_[col_dsp_int:]
 
-        criteria_row_slice = np.s_[-row_dsp_int:] if row_dsp_int <= 0 else np.s_[:-row_dsp_int]  # type: ignore[index]
-        criteria_col_slice = np.s_[-col_dsp_int:] if col_dsp_int <= 0 else np.s_[:-col_dsp_int]  # type: ignore[index]
+        criteria_row_slice = np.s_[-row_dsp_int:] if row_dsp_int <= 0 else np.s_[:-row_dsp_int]
+        criteria_col_slice = np.s_[-col_dsp_int:] if col_dsp_int <= 0 else np.s_[:-col_dsp_int]
 
         mask_img_shape[:] = 0
         mask_img_shape[criteria_row_slice, criteria_col_slice] |= mask_criteria_right[msk_row_slice, msk_col_slice]
@@ -445,8 +445,8 @@ def apply_nodata_right_criteria_mask(
 
         # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
         inv_row_dsp_int, inv_col_dsp_int = int(np.floor(-row_disp)), int(np.floor(-col_disp))
-        criteria_row_slice = np.s_[-row_dsp_int:] if row_disp <= 0 else np.s_[:inv_row_dsp_int]  # type: ignore[index]
-        criteria_col_slice = np.s_[-col_dsp_int:] if col_disp <= 0 else np.s_[:inv_col_dsp_int]  # type: ignore[index]
+        criteria_row_slice = np.s_[-row_dsp_int:] if row_disp <= 0 else np.s_[:inv_row_dsp_int]
+        criteria_col_slice = np.s_[-col_dsp_int:] if col_disp <= 0 else np.s_[:inv_col_dsp_int]
 
         mask_img_shape[criteria_row_slice, criteria_col_slice] |= mask_criteria[mask_row_slice, mask_col_slice]
 
