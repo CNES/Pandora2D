@@ -99,6 +99,7 @@ def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> dict:
     # The nodata value must be checked after the input section because the parameter is optional.
     if "matching_cost" in user_cfg["pipeline"]:
         check_right_nodata_condition(user_cfg["input"], user_cfg["pipeline"])
+        check_window_size_limit(user_cfg)
 
     return user_cfg
 
@@ -231,6 +232,29 @@ def check_matching_cost_method_with_ambiguity(matching_cost_method: str) -> None
             "This initial version, available in Pandora2d 1.1.0, should not be used with Pandora measurements"
             "(ssd, sad, zncc_python, mc_cnn). An update in a future version will resolve this issue."
             "In the meantime, it is recommended to filter the confidence_measure map using the validity_mask"
+        )
+
+
+def check_window_size_limit(user_cfg: dict) -> None:
+    """
+    Check that matching_cost window_size does not exceed left image dimensions.
+
+    Expected call order within check_conf: after check_pipeline_section (completed
+    matching_cost including window_size) and check_input_section (left image path).
+
+    :param user_cfg: user configuration dictionary
+    :raises ValueError: if window_size is larger than image rows or columns
+    """
+    window_size = user_cfg["pipeline"]["matching_cost"]["window_size"]
+    img_path = user_cfg["input"]["left"]["img"]
+
+    metadata = get_metadata(img_path)
+    n_rows = metadata.sizes["row"]
+    n_cols = metadata.sizes["col"]
+
+    if window_size > n_rows or window_size > n_cols:
+        raise ValueError(
+            f"window_size ({window_size}) is larger than image dimensions " f"(rows={n_rows}, cols={n_cols})"
         )
 
 
