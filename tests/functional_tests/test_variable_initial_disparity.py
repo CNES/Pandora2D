@@ -20,7 +20,7 @@
 Functional tests for configurations with variable initial disparity.
 """
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, too-many-arguments, too-many-positional-arguments
 
 from copy import deepcopy
 
@@ -170,6 +170,7 @@ class TestDirectoryDisparityPipeline:
 
     @pytest.mark.parametrize("input_cfg", ["correct_input_cfg", "correct_input_with_left_right_mask"])
     @pytest.mark.parametrize("pipeline_cfg", ["correct_pipeline_with_dichotomy_cpp"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "sad"])
     @pytest.mark.parametrize("step", [[1, 1], [3, 10]])
     @pytest.mark.parametrize("subpix", [1, 2])
     @pytest.mark.parametrize("invalid_disparity", [-99, np.nan])
@@ -180,6 +181,7 @@ class TestDirectoryDisparityPipeline:
         self,
         second_configuration,
         invalid_disparity_first_pipeline,
+        matching_cost_method,
         step,
         subpix,
         invalid_disparity,
