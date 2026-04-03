@@ -35,6 +35,27 @@ class TestNotebooks:
     Allows to test the pandora2d notebooks
     """
 
+    def test_estimation_step_explained(self):
+        """
+        Test that the estimation_step_explained notebook runs without errors
+
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run(
+                [f"jupyter nbconvert --to script notebooks/estimation_step_explained.ipynb --output-dir {directory}"],
+                shell=True,
+                check=False,
+            )
+            out = subprocess.run(
+                [f"ipython {directory}/estimation_step_explained.py"],
+                shell=True,
+                check=False,
+                cwd="notebooks",
+                capture_output=True,
+            )
+
+            assert out.returncode == 0
+
     def test_introduction_and_basic_usage(self):
         """
         Test that the introduction_and_basic_usage notebook runs without errors
@@ -58,19 +79,42 @@ class TestNotebooks:
 
             assert out.returncode == 0
 
-    def test_usage_step_roi_config(self):
+    def test_usage_cost_volume_confidence(self):
         """
-        Test that the usage_step_roi_config notebook runs without errors
+        Test that the usage_cost_volume_confidence notebook runs without errors
 
         """
         with tempfile.TemporaryDirectory() as directory:
             subprocess.run(
-                [f"jupyter nbconvert --to script notebooks/usage_step_roi_config.ipynb --output-dir {directory}"],
+                [
+                    f"jupyter nbconvert --to script notebooks/usage_cost_volume_confidence.ipynb --output-dir {directory}"
+                ],
                 shell=True,
                 check=False,
             )
             out = subprocess.run(
-                [f"ipython {directory}/usage_step_roi_config.py"],
+                [f"ipython {directory}/usage_cost_volume_confidence.py"],
+                shell=True,
+                check=False,
+                cwd="notebooks",
+                capture_output=True,
+            )
+
+            assert out.returncode == 0
+
+    def test_usage_deformation_grid(self):
+        """
+        Test that the usage_deformation_grid notebook runs without errors
+
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run(
+                [f"jupyter nbconvert --to script notebooks/usage_deformation_grid.ipynb --output-dir {directory}"],
+                shell=True,
+                check=False,
+            )
+            out = subprocess.run(
+                [f"ipython {directory}/usage_deformation_grid.py"],
                 shell=True,
                 check=False,
                 cwd="notebooks",
@@ -100,19 +144,21 @@ class TestNotebooks:
 
             assert out.returncode == 0
 
-    def test_estimation_step_explained(self):
+    def test_usage_segment_mode_and_comparison(self):
         """
-        Test that the estimation_step_explained notebook runs without errors
+        Test that the usage_segment_mode_and_comparison notebook runs without errors
 
         """
         with tempfile.TemporaryDirectory() as directory:
             subprocess.run(
-                [f"jupyter nbconvert --to script notebooks/estimation_step_explained.ipynb --output-dir {directory}"],
+                [
+                    f"jupyter nbconvert --to script notebooks/usage_segment_mode_and_comparison.ipynb --output-dir {directory}"
+                ],
                 shell=True,
                 check=False,
             )
             out = subprocess.run(
-                [f"ipython {directory}/estimation_step_explained.py"],
+                [f"ipython {directory}/usage_segment_mode_and_comparison.py"],
                 shell=True,
                 check=False,
                 cwd="notebooks",
@@ -121,9 +167,30 @@ class TestNotebooks:
 
             assert out.returncode == 0
 
-    def test_origin_coordinates(self):
+    def test_usage_step_roi_config(self):
         """
-        Test that the test_margins notebook runs without errors
+        Test that the usage_step_roi_config notebook runs without errors
+
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run(
+                [f"jupyter nbconvert --to script notebooks/usage_step_roi_config.ipynb --output-dir {directory}"],
+                shell=True,
+                check=False,
+            )
+            out = subprocess.run(
+                [f"ipython {directory}/usage_step_roi_config.py"],
+                shell=True,
+                check=False,
+                cwd="notebooks",
+                capture_output=True,
+            )
+
+            assert out.returncode == 0
+
+    def test_usage_with_origin_coordinates(self):
+        """
+        Test that the usage_with_origin_coordinates notebook runs without errors
 
         """
         with tempfile.TemporaryDirectory() as directory:
