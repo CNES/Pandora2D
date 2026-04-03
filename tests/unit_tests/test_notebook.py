@@ -121,6 +121,29 @@ class TestNotebooks:
 
             assert out.returncode == 0
 
+    def test_origin_coordinates(self):
+        """
+        Test that the test_margins notebook runs without errors
+
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run(
+                [
+                    f"jupyter nbconvert --to script notebooks/usage_with_origin_coordinates.ipynb --output-dir {directory}"
+                ],
+                shell=True,
+                check=False,
+            )
+            out = subprocess.run(
+                [f"ipython {directory}/usage_with_origin_coordinates.py"],
+                shell=True,
+                check=False,
+                cwd="notebooks",
+                capture_output=True,
+            )
+
+            assert out.returncode == 0
+
     def test_margins(self):
         """
         Test that the test_margins notebook runs without errors
