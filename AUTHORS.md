@@ -13,16 +13,18 @@ This file keeps track of authors contributions.
 * Alexandre Constantin <alexandre.constantin@cnes.fr>
 * Marie Leconte <marie.leconte@cs-soprasteria.com>
 * Elisa Duz <elisa.duz@cs-soprasteria.com>
-* Philippe Mallet-Ladeira <philippe.mallet-ladeira@cs-soprasteria.com>
+* Alexandre Vinas <alexandre.vinas@cs-soprasteria.com>
 
 ## Contributors
 
 * Emmanuel Dubois <emmanuel.dubois@cnes.fr>
 * Emmanuelle Sarrazin <emmanuelle.sarrazin@cnes.fr>
-* Natalia Jimenez <natalia.jimenez-diaz@csgroup.eu>
+* Natalia Jimenez
 * Quentin Fardet <quentin.fardet@cs-soprasteria.com>
 * Jerome Lebreton <jerome.lebreton@cs-soprasteria.com>
 * Tommy Calendini <tommy.calendini@cs-soprasteria.com>
+* Philippe Mallet-Ladeira <philippe.mallet-ladeira@cs-soprasteria.com>
+* Pierrick Koch <pierrick.koch@cs-soprasteria.com>
 
 Update here with new contributors.
 
