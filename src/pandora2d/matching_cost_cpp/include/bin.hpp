@@ -47,9 +47,8 @@ template <typename T>
 T get_bins_width_scott(const P2d::Matrixf& image) {
   // Compute variance according to the formula: E(X^2) - E(X)^2
   // The sum is computed in float as the input image
-  float sum;
-  float sum_sq;
-  calculate_sums(image, sum, sum_sq);
+  auto sum = image.sum();
+  auto sum_sq = image.squaredNorm();
 
   // Then we cast to T type to keep or increase precision (float32/64)
   auto num_elem = static_cast<T>(image.size());

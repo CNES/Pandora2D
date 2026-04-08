@@ -133,9 +133,8 @@ class Histogram1D {
     if (m_nb_bins > NB_BINS_MAX) {
       m_nb_bins = NB_BINS_MAX;
       
-      float sum;    // Initilializations for the variance E(X^2) - E(X)^2
-      float sum_sq;
-      calculate_sums(image, sum, sum_sq);
+      auto sum = image.sum();    // Initilializations for the variance E(X^2) - E(X)^2
+      auto sum_sq = image.squaredNorm();
       
       // Variance is stored within the moment, forces T type for compilation
       T num_elem = static_cast<T>(image.size());

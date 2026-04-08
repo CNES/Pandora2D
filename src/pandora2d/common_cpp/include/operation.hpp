@@ -69,13 +69,4 @@ int nanargmax(const P2d::VectorD& vec);
  */
 bool all_same(const P2d::VectorD& data);
 
-/**
- * @brief Compute sum and sum of squares from Eigen matrix
- *
- * @param Eigen P2d::Matrixf
- * @param sum : reference to store sum inside
- * @param sum_sq : reference to store sum of squares inside
- */
-void calculate_sums(const P2d::Matrixf& image, float& sum, float& sum_sq);
-
 #endif

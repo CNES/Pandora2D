@@ -39,23 +39,26 @@ P2d::Matrixf get_window(const P2d::Matrixf& image,
 			int window_size,
 			int index_row,
 			int index_col) {
-  const int offset = window_size / 2;
+  // Constant to use, ZERO is required for std::min / std::max
+  const Eigen::Index offset = static_cast<Eigen::Index>(window_size) / 2;
+  const Eigen::Index zero = 0;
 
   // Get first row and column of the window
-  int start_row = std::max(0, index_row - offset);
-  int start_col = std::max(0, index_col - offset);
+  // First cast to Index
+  Eigen::Index eigen_index_row = static_cast<Eigen::Index>(index_row);
+  Eigen::Index eigen_index_col = static_cast<Eigen::Index>(index_col);
+  Eigen::Index start_row = std::max(zero, eigen_index_row - offset);
+  Eigen::Index start_col = std::max(zero, eigen_index_col - offset);
 
   // Get last row and column of the window
-  int nb_rows_img = static_cast<int>(image.rows());
-  int nb_cols_img = static_cast<int>(image.cols());
-  int end_row = std::min(nb_rows_img - 1, index_row + offset);
-  int end_col = std::min(nb_cols_img - 1, index_col + offset);
+  Eigen::Index end_row = std::min(image.rows() - 1, eigen_index_row + offset);
+  Eigen::Index end_col = std::min(image.cols() - 1, eigen_index_col + offset);
 
   // if the window is out of the image,
   // nb_rows_window or nb_cols_window are < 0
   // in this case we return an empty window
-  int nb_rows_window = std::max(0, end_row - start_row + 1);
-  int nb_cols_window = std::max(0, end_col - start_col + 1);
+  Eigen::Index nb_rows_window = std::max(zero, end_row - start_row + 1);
+  Eigen::Index nb_cols_window = std::max(zero, end_col - start_col + 1);
 
   return image.block(start_row, start_col, nb_rows_window, nb_cols_window);
 }

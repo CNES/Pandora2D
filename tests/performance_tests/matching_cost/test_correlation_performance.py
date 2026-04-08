@@ -165,14 +165,14 @@ class TestComparisonMedicis:
                 "zncc-optim-2",
                 2,
                 "zncc/gri_resultat_",
-                id="T19KER (Calama, Chile) shifted of 0.5 in columns with subpix=2, zncc",
+                id="T19KER (Calama, Chile) shifted of 0.5 in columns with subpix=2, zncc (optim-2)",
             ),
             pytest.param(
                 "T50JML/r+0.00c+0.50/",
                 "zncc-optim-2",
                 2,
                 "zncc/gri_resultat_",
-                id="T50JML (Perth, Australia) shifted of 0.5 in columns with subpix=2, zncc",
+                id="T50JML (Perth, Australia) shifted of 0.5 in columns with subpix=2, zncc (optim-2)",
             ),
             pytest.param(
                 "T19KER/r+0.00c-0.25/",
