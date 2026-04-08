@@ -315,7 +315,7 @@ class Pandora2DMachine(BaseMachine):
 
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
-        :param img_right: left Dataset image containing :
+        :param img_right: right Dataset image containing :
 
                 - im : 2D (row, col) xarray.DataArray
                 - msk : 2D (row, col) xarray.DataArray
@@ -493,7 +493,6 @@ class Pandora2DMachine(BaseMachine):
 
         self.cost_volumes, self.dataset_disp_maps = confidence_.confidence_prediction(
             self.left_img,
-            self.right_img,
             self.cost_volumes,
             self.dataset_disp_maps,
         )

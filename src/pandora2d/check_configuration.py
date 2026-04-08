@@ -99,6 +99,7 @@ def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> dict:
     # The nodata value must be checked after the input section because the parameter is optional.
     if "matching_cost" in user_cfg["pipeline"]:
         check_right_nodata_condition(user_cfg["input"], user_cfg["pipeline"])
+        check_window_size_limit(user_cfg)
 
     return user_cfg
 
@@ -195,6 +196,13 @@ def check_pipeline_section(user_cfg: dict[str, dict], pandora2d_machine: Pandora
             user_cfg["pipeline"]["matching_cost"]["subpix"],
         )
 
+    # Check the correlation metric if there is a ambiguity step
+    if (
+        "cost_volume_confidence" in user_cfg["pipeline"]
+        and "ambiguity" in user_cfg["pipeline"]["cost_volume_confidence"]["confidence_method"]
+    ):
+        check_matching_cost_method_with_ambiguity(user_cfg["pipeline"]["matching_cost"]["matching_cost_method"])
+
 
 def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> None:
     """
@@ -209,6 +217,44 @@ def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> No
         logging.warning(
             "To avoid aliasing, it is strongly recommended to set the subpix parameter of the matching cost step"
             " to a value greater than 1 when using dichotomy."
+        )
+
+
+def check_matching_cost_method_with_ambiguity(matching_cost_method: str) -> None:
+    """
+    Check the correlation method used in relation to ambiguity
+
+    :param matching_cost_method: matching_cost method in user configuration
+    """
+
+    if matching_cost_method in ("ssd", "sad", "zncc_python", "mc_cnn"):
+        logging.warning(
+            "This initial version, available in Pandora2d 1.1.0, should not be used with Pandora measurements"
+            "(ssd, sad, zncc_python, mc_cnn). An update in a future version will resolve this issue."
+            "In the meantime, it is recommended to filter the confidence_measure map using the validity_mask"
+        )
+
+
+def check_window_size_limit(user_cfg: dict) -> None:
+    """
+    Check that matching_cost window_size does not exceed left image dimensions.
+
+    Expected call order within check_conf: after check_pipeline_section (completed
+    matching_cost including window_size) and check_input_section (left image path).
+
+    :param user_cfg: user configuration dictionary
+    :raises ValueError: if window_size is larger than image rows or columns
+    """
+    window_size = user_cfg["pipeline"]["matching_cost"]["window_size"]
+    img_path = user_cfg["input"]["left"]["img"]
+
+    metadata = get_metadata(img_path)
+    n_rows = metadata.sizes["row"]
+    n_cols = metadata.sizes["col"]
+
+    if window_size > n_rows or window_size > n_cols:
+        raise ValueError(
+            f"window_size ({window_size}) is larger than image dimensions " f"(rows={n_rows}, cols={n_cols})"
         )
 
 
@@ -465,11 +511,13 @@ def check_disparity_grids_from_directory_within_image(
 
     # Get row coordinates
     row_min = attributes["origin_coordinates"]["row"]
-    row_max = row_min + disparity_row_reader.height * attributes["step"]["row"]
+    # Get row maximum coordinates according to step value
+    row_max = row_min + (disparity_row_reader.height - 1) * attributes["step"]["row"] + 1
 
     # Get col coordinates
     col_min = attributes["origin_coordinates"]["col"]
-    col_max = col_min + disparity_row_reader.width * attributes["step"]["col"]
+    # Get column maximum coordinates according to step value
+    col_max = col_min + (disparity_row_reader.width - 1) * attributes["step"]["col"] + 1
 
     image_height, image_width = image_metadata.sizes["row"], image_metadata.sizes["col"]
     if not (row_min >= 0 and col_min >= 0 and row_max <= image_height and col_max <= image_width):
@@ -542,7 +590,7 @@ def check_disparity_ranges_are_inside_image(
     image_metadata: xr.Dataset, row_disparity: dict, col_disparity: dict
 ) -> None:
     """
-    Raise an error if disparity ranges are out off image.
+    Raise an error if disparity ranges are out of image.
 
     :param image_metadata: left image metadata
     :param row_disparity: row disparity configuration

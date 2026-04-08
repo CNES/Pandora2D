@@ -47,18 +47,18 @@ class TestCheckSegmentMode:
             pytest.param("enable", 12.0, id="error enable value with a float"),
             pytest.param("enable", [True, True], id="error enable value with a list of boolean"),
             pytest.param("enable", [1, 1], id="error enable value with a list of int"),
-            pytest.param("enable", {"value": True}, id="error enable value with a dictionnary"),
+            pytest.param("enable", {"value": True}, id="error enable value with a dictionary"),
             pytest.param("memory_per_work", 0, id="error memory_per_work value with a zero"),
             pytest.param("memory_per_work", -10, id="error memory_per_work value with a negative number"),
             pytest.param("memory_per_work", 10.12, id="error memory_per_work value with a float"),
             pytest.param("memory_per_work", [True, True], id="error enable memory_per_work with a list of boolean"),
             pytest.param("memory_per_work", [1000, 1000], id="error enable memory_per_work with a list of int"),
-            pytest.param("enable", {"value": 2000}, id="error enable value with a dictionnary"),
+            pytest.param("enable", {"value": 2000}, id="error enable value with a dictionary"),
         ],
     )
     def test_wrong_configuration_raises_exception(self, correct_segment_mode, parameter, wrong_value_parameter):
         """
-        Description : Raises an exception if the enable parameter are not a boolean
+        Description : Raises an exception if the enable parameter is not a boolean
         """
         correct_segment_mode["segment_mode"][parameter] = wrong_value_parameter
         with pytest.raises(BaseException):

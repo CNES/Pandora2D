@@ -143,7 +143,7 @@ void compute_dichotomy(py::array_t<T> cost_volume,
       precision /= 2.;
     }
 
-    // update informations
+    // update information
     *pos_disp_row_it = (std::is_same_v<T, float>) ? static_cast<float>(pos_row_disp) : pos_row_disp;
     *pos_disp_col_it = (std::is_same_v<T, float>) ? static_cast<float>(pos_col_disp) : pos_col_disp;
     *score_it = (std::is_same_v<T, float>) ? static_cast<float>(score) : score;

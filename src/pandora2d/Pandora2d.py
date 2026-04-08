@@ -48,7 +48,7 @@ def get_parser():
     parser.add_argument(
         "config",
         type=Path,
-        help="path to a json file containing the input/output files paths and \
+        help="path to a json file containing the input/output file paths and \
             algorithm parameters",
     )
     parser.add_argument(

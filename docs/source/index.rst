@@ -16,7 +16,7 @@ Welcome to Pandora2D's documentation!
 .. warning::
     The maturity of Pandora2D is tightly linked to the progress of the `Trishna mission <https://trishna.cnes.fr>`_.
     
-    As long as this mission is in the development phase, released versions of Pandora2d should be considered experimental. 
+    As long as this mission is in the development phase, released versions of Pandora2D should be considered experimental. 
 
 .. toctree::
    :maxdepth: 2

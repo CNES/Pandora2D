@@ -785,6 +785,6 @@ def test_validity_mask_with_refinement(make_cost_volumes, refinement_margins, re
 
     validity_mask_band_with_margins = criteria.get_validity_mask_band(subset_with_margins)
 
-    # Check valitity band, '0' if the pixel is valid, '1' if at least one disparity cannot be computed
+    # Check validity band, '0' if the pixel is valid, '1' if at least one disparity cannot be computed
     np.testing.assert_array_equal(validity_mask_band_without_margins, expected)
     np.testing.assert_array_equal(validity_mask_band_with_margins, expected)

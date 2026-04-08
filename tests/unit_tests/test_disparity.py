@@ -115,12 +115,14 @@ def test_extrema_split(left_stereo_object, right_stereo_object, extrema_func, ex
     """
     Test the min_split function
     """
-    # create a cost_volume, with SAD measure, window_size 1, dispx_min 0, dispx_max 1, dispy_min -1, dispy_max 0
+    # create a cost_volume, with SAD measure, window_size 1, dispx_min -1, dispx_max 1, dispy_min -1, dispy_max 0
     cfg = {"pipeline": {"matching_cost": {"matching_cost_method": "sad", "window_size": 1}}}
     matching_cost_test = matching_cost.PandoraMatchingCostMethods(cfg["pipeline"]["matching_cost"])
 
     left_stereo_object["col_disparity"][1, :, :] = np.full((3, 3), 1)
     left_stereo_object["row_disparity"][0, :, :] = np.full((3, 3), -1)
+    left_stereo_object.attrs["row_disparity_source"] = [-1, 0]
+    left_stereo_object.attrs["col_disparity_source"] = [-1, 1]
     matching_cost_test.allocate(img_left=left_stereo_object, img_right=right_stereo_object, cfg=cfg)
     cvs = matching_cost_test.compute_cost_volumes(left_stereo_object, right_stereo_object)
 
@@ -167,6 +169,8 @@ def test_arg_split(stereo_object_with_args, extrema_func, arg_extrema_func, expe
 
     left_arg["col_disparity"][1, :, :] = np.full((5, 5), 1)
     left_arg["row_disparity"][0, :, :] = np.full((5, 5), -1)
+    left_arg.attrs["row_disparity_source"] = [-1, 0]
+    left_arg.attrs["col_disparity_source"] = [0, 1]
     matching_cost_test.allocate(
         img_left=left_arg,
         img_right=right_arg,

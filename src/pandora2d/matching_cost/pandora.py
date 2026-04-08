@@ -30,6 +30,7 @@ from pandora import matching_cost
 from pandora.margins import Margins as PandoraMargins
 
 from pandora2d import img_tools
+from pandora2d.common import build_usable_data_mask
 from pandora2d.margins import Margins
 
 from .base import BaseMatchingCost
@@ -82,6 +83,19 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         )
 
         return schema
+
+    def check_conf(self, cfg: dict) -> dict[str, str]:
+        """
+        Check the matching cost configuration
+        and raise error if float precision is float64
+        """
+
+        if "float_precision" in cfg and np.dtype(cfg["float_precision"]) == np.float64:
+            raise ValueError(
+                "With sad, ssd, mc_cnn, and zncc_python methods, only the float32 type is accepted for float_precision"
+            )
+
+        return super().check_conf(cfg)
 
     @property
     def window_size(self) -> int:
@@ -184,6 +198,12 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
 
         grid_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
         grid_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
+
+        # Replace invalid initial disparity values by np.nan
+        # so that they are not included in the 3D Pandora cost-volume allocation
+        no_data_disp = img_left["col_disparity"].attrs["no_data"]
+        grid_min_col = np.where(build_usable_data_mask(grid_min_col, no_data_disp), grid_min_col, np.nan)
+        grid_max_col = np.where(build_usable_data_mask(grid_max_col, no_data_disp), grid_max_col, np.nan)
 
         if margins is not None:
             grid_min_col -= margins.left

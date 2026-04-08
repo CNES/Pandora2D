@@ -154,8 +154,6 @@ cost_volumes repository
 
 - *confidence_measure.tif*: confidence measure map (this file is present only if a cost_volume_confidence step is specified in the user pipeline). 
 
-.. warning::
-        Pending implementation of ambiguity (:ref:`cost_volume_confidence`), the confidence_measure.tif file currently contains a single band filled with zeros. 
 
 disparity_map repository
 ------------------------
@@ -165,13 +163,34 @@ disparity_map repository
 - *correlation_score.tif* : correlation score map.
 - *validity.tif* : validity map containing several bands, each band encoded in 1 bit:
 
-    - a global validity map 'validity_mask', indicating whether each point is valid (value 0) or invalid (value 1) when at least one requested disparity can not be computed.
-    - a global partial validity map 'partial_validity_mask', indicating whether each point is partially valid (value 0) or invalid (value 1) when all requested disparity can not be computed.
+    - a global validity map 'validity_mask', indicating whether each point is valid (value 0) or invalid (value 1) when at least one requested disparity cannot be computed.
+    - a global partial validity map 'partial_validity_mask', indicating whether each point is partially valid (value 0) or invalid (value 1) when all requested disparities cannot be computed.
     - a band for each criteria indicating whether the corresponding criteria is raised at the point or not.
 
 .. warning::
         The output correlation_score map with optical flow refinement method contains the disparity
         step correlation score.
+
+Saved statistic report
+**********************
+
+- *output/path/disparity_map/report.json* : statistical report on the disparity values (row and col), saved as a JSON file.
+
+  The statistics are computed **only on valid pixels**: pixels whose value equals ``invalid_disparity``
+  (as defined in the user configuration json file) are excluded from all computations.
+  The ``minimal_valid_pixel_ratio`` field indicates the proportion of valid pixels that were used.
+
+  The ``quantiles`` field contains the following percentiles of the disparity distribution
+  among valid pixels:
+
+  - ``p10``: 10th percentile
+  - ``p25``: 25th percentile (first quartile)
+  - ``p50``: 50th percentile (median)
+  - ``p75``: 75th percentile (third quartile)
+  - ``p90``: 90th percentile
+
+  .. note::
+        All values in ``report.json`` are expressed in **pixels**, matching the unit of the disparity maps.
 
 Saved configuration
 *******************

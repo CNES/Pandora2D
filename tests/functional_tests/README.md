@@ -86,7 +86,7 @@ Accurate the disparity to smooth outliers. The algorithms tested here are:
 +-----------+-----------------------------------------+
 | bicubic   | Bicubic interpolation                   |
 +-----------+-----------------------------------------+
-| sinc      | Sinux cardinal                          |
+| sinc      | Sinus cardinal                          |
 +-----------+-----------------------------------------+
 | spline    | Spline                                  |
 +-----------+-----------------------------------------+

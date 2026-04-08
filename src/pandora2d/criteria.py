@@ -30,8 +30,14 @@ from numpy.typing import ArrayLike, DTypeLike, NDArray
 from scipy.ndimage import binary_dilation
 
 from pandora2d.constants import Criteria
+from pandora2d.common import build_usable_data_mask
 
-DISPARITY_INDEPENDENT_CRITERIA = {Criteria.P2D_LEFT_BORDER, Criteria.P2D_LEFT_NODATA, Criteria.P2D_INVALID_MASK_LEFT}
+DISPARITY_INDEPENDENT_CRITERIA = {
+    Criteria.P2D_LEFT_BORDER,
+    Criteria.P2D_LEFT_NODATA,
+    Criteria.P2D_INVALID_MASK_LEFT,
+    Criteria.P2D_INVALID_INIT_DISPARITY,
+}
 DISPARITY_DEPENDENT_CRITERIA = set(Criteria) - {Criteria.VALID} - DISPARITY_INDEPENDENT_CRITERIA
 
 
@@ -175,6 +181,11 @@ def get_criteria_dataarray(left_image: xr.Dataset, right_image: xr.Dataset, cv: 
     # Raise criteria P2D_RIGHT_DISPARITY_OUTSIDE
     # for points for which window is outside right image according to disparity value
     mask_disparity_outside_right_image(right_image, cv.attrs["offset_row_col"], criteria_dataarray)
+
+    # Raise criteria P2D_INVALID_INIT_DISPARITY
+    # for points for which initial disparity is invalid
+    mask_invalid_init_disparity(criteria_dataarray, left_image["row_disparity"])
+    mask_invalid_init_disparity(criteria_dataarray, left_image["col_disparity"])
 
     # Raise criteria P2D_LEFT_BORDER
     # on the border according to offset value, for each disparity
@@ -347,11 +358,11 @@ def apply_invalid_right_criteria_mask(criteria_dataarray: xr.DataArray, mask_cri
 
         row_dsp_int, col_dsp_int = int(row_disp), int(col_disp)
         # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
-        msk_row_slice = np.s_[:row_dsp_int] if row_dsp_int < 0 else np.s_[row_dsp_int:]  # type: ignore[index]
-        msk_col_slice = np.s_[:col_dsp_int] if col_dsp_int < 0 else np.s_[col_dsp_int:]  # type: ignore[index]
+        msk_row_slice = np.s_[:row_dsp_int] if row_dsp_int < 0 else np.s_[row_dsp_int:]
+        msk_col_slice = np.s_[:col_dsp_int] if col_dsp_int < 0 else np.s_[col_dsp_int:]
 
-        criteria_row_slice = np.s_[-row_dsp_int:] if row_dsp_int <= 0 else np.s_[:-row_dsp_int]  # type: ignore[index]
-        criteria_col_slice = np.s_[-col_dsp_int:] if col_dsp_int <= 0 else np.s_[:-col_dsp_int]  # type: ignore[index]
+        criteria_row_slice = np.s_[-row_dsp_int:] if row_dsp_int <= 0 else np.s_[:-row_dsp_int]
+        criteria_col_slice = np.s_[-col_dsp_int:] if col_dsp_int <= 0 else np.s_[:-col_dsp_int]
 
         mask_img_shape[:] = 0
         mask_img_shape[criteria_row_slice, criteria_col_slice] |= mask_criteria_right[msk_row_slice, msk_col_slice]
@@ -434,8 +445,8 @@ def apply_nodata_right_criteria_mask(
 
         # We arrange tests to avoid the slice [:0], which doesn’t work, while [0:] is fine.
         inv_row_dsp_int, inv_col_dsp_int = int(np.floor(-row_disp)), int(np.floor(-col_disp))
-        criteria_row_slice = np.s_[-row_dsp_int:] if row_disp <= 0 else np.s_[:inv_row_dsp_int]  # type: ignore[index]
-        criteria_col_slice = np.s_[-col_dsp_int:] if col_disp <= 0 else np.s_[:inv_col_dsp_int]  # type: ignore[index]
+        criteria_row_slice = np.s_[-row_dsp_int:] if row_disp <= 0 else np.s_[:inv_row_dsp_int]
+        criteria_col_slice = np.s_[-col_dsp_int:] if col_disp <= 0 else np.s_[:inv_col_dsp_int]
 
         mask_img_shape[criteria_row_slice, criteria_col_slice] |= mask_criteria[mask_row_slice, mask_col_slice]
 
@@ -449,6 +460,34 @@ def apply_nodata_right_criteria_mask(
             criteria_dataarray.coords["row"].data[:, None] - mask_criteria_right.coords["row"].data[0],
             criteria_dataarray.coords["col"].data[None, :] - mask_criteria_right.coords["col"].data[0],
         ]
+
+
+def mask_invalid_init_disparity(criteria_dataarray: xr.DataArray, left_image_disparity: xr.DataArray) -> None:
+    """
+    This method raises P2D_INVALID_INIT_DISPARITY criteria for points (row, col)
+    for which the initial disparity is invalid.
+    This criteria is applied on point (row, col), for each disparity value.
+
+    :param criteria_dataarray: criteria dataarray to update
+    :param left_image_disparity: left image disparity dataarray
+    """
+
+    # Get no data values for initial disparity grids
+    disparity_no_data = left_image_disparity.attrs["no_data"]
+
+    # Get points where initial disparity is valid for min and max disparity grids
+    usable_min = build_usable_data_mask(
+        left_image_disparity.sel(band_disp="min", row=criteria_dataarray.row, col=criteria_dataarray.col).values,
+        disparity_no_data,
+    )
+    usable_max = build_usable_data_mask(
+        left_image_disparity.sel(band_disp="max", row=criteria_dataarray.row, col=criteria_dataarray.col).values,
+        disparity_no_data,
+    )
+
+    invalid_init_disp = ~(usable_min & usable_max)
+
+    criteria_dataarray.data[invalid_init_disp, ...] |= np.uint8(Criteria.P2D_INVALID_INIT_DISPARITY.value)
 
 
 def apply_peak_on_edge(

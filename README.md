@@ -2,8 +2,8 @@
 <a href="https://pandora2d.readthedocs.io/?badge=latest"><img src="https://raw.githubusercontent.com/CNES/Pandora2D/master/docs/source/Images/logo/logo_pandora2d.png?inline=false" alt="Pandora2D coregistration Framework" width="432"></a>
 </h1>
 
-<h4 align="center">Pandora2d  is a tool based on <a href="https://github.com/CNES/Pandora">Pandora<a/> to provide disparity maps
-for images pairs with a combination of vertical and horizontal stereo.</h4>
+<h4 align="center">Pandora2d  is a tool based on <a href="https://github.com/CNES/Pandora">Pandora</a> to provide disparity maps
+for image pairs with a combination of vertical and horizontal stereo.</h4>
 
 <p align="center">
   <a><img src="https://github.com/CNES/Pandora2D/actions/workflows/pandora2d_ci.yml/badge.svg?branch=master"></a>
@@ -50,7 +50,7 @@ Download our data sample to start right away !
 - [a configuration file](https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/json_conf_files/a_basic_pipeline.json)
 
 ```bash
-    # Images pairs with a combination of vertical and horizontal stereo
+    # Image pairs with a combination of vertical and horizontal stereo
     wget -P data_samples/images https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/images/maricopa.zip
     # Config file
     wget -P data_samples/json_conf_files https://raw.githubusercontent.com/CNES/Pandora2D/master/data_samples/json_conf_files/a_basic_pipeline.json
@@ -59,8 +59,8 @@ Download our data sample to start right away !
     # run Pandora2d
     pandora2d data_samples/json_conf_files/a_basic_pipeline.json
 
-    # The columns disparity map is saved in  "./output_dir/disparity_map/col_map.tif"
-    # The row disparity map is saved in  "./output_dir/disparity_map/row_map.tif"
+    # The columns disparity map is saved in  "./data_samples/json_conf_files/a_basic_pipeline_output/disparity_map/col_map.tif".
+    # The row disparity map is saved in  "./data_samples/json_conf_files/a_basic_pipeline_output/disparity_map/row_map.tif".
 ```
 
 ## To go further

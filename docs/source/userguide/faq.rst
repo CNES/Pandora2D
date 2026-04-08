@@ -109,9 +109,24 @@ On which target platforms are wheels produced?
 **********************************************
 
 Wheel production is carried out using cibuildwheel. See `here <https://cibuildwheel.pypa.io/en/stable/#what-does-it-do>`_ for possible target platforms.
-However, a number of platforms have been removed from the list, such as :
+However, a number of platforms have been removed from the list, such as:
 
 - 32-bit platforms: SciPy is not available on them, and it is a necessary dependency for subpix input and multiscale.
 - musllinux: The rasterio library is not available on it, and it is a necessary dependency for the execution of pandora.
 - macOs: Wheel construction is impossible at the moment.
 - pypy : An internal decision was made not to support it.
+
+How do I add a no data value to the metadata of a tif file that I want to use as an initial disparity grid? 
+***********************************************************************************************************
+
+When using an initial disparity grid as input for Pandora2D, if the corresponding file contains a no data value in its metadata, 
+pixels with this value in the initial disparity grid will not be processed in the Pandora2D pipeline (see :ref:`inputs`).
+
+To add a no data value to a tif file that does not contain one, you can use this command: 
+
+.. code-block:: bash
+
+   gdal_translate -a_nodata -9999 image.tif image_nodata.tif
+
+Where -9999 is the no data value you want to add, image.tif is the path to your original tif file 
+and image_nodata.tif is the path to the new tif file with no data added.

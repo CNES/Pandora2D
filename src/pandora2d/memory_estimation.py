@@ -117,7 +117,7 @@ def compute_effective_image_size(config: dict, image_margins: Margins) -> tuple[
 def get_img_size(img_path: str, roi: dict = None) -> tuple[int, int]:
     """
     Get width and height from an image path.
-    If a ROI is given, its width and height are returned without takin margins into account.
+    If a ROI is given, its width and height are returned without taking margins into account.
 
     :param img_path: img path
     :return:  width and height of the image
@@ -429,5 +429,5 @@ def segment_image_by_rows(config: dict, disp_margins: Margins, image_margins: Ma
         "first": 0 if input_roi is None else input_roi["col"]["first"],
         "last": width - 1 if input_roi is None else input_roi["col"]["last"],
     }
-    # We need to convert to integer because of json_checker expects Python integer and not numpy integer
+    # We need to convert to integer because json_checker expects Python integer and not numpy integer
     return [{"row": {"first": int(s), "last": int(e)}, "col": col_roi} for s, e in zip(starts, ends)]

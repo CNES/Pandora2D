@@ -21,11 +21,16 @@
 Test ambiguity cost volume confidence method
 """
 
+import copy
 import json_checker
+import numpy as np
 import pytest
 import xarray as xr
 
+from pandora import matching_cost as pandora_matching_cost
 from pandora2d import cost_volume_confidence
+from pandora2d.img_tools import add_disparity_grid
+from pandora2d.margins import Margins
 
 # pylint: disable=redefined-outer-name, protected-access
 
@@ -120,29 +125,319 @@ class TestCheckConf:
             cost_volume_confidence_object({"eta_max": 0.2, "eta_step": 0.02})
 
 
+@pytest.fixture
+def row():
+    """The number of rows"""
+    return 4
+
+
+@pytest.fixture
+def col():
+    """The number of columns"""
+    return 4
+
+
+@pytest.fixture
+def shape(row, col):
+    """Image shape"""
+    return (row, col)
+
+
+@pytest.fixture
+def row_disparity():
+    """Default row disparity configuration"""
+    return {"init": 1, "range": 2}
+
+
+@pytest.fixture
+def col_disparity():
+    """Default column disparity configuration"""
+    return {"init": -1, "range": 2}
+
+
+@pytest.fixture
+def subpix():
+    """Default subpix"""
+    return 1
+
+
+@pytest.fixture
+def margins():
+    """Default cost_volume margins"""
+    return Margins(0, 0, 0, 0)
+
+
+@pytest.fixture
+def disps_row(row_disparity, margins, subpix):
+    """Range of row disparity"""
+    disp_min = row_disparity["init"] - row_disparity["range"] - margins.up
+    disp_max = row_disparity["init"] + row_disparity["range"] + margins.down
+    return pandora_matching_cost.AbstractMatchingCost.get_disparity_range(disp_min, disp_max, subpix)
+
+
+@pytest.fixture
+def disps_col(col_disparity, margins, subpix):
+    """Range of column disparity"""
+    disp_min = col_disparity["init"] - col_disparity["range"] - margins.left
+    disp_max = col_disparity["init"] + col_disparity["range"] + margins.right
+    return pandora_matching_cost.AbstractMatchingCost.get_disparity_range(disp_min, disp_max, subpix)
+
+
+@pytest.fixture()
+def left_datasets(row, col, row_disparity, col_disparity):
+    """
+    Creates left datasets
+    """
+    left = xr.Dataset(
+        {"im": (["row", "col"], np.full((row, col), 1))},
+        coords={"row": np.arange(row), "col": np.arange(col)},
+    )
+
+    return add_disparity_grid(left, col_disparity, row_disparity)
+
+
+@pytest.fixture
+def cost_volume_init_value():
+    """Default initial value for cost_volume"""
+    return np.nan
+
+
+@pytest.fixture
+def cost_volume(row, col, disps_row, disps_col, cost_volume_init_value, subpix, margins):
+    """Create a cost_volume"""
+    np_data = np.full((row, col, len(disps_row), len(disps_col)), cost_volume_init_value, dtype=float)
+
+    # Add margins
+    if margins != Margins(0, 0, 0, 0):
+        row_down_slice = slice(-margins.down, None) if margins.down else slice(0, 0)
+        col_right_slice = slice(-margins.right, None) if margins.right else slice(0, 0)
+        # Adding these margins with a value of 1 creates artificial correlation peaks in order to verify
+        # that they are not included in the ambiguity computation
+        np_data[:, :, : margins.up, :] = 1
+        np_data[:, :, :, : margins.left] = 1
+        np_data[:, :, row_down_slice, :] = 1
+        np_data[:, :, :, col_right_slice] = 1
+
+    return xr.Dataset(
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np_data)},
+        coords={"row": np.arange(row), "col": np.arange(col), "disp_row": disps_row, "disp_col": disps_col},
+        attrs={"subpixel": subpix, "type_measure": "max", "disparity_margins": margins},
+    )
+
+
+@pytest.fixture()
+def dataset_disp_maps(row, col):
+    """Empty dataset_disp_maps"""
+    return xr.Dataset(
+        coords={
+            "row": np.arange(row),
+            "col": np.arange(col),
+        }
+    )
+
+
 class TestConfidencePrediction:
     """
     Test confidence_prediction method
     """
 
     @pytest.fixture()
-    def empty_dataset(self):
-        """
-        Empty dataset to check that the warning is printed when the confidence_prediction method is called.
-        Fixture to be deleted when the ambiguity has been implemented.
-        """
-        return xr.Dataset()
+    def cost_volume_confidence_instance(self, cost_volume_confidence_object, ambiguity_cfg):
+        """Create ambiguity instance"""
+        ambiguity_cfg["normalization"] = False
+        return cost_volume_confidence_object(ambiguity_cfg)
 
-    def test_confidence_prediction(self, ambiguity_cfg, cost_volume_confidence_object, empty_dataset, caplog):
+    @pytest.fixture()
+    def nbr_etas(self, cost_volume_confidence_instance):
+        """Number of etas"""
+        return np.arange(
+            cost_volume_confidence_instance._eta_min,
+            cost_volume_confidence_instance._eta_max,
+            cost_volume_confidence_instance._eta_step,
+        ).shape[0]
+
+    @pytest.fixture()
+    def expected_value_with_monotonic_surface(self, nbr_etas, cost_volume, margins):
+        """Compute expected ambiguity value for monotonic surface"""
+        # default value computed if norm_extremum parameter is nan on ambiguity.cpp pandora file
+        row_disparity_size = cost_volume.sizes["disp_row"] - margins.up - margins.down
+        col_disparity_size = cost_volume.sizes["disp_col"] - margins.left - margins.right
+        nbr_disparities = row_disparity_size * col_disparity_size
+        # return 1 - ambiguity
+        return 1 - (nbr_etas * nbr_disparities)
+
+    @pytest.mark.parametrize("cost_volume_init_value", [np.nan, np.inf, 0, -99, 0.1])
+    @pytest.mark.parametrize(
+        "margins", [Margins(0, 0, 0, 0), Margins(1, 0, 1, 0), Margins(0, 1, 0, 2), Margins(1, 2, 2, 1)]
+    )
+    def test_with_monotonic_surface(
+        self,
+        cost_volume_confidence_instance,
+        left_datasets,
+        cost_volume,
+        dataset_disp_maps,
+        expected_value_with_monotonic_surface,
+    ):
         """
-        Test confidence_prediction method
+        Test confidence_prediction method with monotonic surface
+        i.e. cost_surface is filled only with the same value = cost_volume_init_value
+        Tests run without normalization
         """
 
-        cost_volume_confidence_instance = cost_volume_confidence_object(ambiguity_cfg)
-        returned_dataset_1, returned_dataset_2 = cost_volume_confidence_instance.confidence_prediction(
-            empty_dataset, empty_dataset, empty_dataset, empty_dataset
+        _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
+            left_image=left_datasets,
+            cost_volumes=cost_volume,
+            dataset_disp_maps=dataset_disp_maps,
         )
 
-        assert "The ambiguity method has not yet been implemented" in caplog.messages
-        xr.testing.assert_equal(returned_dataset_1, empty_dataset)
-        xr.testing.assert_equal(returned_dataset_2, empty_dataset)
+        assert "confidence_measure" in dataset_disp_maps.data_vars
+        assert np.all(dataset_disp_maps["confidence_measure"].values == expected_value_with_monotonic_surface)
+
+    @pytest.fixture()
+    def expected_value_with_one_peak(self, nbr_etas):
+        """Compute expected ambiguity value for one peak"""
+        # return 1 - ambiguity
+        return 1 - nbr_etas
+
+    @pytest.mark.parametrize("cost_volume_init_value", [0])
+    @pytest.mark.parametrize("margins", [Margins(0, 0, 0, 0), Margins(1, 0, 1, 0), Margins(0, 1, 0, 2)])
+    def test_with_one_peak(
+        self,
+        cost_volume_confidence_instance,
+        left_datasets,
+        cost_volume,
+        dataset_disp_maps,
+        expected_value_with_one_peak,
+    ):
+        """
+        Test confidence_prediction method with monotonic surface
+        i.e. cost_surface is filled only with one peak (value = 1) and the remaining elements to cost_volume_init_value
+        Tests run without normalization
+        """
+
+        # For all points, there is only one peak where disps_row = 0 and disps_col = 0
+        cost_volume["cost_volumes"].values[:, :, 1, 3] = 1
+
+        _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
+            left_image=left_datasets,
+            cost_volumes=cost_volume,
+            dataset_disp_maps=dataset_disp_maps,
+        )
+
+        assert "confidence_measure" in dataset_disp_maps.data_vars
+        assert np.all(dataset_disp_maps["confidence_measure"].values == expected_value_with_one_peak)
+
+
+class TestNormalizeWithExtremum:
+    """
+    Test normalize_with_extremum method
+    """
+
+    @pytest.fixture()
+    def cost_volume_confidence_instance(self, cost_volume_confidence_object, ambiguity_cfg):
+        """Create ambiguity instance"""
+        return cost_volume_confidence_object(ambiguity_cfg)
+
+    @pytest.mark.parametrize("cost_volume_init_value", [np.nan, np.inf, 0, -99, 0.1])
+    @pytest.mark.parametrize("subpix", [1, 2, 4])
+    @pytest.mark.parametrize(
+        "margins", [Margins(0, 0, 0, 0), Margins(1, 0, 1, 0), Margins(0, 1, 0, 2), Margins(1, 2, 2, 1)]
+    )
+    def test_with_monotonic_surface(
+        self,
+        cost_volume_confidence_instance,
+        left_datasets,
+        cost_volume,
+        dataset_disp_maps,
+    ):
+        """
+        Test confidence_prediction method with monotonic surface
+        i.e. cost_surface is filled only with the same value = cost_volume_init_value
+        In this case, there is no confidence.
+        """
+
+        _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
+            left_image=left_datasets,
+            cost_volumes=cost_volume,
+            dataset_disp_maps=dataset_disp_maps,
+        )
+
+        assert "confidence_measure" in dataset_disp_maps.data_vars
+        assert np.all(dataset_disp_maps["confidence_measure"].values == 0)
+
+    @pytest.fixture()
+    def expected_value_with_one_peak(self, disps_row, disps_col):
+        """Compute expected ambiguity value for one peak"""
+        # return 1 - [1 / nbr_disparity]
+        return 1 - (1 / float(len(disps_col) * len(disps_row)))
+
+    @pytest.mark.parametrize("cost_volume_init_value", [0])
+    @pytest.mark.parametrize("subpix", [1, 2, 4])
+    def test_with_one_peak(
+        self,
+        cost_volume_confidence_instance,
+        left_datasets,
+        cost_volume,
+        dataset_disp_maps,
+        expected_value_with_one_peak,
+    ):
+        """
+        Test confidence_prediction method with monotonic surface
+        i.e. cost_surface is filled only with one peak (value = 1) and the remaining elements to cost_volume_init_value
+        Confidence is at its highest, i.e. close to 1
+        """
+
+        # For all points, there is only one peak where disps_row = 0 and disps_col = 0
+        cost_volume["cost_volumes"].values[:, :, 1, 3] = 1
+
+        _, dataset_disp_maps = cost_volume_confidence_instance.confidence_prediction(
+            left_image=left_datasets,
+            cost_volumes=cost_volume,
+            dataset_disp_maps=dataset_disp_maps,
+        )
+
+        assert "confidence_measure" in dataset_disp_maps.data_vars
+        assert np.all(dataset_disp_maps["confidence_measure"].values == expected_value_with_one_peak)
+
+    @pytest.mark.parametrize("cost_volume_init_value", [0])
+    @pytest.mark.parametrize("subpix", [1, 2, 4])
+    @pytest.mark.parametrize("margins", [Margins(0, 0, 0, 0), Margins(1, 0, 1, 0), Margins(0, 0, 0, 1)])
+    def test_with_multiple_peak(
+        self,
+        cost_volume_confidence_instance,
+        left_datasets,
+        cost_volume,
+        dataset_disp_maps,
+        expected_value_with_one_peak,
+    ):
+        """
+        Test confidence_prediction method with multiple peak
+        i.e. cost_surface is filled with multiple max value and the remaining elements to cost_volume_init_value
+        Here we are checking whether the result is the same regardless of whether the peak is in the rows or the columns
+        """
+
+        cost_volume_row = copy.deepcopy(cost_volume)
+        cost_volume_column = copy.deepcopy(cost_volume)
+
+        # Add a peak every 2 row disparities
+        cost_volume_row["cost_volumes"].values[:, :, ::2, :] = 0.8
+        # Add a peak every 2 column disparities
+        cost_volume_column["cost_volumes"].values[:, :, :, ::2] = 0.8
+
+        _, dataset_disp_maps_row = cost_volume_confidence_instance.confidence_prediction(
+            left_image=left_datasets,
+            cost_volumes=cost_volume_row,
+            dataset_disp_maps=dataset_disp_maps,
+        )
+        _, dataset_disp_maps_column = cost_volume_confidence_instance.confidence_prediction(
+            left_image=left_datasets,
+            cost_volumes=cost_volume_column,
+            dataset_disp_maps=dataset_disp_maps,
+        )
+
+        assert "confidence_measure" in dataset_disp_maps_row.data_vars
+        assert "confidence_measure" in dataset_disp_maps_column.data_vars
+        np.testing.assert_array_equal(
+            dataset_disp_maps_row["confidence_measure"], dataset_disp_maps_column["confidence_measure"]
+        )
+        assert np.all(dataset_disp_maps_row["confidence_measure"].values < expected_value_with_one_peak)

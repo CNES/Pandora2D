@@ -29,6 +29,7 @@ import numpy as np
 import xarray as xr
 from json_checker import And, Checker, Or
 
+from pandora2d.common import get_cost_volume_without_margins
 from pandora2d.constants import Criteria
 from pandora2d.margins import Margins, NullMargins
 
@@ -197,15 +198,7 @@ class Disparity:
 
         # Check margins presence
         if disparity_margins is not None and disparity_margins != Margins(0, 0, 0, 0):
-            margins = disparity_margins.asdict()
-            for key in margins.keys():
-                margins[key] *= cost_volumes.attrs["subpixel"]
-
-            cost_volumes_user = cost_volumes.isel(
-                disp_row=slice(margins["up"], -margins["down"] or None),
-                disp_col=slice(margins["left"], -margins["right"] or None),
-            )
-
+            cost_volumes_user = get_cost_volume_without_margins(cost_volumes)
         else:
             cost_volumes_user = cost_volumes.copy(deep=True)
 
@@ -247,6 +240,7 @@ class Disparity:
         cost_volumes_user["cost_volumes"].data[invalid_index] = np.nan
 
         if cost_volumes["cost_volumes"].data.dtype != disp_map_col.dtype:
+            # Using .astype() creates a memory copy
             disp_map_col = disp_map_col.astype(cost_volumes["cost_volumes"].data.dtype)
             disp_map_row = disp_map_row.astype(cost_volumes["cost_volumes"].data.dtype)
             score_map = score_map.astype(cost_volumes["cost_volumes"].data.dtype)

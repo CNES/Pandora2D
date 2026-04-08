@@ -24,7 +24,7 @@
 Test common
 """
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, too-many-lines
 
 import json
 from copy import deepcopy
@@ -42,6 +42,7 @@ from pandora2d import common, criteria, disparity, matching_cost, refinement, ru
 from pandora2d.check_configuration import check_conf
 from pandora2d.constants import Criteria
 from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.margins import Margins
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -742,7 +743,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.zeros((5, 5)),
                 np.zeros((5, 5)),
                 np.zeros((5, 5)),
-                np.zeros((5, 5, 9)),
+                np.zeros((5, 5, 10)),
                 np.arange(5),
                 np.arange(5),
                 [0, 0],
@@ -770,7 +771,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.0, 0.0, 1.0, 2.0], [4.0, 5.0, 1.0, 3.0], [0.0, 1.0, 2.0, 2.0]]),
                 np.array([[3.0, 1.0, 1.0, 4.0], [1.0, 1.0, 2.0, 6.0], [0.0, 1.0, 0.0, 2.0]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 9)),
+                np.zeros((3, 4, 10)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
@@ -829,7 +830,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                     ]
                 ),
                 np.zeros((5, 5)),
-                np.zeros((5, 5, 9)),
+                np.zeros((5, 5, 10)),
                 np.arange(5),
                 np.arange(5),
                 [0, 0],
@@ -841,7 +842,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.5, 0.5, 1.5, 2.5], [5.5, 6.5, 2.5, 4.5], [2.5, 3.5, 4.5, 4.5]]),
                 np.array([[3.5, 2.5, 3.5, 7.5], [1.5, 2.5, 4.5, 9.5], [0.5, 2.5, 2.5, 5.5]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 9)),
+                np.zeros((3, 4, 10)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
@@ -985,3 +986,72 @@ def test_resolve_path_in_config(col_disparity, expected_col_disparity, row_dispa
     result = common.resolve_path_in_config(config, config_path)
 
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["disp_data", "nodata", "expected"],
+    [
+        pytest.param(np.array([1, 2]), None, [True, True], id="Nothing to filter"),
+        pytest.param(np.array([1, np.inf]), None, [True, False], id="inf"),
+        pytest.param(np.array([-np.inf, 2]), None, [False, True], id="-inf"),
+        pytest.param(np.array([np.nan, 2]), None, [False, True], id="nan"),
+        pytest.param(np.array([3, 2]), 3, [False, True], id="value"),
+        pytest.param(np.array([3, np.inf, np.nan, 2]), 3, [False, False, False, True], id="mix"),
+    ],
+)
+def test_build_usable_data_mask(disp_data, nodata, expected):
+    """Unusable values are masked to False."""
+    result = common.build_usable_data_mask(disp_data, nodata)
+    assert (result == expected).all()
+
+
+@pytest.mark.parametrize(
+    ["shape", "margins", "subpixel", "expected_shape"],
+    [
+        pytest.param(
+            (5, 5),  # disp_row, disp_col
+            Margins(1, 1, 1, 1),  # {"left": 1, "up": 1, "right": 1, "down": 1}
+            1,
+            (3, 3),
+            id="simple margins",
+        ),
+        pytest.param(
+            (6, 6),  # disp_row, disp_col
+            Margins(1, 2, 1, 2),  # {"left": 1, "up": 2, "right": 1, "down": 2}
+            1,
+            (2, 4),
+            id="asymmetric margins",
+        ),
+        pytest.param(
+            (6, 6),
+            Margins(1, 1, 1, 1),  # {"left": 1, "up": 1, "right": 1, "down": 1}
+            2,  # subpixel scaling
+            (2, 2),
+            id="with subpixel",
+        ),
+        pytest.param(
+            (4, 4),
+            Margins(1, 1, 0, 0),  # {"left": 1, "up": 1, "right": 0, "down": 0}
+            1,
+            (3, 3),
+            id="no bottom/right margin",
+        ),
+    ],
+)
+def test_get_cost_volume_without_margins(shape, margins, subpixel, expected_shape):
+    """Margins should be correctly removed from cost volume."""
+
+    disp_row, disp_col = shape
+    data = xr.Dataset(
+        {"cost_volumes": (["row", "col", "disp_row", "disp_col"], np.full((1, 1, disp_row, disp_col), 0))},
+        coords={
+            "row": np.arange(1),
+            "col": np.arange(1),
+            "disp_row": np.arange(disp_row),
+            "disp_col": np.arange(disp_col),
+        },
+        attrs={"subpixel": subpixel, "disparity_margins": margins},
+    )
+
+    result = common.get_cost_volume_without_margins(data)
+    assert result.cost_volumes.shape[2:] == expected_shape

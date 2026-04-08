@@ -45,6 +45,7 @@ from rasterio.windows import Window
 from scipy.ndimage import shift, zoom
 
 from pandora2d.types import Origin, Step
+from pandora2d.common import build_usable_data_mask
 
 
 class Datasets(NamedTuple):
@@ -151,7 +152,7 @@ def check_disparity_types(disparity: Any) -> None:
     if not isinstance(disparity["init"], (int, str)):
         raise ValueError("Disparity init should be an integer or a path to a grid")
 
-    # Check that range value is a postive integer
+    # Check that range value is a positive integer
     if disparity["range"] < 0 or not isinstance(disparity["range"], int):
         raise ValueError("Disparity range should be an integer greater or equal to 0")
 
@@ -272,6 +273,11 @@ def get_min_max_disp_from_dicts(
         nodata = reader.meta.get("nodata")
         # Work on disp_data to avoid transformation on nodata
         is_data_mask = build_usable_data_mask(disp_data, nodata)
+
+        # We use np.round to ensure that disp_interval and disp_min_max contains
+        # integer disparity values in cases where sub-pixel disparity maps are reused as initial disparities
+        disp_data = np.round(disp_data)
+
         disp_interval = [
             np.min(disp_data[is_data_mask] * pow(-1, right) - disparity["range"]),
             np.max(disp_data[is_data_mask] * pow(-1, right) + disparity["range"]),
@@ -291,25 +297,6 @@ def get_min_max_disp_from_dicts(
         disp_min_max[1, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
 
     return disp_min_max, disp_interval, nodata
-
-
-def build_usable_data_mask(disp_data: NDArray, nodata: float | None) -> NDArray[np.bool_]:
-    """
-    Build a boolean mask indicating which elements of the input array are usable.
-
-    An element is considered usable if it is finite (not NaN or infinite) and,
-    when a ``nodata`` value is provided, different from that value.
-
-    :param disp_data: Input array containing the data to be tested.
-    :param nodata: Value representing missing or invalid data.
-                   If ``None``, only finiteness is checked.
-    :return: A boolean array with the same shape as ``disp_data``, where
-             ``True`` indicates usable data.
-    """
-    mask = np.isfinite(disp_data)
-    if nodata is not None:
-        mask &= disp_data != nodata
-    return mask
 
 
 def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
@@ -450,6 +437,13 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: dict):
         "correlation_score": (("row", "col"), dataset["correlation_score"].data[up:down, left:right]),
         "validity": (("row", "col", "criteria"), dataset["validity"].data[up:down, left:right, :]),
     }
+
+    # Check if the confidence measure exists
+    if "confidence_measure" in dataset:
+        data_variables["confidence_measure"] = (
+            ("row", "col"),
+            dataset["confidence_measure"].data[up:down, left:right],
+        )
 
     coords = {"row": row[up:down], "col": col[left:right], "criteria": dataset.criteria.values}
 

@@ -3,8 +3,8 @@
 Inputs
 ======
 
-Pandora2D needs a pair of image that `rasterio <https://github.com/mapbox/rasterio>`_ can open and information about
-the no_data's images and range disparities.
+Pandora2D needs a pair of images that `rasterio <https://github.com/mapbox/rasterio>`_ can open and information about
+the no_data of the images and range disparities.
 
 Configuration and parameters
 ****************************
@@ -117,17 +117,30 @@ Image (left and right) and disparity (col_disparity and row_disparity) propertie
     - Both *init* values for the disparities must reference the same directory. Mixing grids from different runs is not allowed.
     - The step value defined in the pipeline configuration must match the one declared in the `attributes.json` file.
 
+.. note::
+    When using a string initial disparity (i.e., a path to a grid or an output directory),
+    it is possible to enter a no data value in the metadata of the initial disparity grid so that points with this value are ignored in Pandora2d calculations.
+    
+    If a disparity map calculated by Pandora2D is used as the initial variable disparity grid, the *invalid_disp* value used in the Pandora2D disparity step configuration 
+    that calculated these disparity maps is automatically saved as no data in the metadata of the the row_map.tif and col_map.tif files.
+
 .. warning::
   If an output directory path is specified as input disparities and 
   it contains disparity maps smaller than the image, these maps will serve as the ROI (see :ref:`roi`). 
 
 .. warning::
-    With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`) , `nodata` only accepts `int` type.
+    If you provide a path to a disparity grid or an output directory as the initial disparity, 
+    and one of the initial disparity grids contains sub-pixel values, then these sub-pixel values are rounded to the nearest integer.
+
+    Values with a decimal of .5 are rounded to the nearest even integer (as is done in NumPy's `round` function)
+
+.. warning::
+    With sad/ssd matching_cost_method in the pipeline (see :ref:`Sequencing`), `nodata` only accepts `int` type.
     
     In addition, when the `nodata` value entered is `NaN` or `inf`, it is replaced by -9999  in the image datasets to avoid disrupting processing.
 
 .. note::
-    Only one-band masks are accepted by pandora2d. Mask must comply with the following convention :
+    Only one-band masks are accepted by pandora2d. Mask must comply with the following convention:
      - Value equal to 0 for valid pixel
      - Value not equal to 0 for invalid pixel
 

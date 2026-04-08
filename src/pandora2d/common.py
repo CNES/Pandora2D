@@ -30,6 +30,7 @@ from copy import deepcopy
 from os import PathLike
 from pathlib import Path
 from typing import Generic, TypeVar
+from numpy.typing import NDArray
 
 import numpy as np
 import rasterio
@@ -117,7 +118,7 @@ class AllPrimitiveEncoder(json.JSONEncoder):
 
 def convert_disp_to_grid(dataset: xr.Dataset, pixel_convention: list[int]) -> xr.Dataset:
     """
-    Convet disparity maps to deformation grids
+    Convert disparity maps to deformation grids
 
     :param dataset: disparity maps dataset
     :param pixel_convention: initial pixel convention for grid
@@ -134,7 +135,7 @@ def convert_disp_to_grid(dataset: xr.Dataset, pixel_convention: list[int]) -> xr
 
 def convert_grid_to_disp(dataset: xr.Dataset, pixel_convention: list[int]) -> xr.Dataset:
     """
-    Convet deformation grids to disparity maps
+    Convert deformation grids to disparity maps
 
     :param dataset: deformation maps dataset
     :param pixel_convention: initial pixel convention for grid
@@ -292,7 +293,7 @@ def adjust_georeferencement(dataset: xr.Dataset, cfg: dict) -> None:
 
 def get_step(cfg: dict) -> tuple[int, int]:
     """
-    Get step from matching cost or retun default value.
+    Get step from matching cost or return default value.
     :param cfg: configuration
     :return: row_step, col_step
     """
@@ -324,7 +325,7 @@ def dataset_disp_maps(
     """
     Create the dataset containing disparity maps and score maps
     :param coords: disparity maps coordinates
-    :param dataset_validity: xr.Dataset containing validity informations
+    :param dataset_validity: xr.Dataset containing validity information
     :param attributes: disparity map for col
     :param dtype: dtype of the dataset
     :return: dataset: Dataset with the empty disparity maps and score with the data variables :
@@ -456,3 +457,40 @@ def resolve_path_in_config(config: dict, config_path: Path) -> dict:
 def all_same(iterable: Iterable) -> bool:
     """Return True if all items in sequence are equals."""
     return len(set(iterable)) == 1
+
+
+def build_usable_data_mask(disp_data: NDArray, nodata: float | None) -> NDArray[np.bool_]:
+    """
+    Build a boolean mask indicating which elements of the input array are usable.
+
+    An element is considered usable if it is finite (not NaN or infinite) and,
+    when a ``nodata`` value is provided, different from that value.
+
+    :param disp_data: Input array containing the data to be tested.
+    :param nodata: Value representing missing or invalid data.
+                   If ``None``, only finiteness is checked.
+    :return: A boolean array with the same shape as ``disp_data``, where
+             ``True`` indicates usable data.
+    """
+    mask = np.isfinite(disp_data)
+    if nodata is not None:
+        mask &= disp_data != nodata
+    return mask
+
+
+def get_cost_volume_without_margins(cost_volumes: xr.Dataset) -> xr.Dataset:
+    """
+    Getting cost_volume without the margins on the disparities
+
+    :param cost_volumes: the cost volumes dataset with the data variables:
+        - cost_volume 4D xarray.DataArray (row, col, disp_row, disp_col)
+    :return: cost_volumes without margins
+    """
+    margins = cost_volumes.attrs["disparity_margins"].asdict()
+    for key in margins.keys():
+        margins[key] *= cost_volumes.attrs["subpixel"]
+
+    return cost_volumes.isel(
+        disp_row=slice(margins["up"], -margins["down"] or None),
+        disp_col=slice(margins["left"], -margins["right"] or None),
+    )

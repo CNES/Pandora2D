@@ -1,0 +1,85 @@
+# Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
+#
+# This file is part of PANDORA2D
+#
+#     https://github.com/CNES/Pandora2D
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+"""
+Test used resources during execution of a configuration.
+"""
+
+# pylint: disable=redefined-outer-name
+
+import pytest
+
+# Mark all test of the module with monitor_test
+pytestmark = pytest.mark.monitor_test
+
+
+@pytest.fixture
+def optical_flow_pipeline(matching_cost_method, window_size, step, iterations):
+    """Pipeline for an optical flow refinement."""
+    return {
+        "matching_cost": {
+            "matching_cost_method": matching_cost_method,
+            "window_size": window_size,
+            "step": step,
+            "subpix": 1,
+        },
+        "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+        "refinement": {
+            "refinement_method": "optical_flow",
+            "iterations": iterations,
+        },
+    }
+
+
+@pytest.mark.optical_flow_resource_tests
+@pytest.mark.parametrize(
+    ["left_img", "right_img", "step", "window_size"],
+    [
+        pytest.param("small_left_img_path", "small_right_img_path", [1, 1], 5, id="image.size=(224, 186)"),
+        pytest.param(
+            "large_left_img_path",
+            "large_right_img_path",
+            [16, 16],
+            33,
+            id="image.size=(2000, 2000)",
+            marks=pytest.mark.skip(reason="This method takes too long for these tests."),
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize(
+    "matching_cost_method",
+    [
+        pytest.param(
+            "mutual_information",
+            marks=pytest.mark.skip(reason="This method takes too long for these tests. See ticket 371."),
+        ),
+        "zncc",
+    ],
+)
+def test_optical_flows(run_pipeline, input_cfg, optical_flow_pipeline, tmp_path):
+    """Test optical flows."""
+    configuration = {
+        **input_cfg,
+        "pipeline": {
+            **optical_flow_pipeline,
+        },
+        "output": {"path": str(tmp_path)},
+    }
+    run_pipeline(configuration)

@@ -648,17 +648,29 @@ class TestDisparityGrids:
         return xr.Dataset(
             {
                 "im": (["row", "col"], data),
-                "row_disparity": (["band_disp", "row", "col"], np.array([row_min_disparity, row_max_disparity])),
-                "col_disparity": (["band_disp", "row", "col"], np.array([col_min_disparity, col_max_disparity])),
+                "row_disparity": xr.DataArray(
+                    np.array([row_min_disparity, row_max_disparity]),
+                    dims=["band_disp", "row", "col"],
+                    attrs={"no_data": None},
+                ),
+                "col_disparity": xr.DataArray(
+                    np.array([col_min_disparity, col_max_disparity]),
+                    dims=["band_disp", "row", "col"],
+                    attrs={"no_data": None},
+                ),
             },
-            coords={"row": np.arange(nb_rows), "col": np.arange(nb_cols), "band_disp": ["min", "max"]},
+            coords={
+                "row": np.arange(nb_rows),
+                "col": np.arange(nb_cols),
+                "band_disp": ["min", "max"],
+            },
             attrs={
                 "no_data_img": -9999,
                 "valid_pixels": 0,
                 "no_data_mask": 1,
                 "crs": None,
                 "col_disparity_source": [np.min(col_min_disparity), np.max(col_max_disparity)],
-                "row_disparity_source": [np.min(row_min_disparity), np.max(col_max_disparity)],
+                "row_disparity_source": [np.min(row_min_disparity), np.max(row_max_disparity)],
             },
         )
 

@@ -408,7 +408,7 @@ class TestMaskRightInvalid:
     def test_mask_invalid_right(self, image, criteria_dataarray, expected_criteria, disp_col, disp_row):
         """
         Test that mask_invalid_right method raises criteria P2D_INVALID_MASK_RIGHT
-        for points whose value is neither valid_pixels or no_data_mask when we shift it by its disparity.
+        for points whose value is neither valid_pixels nor no_data_mask when we shift it by its disparity.
         """
 
         criteria.mask_right_invalid(image, criteria_dataarray)

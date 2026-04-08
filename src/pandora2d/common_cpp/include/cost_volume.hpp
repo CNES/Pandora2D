@@ -57,7 +57,7 @@ struct CostVolumeSize {
   /**
    * @brief Construct a new CostVolumeSize object
    *
-   * @param cv_size : Eigen vector with cost_volume size informations
+   * @param cv_size : Eigen vector with cost_volume size information
    */
   CostVolumeSize(P2d::VectorD& cv_size)
       : CostVolumeSize(cv_size[0], cv_size[1], cv_size[2], cv_size[3]) {};
@@ -65,7 +65,7 @@ struct CostVolumeSize {
   /**
    * @brief Construct a new CostVolumeSize object
    *
-   * @param cv_size : std::vector with cost_volume size informations
+   * @param cv_size : std::vector with cost_volume size information
    */
   CostVolumeSize(std::vector<size_t>& cv_size)
       : CostVolumeSize(cv_size[0], cv_size[1], cv_size[2], cv_size[3]) {};
