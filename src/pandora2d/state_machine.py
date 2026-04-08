@@ -408,6 +408,9 @@ class Pandora2DMachine(BaseMachine):
             self.matching_cost_.cost_volumes.attrs["col_disparity_source"],
         )
 
+        # Check if cost volume confidence step is in the pipeline
+        cost_volume_confidence_step = "cost_volume_confidence" in cfg["pipeline"]
+
         # Allocate disparity maps dataset
         self.dataset_disp_maps = common.dataset_disp_maps(
             self.matching_cost_.cost_volumes.coords,
@@ -426,6 +429,7 @@ class Pandora2DMachine(BaseMachine):
                 "transform": self.left_img.transform,
             },
             self.matching_cost_.cost_volumes["cost_volumes"].dtype,
+            cost_volume_confidence_step,
         )
 
     @mem_time_profile(name="Estimation step")
