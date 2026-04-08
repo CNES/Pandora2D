@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.1.0a2 (April 2026)
+
+### Added
+
+- Added functional tests for variable initial disparity. [#356]
+- Added warning for pandora matching cost methods with float64 precision. [#435]
+- Added documentation for report.json. [#439]
+- Added ambiguity implementation. [#424]
+- Added installation documentation for plugin mccnn. [#441]
+- Added notebook for variable initial disparity. [#357]
+- Added a check for the window size limit. [#442]
+- Added documentation and notebook for ambiguity. [#425]
+
+### Fixed
+
+- Fixed README.md output path. [#437]
+- Fixed notebooks. [#440]
+- Fixed warning with a_segment_mode_pipeline.json. [#436]
+- Fixed reentry of disparity maps with pandora matching cost methods. [#447]
+
+### Changed
+
+- Processed invalid initial disparity in matching cost. [#406]
+- Updated resource tests. [#402]
+- Processed invalid initial disparity in criteria. [#407]
+- Updated pandora email adresses. [#458]
+
 ## 1.1.0a1 (March 2026)
 
 ### Added
