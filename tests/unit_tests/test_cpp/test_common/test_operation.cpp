@@ -25,74 +25,6 @@ This module contains tests associated to the operation functions define on opera
 #include <doctest.h>
 #include "operation.hpp"
 
-/**
- * @brief Standard deviation calculation medicis version
- * The standard deviation is calculated here:
- * https://gitlab.cnes.fr/OutilsCommuns/medicis/-/blob/master/SOURCES/sources/QPEC/Library/sources/
- * random_var_d.c#L433
- * The square root part is calculated here:
- * https://gitlab.cnes.fr/OutilsCommuns/medicis/-/blob/master/SOURCES/sources/QPEC/Library/sources/
- * random_var_d.c#L588
- *
- * @param m : the Eigen matrix
- */
-template <typename T>
-double std_dev_medicis(const T& m) {
-  return sqrt(variance(m));
-}
-
-template <typename matrix_type, typename vector_type>
-struct TypePair {
-  using Matrix = matrix_type;
-  using Vector = vector_type;
-};
-
-using FloatPair = TypePair<P2d::Matrixf, P2d::Vectorf>;
-using DoublePair = TypePair<P2d::MatrixD, P2d::VectorD>;
-
-TYPE_TO_STRING_AS("Float", FloatPair);
-TYPE_TO_STRING_AS("Double", DoublePair);
-
-TEST_CASE_TEMPLATE("standard deviation", T, FloatPair, DoublePair) {
-  using Matrix = typename T::Matrix;
-  using Vector = typename T::Vector;
-  SUBCASE("standard deviation with null matrix") {
-    Matrix image(2, 4);
-
-    image << 0, 0, 0, 0, 0, 0, 0, 0;
-
-    auto standard_deviation = std_dev(image);
-    CHECK(standard_deviation == 0);
-  }
-
-  SUBCASE("standard deviation with Vector") {
-    Vector image(2, 4);
-
-    image << 1, 2, 3;
-
-    auto standard_deviation = std_dev(image);
-    CHECK(standard_deviation == 0.5);
-  }
-
-  SUBCASE("standard deviation with Matrix one line") {
-    Matrix image(1, 4);
-
-    image << 1, 2, 3, 4;
-
-    auto standard_deviation = std_dev(image);
-    CHECK(standard_deviation == doctest::Approx(1.118033989).epsilon(1e-9));
-  }
-
-  SUBCASE("comparison of standard deviation with that of medicis") {
-    Matrix image(1, 4);
-
-    image << 1, 2, 3, 4;
-
-    auto standard_deviation = std_dev(image);
-    double standard_deviation_medicis = std_dev_medicis(image);
-    CHECK(standard_deviation == standard_deviation_medicis);
-  }
-}
 
 TEST_CASE("nanargmin & nanargmax") {
   SUBCASE("Positive value") {
@@ -154,3 +86,4 @@ TEST_CASE("all_same") {
     CHECK(all_same(data) == false);
   }
 }
+

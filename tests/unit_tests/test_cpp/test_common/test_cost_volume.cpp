@@ -161,7 +161,7 @@ TEST_CASE("Position2D") {
 
 TEST_CASE("get_cost_surfaces") {
   CostVolumeSize cv_size = CostVolumeSize(4, 4, 2, 3);
-  auto cost_volume = py_cost_volume_4_4_2_3();
+  py::array_t<float> cost_volume = py_cost_volume_4_4_2_3();
 
   // Check First pixel
   Position2D pixel = Position2D();

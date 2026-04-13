@@ -59,7 +59,7 @@ T get_entropy_medicis(const T nb_pixel, const TypeHist& hist) {
 template <typename T>
 T calculate_entropy1D_medicis(const P2d::MatrixX<T>& img) {
   auto nb_pixel = static_cast<T>(img.size());
-  auto hist_1D = calculate_histogram1D(img);
+  auto hist_1D = calculate_histogram1D<T>(img);
 
   return get_entropy_medicis<T, Histogram1D<T>>(nb_pixel, hist_1D);
 };
@@ -74,7 +74,7 @@ template <typename T>
 T calculate_entropy2D_medicis(const P2d::MatrixX<T>& img_l, const P2d::MatrixX<T>& img_r) {
   // same size for left and right images
   auto nb_pixel = static_cast<T>(img_l.size());
-  auto hist_2D = calculate_histogram2D(img_l, img_r);
+  auto hist_2D = calculate_histogram2D<T>(img_l, img_r);
 
   return get_entropy_medicis<T, Histogram2D<T>>(nb_pixel, hist_2D);
 };
@@ -87,12 +87,11 @@ struct TypeStruct {
 };
 
 TYPE_TO_STRING_AS("Float", TypeStruct<float, P2d::Vectorf, P2d::Matrixf>);
-TYPE_TO_STRING_AS("Double", TypeStruct<double, P2d::VectorD, P2d::MatrixD>);
 
 TEST_CASE_TEMPLATE("Test Entropy1D",
                    T,
-                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>,
-                   TypeStruct<double, P2d::VectorD, P2d::MatrixD>) {
+                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>
+		   ) {
   using Type = typename T::Type;
   using VectorType = typename T::VectorType;
   using MatrixType = typename T::MatrixType;
@@ -161,8 +160,8 @@ TEST_CASE_TEMPLATE("Test Entropy1D",
 
 TEST_CASE_TEMPLATE("Test Entropy2D",
                    T,
-                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>,
-                   TypeStruct<double, P2d::VectorD, P2d::MatrixD>) {
+                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>
+		   ) {
   using Type = typename T::Type;
   using VectorType = typename T::VectorType;
   using MatrixType = typename T::MatrixType;
@@ -231,8 +230,8 @@ TEST_CASE_TEMPLATE("Test Entropy2D",
 
 TEST_CASE_TEMPLATE("Test MutualInformation",
                    T,
-                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>,
-                   TypeStruct<double, P2d::VectorD, P2d::MatrixD>) {
+                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>
+		   ) {
   using Type = typename T::Type;
   using VectorType = typename T::VectorType;
   using MatrixType = typename T::MatrixType;

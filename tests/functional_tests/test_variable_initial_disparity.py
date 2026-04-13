@@ -29,7 +29,8 @@ import pytest
 import rasterio
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc_python", "mutual_information"])
+# /!\ "zncc" currently target "zncc-optim-1"
+@pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-2", "zncc_python", "mutual_information"])
 @pytest.mark.parametrize(
     ["make_input_cfg", "pipeline"],
     [
