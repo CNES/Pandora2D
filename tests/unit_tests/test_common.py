@@ -531,9 +531,9 @@ class TestDatasetDispMaps:
             ),
         ],
     )
-    def test_fill_dataset_disp_maps(self, row, col, dataset_validity, dataset_ground_truth):
+    def test_complete_dataset_disp_maps(self, row, col, dataset_validity, dataset_ground_truth):
         """
-        Test for fill_dataset_disp_maps method
+        Test for complete_dataset_disp_maps method
         """
 
         # create dataset with dataset_disp_maps function
@@ -543,8 +543,8 @@ class TestDatasetDispMaps:
             {"invalid_disp": -9999},
         )
 
-        # Fill disparity_maps dataset with dataset_test data variables
-        common.fill_dataset_disp_maps(
+        # Complete disparity_maps dataset with dataset_test data variables
+        common.complete_dataset_disp_maps(
             disparity_maps,
             dataset_ground_truth.row_map.data,
             dataset_ground_truth.col_map.data,
@@ -684,7 +684,7 @@ class TestDatasetDispMaps:
         delta_col, delta_row, correlation_score = disparity_matcher.compute_disp_maps(cvs)
 
         # fill dataset with fill_dataset_disp_maps function
-        common.fill_dataset_disp_maps(disparity_maps, delta_row, delta_col, correlation_score)
+        common.complete_dataset_disp_maps(disparity_maps, delta_row, delta_col, correlation_score)
 
         dichotomy = refinement.AbstractRefinement(
             {"refinement_method": "dichotomy", "filter": {"method": "bicubic"}, "iterations": 2}
@@ -693,7 +693,7 @@ class TestDatasetDispMaps:
         delta_x, delta_y, correlation_score = dichotomy.refinement_method(cvs, disparity_maps, img_left, img_right)
 
         # create dataset with dataset_disp_maps function
-        common.fill_dataset_disp_maps(disparity_maps, delta_y, delta_x, correlation_score)
+        common.complete_dataset_disp_maps(disparity_maps, delta_y, delta_x, correlation_score)
 
         # create ground truth with create_dataset_coords method
         dataset_ground_truth = create_dataset_coords(

@@ -516,7 +516,7 @@ class Pandora2DMachine(BaseMachine):
 
         map_col, map_row, correlation_score = disparity_.compute_disp_maps(self.cost_volumes)
 
-        common.fill_dataset_disp_maps(self.dataset_disp_maps, map_row, map_col, correlation_score)
+        common.complete_dataset_disp_maps(self.dataset_disp_maps, map_row, map_col, correlation_score)
 
         cv_coords = (self.cost_volumes.row.values, self.cost_volumes.col.values)
 
@@ -552,4 +552,4 @@ class Pandora2DMachine(BaseMachine):
             self.cost_volumes, self.dataset_disp_maps, self.left_img, self.right_img
         )
 
-        common.fill_dataset_disp_maps(self.dataset_disp_maps, refine_map_row, refine_map_col, correlation_score)
+        common.complete_dataset_disp_maps(self.dataset_disp_maps, refine_map_row, refine_map_col, correlation_score)

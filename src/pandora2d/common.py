@@ -369,14 +369,14 @@ def dataset_disp_maps(
     return dataset
 
 
-def fill_dataset_disp_maps(
+def complete_dataset_disp_maps(
     disparity_dataset: xr.Dataset,
     delta_row: np.ndarray,
     delta_col: np.ndarray,
     correlation_score: np.ndarray,
 ) -> None:
     """
-    Fill the dataset with computed disparity maps and score maps.
+    Complete the dataset with computed disparity maps and score maps.
 
     If a cost volume confidence step is present in the pipeline,
     the confidence measure is filled during the corresponding step.
