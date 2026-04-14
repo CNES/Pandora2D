@@ -71,6 +71,8 @@ def estimate_total_consumption(config: dict, height: int, width: int, margin_dis
     cost_volume_dtype = np.dtype(matching_cost_config["float_precision"])
     cost_volume_datavars = CV_FLOAT_DATA_VAR if cost_volume_dtype == np.float32 else CV_DOUBLE_DATA_VAR
 
+    cost_volume_confidence_step = "cost_volume_confidence" in config["pipeline"]
+
     # Left and Right images
     number_of_images = 2
     number_of_pandora_cost_volumes = 1
@@ -78,7 +80,9 @@ def estimate_total_consumption(config: dict, height: int, width: int, margin_dis
     result = (
         number_of_images * estimate_input_size(height, width, IMG_DATA_VAR)
         + estimate_cost_volumes_size(config, height, width, margin_disp, cost_volume_datavars)
-        + estimate_dataset_disp_map_size(height, width, matching_cost_config["step"], cost_volume_dtype)
+        + estimate_dataset_disp_map_size(
+            height, width, matching_cost_config["step"], cost_volume_dtype, cost_volume_confidence_step
+        )
     )
 
     if matching_cost_config["matching_cost_method"] not in MatchingCostRegistry.registered:
@@ -297,7 +301,9 @@ def estimate_pandora_cost_volume_size(config: dict, height: int, width: int, mar
     return DATA_VARS_TYPE_SIZE["cost_volumes_float"] * image_size * disparity_size / BYTE_TO_MB
 
 
-def estimate_dataset_disp_map_size(height: int, width: int, step: list, dtype: DTypeLike) -> float:
+def estimate_dataset_disp_map_size(
+    height: int, width: int, step: list, dtype: DTypeLike, cost_volume_confidence_step: bool
+) -> float:
     """
     Estimate the size in MB of the disparity map dataset.
 
@@ -305,10 +311,12 @@ def estimate_dataset_disp_map_size(height: int, width: int, step: list, dtype: D
     :param width: image or ROI number of columns.
     :param step: step.
     :param dtype: dtype of the disparity map (should be same as cost volumes dataset).
+    :param cost_volume_confidence_step: whether to include the cost volume confidence step.
     :return: estimated size in MB.
     """
     image_size = math.ceil(height / step[0]) * math.ceil(width / step[1])
-    number_of_dtyped_datavars = 3  # row_map, col_map, correlation_score
+    # row_map, col_map, correlation_score, and optionally confidence_score if cost_volume_confidence_step is True
+    number_of_dtyped_datavars = 4 if cost_volume_confidence_step else 3
     # The number of criteria is incremented by two
     #  in order to take the validity_mask/partial_validity_mask bands into account:
     number_of_validity_bands = len(Criteria.__members__) + 2
@@ -343,7 +351,9 @@ class Roi(TypedDict):
     col: RoiRange
 
 
-def segment_image_by_rows(config: dict, disp_margins: Margins, image_margins: Margins) -> list[Roi]:
+def segment_image_by_rows(  # pylint: disable=too-many-locals
+    config: dict, disp_margins: Margins, image_margins: Margins
+) -> list[Roi]:
     """
     Split an image into multiple horizontal ROI segments that fit within memory constraints.
 
@@ -379,8 +389,9 @@ def segment_image_by_rows(config: dict, disp_margins: Margins, image_margins: Ma
     cost_volume_dtype = np.dtype(config["pipeline"]["matching_cost"]["float_precision"])
 
     # Estimate fixed memory usage for final disparity map
+    cost_volume_confidence_step = "cost_volume_confidence" in config["pipeline"]
     final_dataset_disp_map_size = estimate_dataset_disp_map_size(
-        height, width, config["pipeline"]["matching_cost"]["step"], cost_volume_dtype
+        height, width, config["pipeline"]["matching_cost"]["step"], cost_volume_dtype, cost_volume_confidence_step
     )
 
     roi_margins = get_roi_margins(

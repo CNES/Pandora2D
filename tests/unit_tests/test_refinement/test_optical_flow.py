@@ -505,7 +505,7 @@ def make_disparity_dataset(dataset_cv, cfg_disp):
     }
     coords = {"row": dataset_cv.row.data, "col": dataset_cv.col.data}
     dataset = xr.Dataset(data_variables, coords)
-    common.fill_dataset_disp_maps(
+    common.complete_dataset_disp_maps(
         dataset_disp_map,
         dataset.row_map,
         dataset.col_map,
@@ -728,7 +728,7 @@ class TestDisparityGrids:
 
         dataset = xr.Dataset(data_variables, coords)
 
-        common.fill_dataset_disp_maps(
+        common.complete_dataset_disp_maps(
             dataset_disp_map,
             dataset.row_map,
             dataset.col_map,

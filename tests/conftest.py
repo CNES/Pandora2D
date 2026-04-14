@@ -659,6 +659,23 @@ def correct_pipeline_with_dichotomy_cpp(matching_cost_method, subpix, step, inva
     }
 
 
+@pytest.fixture
+def cost_volume_confidence_config():
+    """
+    Cost volume confidence configuration
+    """
+
+    return {"confidence_method": "ambiguity", "eta_max": 0.7, "eta_step": 0.01}
+
+
+@pytest.fixture
+def enable_cost_volume_confidence_step():
+    """
+    Whether to use cost volume confidence or not
+    """
+    return True
+
+
 @pytest.fixture()
 def reset_profiling():
     pandora2d.profiling.data.reset()
