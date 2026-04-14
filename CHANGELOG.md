@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 (April 2026)
+
+### Added
+
+- Added new ZNCC optimization. [#430]
+- Added cost volume confidence in segment mode computation. [#456]
+- Added functional tests for cost volume confidence. [#426]
+
+### Fixed
+
+- Removed margins key from the ROI for JSON configuration reentry. [#412]
+
 ## 1.1.0a2 (April 2026)
 
 ### Added
