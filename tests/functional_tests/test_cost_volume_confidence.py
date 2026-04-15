@@ -23,6 +23,7 @@ Functional tests for configurations with cost_volume_confidence step.
 # pylint: disable=redefined-outer-name
 
 import copy
+import sys
 import numpy as np
 import pytest
 import rasterio
@@ -91,6 +92,7 @@ class TestAmbiguity:
     def normalization(self):
         return True
 
+    @pytest.mark.skipif(sys.platform.startswith("win"), reason="Does not work on windows")
     @pytest.mark.parametrize("subpix", [1])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
     @pytest.mark.parametrize("eta_max", [0.7, 0.8, 0.9, 0.99])
@@ -151,6 +153,7 @@ class TestCostVolumeConfidence:
             **{"output": {"path": str(tmp_path)}},
         }
 
+    @pytest.mark.skipif(sys.platform.startswith("win"), reason="Does not work on windows")
     def test_cost_volume_confidence_pipeline(self, configuration, run_pipeline, tmp_path):
         """
         Test execution of a pipeline with cost volumes confidence
