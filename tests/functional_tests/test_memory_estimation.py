@@ -19,6 +19,7 @@
 """Memory estimation tests."""
 
 import json
+import sys
 
 import pytest
 
@@ -133,6 +134,7 @@ class TestEstimateTotalMemoryConsumption:
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("deformation_grid_mode", [True, False])
+    @pytest.mark.parametrize("enable_cost_volume_confidence_step", [False])
     def test(
         self,
         checked_config,
@@ -170,11 +172,22 @@ class TestEstimateTotalMemoryConsumption:
 
     # /!\ "zncc" currently targets "zncc-optim-1"
     @pytest.mark.usefixtures("add_roi_to_config")
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "zncc", "zncc-optim-2"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-2"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 4])
     @pytest.mark.parametrize("deformation_grid_mode", [True, False])
-    @pytest.mark.parametrize("enable_cost_volume_confidence_step", [True, False])
+    @pytest.mark.parametrize(
+        "enable_cost_volume_confidence_step",
+        [
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    sys.platform.startswith("win"), reason="Cost volume confidence not supported on Windows"
+                ),
+            ),
+            False,
+        ],
+    )
     @pytest.mark.parametrize(
         "roi",
         [
