@@ -92,7 +92,10 @@ class TestDisparityMargins:
             },
         }
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc"])
+    # /!\ "zncc" currently target "zncc-optim-1"
+    @pytest.mark.parametrize(
+        "matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc", "zncc-optim-2"]
+    )
     @pytest.mark.parametrize(
         ["subpix", "refinement_config", "cv_shape_expected", "disp_col_expected", "disp_row_expected"],
         [

@@ -60,7 +60,7 @@ T get_entropy(const T nb_pixel, const U& hist) {
  * @return T entropy1D
  */
 template <typename T>
-T calculate_entropy1D(const P2d::MatrixX<T>& image) {
+T calculate_entropy1D(const P2d::Matrixf& image) {
   auto nb_pixel = static_cast<T>(image.size());
   auto hist_1D = calculate_histogram1D<T>(image);
 
@@ -78,7 +78,7 @@ T calculate_entropy1D(const P2d::MatrixX<T>& image) {
  * @return T entropy 2D
  */
 template <typename T>
-T calculate_entropy2D(const P2d::MatrixX<T>& left_image, const P2d::MatrixX<T>& right_image) {
+T calculate_entropy2D(const P2d::Matrixf& left_image, const P2d::Matrixf& right_image) {
   // same size for left and right images
   auto nb_pixel = static_cast<T>(left_image.size());
   auto hist_2D = calculate_histogram2D<T>(left_image, right_image);
@@ -96,8 +96,8 @@ T calculate_entropy2D(const P2d::MatrixX<T>& left_image, const P2d::MatrixX<T>& 
  * @return T mutual information value
  */
 template <typename T>
-T calculate_mutual_information(const P2d::MatrixX<T>& left_image,
-                               const P2d::MatrixX<T>& right_image) {
+T calculate_mutual_information(const P2d::Matrixf& left_image,
+                               const P2d::Matrixf& right_image) {
   T mutual_information = calculate_entropy1D<T>(left_image) + calculate_entropy1D<T>(right_image) -
                          calculate_entropy2D<T>(left_image, right_image);
 

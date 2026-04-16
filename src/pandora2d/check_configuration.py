@@ -614,6 +614,9 @@ def check_roi_section(user_cfg: dict[str, dict]) -> None:
     user_cfg_roi = get_section_config(user_cfg, "ROI")
 
     if user_cfg_roi:
+        # margins is an execution artifact written in output configs and must not be validated as user ROI input
+        user_cfg_roi["ROI"].pop("margins", None)
+
         # check schema
         configuration_schema = {"ROI": roi_configuration_schema}
         checker = Checker(configuration_schema)

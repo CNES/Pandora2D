@@ -676,17 +676,37 @@ class TestDatasetDispMap:
         }
 
     @pytest.fixture()
-    def config(self, input_config, matching_cost_config):
+    def config(
+        self, input_config, matching_cost_config, enable_cost_volume_confidence_step, cost_volume_confidence_config
+    ):
         """Full configuration."""
+
         return {
             **input_config,
-            "pipeline": {"matching_cost": matching_cost_config},
+            "pipeline": {
+                "matching_cost": matching_cost_config,
+                **(
+                    {"cost_volume_confidence": cost_volume_confidence_config}
+                    if enable_cost_volume_confidence_step
+                    else {}
+                ),
+            },
         }
 
     @pytest.mark.parametrize("dtype_argument", [np.float32, "float32"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 2], [2, 1]])
     @pytest.mark.parametrize("image_size", [(200, 300), (700, 500)])
-    def test(self, MemoryTracer, config, step, image_datasets, image_size: tuple[int, int], dtype_argument):
+    @pytest.mark.parametrize("enable_cost_volume_confidence_step", [True, False])
+    def test(
+        self,
+        MemoryTracer,
+        config,
+        step,
+        image_datasets,
+        image_size: tuple[int, int],
+        dtype_argument,
+        enable_cost_volume_confidence_step,
+    ):
         """Test coherence between estimated memory consumption and actual memory consumption."""
 
         matching_cost = CorrelationMethods(config["pipeline"]["matching_cost"])
@@ -715,9 +735,12 @@ class TestDatasetDispMap:
                     "crs": image_datasets.left.crs,
                     "transform": image_datasets.left.transform,
                 },
+                cost_volume_confidence_step=enable_cost_volume_confidence_step,
             )
 
-        estimation = memory_estimation.estimate_dataset_disp_map_size(*image_size, step, dtype_argument)
+        estimation = memory_estimation.estimate_dataset_disp_map_size(
+            *image_size, step, dtype_argument, enable_cost_volume_confidence_step
+        )
 
         assert estimation == pytest.approx(dataset_disp_maps.nbytes / memory_estimation.BYTE_TO_MB, rel=0.05)
         assert estimation == pytest.approx(memory_tracer.current, rel=0.05, abs=1e-2)
@@ -748,6 +771,13 @@ class TestSegmentImageByRows:
         return [1, 1]
 
     @pytest.fixture
+    def disable_cost_volume_confidence_step(self):
+        """
+        Whether to use cost volume confidence or not
+        """
+        return False
+
+    @pytest.fixture
     def config(self, tmp_path, input_config, segment_mode, step):
         return {
             **input_config,
@@ -770,11 +800,12 @@ class TestSegmentImageByRows:
         }
 
     @pytest.fixture
-    def dataset_disp_map_size(self, image_size: tuple[int, int], checked_config):
+    def dataset_disp_map_size(self, image_size: tuple[int, int], checked_config, disable_cost_volume_confidence_step):
         return memory_estimation.estimate_dataset_disp_map_size(
             *image_size,
             checked_config["pipeline"]["matching_cost"]["step"],
             checked_config["pipeline"]["matching_cost"]["float_precision"],
+            disable_cost_volume_confidence_step,
         )
 
     @pytest.fixture
@@ -931,11 +962,21 @@ class TestSegmentImageByRowsWithRoi(TestSegmentImageByRows):
         }
 
     @pytest.fixture
-    def dataset_disp_map_size(self, checked_config, state_machine):  # pylint: disable=arguments-renamed
+    def disable_cost_volume_confidence_step(self):
+        """
+        Whether to use cost volume confidence or not
+        """
+        return False
+
+    @pytest.fixture
+    def dataset_disp_map_size(
+        self, checked_config, state_machine, disable_cost_volume_confidence_step
+    ):  # pylint: disable=arguments-renamed
         return memory_estimation.estimate_dataset_disp_map_size(
             *memory_estimation.compute_effective_image_size(checked_config, state_machine.margins_img.global_margins),
             checked_config["pipeline"]["matching_cost"]["step"],
             checked_config["pipeline"]["matching_cost"]["float_precision"],
+            disable_cost_volume_confidence_step,
         )
 
     @pytest.fixture

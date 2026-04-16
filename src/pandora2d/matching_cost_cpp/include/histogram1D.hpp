@@ -61,7 +61,7 @@ class Histogram1D {
    *
    * @param image
    */
-  Histogram1D(const P2d::MatrixX<T>& image) {
+  Histogram1D(const P2d::Matrixf& image) {
     create(image);
     m_values = P2d::VectorX<T>::Zero(m_nb_bins);
   }
@@ -120,17 +120,27 @@ class Histogram1D {
    *
    * @param image
    */
-  void create(const P2d::MatrixX<T>& image) {
-    m_bins_width = get_bins_width(image);
-    T min_coeff = image.minCoeff();
-    T max_coeff = image.maxCoeff();
+  void create(const P2d::Matrixf& image) {
+    m_bins_width = get_bins_width<T>(image);
+    
+    T min_coeff = static_cast<T>(image.minCoeff());
+    T max_coeff = static_cast<T>(image.maxCoeff());
     T dynamic_range = max_coeff - min_coeff;
+    
     m_nb_bins = static_cast<int>(1. + (dynamic_range / m_bins_width));
 
     // check nb_bins > NB_BINS_MAX
     if (m_nb_bins > NB_BINS_MAX) {
       m_nb_bins = NB_BINS_MAX;
-      T moment = variance(image);
+      
+      auto sum = image.sum();    // Initilializations for the variance E(X^2) - E(X)^2
+      auto sum_sq = image.squaredNorm();
+      
+      // Variance is stored within the moment, forces T type for compilation
+      T num_elem = static_cast<T>(image.size());
+      T mean = static_cast<T>(sum) / num_elem;
+      T moment = static_cast<T>(sum_sq) / num_elem - mean * mean;
+      // Use float precision
       max_coeff = std::min(static_cast<T>(4.) * moment, max_coeff);
       min_coeff = std::max(static_cast<T>(-4.) * moment, min_coeff);
       dynamic_range = max_coeff - min_coeff;
@@ -152,7 +162,7 @@ class Histogram1D {
  * @return Histogram1D
  */
 template <typename T>
-Histogram1D<T> calculate_histogram1D(const P2d::MatrixX<T>& image) {
+Histogram1D<T> calculate_histogram1D(const P2d::Matrixf& image) {
   auto hist = Histogram1D<T>(image);
   P2d::VectorX<T> hist_values = P2d::VectorX<T>::Zero(hist.nb_bins());
   auto low_bound = hist.low_bound();

@@ -321,6 +321,7 @@ def dataset_disp_maps(
     dataset_validity: xr.Dataset,
     attributes: dict = None,
     dtype: np.typing.DTypeLike = np.float32,
+    cost_volume_confidence_step: bool = False,
 ) -> xr.Dataset:
     """
     Create the dataset containing disparity maps and score maps
@@ -328,6 +329,7 @@ def dataset_disp_maps(
     :param dataset_validity: xr.Dataset containing validity information
     :param attributes: disparity map for col
     :param dtype: dtype of the dataset
+    :param cost_volume_confidence_step: whether there is a cost volume confidence step in the pipeline or not
     :return: dataset: Dataset with the empty disparity maps and score with the data variables :
 
             - row_map 2D xarray.DataArray (row, col)
@@ -351,15 +353,14 @@ def dataset_disp_maps(
     dims = ("row", "col")
     shape = (len(coords.get("row")), len(coords.get("col")))
 
-    dataset = xr.Dataset(
-        {
-            "row_map": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
-            "col_map": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
-            "correlation_score": (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)),
-        },
-        coords=coords,
-    )
+    data_variables = ["row_map", "col_map", "correlation_score"]
 
+    if cost_volume_confidence_step:
+        data_variables.append("confidence_measure")
+
+    data_vars = {name: (dims, np.full(shape, attributes["invalid_disp"], dtype=dtype)) for name in data_variables}
+
+    dataset = xr.Dataset(data_vars, coords=coords)
     dataset = xr.merge([dataset, dataset_validity])
 
     if attributes is not None:
@@ -368,14 +369,17 @@ def dataset_disp_maps(
     return dataset
 
 
-def fill_dataset_disp_maps(
+def complete_dataset_disp_maps(
     disparity_dataset: xr.Dataset,
     delta_row: np.ndarray,
     delta_col: np.ndarray,
     correlation_score: np.ndarray,
 ) -> None:
     """
-    Fill the dataset with computed disparity maps and score maps
+    Complete the dataset with computed disparity maps and score maps.
+
+    If a cost volume confidence step is present in the pipeline,
+    the confidence measure is filled during the corresponding step.
 
     :param disparity_dataset: initialized disparity maps dataset
     :param delta_row: disparity map for row

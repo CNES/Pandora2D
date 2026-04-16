@@ -26,15 +26,6 @@ This module contains functions, struct and other elements associated to the matc
 
 #include "pandora2d_type.hpp"
 
-/**
- * @brief Standard deviation with Eigen matrix
- * @param m : the Eigen matrix
- *
- */
-template <typename T>
-double std_dev(const T& m) {
-  return sqrt((m.array() - m.mean()).square().sum() / (m.size()));
-}
 
 /**
  * @brief Variance with Eigen matrix

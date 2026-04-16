@@ -253,7 +253,7 @@ class TestComparisonMedicis:
         col_map_threshold,
     ):
         """
-        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
+        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medicis
         with bicubic filter.
         """
 
@@ -398,7 +398,7 @@ class TestComparisonMedicis:
         col_map_threshold,
     ):
         """
-        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medici
+        Tests that the pandora2d disparity maps after using the dichotomy are similar to those obtained with Medicis
         with sinc_python filter.
         """
 

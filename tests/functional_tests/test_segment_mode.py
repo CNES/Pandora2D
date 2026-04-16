@@ -136,6 +136,7 @@ class TestSegmentMode:
                 400,
                 id="Pipeline without refinement, zncc_python, mask and enough memory",
             ),
+            # /!\ "zncc" currently target "zncc-optim-1"
             pytest.param(
                 "correct_input_cfg",
                 "correct_pipeline_without_refinement",
@@ -143,6 +144,15 @@ class TestSegmentMode:
                 2,
                 40,
                 id="Pipeline without refinement, zncc cpp, subpix=2 and no enough memory without segment mode",
+            ),
+            pytest.param(
+                "correct_input_cfg",
+                "correct_pipeline_without_refinement",
+                "zncc-optim-2",
+                2,
+                40,
+                id="Pipeline without refinement, zncc cpp (optim-2),"
+                + "subpix=2 and no enough memory without segment mode",
             ),
         ],
     )
@@ -223,6 +233,7 @@ class TestSegmentMode:
                 10,
                 id="151x151 ROI, 10 MB memory per work, zncc python without refinement",
             ),
+            # /!\ "zncc" currently target "zncc-optim-1"
             pytest.param(
                 "correct_input_with_left_mask",
                 "correct_pipeline_with_dichotomy_cpp",
@@ -231,6 +242,15 @@ class TestSegmentMode:
                 1,
                 15,
                 id="101x101 ROI, 15 MB memory per work, mask, zncc cpp with refinement",
+            ),
+            pytest.param(
+                "correct_input_with_left_mask",
+                "correct_pipeline_with_dichotomy_cpp",
+                {"col": {"first": 200, "last": 300}, "row": {"first": 100, "last": 200}},
+                "zncc-optim-2",
+                1,
+                15,
+                id="101x101 ROI, 15 MB memory per work, mask," + "zncc cpp (optim-2) with refinement",
             ),
             pytest.param(
                 "correct_input_cfg",
@@ -258,6 +278,15 @@ class TestSegmentMode:
                 4,
                 15,
                 id="51x51 ROI, 15 MB memory per work, mask, subpix=4, zncc cpp without refinement",
+            ),
+            pytest.param(
+                "correct_input_with_right_mask",
+                "correct_pipeline_without_refinement",
+                {"col": {"first": 0, "last": 50}, "row": {"first": 0, "last": 50}},
+                "zncc-optim-2",
+                4,
+                15,
+                id="51x51 ROI, 15 MB memory per work, mask, subpix=4," + "zncc cpp (optim-2) without refinement",
             ),
             pytest.param(
                 "correct_input_with_left_right_mask",
@@ -321,7 +350,8 @@ class TestSegmentMode:
         assert output_cfg == output_cfg_segment
         assert memory_tracer.current <= configuration_segment["segment_mode"]["memory_per_work"]
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc"])
+    # /!\ zncc targets zncc-optim-1
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-2"])
     @pytest.mark.parametrize("pipeline", ["correct_pipeline_with_step", "correct_pipeline_with_step_and_refinement"])
     @pytest.mark.parametrize(
         "input_cfg",
@@ -380,7 +410,8 @@ class TestSegmentMode:
         assert output_cfg == output_cfg_segment
         assert memory_tracer.current <= configuration_segment["segment_mode"]["memory_per_work"]
 
-    @pytest.mark.parametrize("matching_cost_method", ["zncc"])
+    # /!\ zncc targets zncc-optim-1
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-2"])
     @pytest.mark.parametrize("pipeline", ["correct_pipeline_with_step_and_refinement"])
     @pytest.mark.parametrize("input_cfg", ["correct_input_with_left_right_mask"])
     @pytest.mark.parametrize("step", [[100, 1]])

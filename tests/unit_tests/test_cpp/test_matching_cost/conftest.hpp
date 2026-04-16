@@ -41,7 +41,7 @@ P2d::MatrixX<T> create_image(std::size_t size, T mean, T std, T nb_bins = 120) {
   auto matrix = create_normal_matrix<T>(size, mean, std);
 
   auto check_nb_bins = [](auto& matrix) -> T {
-    auto h0 = get_bins_width(matrix);
+    auto h0 = get_bins_width<T>(matrix);
     auto dynamic_range = matrix.maxCoeff() - matrix.minCoeff();
     return dynamic_range / h0;
   };
@@ -49,7 +49,7 @@ P2d::MatrixX<T> create_image(std::size_t size, T mean, T std, T nb_bins = 120) {
   if (check_nb_bins(matrix) >= nb_bins)
     return matrix;
 
-  auto h0 = get_bins_width(matrix);
+  auto h0 = get_bins_width<T>(matrix);
   auto new_dynamic_range = std::ceil(nb_bins * h0);
 
   auto elt = 2;

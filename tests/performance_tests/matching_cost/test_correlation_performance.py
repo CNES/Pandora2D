@@ -131,6 +131,7 @@ class TestComparisonMedicis:
                 "mi/gri_resultat_",
                 id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, mutual_information",
             ),
+            # /!\ "zncc" currently target "zncc-optim-1"
             pytest.param(
                 "T19KER/r+0.00c+0.50/",
                 "zncc",
@@ -158,6 +159,34 @@ class TestComparisonMedicis:
                 4,
                 "zncc/gri_resultat_",
                 id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, zncc",
+            ),
+            pytest.param(
+                "T19KER/r+0.00c+0.50/",
+                "zncc-optim-2",
+                2,
+                "zncc/gri_resultat_",
+                id="T19KER (Calama, Chile) shifted of 0.5 in columns with subpix=2, zncc (optim-2)",
+            ),
+            pytest.param(
+                "T50JML/r+0.00c+0.50/",
+                "zncc-optim-2",
+                2,
+                "zncc/gri_resultat_",
+                id="T50JML (Perth, Australia) shifted of 0.5 in columns with subpix=2, zncc (optim-2)",
+            ),
+            pytest.param(
+                "T19KER/r+0.00c-0.25/",
+                "zncc-optim-2",
+                4,
+                "zncc/gri_resultat_",
+                id="T19KER (Calama, Chile) shifted of -0.25 in columns with subpix=4, zncc (optim-2)",
+            ),
+            pytest.param(
+                "T50JML/r+0.00c-0.25/",
+                "zncc-optim-2",
+                4,
+                "zncc/gri_resultat_",
+                id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, zncc (optim-2)",
             ),
         ],
     )
@@ -283,14 +312,11 @@ class TestComparisonZncc:
         "cpp_float_precision",
         ["float64", "float32"],
     )
-    def test_compare_znccs(
-        self,
-        tmp_path,
-        configuration,
-        row_shift,
-        col_shift,
-        cpp_float_precision,
-    ):
+    @pytest.mark.parametrize(
+        "zncc_method",
+        ["zncc", "zncc-optim-2"],  # /!\ "zncc" currently targets "zncc-optim-1"
+    )
+    def test_compare_znccs(self, tmp_path, configuration, row_shift, col_shift, cpp_float_precision, zncc_method):
         """
         Tests that the pandora2d disparity maps from ZNCC in Python or C++ are similar.
         """
@@ -298,7 +324,7 @@ class TestComparisonZncc:
         zncc_python_config_path = save_config(configuration, tmp_path / "python")
 
         zncc_cpp_config = deepcopy(configuration)
-        zncc_cpp_config["pipeline"]["matching_cost"]["matching_cost_method"] = "zncc"
+        zncc_cpp_config["pipeline"]["matching_cost"]["matching_cost_method"] = zncc_method
         zncc_cpp_config["pipeline"]["matching_cost"]["float_precision"] = cpp_float_precision
         zncc_cpp_config_path = save_config(zncc_cpp_config, tmp_path / "cpp")
 

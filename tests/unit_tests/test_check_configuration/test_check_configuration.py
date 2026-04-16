@@ -179,14 +179,16 @@ class TestCheckConfMatchingCostNodataCondition:
         with pytest.raises((ValueError, DictCheckerError)):
             check_right_nodata_condition(input_configuration["input"], pipeline_configuration["pipeline"])
 
+    # /!\ "zncc" currently target "zncc-optim-1"
     @pytest.mark.parametrize("right_nodata", [432])
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc", "zncc-optim-1", "zncc-optim-2"])
     def test_passes_with_int(self, input_configuration, pipeline_configuration):
         """Right nodata must be an integer."""
         check_right_nodata_condition(input_configuration["input"], pipeline_configuration["pipeline"])
 
+    # /!\ "zncc" currently target "zncc-optim-1"
     @pytest.mark.parametrize("right_nodata", ["NaN", "inf"])
-    @pytest.mark.parametrize("matching_cost_method", ["zncc"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-1", "zncc-optim-2"])
     def test_zncc_passes_with(self, input_configuration, pipeline_configuration):
         """Right nodata can be inf or nan with zncc matching_cost_method."""
         check_right_nodata_condition(input_configuration["input"], pipeline_configuration["pipeline"])

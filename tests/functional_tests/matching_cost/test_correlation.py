@@ -85,7 +85,8 @@ class TestCorrelation:
     for different parameter panels
     """
 
-    @pytest.mark.parametrize("method", ["mutual_information", "zncc"])
+    # /!\ "zncc" currently target "zncc-optim-1"
+    @pytest.mark.parametrize("method", ["mutual_information", "zncc", "zncc-optim-2"])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
@@ -117,7 +118,8 @@ class TestCorrelation:
         assert not np.all(np.isnan(dataset_disp_maps.col_map.data))
         assert pandora2d_machine.cost_volumes["cost_volumes"].data.dtype == np.dtype(float_precision)
 
-    @pytest.mark.parametrize("method", ["mutual_information", "zncc"])
+    # /!\ "zncc" currently target "zncc-optim-1"
+    @pytest.mark.parametrize("method", ["mutual_information", "zncc", "zncc-optim-2"])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])

@@ -12,6 +12,10 @@ The purpose of this step is to compute confidence measure on the cost volume.
     This initial version, available in Pandora2d 1.1.0, should not be used with Pandora correlation metrics (sad, ssd, zncc_python, mc_cnn). 
     An update in a future version will resolve this issue.
 
+.. warning::
+    This initial version, available in Pandora2d 1.1.0, should not be used with Windows. 
+    An update in a future version will resolve this issue.
+
 Configuration and parameters
 ----------------------------
 

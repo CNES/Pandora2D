@@ -235,7 +235,8 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     np.testing.assert_allclose(sad["cost_volumes"].data[valid_mask], ad_ground_truth[valid_mask], atol=1e-06)
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc"])
+# /!\ "zncc" currently target "zncc-optim-1"
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
 def test_compute_cv_zncc(matching_cost_config, matching_cost_object):
     """
     Test the cost volume product by zncc
@@ -363,7 +364,8 @@ def python_matching_cost_instance(python_matching_cost_config):
     return matching_cost_class(python_matching_cost_config)
 
 
-@pytest.fixture
+# /!\ "zncc" currently target "zncc-optim-1"
+@pytest.fixture(params=["zncc", "zncc-optim-2"])
 def cpp_matching_cost_config(matching_cost_config):
     config = deepcopy(matching_cost_config)
     config["matching_cost_method"] = "zncc"
@@ -662,7 +664,8 @@ def test_cost_volume_coordinates_with_roi(
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc"])
+# /!\ "zncc" currently target "zncc-optim-1"
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
 @pytest.mark.parametrize(
     ["step", "col_expected", "row_expected"],
     [
@@ -1674,7 +1677,10 @@ class TestDisparityMargins:
 
         return left, right
 
-    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc"])
+    # /!\ "zncc" currently target "zncc-optim-1"
+    @pytest.mark.parametrize(
+        "matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc", "zncc-optim-2"]
+    )
     @pytest.mark.parametrize(
         ["margins", "subpix", "gt_cv_shape", "gt_disp_col", "gt_disp_row"],
         [
