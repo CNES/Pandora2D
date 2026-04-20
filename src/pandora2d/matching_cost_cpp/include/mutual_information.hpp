@@ -31,7 +31,7 @@ This module contains functions associated to the mutual information in cpp.
 /**
  * @brief Compute entropy
  *
- * @tparam T hist1D or hist2D
+ * @param T hist1D or hist2D
  * @param nb_pixel of the image
  * @param hist to iterate
  * @return T entropy

@@ -21,6 +21,7 @@
 This module contains functions associated to the binding pybind of cpp cost volumes computation.
 */
 
+#define _USE_MATH_DEFINES
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>

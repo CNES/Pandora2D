@@ -35,6 +35,8 @@ Configuration and parameters
        * "zncc_python"
        * "mc_cnn"
        * "mutual_information"
+       * "cfog_ncc"
+       * "cfog_ssd"
      - Yes
    * - window_size
      - Window size for similarity measure
@@ -96,6 +98,9 @@ Configuration and parameters
         pip install pandora-plugin-mccnn
 
     See `Pandora plugin documentation <https://pandora.readthedocs.io/en/stable/userguide/plugins/plugin_mccnn.html>`_.
+
+.. warning::
+     CFOG methods are still experimental.
 
 .. warning::
     The subpix parameter can only take values 1, 2 and 4.

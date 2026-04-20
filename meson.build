@@ -14,6 +14,7 @@ pybind11_dep = dependency('pybind11')
 eigen_dep = dependency('eigen3')
 doctest_dep = dependency('doctest', required: get_option('build_cpp_tests'))
 python_dep = py.dependency(embed: true, required: get_option('build_cpp_tests'))
+omp_dep = dependency('openmp', required: false)
 
 install_subdir(
     'src/pandora2d',

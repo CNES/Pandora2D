@@ -86,8 +86,8 @@ variables:
   PROD_REF: /^(master|main)$/
   # default integration ref name (pattern)
   # Decomment to add new branch TickerNumber-XXX
-  #INTEG_REF: /^(develop|release|TickerNumber-XXX)$/
-  INTEG_REF: /^(develop|release)$/
+  INTEG_REF: /^(develop|release|poc_cfog)$/
+  # INTEG_REF: /^(develop|release)$/
 
   # Pandora's branch to integrate with
   # Override from pipeline GUI/Schedule if needed

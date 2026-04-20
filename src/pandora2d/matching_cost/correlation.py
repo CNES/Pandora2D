@@ -40,6 +40,8 @@ from .base import BaseMatchingCost
 @MatchingCostRegistry.add("zncc")
 @MatchingCostRegistry.add("zncc-optim-1")
 @MatchingCostRegistry.add("zncc-optim-2")
+@MatchingCostRegistry.add("cfog_ncc")
+@MatchingCostRegistry.add("cfog_ssd")
 class CorrelationMethods(BaseMatchingCost):
     """
     Mutual Information class
@@ -57,7 +59,9 @@ class CorrelationMethods(BaseMatchingCost):
         schema.update(
             {
                 "matching_cost_method": And(
-                    str, lambda x: x in ["zncc", "zncc-optim-1", "zncc-optim-2", "mutual_information"]
+                    str,
+                    lambda x: x
+                    in ["zncc", "zncc-optim-1", "zncc-optim-2", "mutual_information", "cfog_ncc", "cfog_ssd"],
                 ),
                 "float_precision": And(str, lambda x: np.dtype(x) in [np.float32, np.float64]),
             }
@@ -95,8 +99,11 @@ class CorrelationMethods(BaseMatchingCost):
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         """
 
-        # Add type measure to attributes for WTA
-        self.cost_volumes.attrs["type_measure"] = "max"
+        if self.cost_volumes.attrs["measure"] in ["cfog_ssd", "cfog_ncc"]:
+            self.cost_volumes.attrs["type_measure"] = "min"
+        else:
+            # Add type measure to attributes for WTA
+            self.cost_volumes.attrs["type_measure"] = "max"
 
         imgs_right = [right["im"].values for right in self.shifted_right_images]
         offset_cv_img_row = self.cost_volumes.row.data[0] - img_left.row.data[0]

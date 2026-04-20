@@ -9,5 +9,5 @@ py.extension_module(
     subdir: 'pandora2d/matching_cost_cpp',
     install: true,
     include_directories: [matching_cost_includes, common_includes],
-    dependencies: [pybind11_dep, eigen_dep],
+    dependencies: [pybind11_dep, eigen_dep, omp_dep],
 )

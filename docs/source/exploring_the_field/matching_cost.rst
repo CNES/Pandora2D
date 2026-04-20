@@ -24,6 +24,7 @@ Different measures of similarity are available in Pandora2D to compute these coe
 - ZNCC (Zero mean Normalized Cross Correlation)
 - MI (Mutual Information)
 - MCCNN (Neural network which computes a similarity measure) (MANDATORY: pandora_plugin_mccnn) (please see: `pandora documentation <https://pandora.readthedocs.io/en/stable/userguide/plugins/plugin_mccnn.html>`_)
+- CFOG (Convolutional Feature Oriented Gradient)
 
 Let's see in following sections how they work.
 
@@ -146,3 +147,18 @@ Now that the simple case has been explained, here's a more complete example wher
 
 .. image:: /Images/complete_histogram2D_how_to.drawio.svg
     :align: center
+
+
+CFOG Correlation
+----------------
+
+.. warning::
+     This method is still experimental.
+
+
+CFOG (Convolutional Feature Oriented Gradient) is a similarity measure based on the convolution of the image with oriented gradient kernels.
+The idea is to convolve the image with a set of kernels that are sensitive to different orientations of gradients.
+The resulting feature maps are then compared using a similarity measure such as the NCC or SSD.
+
+(please see: `Y. Ye, L. Bruzzone, J. Shan, F. Bovolo and Q. Zhu, 
+"Fast and Robust Matching for Multimodal Remote Sensing Image Registration," in IEEE Transactions on Geoscience and Remote Sensing, vol. 57, no. 11, pp. 9059-9070, Nov. 2019 <https://doi.org/10.1109/TGRS.2019.2924684>`_)
