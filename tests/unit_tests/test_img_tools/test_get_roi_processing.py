@@ -27,7 +27,7 @@ Test get_roi_processing.
 import numpy as np
 import pytest
 
-from pandora2d import img_tools  # type: ignore[import-not-found]
+from pandora2d import img_tools
 
 
 @pytest.fixture()
@@ -276,13 +276,12 @@ class TestGetRoiProcessingOutliers:
 
     def test_get_roi_processing(self, border_outliers_grid):
         """Check that only ROI values impact computed margins."""
-        disparity = {"init": border_outliers_grid, "range": 1}
         roi = {
             "col": {"first": 2, "last": 5},
             "row": {"first": 2, "last": 5},
             "margins": [2, 2, 2, 2],
         }
 
-        result = img_tools.get_roi_processing(roi, disparity, disparity)
+        result = img_tools.get_roi_processing(roi, border_outliers_grid, border_outliers_grid)
 
         assert result["margins"] == (2, 2, 4, 4)
