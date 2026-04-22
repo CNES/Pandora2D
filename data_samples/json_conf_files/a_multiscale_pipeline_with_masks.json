@@ -8,9 +8,10 @@
         "right" : {"img_pyramid": "../images/maricopa_pyramid/right_image",
                    "mask_pyramid": "../images/maricopa_pyramid/right_mask"},
         "model": {"type": "pol", "degree": 2},
-        "mesh": {"row":1, "col":1},
+        "mesh": {"row":3, "col":3},
+        "minimal_nb_pixels_per_mesh": 50,
         "output": 
-            "a_multiscale_output"
+            "a_multiscale_output_with_masks"
         
     },
 "pandora2d": 
