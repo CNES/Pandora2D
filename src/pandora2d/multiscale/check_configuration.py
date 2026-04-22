@@ -327,6 +327,7 @@ multiscale_configuration_schema = {
     },
     "model": {"type": And(str, lambda s: s == "pol"), "degree": And(int, lambda d: d >= 0)},
     "mesh": {"row": And(int, lambda x: x > 0), "col": And(int, lambda x: x > 0)},
+    "minimal_nb_pixels_per_mesh": And(int, lambda nb: nb > 0),
     "output": str,
 }
 
@@ -344,5 +345,6 @@ default_configuration_multiscale = {
             "degree": 2,
         },
         "mesh": {"row": 1, "col": 1},
+        "minimal_nb_pixels_per_mesh": 1,
     }
 }

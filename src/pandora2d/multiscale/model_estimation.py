@@ -56,6 +56,23 @@ def get_invalid_disp_mask(row_map: NDArray, col_map: NDArray, invalid_disp: Unio
     return mask_invalid
 
 
+def add_mesh_validity_band(dataset_disp_maps: xr.Dataset) -> xr.Dataset:
+    """
+    Add a 'MESH_validity' band to an existing validity dataset.
+
+    :param dataset_disp_maps: xarray Dataset containing the validity data and the disparity maps
+    """
+
+    # Criteria list with new criteria for MESH_validity
+    new_criteria = list(dataset_disp_maps.coords["criteria"].values) + ["MESH_validity"]
+    # Mesh validity band initialized to 0
+    dataset_validity_extended = dataset_disp_maps.reindex(criteria=new_criteria, fill_value=0)
+
+    dataset_disp_maps = dataset_validity_extended
+
+    return dataset_disp_maps
+
+
 def make_position_vectors(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Construct initial et final positions vectors using dataset_disp_maps coordinates
@@ -89,6 +106,11 @@ def make_position_vectors(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArr
     mask_invalid = get_invalid_disp_mask(
         dataset_disp_maps["row_map"].data, dataset_disp_maps["col_map"].data, dataset_disp_maps.attrs["invalid_disp"]
     )
+
+    # Fill mesh validity band in validity dataset according to the number of valid points in the mesh
+    nb_valid = (mask_invalid == 0).sum()
+    value = 0 if nb_valid >= dataset_disp_maps.attrs["minimal_nb_pixels_per_mesh"] else 1
+    dataset_disp_maps["validity"].sel(criteria="MESH_validity")[:, :] = value
 
     init_row_coords = init_row_2d_coords[~mask_invalid]
     init_col_coords = init_col_2d_coords[~mask_invalid]
@@ -379,7 +401,7 @@ def get_init_disparity_grids(
 
 def get_init_disparity_grids_with_mesh(
     dataset_disp_maps: xr.Dataset, multiscale_cfg: Dict, next_resolution_shape: Tuple
-) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
+) -> Tuple[NDArray, NDArray, NDArray, NDArray, xr.Dataset]:
     """
     Return initial disparity grid after computing least square coefficients
     for each mesh
@@ -391,8 +413,11 @@ def get_init_disparity_grids_with_mesh(
     :param next_resolution_shape: shape of image for next resolution
     :type next_resolution_shape: Tuple (height, width)
     :return: initial disparity grids for rows and columns and RMSE for row and columns
-    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
+    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray, xr.Dataset]
     """
+
+    # Add mesh validity band to dataset_disp_maps
+    dataset_disp_maps = add_mesh_validity_band(dataset_disp_maps)
 
     # Tile size used to divide the disparty grid
     nb_row_mesh = multiscale_cfg["mesh"]["row"]
@@ -449,4 +474,4 @@ def get_init_disparity_grids_with_mesh(
     rmse_row = np.sqrt(sum_sq_residuals_row_total / (dataset_disp_maps["row_map"].size))
     rmse_col = np.sqrt(sum_sq_residuals_col_total / (dataset_disp_maps["row_map"].size))
 
-    return estimated_init_row_grid, estimated_init_col_grid, rmse_row, rmse_col
+    return estimated_init_row_grid, estimated_init_col_grid, rmse_row, rmse_col, dataset_disp_maps

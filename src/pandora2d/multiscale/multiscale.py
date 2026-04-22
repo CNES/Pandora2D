@@ -294,12 +294,17 @@ def process_one_resolution(
     else:
         dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, checked_pandora2d_cfg)
 
+    # Add ratio mesh
+    dataset_disp_maps.attrs["minimal_nb_pixels_per_mesh"] = checked_cfg["multiscale"]["minimal_nb_pixels_per_mesh"]
+
     # We estimate initial disparity grids for next resolution
     if resolution != len(image_shapes_list):
 
         # Estimate initial disparity grids for next resolution
-        estimated_init_row_grid, estimated_init_col_grid, rmse_row, rmse_col = get_init_disparity_grids_with_mesh(
-            dataset_disp_maps, checked_cfg["multiscale"], image_shapes_list[resolution]
+        estimated_init_row_grid, estimated_init_col_grid, rmse_row, rmse_col, dataset_disp_maps = (
+            get_init_disparity_grids_with_mesh(
+                dataset_disp_maps, checked_cfg["multiscale"], image_shapes_list[resolution]
+            )
         )
 
         # Save initial disparity grids for next resolution
