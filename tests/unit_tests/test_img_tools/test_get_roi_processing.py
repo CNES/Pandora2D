@@ -18,7 +18,7 @@
 #
 
 """
-Test get_roi_processing.
+Test get_roi_processing method.
 """
 
 # Make pylint happy with fixtures:
@@ -264,24 +264,8 @@ class TestNodataFiltering:
 class TestGetRoiProcessingOutliers:
     """Border outliers should not inflate ROI margins."""
 
-    @pytest.fixture
-    def border_outliers_grid(self, left_img_shape, create_disparity_grid_fixture):
-        """Create a grid with high border values and controlled ROI interior."""
-        height, width = left_img_shape
-
-        grid = np.full((height, width), 100.0, dtype=np.float32)
-        grid[2 : height - 2, 2 : width - 2] = 1.0
-
-        return create_disparity_grid_fixture(grid, 1, "border_outliers_disparity.tif")
-
-    def test_get_roi_processing(self, border_outliers_grid):
+    def test_get_roi_processing(self, default_roi, border_outliers_grid):
         """Check that only ROI values impact computed margins."""
-        roi = {
-            "col": {"first": 2, "last": 5},
-            "row": {"first": 2, "last": 5},
-            "margins": [2, 2, 2, 2],
-        }
-
-        result = img_tools.get_roi_processing(roi, border_outliers_grid, border_outliers_grid)
+        result = img_tools.get_roi_processing(default_roi, border_outliers_grid, border_outliers_grid)
 
         assert result["margins"] == (2, 2, 4, 4)

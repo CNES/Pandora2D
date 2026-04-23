@@ -367,7 +367,7 @@ def get_roi_processing(roi: dict, col_disparity: dict, row_disparity: dict, from
 
     :param col_disparity: init and range for disparities in columns.
     :param row_disparity: init and range for disparities in rows.
-    :param from_previous_run: True when disparity grids come from a previous Pandora2D run
+    :param from_previous_run: True when initial disparity grids come from a previous Pandora2D run
         (local coordinates); passed through to get_initial_disparity to skip ROI windowing.
     """
 

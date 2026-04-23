@@ -19,7 +19,7 @@
 #
 
 """
-Test get_initial_disparity.
+Test get_initial_disparity method.
 """
 
 # Make pylint happy with fixtures:
@@ -43,6 +43,16 @@ class TestGetInitialDisparity:
         data[:, 3::4] = np.nan
         return data
 
+    @pytest.fixture
+    def centered_roi(self, left_img_shape):
+        """Create a ROI that excludes a 2-pixel border on each side."""
+        height, width = left_img_shape
+        return {
+            "col": {"first": 2, "last": width - 3},
+            "row": {"first": 2, "last": height - 3},
+            "margins": [2, 2, 2, 2],
+        }
+
     @pytest.mark.parametrize(
         ["second_correct_grid_shape", "nodata", "expected"], [((1, 5), None, [[[5, -21, np.nan, np.nan, 5]]])]
     )
@@ -64,35 +74,23 @@ class TestGetInitialDisparity:
 
         assert result == 1
 
-    @pytest.fixture
-    def roi_outliers_grid(self, left_img_shape, create_disparity_grid_fixture):
-        """Create a grid with extreme border values and stable ROI interior."""
-        height, width = left_img_shape
-        grid = np.full((height, width), 100.0, dtype=np.float32)
-        grid[2 : height - 2, 2 : width - 2] = 1.0
-        return create_disparity_grid_fixture(grid, 1, "roi_outliers_disparity.tif")
-
-    def test_get_initial_disparity_roi_is_none(self, roi_outliers_grid, left_img_shape):
+    def test_get_initial_disparity_roi_is_none(self, border_outliers_grid, left_img_shape):
         """When roi=None, full disparity grid is read including border outliers."""
         height, width = left_img_shape
-        result = img_tools.get_initial_disparity(roi_outliers_grid, roi=None)
+        result = img_tools.get_initial_disparity(border_outliers_grid, roi=None)
 
         assert result.shape == (1, height, width)
-        assert result[0, 0, 0] == 100.0
-        assert result[0, 1, 1] == 100.0
-        assert result[0, 3, 3] == 1.0
-        assert result[0, height - 1, width - 1] == 100.0
 
-    def test_get_initial_disparity_roi_is_not_none(self, roi_outliers_grid, left_img_shape):
+        # Build the expected grid and compare
+        expected = np.full((1, height, width), 100.0, dtype=np.float32)
+        expected[0, 2 : height - 2, 2 : width - 2] = 1.0
+        np.testing.assert_array_equal(result, expected)
+
+    def test_get_initial_disparity_roi_is_not_none(self, border_outliers_grid, left_img_shape, centered_roi):
         """When roi is not None, only ROI window pixels are read."""
         height, width = left_img_shape
-        roi = {
-            "col": {"first": 2, "last": width - 3},
-            "row": {"first": 2, "last": height - 3},
-            "margins": [2, 2, 2, 2],
-        }
 
-        result = img_tools.get_initial_disparity(roi_outliers_grid, roi=roi)
+        result = img_tools.get_initial_disparity(border_outliers_grid, roi=centered_roi)
 
         row_bounds = {"first": 2, "last": height - 3}
         col_bounds = {"first": 2, "last": width - 3}
@@ -100,40 +98,21 @@ class TestGetInitialDisparity:
         roi_width = col_bounds["last"] - col_bounds["first"] + 1
         expected_shape = (1, roi_height, roi_width)
         assert result.shape == expected_shape
+        # The ROI window excludes border outliers, so only interior 1.0 values are read.
         np.testing.assert_array_equal(result, np.ones(expected_shape, dtype=np.float32))
 
-    def test_get_initial_disparity_roi_excludes_border_outliers(self, roi_outliers_grid, left_img_shape):
-        """ROI prevents border outliers from being read."""
-        height, width = left_img_shape
-        roi = {
-            "col": {"first": 2, "last": width - 3},
-            "row": {"first": 2, "last": height - 3},
-            "margins": [2, 2, 2, 2],
-        }
-
-        result_with_roi = img_tools.get_initial_disparity(roi_outliers_grid, roi=roi)
-        result_without_roi = img_tools.get_initial_disparity(roi_outliers_grid, roi=None)
-
-        assert isinstance(result_with_roi, np.ndarray)
-        assert isinstance(result_without_roi, np.ndarray)
-        assert result_with_roi.shape != result_without_roi.shape
-        assert np.all(result_with_roi == 1.0)
-        assert np.any(result_without_roi == 100.0)
-
-    def test_get_initial_disparity_from_previous_run_reads_full_raster(self, roi_outliers_grid, left_img_shape):
-        """When from_previous_run=True, the full raster is read even if a ROI is provided.
+    def test_get_initial_disparity_from_previous_run_reads_full_raster(
+        self, border_outliers_grid, left_img_shape, centered_roi
+    ):
+        """
+        When from_previous_run=True, the full raster is read even if a ROI is provided.
 
         This covers the re-entrance case where the raster is already cropped to the ROI zone
         and stored in local coordinates: applying the global ROI as a window offset would be wrong.
         """
         height, width = left_img_shape
-        roi = {
-            "col": {"first": 2, "last": width - 3},
-            "row": {"first": 2, "last": height - 3},
-            "margins": [2, 2, 2, 2],
-        }
 
-        result = img_tools.get_initial_disparity(roi_outliers_grid, roi=roi, from_previous_run=True)
+        result = img_tools.get_initial_disparity(border_outliers_grid, roi=centered_roi, from_previous_run=True)
 
         assert result.shape == (1, height, width)
         assert np.any(result == 100.0)

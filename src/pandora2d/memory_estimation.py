@@ -202,7 +202,7 @@ def get_roi_margins(
     :param col_disparity: init and range for disparities in columns.
     :param global_margins: global image margins computed in the check conf
     :param roi: optional ROI dict with keys "row" and "col", each containing "first" and "last".
-    :param from_previous_run: True when disparity grids come from a previous Pandora2D run.
+    :param from_previous_run: True when initial disparity grids come from a previous Pandora2D run.
     :return: ROI margins updated according to disparity values
     """
 
