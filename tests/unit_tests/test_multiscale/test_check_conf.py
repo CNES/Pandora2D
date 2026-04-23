@@ -149,6 +149,7 @@ def correct_multiscale_config_with_mesh(correct_multiscale_config):
 
     cfg = deepcopy(correct_multiscale_config)
     cfg["multiscale"]["mesh"] = {"row": 2, "col": 3}
+    cfg["multiscale"]["minimal_nb_pixels_per_mesh"] = 10
     return cfg
 
 
@@ -172,6 +173,18 @@ def correct_multiscale_config_with_left_mask(correct_multiscale_config, tmp_corr
 
     cfg = deepcopy(correct_multiscale_config)
     cfg["multiscale"]["left"]["mask_pyramid"] = str(tmp_correct_repository)
+    return cfg
+
+
+@pytest.fixture()
+def correct_multiscale_config_with_left_mask_and_mesh(correct_multiscale_config_with_left_mask):
+    """
+    Correct multiscale configuration with left mask pyramid and mesh key
+    """
+
+    cfg = deepcopy(correct_multiscale_config_with_left_mask)
+    cfg["multiscale"]["mesh"] = {"row": 2, "col": 3}
+    cfg["multiscale"]["minimal_nb_pixels_per_mesh"] = 3
     return cfg
 
 
@@ -222,6 +235,7 @@ def incorrect_multiscale_config_with_masks(request):
             },
             "model": {"type": request.param["model_type"], "degree": request.param["model_degree"]},
             "mesh": request.param["mesh"],
+            "minimal_nb_pixels_per_mesh": request.param["minimal_nb_pixels_per_mesh"],
             "output": request.param["output"],
         },
         "pandora2d": str(request.getfixturevalue(request.param["json_file"])),
@@ -230,7 +244,14 @@ def incorrect_multiscale_config_with_masks(request):
 
 @pytest.mark.parametrize(
     "multiscale_config",
-    ["correct_multiscale_config", "correct_multiscale_config_with_mesh", "correct_multiscale_config_with_json_list"],
+    [
+        "correct_multiscale_config",
+        "correct_multiscale_config_with_mesh",
+        "correct_multiscale_config_with_json_list",
+        "correct_multiscale_config_with_left_mask",
+        "correct_multiscale_config_with_left_mask_and_mesh",
+        "correct_multiscale_config_with_left_and_right_masks",
+    ],
 )
 def test_multiscale_check_conf(multiscale_config, request):
     """
@@ -382,6 +403,7 @@ def test_fails_multiscale_check_conf(incorrect_multiscale_config):
                 "model_type": "pol",
                 "model_degree": 2,
                 "mesh": {"row": 1, "col": 1},
+                "minimal_nb_pixels_per_mesh": 3,
                 "output": "output_test",
                 "json_file": "tmp_json_file",
             },
@@ -396,10 +418,26 @@ def test_fails_multiscale_check_conf(incorrect_multiscale_config):
                 "model_type": "pol",
                 "model_degree": 2,
                 "mesh": {"row": 1, "col": 1},
+                "minimal_nb_pixels_per_mesh": 3,
                 "output": "output_test",
                 "json_file": "tmp_json_file",
             },
             id="Right mask pyramid with unreadable tif file",
+        ),
+        pytest.param(
+            {
+                "left_path": "tmp_correct_repository",
+                "right_path": "tmp_correct_repository",
+                "left_mask_path": "tmp_correct_repository",
+                "right_mask_path": "tmp_repository_with_unreadable_tif",
+                "model_type": "pol",
+                "model_degree": 2,
+                "mesh": {"row": 1, "col": 1},
+                "minimal_nb_pixels_per_mesh": 3.4,
+                "output": "output_test",
+                "json_file": "tmp_json_file",
+            },
+            id="Float minimal_nb_pixels_per_mesh",
         ),
     ],
     indirect=["incorrect_multiscale_config_with_masks"],
@@ -447,6 +485,7 @@ def test_default_values(correct_multiscale_config):
     assert result["multiscale"]["model"]["degree"] == 2
     assert result["multiscale"]["mesh"]["row"] == 1
     assert result["multiscale"]["mesh"]["col"] == 1
+    assert result["multiscale"]["minimal_nb_pixels_per_mesh"] == 1
 
 
 @pytest.mark.parametrize(
@@ -491,6 +530,7 @@ def test_fails_with_different_number_of_tif(incorrect_multiscale_config):
                 "model_type": "pol",
                 "model_degree": 2,
                 "mesh": {"row": 1, "col": 1},
+                "minimal_nb_pixels_per_mesh": 3,
                 "output": "output_test",
                 "json_file": "tmp_json_file",
             },
@@ -505,6 +545,7 @@ def test_fails_with_different_number_of_tif(incorrect_multiscale_config):
                 "model_type": "pol",
                 "model_degree": 2,
                 "mesh": {"row": 1, "col": 1},
+                "minimal_nb_pixels_per_mesh": 3,
                 "output": "output_test",
                 "json_file": "tmp_json_file",
             },
@@ -519,6 +560,7 @@ def test_fails_with_different_number_of_tif(incorrect_multiscale_config):
                 "model_type": "pol",
                 "model_degree": 2,
                 "mesh": {"row": 1, "col": 1},
+                "minimal_nb_pixels_per_mesh": 3,
                 "output": "output_test",
                 "json_file": "tmp_json_file",
             },
