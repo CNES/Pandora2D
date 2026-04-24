@@ -28,7 +28,7 @@ import xarray as xr
 from numpy.typing import NDArray
 from scipy.linalg import cho_factor, cho_solve
 
-COMPRESSION_FACTOR = 0.5
+COMPRESSION_FACTOR = 0.5  # factor used to reduce numerical instability
 
 
 def get_invalid_disp_mask(row_map: NDArray, col_map: NDArray, invalid_disp: Union[int, float]) -> NDArray:
