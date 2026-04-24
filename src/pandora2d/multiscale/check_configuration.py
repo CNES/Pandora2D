@@ -36,9 +36,7 @@ def tiff_area(file_path: Union[Path, str]) -> int:
     Return tiff area for a given tif file_path
 
     :param file_path: path to tif file
-    :type file_path: Union[Path, str]
     :return: tif area width*height
-    :rtype: int
     """
     with rasterio.open(file_path) as src:
         width = src.width
@@ -52,9 +50,7 @@ def get_tif_files_list(path: Path) -> List[Path]:
     sorted by file area
 
     :param path: path to pyramid repository
-    :type path: Path
     :return: list of tif files sorted by size (width*height)
-    :rtype: List[Path]
     """
 
     return sorted(path.glob("*.tif"), key=tiff_area)
@@ -65,9 +61,7 @@ def get_tif_shape_list(tif_files_list: List[Path]) -> List[Tuple]:
     Return list of tif files shape (height, width)
 
     :param tif_files_list: list of path to tif files
-    :type tif_files_list: List[Path]
     :return: list of shape (height, width) for each tif file in tif_files_list
-    :rtype: List[Tuple]
     """
 
     tif_files_shapes = []
@@ -86,9 +80,7 @@ def is_repository_with_tif_file(path: Union[PathLike, str]) -> bool:
     Check if the given path leads to a repository containing at least one readable tif file.
 
     :param path: path to a repository
-    :type path: Union[PathLike, str]
     :return: whether the path refers to a valid repository or not
-    :rtype: bool
     """
 
     if path is None:
@@ -108,9 +100,8 @@ def is_json_file(path: Union[str, Path]) -> bool:
     Check if the given path refers to a JSON file.
 
     :param path: path to a JSON file
-    :type path: Union[str, Path]
     :return: whether the path refers to a JSON file or not
-    :rtype: bool
+
     """
     user_path = Path(path)
 
@@ -129,9 +120,7 @@ def check_pyramid_repositories(first_pyramid_path: Union[str, Path], second_pyra
     and that, if masks are specified, there are as many masks as there are images in the pyramids.
 
     :param first_pyramid_path: path to first pyramid repository
-    :type first_pyramid_path: Union[str, Path]
     :param second_pyramid_path: path to second pyramid repository
-    :type second_pyramid_path: Union[str, Path]
     """
 
     first_pyramid_path = Path(first_pyramid_path)
@@ -156,7 +145,6 @@ def check_mask_pyramid_repositories(user_cfg: Dict) -> None:
     Check if tif files have correct suffix.
 
     :param user_cfg: user configuration
-    :type user_cfg: Dict
     """
 
     if user_cfg["multiscale"]["left"]["mask_pyramid"] is not None:
@@ -174,9 +162,7 @@ def get_multiscale_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     Get the multiscale configuration
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return cfg: partial configuration
-    :rtype cfg: dict
     """
 
     cfg = {}
@@ -192,9 +178,7 @@ def check_multiscale_section(user_cfg) -> Dict[str, dict]:
     Check multiscale section of configuration
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return: cfg: checked multiscale configuration
-    :rtype: cfg: dict
     """
 
     # Check multiscale configuration
@@ -223,9 +207,7 @@ def get_pandora2d_config(user_cfg: Dict[str, dict]) -> Dict[str, dict]:
     Get the pandora2d configuration
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return cfg: partial configuration
-    :rtype cfg: dict
     """
 
     cfg = {}
@@ -241,9 +223,7 @@ def check_pandora2d_section(user_cfg) -> None:
     Check pandora2d section of configuration
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
     :return: cfg: checked pandora2d configuration
-    :rtype: cfg: dict
     """
 
     # Check pandora2d configuration
@@ -263,7 +243,6 @@ def update_pyramid_configuration(cfg_multiscale: Dict) -> None:
     instead of path to pyramid repository.
 
     :param cfg_multiscale: multiscale configuration
-    :type cfg_multiscale: Dict
     """
 
     # Update image pyramid configurations
@@ -289,9 +268,8 @@ def check_conf(user_cfg: Dict) -> Dict[str, dict]:
     Check multiscale configuration
 
     :param user_cfg: user configuration
-    :type user_cfg: dict
+
     :return: cfg: checked multiscale configuration
-    :rtype: cfg: dict
     """
 
     user_cfg_multiscale = get_multiscale_config(user_cfg)

@@ -81,7 +81,6 @@ def setup_logging(verbose: bool) -> None:
     if -vv option is given, pandora2d pipeline informations are added
 
     :param verbose: verbose mode
-    :type verbose: bool
     :return: None
     """
 
@@ -111,11 +110,8 @@ def resolve_path_in_config_multiscale(config: Dict, config_path: Path) -> Dict:
     config_path.
 
     :param config: config to modify
-    :type config: Dict
     :param config_path: path to the config file.
-    :type config_path: Path
     :return: The configuration with changed paths.
-    :rtype: Dict
     """
     result = deepcopy(config)
     relative_to = config_path.parent
@@ -153,19 +149,12 @@ def get_pandora2d_cfg(
     Returns pandora2d configuration for a given resolution to process
 
     :param user_cfg: user configuration
-    :type user_cfg: Dict
     :param path_left_image: path of left image
-    :type path_left_image: Path
     :param path_right_image: path of right image
-    :type path_right_image: Path
     :param path_left_mask: path of left mask
-    :type path_left_mask: Path
     :param path_right_mask: path of right mask
-    :type path_right_mask: Path
     :param resolution_index: index of the current resolution
-    :type resolution_index: int
     :return: pandora2d configuration
-    :rtype: Dict
     """
 
     # Create pandora2d configuration
@@ -198,13 +187,9 @@ def write_initial_disparity_grid(
     Write initial disparity grid tif file at output_path
 
     :param output_path: Path to output directory for initial disparity grid
-    :type output_path: Path
     :param file_name: file name for initial disparity grid
-    :type file_name: Union[Path, str]
     :param data: initial disparity grid
-    :type data: NDArray
     :param dataset_disp_maps: computed disparity maps
-    :type dataset_disp_maps: xr.Dataset
     """
 
     output_path.mkdir(parents=True, exist_ok=True)
@@ -230,13 +215,9 @@ def save_disparity_maps_and_config(
     Save disparity maps and pandora2d configuration for a given resolution
 
     :param completed_cfg: pandora2d configuration after pandora2d execution
-    :type completed_cfg: Dict
     :param dataset_disp_maps: computed disparity maps
-    :type dataset_disp_maps: xr.Dataset
     :param output_path: Path to output directory for disparity maps
-    :type output_path: str
     :param resolution: current resolution index
-    :type resolution: int
     :return: None
     """
 
@@ -326,9 +307,7 @@ def run_multiscale(config_path: Union[PathLike, str], verbose: bool) -> None:
     Check config file and run multiscale pipeline accordingly
 
     :param config_path: path to the json configuration file
-    :type config_path: PathLike|str
     :param verbose: verbose mode
-    :type verbose: bool
     :return: None
     """
 

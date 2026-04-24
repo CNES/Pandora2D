@@ -37,13 +37,9 @@ def get_invalid_disp_mask(row_map: NDArray, col_map: NDArray, invalid_disp: Unio
     This mask is then used to remove invalid points from position vectors.
 
     :param row_map: row disparity map
-    :type row_map: NDArray
     :param col_map: col disparity map
-    :type col_map: NDArray
     :param invalid_disp: invalid disparity value
-    :type invalid_disp: Union[int, float]
     :return: invalid mask for position matrix
-    :rtype: NDArray
     """
 
     if np.isnan(invalid_disp):
@@ -84,9 +80,7 @@ def make_position_vectors(dataset_disp_maps: xr.Dataset) -> Tuple[NDArray, NDArr
         - y is either final_row_coords or final_col_coords.
 
     :param dataset_disp_maps: disparity maps dataset
-    :type dataset_disp_maps: xr.Dataset
     :return: initial position vectors and final position vectors
-    :rtype: Tuple[NDArray, NDArray]
     """
 
     # dataset_disp_maps xarray coordinates are used to get initial positions
@@ -130,13 +124,9 @@ def make_polynomial_design_matrix(row_init_coords: NDArray, col_init_coords: NDA
     For the least squares problem y=Xb, X is the design matrix.
 
     :param col_init_coords: initial column positions
-    :type col_init_coords: NDArray
     :param row_init_coords: initial row positions
-    :type row_init_coords: NDArray
     :param degree: polynomial degree
-    :type degree: int
     :return: polynomial design matrix
-    :rtype: Tuple[NDArray, List]
     """
 
     exponent_pairs = [(a, b) for a in range(degree + 1) for b in range(degree + 1 - a)]
@@ -150,7 +140,6 @@ def check_nb_observations(design_matrix: NDArray):
     Check if we have more parameters than observations, in which case a ValueError is raised.
 
     :param design_matrix: Design matrix
-    :type design matrix: NDArray
     """
     if design_matrix.shape[0] < design_matrix.shape[1]:
         raise ValueError(
@@ -165,11 +154,8 @@ def estimate_model(dataset_disp_maps: xr.Dataset, degree: int) -> Tuple[NDArray,
     by resolving y=Xb.
 
     :param degree: polynomial degree
-    :type degree: int
     :param dataset_disp_maps: disparity maps dataset
-    :type dataset_disp_maps: xr.Dataset
     :return: least square solution and sum of residuals for rows and columns
-    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
     # Get initial and final position vectors
@@ -200,13 +186,9 @@ def estimate_model_cholesky(
     If a value is specified for lamba_ridge, Ridge regularization is used.
 
     :param dataset_disp_maps: disparity maps dataset
-    :type dataset_disp_maps: xr.Dataset
     :param degree: polynomial degree
-    :type degree: int
     :param lambda_ridge: Ridge regularization factor
-    :type lambda_ridge: Union[int, float, None], None by default
     :return: least square solution and sum of residuals for rows and columns
-    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
     # Get initial and final position vectors
@@ -253,17 +235,11 @@ def estimate_init_disparity_grids(
     and coefficients of least squares resolution.
 
     :param dataset_disp_maps: disparity maps dataset
-    :type dataset_disp_maps: xr.Dataset
     :param coefficients_row: row coefficients computed by least squares resolution
-    :type_coefficients_row: NDArray
     :param coefficients_col: col coefficients computed by least squares resolution
-    :type_coefficients_col: NDArray
     :param degree: polynomial degree
-    :type degree: int
     :param next_resolution_shape: shape of image for next resolution
-    :type next_resolution_shape: Tuple (height, width)
     :return: initial disparity grids for rows and columns
-    :rtype: Tuple[NDArray, NDArray]
     """
 
     # Get resampled coordinates according to scale factor
@@ -325,11 +301,8 @@ def get_next_shape_mesh_list(next_resolution_shape: int, nb_mesh: int) -> List[i
     with the right shape for each mesh.
 
     :param next_resolution_shape: next resolution shape (row or column)
-    :type next_resolution_shape: int
     :param nb_mesh: number of mesh (row or column)
-    :type nb_mesh: int
     :return: List of shape by mesh (row or column)
-    :rtype: List[int]
     """
 
     condition_add_one_pixel = nb_mesh - (next_resolution_shape % nb_mesh)
@@ -346,13 +319,9 @@ def concatenate_estimated_grids(estimated_init_grid_list: List[NDArray], nb_row_
     and return the full initial disparity grid for next resolution.
 
     :param estimated_init_grid_list:
-    :type estimated_init_grid_list: List[NDArray]
     :param nb_row_mesh: number of mesh for rows
-    :type nb_row_mesh: int
     :param nb_col_mesh: number of mesh for columns
-    :type nb_col_mesh: int
     :return: full estimated initial disparity grid for next resolution
-    :rtype: NDArray
     """
 
     estimated_init_grid = np.concatenate(
@@ -373,13 +342,9 @@ def get_init_disparity_grids(
     Return initial disparity grid after computing least square coefficients
 
     :param dataset_disp_maps: disparity maps dataset
-    :type dataset_disp_maps: xr.Dataset
     :param multiscale_cfg: multiscale pipeline configuration
-    :type multiscale_cfg: Dict
     :param next_resolution_shape: shape of image for next resolution
-    :type next_resolution_shape: Tuple (height, width)
     :return: initial disparity grids for rows and columns and sum of squared residuals
-    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray]
     """
 
     # Estimate model
@@ -407,13 +372,9 @@ def get_init_disparity_grids_with_mesh(
     for each mesh
 
     :param dataset_disp_maps: disparity maps dataset
-    :type dataset_disp_maps: xr.Dataset
     :param multiscale_cfg: multiscale pipeline configuration
-    :type multiscale_cfg: Dict
     :param next_resolution_shape: shape of image for next resolution
-    :type next_resolution_shape: Tuple (height, width)
     :return: initial disparity grids for rows and columns and RMSE for row and columns
-    :rtype: Tuple[NDArray, NDArray, NDArray, NDArray, xr.Dataset]
     """
 
     # Add mesh validity band to dataset_disp_maps
