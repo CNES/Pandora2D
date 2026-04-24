@@ -269,3 +269,11 @@ class TestGetRoiProcessingOutliers:
         result = img_tools.get_roi_processing(default_roi, border_outliers_grid, border_outliers_grid)
 
         assert result["margins"] == (2, 2, 4, 4)
+
+    def test_get_roi_processing_from_previous_run(self, default_roi, border_outliers_grid):
+        """Check that full-raster outliers are used when from_previous_run=True."""
+        result = img_tools.get_roi_processing(
+            default_roi, border_outliers_grid, border_outliers_grid, from_previous_run=True
+        )
+
+        assert result["margins"] == (2, 2, 103, 103)
