@@ -20,7 +20,7 @@ We can use a verbose mode:
     - -vv option prints informations about multiscale and pandora2d pipelines
 
 .. hint:: 
-    It is possible to run a_multiscale_pipeline.json `a_multiscale_pipeline.json <https://gitlab.cnes.fr/dali/PandoraBox/pandora2d/-/blob/mvp-pandora2d-multiscale/data_samples/json_conf_files/a_multiscale_pipeline.json>`_ located in the pandora2d gitlab repository on the mvp-pandora2d-multiscale branch. 
+    It is possible to run `a_multiscale_pipeline.json <https://gitlab.cnes.fr/dali/PandoraBox/pandora2d/-/blob/mvp-pandora2d-multiscale/data_samples/json_conf_files/a_multiscale_pipeline.json>`_ located in the pandora2d gitlab repository on the mvp-pandora2d-multiscale branch. 
     
     The image pyramids used are derived from the left.tif and right.tif images in the maricopa folder that were first downsampled by a factor 4.
     Then these images were downsampled again by factors 4 and 2 to create pyramids of 3 images with subsampling factors of 1, 2, and 4.
@@ -49,7 +49,7 @@ Multiscale mode configuration is composed of the following keys:
       - None
       - Yes
     * - *pandora2d*
-      - Pandora2d configuration used for each resolution
+      - Paths of Pandora2d json configurations used for each resolution
       - str or list[str]
       - None
       - Yes
@@ -65,15 +65,25 @@ Multiscale section is composed of the following keys:
       - Default value
       - Required
     * - *left["img_pyramid"]*
-      - Path to the pyramid for left image
+      - Path to the pyramid repository for left image
       - string
       - None
       - Yes
     * - *right["img_pyramid"]*
-      - Path to the pyramid for right image
+      - Path to the pyramid repository for right image
       - string
       - None
       - Yes
+    * - *left["mask_pyramid"]*
+      - Path to the mask pyramid repository for left image
+      - string
+      - None
+      - No
+    * - *right["mask_pyramid"]*
+      - Path to the mask pyramid repository for right image
+      - string
+      - None
+      - No
     * - *model*
       - Model used to estimate grid deformation
       - dict with keys:
@@ -90,6 +100,11 @@ Multiscale section is composed of the following keys:
           - "col" must be an int
       - {"row": 1, "col": 1}
       - No
+    * - *minimal_nb_pixels_per_mesh*
+      - Minimum number of pixels per mesh for it to be considered valid
+      - int
+      - 1
+      - No
     * - *output*
       - Path to output directory
       - string
@@ -105,14 +120,26 @@ Multiscale section is composed of the following keys:
     In this way, each JSON file corresponds to the processing of one resolution. 
     The first JSON file corresponds to the smallest resolution and the last to the largest.
 
+.. note:: 
+    The **minimal_nb_pixels_per_mesh** parameter allows to set a minimum number of pixels per mesh for it to be considered valid.
+
+    When exiting multiscale mode, a **MESH_validity** band is added to the pandora2d validity.tif file. 
+    This band provides an indication of the mesh's validity based on the minimum number of points specified in the **minimal_nb_pixels_per_mesh** parameter. 
+
+    This number of pixels corresponds to the minimum number of points we wish to use to estimate our models in order to consider them sufficiently robust.
+
+    If the number of pixels used to estimate the model in a mesh is less than **minimal_nb_pixels_per_mesh**, 
+    then that mesh is marked as 1 (invalid) in the **MESH_validity** band; otherwise, it is marked as 0 (valid)
 
 .. important::
     The image pyramids (left and right) must be provided as input to the multiscale mode. 
     To create image pyramids, it is possible to use tools such as `gridr <https://gridr.readthedocs.io/en/latest/>`_
 
 
-Example of configuration
-------------------------
+Examples of configuration
+--------------------------
+
+**Example of a multiscale pipeline configuration**
 
 .. code:: json
     :name: multiscale pipeline example
@@ -134,12 +161,49 @@ Example of configuration
 
 .. warning::
     The multiscale mode takes entire pandora2d configurations as input, 
-    but the images specified in the pandora2d configurations are overwritten by the images contained in the pyramids specified in the multiscale key.
+    but the images paths specified in the pandora2d configurations are overwritten by the images contained in the pyramids specified in the multiscale key.
 
     Furthermore, beyond the smallest resolution, the initial disparities are replaced by the initial disparity grids estimated at the previous resolution. 
 
 .. warning::
     Multiscale mode is not yet compatible with the use of an ROI.
+
+**Example of a multiscale pipeline configuration with masks**
+
+It is possible to add input mask in the multiscale configuration. 
+These masks will be used as input masks for the various pandora2d configurations that will be launched. 
+
+.. code:: json
+    :name: multiscale pipeline with input masks example
+
+    {
+        "multiscale": 
+        {
+            "left" : {"img_pyramid": "../images/left_pyramid",
+                      "mask_pyramid": "../images/left_mask_pyramid"},
+            "right" : {"img_pyramid": "../images/right_pyramid",
+                       "mask_pyramid": "../images/right_mask_pyramid"},
+            "model": {"type": "pol", "degree": 2},
+            "mesh": {"row":3, "col":3},
+            "minimal_nb_pixels_per_mesh": 100,
+            "output": 
+                "a_multiscale_output"
+        },
+        "pandora2d": 
+            ["resolution_1_config.json", "resolution_2_config.json", "resolution_3_config.json"] // pandora2d pipelines for each processed resolution
+
+    }
+
+.. warning:: 
+    There must be as many masks as there are images in the image pyramid. 
+    The masks must be the same size as the images in the pyramids. 
+
+    As with images, the masks paths specified in the pandora2d configurations are overwritten by the masks contained in the pyramids specified in the multiscale key.
+
+.. hint:: 
+    It is possible to run `a_multiscale_pipeline_with_masks.json <https://gitlab.cnes.fr/dali/PandoraBox/pandora2d/-/blob/mvp-pandora2d-multiscale/data_samples/json_conf_files/a_multiscale_pipeline_with_masks.json>`_ 
+    located in the pandora2d gitlab repository on the mvp-pandora2d-multiscale branch. 
+
 
 Outputs and results
 *******************
@@ -191,6 +255,9 @@ The configuration given in the example above will result in the following tree s
     in the previous iteration and used in the pandora2d pipeline of the current iteration.
 
     Furthermore, disparity_map repositories and config.json files are pandora2d outputs. 
+
+.. note::
+    A **MESH_validity** band is added to the validity.tif files at each iteration, except the last one for which no new model is being estimated.
 
 Example of inputs and outputs
 -----------------------------
