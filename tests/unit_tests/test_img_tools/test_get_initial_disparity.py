@@ -74,28 +74,21 @@ class TestGetInitialDisparity:
 
         assert result == 1
 
-    def test_get_initial_disparity_roi_is_none(self, border_outliers_grid, left_img_shape):
+    def test_get_initial_disparity_roi_is_none(self, border_outliers_grid, border_outliers_grid_data):
         """When roi=None, full disparity grid is read including border outliers."""
-        height, width = left_img_shape
         result = img_tools.get_initial_disparity(border_outliers_grid, roi=None)
 
-        assert result.shape == (1, height, width)
+        assert result.shape == (1, *border_outliers_grid_data.shape)
 
-        # Build the expected grid and compare
-        expected = np.full((1, height, width), 100.0, dtype=np.float32)
-        expected[0, 2 : height - 2, 2 : width - 2] = 1.0
+        expected = border_outliers_grid_data[np.newaxis, ...]
         np.testing.assert_array_equal(result, expected)
 
     def test_get_initial_disparity_roi_is_not_none(self, border_outliers_grid, left_img_shape, centered_roi):
         """When roi is not None, only ROI window pixels are read."""
-        height, width = left_img_shape
-
         result = img_tools.get_initial_disparity(border_outliers_grid, roi=centered_roi)
 
-        row_bounds = {"first": 2, "last": height - 3}
-        col_bounds = {"first": 2, "last": width - 3}
-        roi_height = row_bounds["last"] - row_bounds["first"] + 1
-        roi_width = col_bounds["last"] - col_bounds["first"] + 1
+        roi_height = centered_roi["row"]["last"] - centered_roi["row"]["first"] + 1
+        roi_width = centered_roi["col"]["last"] - centered_roi["col"]["first"] + 1
         expected_shape = (1, roi_height, roi_width)
         assert result.shape == expected_shape
         # The ROI window excludes border outliers, so only interior 1.0 values are read.
