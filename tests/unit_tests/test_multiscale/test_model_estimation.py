@@ -26,6 +26,7 @@ Test multiscale model estimation methods
 import pytest
 import numpy as np
 import xarray as xr
+from pandora2d.constants import Criteria
 from pandora2d.multiscale import model_estimation
 
 
@@ -40,12 +41,20 @@ def dataset_disp_maps(row_coords, col_coords, invalid_disp, data_row_map, data_c
     Disparity maps dataset
     """
 
+    # We add MESH_validity band because methods tested in this file use this band,
+    # which is normally added in the `get_init_disparity_grids_with_mesh` method
+    criteria_names = (
+        ["validity_mask"] + ["partial_validity_mask"] + list(Criteria.__members__.keys())[1:] + ["MESH_validity"]
+    )
+
     coords = {
         "row": row_coords,
         "col": col_coords,
+        "criteria": criteria_names,
     }
 
     dims = ("row", "col")
+    dims_validity = ("row", "col", "criteria")
     shape = (len(coords.get("row")), len(coords.get("col")))
 
     dataset = xr.Dataset(
@@ -53,11 +62,12 @@ def dataset_disp_maps(row_coords, col_coords, invalid_disp, data_row_map, data_c
             "row_map": (dims, data_row_map),
             "col_map": (dims, data_col_map),
             "correlation_score": (dims, np.full(shape, invalid_disp, dtype=np.float32)),
+            "validity": (dims_validity, np.full((shape[0], shape[1], len(coords.get("criteria"))), 0, dtype=np.uint8)),
         },
         coords=coords,
     )
 
-    dataset.attrs = {"invalid_disp": invalid_disp}
+    dataset.attrs = {"invalid_disp": invalid_disp, "minimal_nb_pixels_per_mesh": 1}
 
     return dataset
 
