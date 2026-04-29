@@ -27,6 +27,16 @@ We can use a verbose mode:
 
 To learn more about multiscale theory, please refer to :ref:`this section <exploring_the_field_multiscale_mode>`
 
+.. warning::
+    Currently, it is not recommended to use multiscale mode with disparity ranges that are too large 
+    or with initial disparities that vary significantly between different points. 
+
+    In fact, the pandora2D cost volume is allocated according to the global minimum and maximum disparities across all points. 
+    If some points have disparity ranges that differ significantly, the cost volume will be constructed to include all the disparities to be processed for all points. 
+    This can therefore significantly increase the memory required to run pandora2D configurations. 
+
+    One way to address this issue is to enable segment mode (see :ref:`segment_mode`).
+
 Configuration and parameters
 ****************************
 
