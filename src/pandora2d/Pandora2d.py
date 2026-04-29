@@ -43,7 +43,7 @@ def get_parser():
     parser = argparse.ArgumentParser(
         description="Image Registration framework that computes 2D displacement maps from a pair of images taken over"
         " the same scene.",
-        epilog=f"%(prog)s {version('pandora2d')}",
+        epilog=f'%(prog)s {version("pandora2d")}',
     )
     parser.add_argument(
         "config",
@@ -58,7 +58,7 @@ def get_parser():
         action="count",
         default=0,
     )
-    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {version('pandora2d')}")
+    parser.add_argument("-V", "--version", action="version", version=f'%(prog)s {version("pandora2d")}')
     return parser
 
 

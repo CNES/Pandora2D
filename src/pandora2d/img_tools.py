@@ -455,7 +455,13 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: dict):
 
 
 def row_zoom_img(
-    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: float | int, order: int = 1
+    img: np.ndarray,
+    ny: int,
+    subpix: int,
+    coords: Coordinates,
+    ind: int,
+    no_data: float | int,
+    order: int = 1,
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in row
@@ -492,7 +498,13 @@ def row_zoom_img(
 
 
 def col_zoom_img(
-    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: float | int, order: int = 1
+    img: np.ndarray,
+    nx: int,
+    subpix: int,
+    coords: Coordinates,
+    ind: int,
+    no_data: float | int,
+    order: int = 1,
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in col
@@ -544,7 +556,7 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
         # To avoid propagation of nan in shifted data, we use -9999 instead of nan if necessary
         no_data = convert_no_data(img_right.attrs["no_data_img"])
 
-        for ind in np.arange(1, subpix, dtype=int):
+        for ind in range(1, subpix):
             if row:
                 img_right_shift.append(
                     row_zoom_img(
