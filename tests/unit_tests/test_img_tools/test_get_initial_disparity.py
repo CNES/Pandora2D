@@ -23,7 +23,7 @@ Test get_initial_disparity method.
 """
 
 # Make pylint happy with fixtures:
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name,unused-argument
 
 import numpy as np
 import pytest
@@ -77,6 +77,8 @@ class TestGetInitialDisparity:
     def test_get_initial_disparity_roi_is_none(self, border_outliers_grid, border_outliers_grid_data):
         """When roi=None, full disparity grid is read including border outliers."""
         result = img_tools.get_initial_disparity(border_outliers_grid, roi=None)
+        # get_initial_disparity can return int; check ndarray before using .shape (for mypy).
+        assert isinstance(result, np.ndarray)
 
         assert result.shape == (1, *border_outliers_grid_data.shape)
 
@@ -86,6 +88,8 @@ class TestGetInitialDisparity:
     def test_get_initial_disparity_roi_is_not_none(self, border_outliers_grid, left_img_shape, centered_roi):
         """When roi is not None, only ROI window pixels are read."""
         result = img_tools.get_initial_disparity(border_outliers_grid, roi=centered_roi)
+        # get_initial_disparity can return int; check ndarray before using .shape (for mypy).
+        assert isinstance(result, np.ndarray)
 
         roi_height = centered_roi["row"]["last"] - centered_roi["row"]["first"] + 1
         roi_width = centered_roi["col"]["last"] - centered_roi["col"]["first"] + 1
@@ -106,6 +110,8 @@ class TestGetInitialDisparity:
         height, width = left_img_shape
 
         result = img_tools.get_initial_disparity(border_outliers_grid, roi=centered_roi, from_previous_run=True)
+        # get_initial_disparity can return int; check ndarray before using .shape (for mypy).
+        assert isinstance(result, np.ndarray)
 
         assert result.shape == (1, height, width)
         assert np.any(result == 100.0)
