@@ -353,7 +353,7 @@ def get_margins_values(init_value: int | np.ndarray, range_value: int, margins: 
     return max(margins[0] - disp_min, 0), max(margins[1] + disp_max, 0)
 
 
-def get_roi_processing(roi: dict, col_disparity: dict, row_disparity: dict) -> dict:
+def get_roi_processing(roi: dict, col_disparity: dict, row_disparity: dict, from_previous_run: bool = False) -> dict:
     """
     Return a roi which takes disparities into account.
     Update cfg roi with new margins.
@@ -367,12 +367,14 @@ def get_roi_processing(roi: dict, col_disparity: dict, row_disparity: dict) -> d
 
     :param col_disparity: init and range for disparities in columns.
     :param row_disparity: init and range for disparities in rows.
+    :param from_previous_run: True when initial disparity grids come from a previous Pandora2D run
+        (local coordinates); passed through to get_initial_disparity to skip ROI windowing.
     """
 
     new_roi = copy.deepcopy(roi)
 
-    disparity_row_init = get_initial_disparity(row_disparity)
-    disparity_col_init = get_initial_disparity(col_disparity)
+    disparity_row_init = get_initial_disparity(row_disparity, roi=roi, from_previous_run=from_previous_run)
+    disparity_col_init = get_initial_disparity(col_disparity, roi=roi, from_previous_run=from_previous_run)
 
     # for columns
     left, right = get_margins_values(disparity_col_init, col_disparity["range"], [roi["margins"][0], roi["margins"][2]])
@@ -607,19 +609,36 @@ def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> l
     return img_right_shift_2d
 
 
-def get_initial_disparity(disparity: dict) -> NDArray | int:
+def get_initial_disparity(disparity: dict, roi: dict | None = None, from_previous_run: bool = False) -> NDArray | int:
     """
     Return initial disparity.
 
     When initial disparity is read from a file, nodata and infinite values are replaced by NaNs.
+    When a ROI is provided and the raster is NOT from a previous run, only the pixels within the
+    ROI are read, preventing border outliers from inflating the extrema used to compute ROI
+    processing margins.
+    When the raster comes from a previous run (``from_previous_run=True``), it is already cropped
+    to the relevant zone in local coordinates, so the full raster is read regardless of the ROI.
 
     :param disparity: init and range for disparities in columns.
+    :param roi: optional ROI dict with keys "row" and "col", each containing "first" and "last".
+    :param from_previous_run: True when the disparity raster was produced by a previous Pandora2D
+        run and is therefore stored in local (ROI-relative) coordinates.
     :return: initial disparity
     """
 
     if isinstance(disparity["init"], str):
         reader = pandora_img_tools.rasterio_open(disparity["init"])
-        disparity_init = reader.read()
+        if roi is not None and not from_previous_run:
+            window = Window(
+                col_off=roi["col"]["first"],
+                row_off=roi["row"]["first"],
+                width=roi["col"]["last"] - roi["col"]["first"] + 1,
+                height=roi["row"]["last"] - roi["row"]["first"] + 1,
+            )
+            disparity_init = reader.read(window=window)
+        else:
+            disparity_init = reader.read()
         nodata = reader.meta.get("nodata")
         return np.where(build_usable_data_mask(disparity_init, nodata), disparity_init, np.nan)
     return disparity["init"]

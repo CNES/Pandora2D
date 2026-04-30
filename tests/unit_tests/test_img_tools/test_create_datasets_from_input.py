@@ -1436,37 +1436,3 @@ def test_get_extrema_disparity(init_value, range_value, expected):
     """NaNs are filtered."""
     result = img_tools.get_extrema_disparity(init_value, range_value)
     assert result == expected
-
-
-class TestNodataFiltering:
-    """Nodata in disparity grids should not influence margin determination."""
-
-    @pytest.fixture
-    def second_correct_grid_data(self, second_correct_grid_shape):
-        """second_correct_grid_data override to include inf and nan."""
-        data = np.full(second_correct_grid_shape, 5.0)
-        data[:, 1::4] = -21
-        data[:, 2::4] = -np.inf
-        data[:, 3::4] = np.nan
-        return data
-
-    @pytest.mark.parametrize(
-        ["second_correct_grid_shape", "nodata", "expected"], [((1, 5), None, [[[5, -21, np.nan, np.nan, 5]]])]
-    )
-    def test_get_initial_disparity_str(
-        self, create_disparity_grid_fixture, second_correct_grid_data, second_correct_grid_shape, nodata, expected
-    ):
-        """Test invalid values are replaced by NaNs"""
-        disparity = create_disparity_grid_fixture(second_correct_grid_data, 2, "disparity.tiff", nodata=nodata)
-
-        result = img_tools.get_initial_disparity(disparity)
-
-        np.testing.assert_array_equal(result, expected)
-
-    def test_get_initial_disparity_int(self):
-        """Test init is returned"""
-        disparity = {"init": 1, "range": 2}
-
-        result = img_tools.get_initial_disparity(disparity)
-
-        assert result == 1

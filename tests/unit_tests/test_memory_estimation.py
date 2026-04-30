@@ -360,6 +360,7 @@ class TestInputSize:
             correct_input_cfg["input"]["row_disparity"],
             correct_input_cfg["input"]["col_disparity"],
             pandora2d_machine.margins_img.global_margins,
+            roi=cfg["ROI"],
         )
         # Final height and width are ROI size + margins
         height += roi_margins.up + roi_margins.down
