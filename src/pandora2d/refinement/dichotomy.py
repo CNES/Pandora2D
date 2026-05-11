@@ -250,7 +250,7 @@ class DichotomyPython(refinement.AbstractRefinement):
                             cost_surface,
                             precision,
                             (disp_row_init, disp_col_init),  # type: ignore # Reason: is 0 dim array
-                            (pos_disp_row_init, pos_disp_col_init),
+                            (pos_disp_row_init, pos_disp_col_init),  # type: ignore[arg-type]
                             cost_value,  # type: ignore # Reason: is 0 dim array
                             self.filter,
                             cost_selection_method,
