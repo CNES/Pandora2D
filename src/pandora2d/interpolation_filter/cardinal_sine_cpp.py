@@ -44,7 +44,9 @@ class CardinalSine(AbstractFilter):
         super().__init__(cfg)
         self._check_fractional_shift(fractional_shift)
         half_size = self.cfg.get("size", 6)
-        self.cpp_instance = interpolation_filter_bind.CardinalSine(half_size, fractional_shift)
+        self.cpp_instance: interpolation_filter_bind.CardinalSine = interpolation_filter_bind.CardinalSine(
+            half_size, fractional_shift
+        )
 
     @staticmethod
     def _check_fractional_shift(fractional_shift: float) -> None:
