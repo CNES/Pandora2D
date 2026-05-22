@@ -28,35 +28,20 @@ from pandora.common import write_data_array
 
 
 @pytest.fixture()
-def cones_support_files(left_img_path, right_img_path, correct_grid_shape, correct_grid, tmp_path):
+def cones_support_files(left_img_path, right_img_path, correct_grid, mask_path):
     """
     Create support files needed to run data_samples pipelines with cones images.
 
-    Generates masks in tmp_path so they are cleaned up automatically after each
-    test. Disparity grids reuse the correct_grid fixture (already sized for cones
+    Reuses the mask_path fixture for both left and right masks (cleaned up automatically
+    via tmp_path). Disparity grids reuse the correct_grid fixture (already sized for cones
     via left_img_path). Returns a dict with absolute paths to all files, including
     the existing cones images from tests/data/.
     """
-    height, width = correct_grid_shape
-
-    support_dir = tmp_path / "cones_support"
-    support_dir.mkdir()
-
-    mask = xr.DataArray(
-        data=np.zeros((height, width), dtype=np.uint8),
-        dims=["height", "width"],
-        coords={"height": range(height), "width": range(width)},
-    )
-    left_mask_path = support_dir / "left_mask.tif"
-    right_mask_path = support_dir / "right_mask.tif"
-    write_data_array(data_array=mask, filename=str(left_mask_path))
-    write_data_array(data_array=mask, filename=str(right_mask_path))
-
     return {
         "left": left_img_path,
         "right": right_img_path,
-        "left_mask": str(left_mask_path),
-        "right_mask": str(right_mask_path),
+        "left_mask": str(mask_path),
+        "right_mask": str(mask_path),
         "init_col_disparity_grid": correct_grid["init"],
         "init_row_disparity_grid": correct_grid["init"],
     }
