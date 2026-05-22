@@ -773,8 +773,8 @@ class TestDataSamplesOutputConfigReusability:  # pylint: disable=too-few-public-
         in tmp_path). Verifies that the output config.json can be re-executed as a second run.
 
         Note: Estimation pipelines (an_estimation_pipeline.json) are expected to fail on re-execution
-        because the output config contains estimated_shifts, which makes the validation reject
-        the presence of disparities. This is a known limitation.
+        because the keys ``estimated_shifts``, ``phase_diff`` and ``error`` written into the output
+        configuration are not valid inputs for the estimation schema.
         """
         configuration, config_file = config_data
 
@@ -789,8 +789,9 @@ class TestDataSamplesOutputConfigReusability:  # pylint: disable=too-few-public-
         assert output_config_path.exists()
 
         if is_estimation_pipeline(config_file):
-            # Known limitation: estimation output configs cannot be re-run because they contain
-            # estimated_shifts which conflicts with input disparities validation.
+            # Known limitation: estimation output configs cannot be re-run because the keys
+            # estimated_shifts, phase_diff and error written into the output config are not
+            # valid inputs for the estimation schema.
             with pytest.raises(MissKeyCheckerError, match=r"Missing keys in expected schema.*estimated_shifts"):
                 pandora2d.main(output_config_path, verbose=False)
         else:
