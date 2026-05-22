@@ -94,9 +94,9 @@ def transform_config_to_cones(config: dict, support_files: dict) -> dict:
             transformed["input"]["row_disparity"]["init"] = support_files["init_row_disparity_grid"]
 
     # Update nodata value for cones (255 instead of -9999)
-    if "left" in transformed["input"] and "nodata" in transformed["input"]["left"]:
+    if "nodata" in transformed["input"]["left"]:
         transformed["input"]["left"]["nodata"] = 255
-    if "right" in transformed["input"] and "nodata" in transformed["input"]["right"]:
+    if "nodata" in transformed["input"]["right"]:
         transformed["input"]["right"]["nodata"] = 255
 
     return transformed
