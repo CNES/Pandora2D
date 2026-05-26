@@ -104,6 +104,9 @@ def transform_config_to_cones(config: dict, support_files: dict) -> dict:
 
 DATA_SAMPLES_CONFIG_DIR = Path(__file__).resolve().parents[2] / "data_samples" / "json_conf_files"
 
+# Configs excluded from reusability tests because they are too slow to run in CI.
+_SKIPPED_DATA_SAMPLES = {"a_dichotomy_python_pipeline"}
+
 
 def filelist_parametrize_generator():
     """
@@ -112,9 +115,12 @@ def filelist_parametrize_generator():
     Loads each raw JSON config and yields it with its source file path.
     Path substitution (maricopa → cones) is deferred to test time via the
     cones_support_files fixture so that support files are created in tmp_path.
+    Configs listed in _SKIPPED_DATA_SAMPLES are excluded.
     """
     for config_file in sorted(DATA_SAMPLES_CONFIG_DIR.glob("*.json")):
         if config_file.suffix != ".json" or config_file.stem.endswith("_output"):
+            continue
+        if config_file.stem in _SKIPPED_DATA_SAMPLES:
             continue
 
         with config_file.open(encoding="utf8") as sample_file:
