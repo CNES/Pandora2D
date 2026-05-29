@@ -1002,6 +1002,81 @@ class TestGetMinMaxDispFromDicts:
                 ),
                 id="Step=[1,1] - Equivalent of tif file disparity",
             ),
+            pytest.param(
+                (8, 9),
+                (8, 9),
+                {"row": 14, "col": 31},
+                [1, 1],
+                np.nan,
+                {"col": {"first": 31, "last": 39}, "row": {"first": 16, "last": 17}, "margins": (1, 1, 1, 1)},
+                np.array(
+                    [
+                        [np.nan, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, np.nan],
+                        [np.nan, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, np.nan],
+                        [np.nan, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, np.nan],
+                        [np.nan, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, np.nan],
+                    ],
+                ),
+                np.array(
+                    [
+                        [np.nan, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, np.nan],
+                        [np.nan, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, np.nan],
+                        [np.nan, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, np.nan],
+                        [np.nan, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, np.nan],
+                    ],
+                ),
+                id="Step=[1,1] - Equivalent of directory disparity with segment mode (offset is (14,31))",
+            ),
+            pytest.param(
+                (4, 3),
+                (4, 3),
+                {"row": 14, "col": 31},
+                [2, 3],
+                np.nan,
+                {"col": {"first": 31, "last": 39}, "row": {"first": 16, "last": 17}, "margins": (1, 1, 1, 1)},
+                np.array(
+                    [
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, -5.0, np.nan, np.nan, -5.0, np.nan, np.nan, -5.0, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, -2.0, np.nan, np.nan, -2.0, np.nan, np.nan, -2.0, np.nan, np.nan, np.nan],
+                    ],
+                ),
+                np.array(
+                    [
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, 5.0, np.nan, np.nan, 5.0, np.nan, np.nan, 5.0, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, 8.0, np.nan, np.nan, 8.0, np.nan, np.nan, 8.0, np.nan, np.nan, np.nan],
+                    ],
+                ),
+                id="Step=[2,3] - Equivalent of directory disparity with segment mode (offset is (14,31))",
+            ),
+            pytest.param(
+                (4, 3),
+                (4, 3),
+                {"row": 16, "col": 31},
+                [3, 2],
+                np.nan,
+                {"col": {"first": 31, "last": 36}, "row": {"first": 16, "last": 17}, "margins": (1, 1, 1, 1)},
+                np.array(
+                    [
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, -3, np.nan, -3, np.nan, -3, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                    ],
+                ),
+                np.array(
+                    [
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, 7, np.nan, 7, np.nan, 7, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                    ],
+                ),
+                id="Step=[2,3] - Equivalent of directory disparity with segment mode (offset is (16,31))",
+            ),
         ],
     )
     def test_str_disparity_with_roi(
@@ -1436,3 +1511,118 @@ def test_get_extrema_disparity(init_value, range_value, expected):
     """NaNs are filtered."""
     result = img_tools.get_extrema_disparity(init_value, range_value)
     assert result == expected
+
+
+class TestComputeValidDisparityGridIndex:  # pylint: disable=too-few-public-methods
+    """
+    Test the compute_valid_disparity_grid_index method
+    """
+
+    @pytest.mark.parametrize(
+        [
+            "dataset_coordinates",
+            "disparity_grid_shape",
+            "origin",
+            "step",
+            "ground_truth_dataset",
+            "ground_truth_disparity_grid",
+        ],
+        [
+            pytest.param(
+                np.arange(10),
+                10,
+                0,
+                1,
+                np.arange(10),
+                np.arange(10),
+                id="Classic case",
+            ),
+            pytest.param(
+                np.arange(10),
+                5,
+                0,
+                1,
+                np.arange(5),
+                np.arange(5),
+                id="Smaller disparity grid",
+            ),
+            pytest.param(
+                np.arange(10),  # (rows, cols)
+                5,
+                3,
+                1,
+                np.arange(3, 8),
+                np.arange(5),
+                id="Smaller disparity grid with offset",
+            ),
+            pytest.param(
+                np.arange(20),
+                5,
+                3,
+                2,
+                np.arange(3, 13, 2),
+                np.arange(5),
+                id="Smaller disparity grid with offset and step",
+            ),
+            pytest.param(
+                np.arange(2, 7),
+                10,
+                0,
+                1,
+                np.arange(5),
+                np.arange(2, 7),
+                id="Smaller dataset",
+            ),
+            pytest.param(
+                np.arange(2, 7),
+                10,
+                4,
+                1,
+                np.arange(2, 5),
+                np.arange(
+                    3,
+                ),
+                id="Smaller dataset with offset",
+            ),
+            pytest.param(
+                np.arange(2, 7),
+                10,
+                4,
+                3,
+                np.arange(2, 3),
+                np.arange(1),
+                id="Smaller dataset with offset and step",
+            ),
+            pytest.param(
+                np.arange(3, 8),
+                10,
+                9,
+                1,
+                np.arange(0),
+                np.arange(0),
+                id="No intersection between dataset and disparity grid",
+            ),
+        ],
+    )
+    def test_compute_valid_disparity_grid_index(
+        self,
+        dataset_coordinates,
+        disparity_grid_shape,
+        origin,
+        step,
+        ground_truth_dataset,
+        ground_truth_disparity_grid,
+    ):
+        """
+        Test the compute_valid_disparity_grid_index method
+        """
+
+        disp_min_max_index, disp_data_index = img_tools.compute_valid_disparity_grid_index(
+            dataset_coordinates,
+            disparity_grid_shape,
+            origin,
+            step,
+        )
+
+        np.testing.assert_equal(disp_min_max_index, ground_truth_dataset)
+        np.testing.assert_equal(disp_data_index, ground_truth_disparity_grid)
