@@ -220,3 +220,60 @@ class TestDirectoryDisparityPipeline:
         # Check that pixels with invalid initial disparity have
         # a value of 1 in the partial validity mask of the second run
         assert np.all(partial_validity_band[invalid_disparity_mask] == 1)
+
+    @pytest.fixture
+    def correct_segment_mode(self):
+        return {
+            "segment_mode": {
+                "enable": True,
+                "memory_per_work": 8,
+            }
+        }
+
+    @pytest.mark.parametrize("input_cfg", ["correct_input_cfg"])
+    @pytest.mark.parametrize("pipeline_cfg", ["correct_pipeline_with_dichotomy_cpp"])
+    @pytest.mark.parametrize("step", [[1, 1], [3, 2]])
+    @pytest.mark.parametrize("roi", [{"ROI": {"col": {"first": 10, "last": 300}, "row": {"first": 150, "last": 350}}}])
+    def test_directory_initial_disparity_with_segment_mode(
+        self,
+        correct_segment_mode,
+        second_configuration,
+        invalid_disparity_first_pipeline,
+        step,
+        run_pipeline,
+        tmp_path,
+    ):  # pylint: disable=unused-argument
+        """
+        Test execution of a pipeline with variable initial disparity given as a directory
+        and segment mode enabled.
+        """
+
+        second_configuration["segment_mode"] = correct_segment_mode["segment_mode"]
+
+        run_pipeline(second_configuration)
+
+        with rasterio.open(tmp_path / "disparity_map" / "row_map.tif") as src:
+            row_map_second = src.read(1)
+        with rasterio.open(tmp_path / "disparity_map" / "col_map.tif") as src:
+            col_map_second = src.read(1)
+        with rasterio.open(tmp_path / "disparity_map" / "validity.tif") as dataset:
+            invalid_init_disp_band = dataset.read(dataset.descriptions.index("P2D_INVALID_INIT_DISPARITY") + 1)
+            left_border_band = dataset.read(dataset.descriptions.index("P2D_LEFT_BORDER") + 1)
+            partial_validity_band = dataset.read(dataset.descriptions.index("partial_validity_mask") + 1)
+
+        # The invalid initial disparity mask corresponds to pixels that have invalid disparity in the first run
+        invalid_init_disp_mask = invalid_init_disp_band == 1
+
+        # We remove from the invalid disparity mask the pixels that are on the left border because
+        # the P2D_LEFT_BORDER criterion override other criteria.
+        invalid_disparity_mask = invalid_disparity_first_pipeline & (left_border_band == 0)
+
+        # Checking that resulting disparities are not full of nans
+        assert not np.all(np.isnan(row_map_second))
+        assert not np.all(np.isnan(col_map_second))
+        # Check that pixels with invalid initial disparity in the second run
+        # are the ones with invalid disparity in the first run
+        assert np.array_equal(invalid_init_disp_mask, invalid_disparity_mask)
+        # Check that pixels with invalid initial disparity have
+        # a value of 1 in the partial validity mask of the second run
+        assert np.all(partial_validity_band[invalid_disparity_mask] == 1)
