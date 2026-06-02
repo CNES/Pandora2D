@@ -28,6 +28,26 @@ from pandora.common import write_data_array
 
 
 @pytest.fixture()
+def cones_support_files(left_img_path, right_img_path, correct_grid, mask_path):
+    """
+    Create support files needed to run data_samples pipelines with cones images.
+
+    Reuses the mask_path fixture for both left and right masks (cleaned up automatically
+    via tmp_path). Disparity grids reuse the correct_grid fixture (already sized for cones
+    via left_img_path). Returns a dict with absolute paths to all files, including
+    the existing cones images from tests/data/.
+    """
+    return {
+        "left": left_img_path,
+        "right": right_img_path,
+        "left_mask": str(mask_path),
+        "right_mask": str(mask_path),
+        "init_col_disparity_grid": correct_grid["init"],
+        "init_row_disparity_grid": correct_grid["init"],
+    }
+
+
+@pytest.fixture()
 def correct_pipeline_with_optical_flow(matching_cost_method, subpix):
     return {
         "pipeline": {
