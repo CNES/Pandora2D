@@ -28,7 +28,7 @@ This module contains tests associated to bin for histogram.
 TYPE_TO_STRING_AS("Float", P2d::Matrixf);
 // TYPE_TO_STRING_AS("Double", P2d::MatrixD);
 
-TEST_CASE_TEMPLATE("get_bins_width_scott method", MatrixType, P2d::Matrixf) { //, P2d::MatrixD) {
+TEST_CASE_TEMPLATE("get_bins_width_scott method", MatrixType, P2d::Matrixf) {  //, P2d::MatrixD) {
   MatrixType image(2, 4);
 
   SUBCASE("same cols") {

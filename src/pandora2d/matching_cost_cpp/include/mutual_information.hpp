@@ -96,8 +96,7 @@ T calculate_entropy2D(const P2d::Matrixf& left_image, const P2d::Matrixf& right_
  * @return T mutual information value
  */
 template <typename T>
-T calculate_mutual_information(const P2d::Matrixf& left_image,
-                               const P2d::Matrixf& right_image) {
+T calculate_mutual_information(const P2d::Matrixf& left_image, const P2d::Matrixf& right_image) {
   T mutual_information = calculate_entropy1D<T>(left_image) + calculate_entropy1D<T>(right_image) -
                          calculate_entropy2D<T>(left_image, right_image);
 
