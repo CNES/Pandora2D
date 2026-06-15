@@ -122,20 +122,20 @@ class Histogram1D {
    */
   void create(const P2d::Matrixf& image) {
     m_bins_width = get_bins_width<T>(image);
-    
+
     T min_coeff = static_cast<T>(image.minCoeff());
     T max_coeff = static_cast<T>(image.maxCoeff());
     T dynamic_range = max_coeff - min_coeff;
-    
+
     m_nb_bins = static_cast<int>(1. + (dynamic_range / m_bins_width));
 
     // check nb_bins > NB_BINS_MAX
     if (m_nb_bins > NB_BINS_MAX) {
       m_nb_bins = NB_BINS_MAX;
-      
-      auto sum = image.sum();    // Initilializations for the variance E(X^2) - E(X)^2
+
+      auto sum = image.sum();  // Initilializations for the variance E(X^2) - E(X)^2
       auto sum_sq = image.squaredNorm();
-      
+
       // Variance is stored within the moment, forces T type for compilation
       T num_elem = static_cast<T>(image.size());
       T mean = static_cast<T>(sum) / num_elem;

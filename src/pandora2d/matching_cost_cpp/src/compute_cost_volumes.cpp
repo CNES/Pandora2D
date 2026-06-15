@@ -35,10 +35,7 @@ This module contains functions associated to the computation of cost volumes in 
  * @param index_col col index of the center of the window
  * @return P2d::Matrixf
  */
-P2d::Matrixf get_window(const P2d::Matrixf& image,
-			int window_size,
-			int index_row,
-			int index_col) {
+P2d::Matrixf get_window(const P2d::Matrixf& image, int window_size, int index_row, int index_col) {
   // Constant to use, ZERO is required for std::min / std::max
   const Eigen::Index offset = static_cast<Eigen::Index>(window_size) / 2;
   const Eigen::Index zero = 0;
@@ -86,4 +83,22 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  */
 bool all_non_zero_elements(const P2d::MatrixUI& mat) {
   return (mat.array() != 0).all();
+}
+
+/**
+ * @brief Get the index corresponding to the disp_val value in the disparity range
+ *
+ * @param disp_range disparity range
+ * @param disp_val disparity value for which we want to find the index
+ * @return int index of the disparity value in the disparity range
+ */
+int disparity_index(const P2d::VectorD& disp_range, float disp_val) {
+  // std::lower_bound returns an iterator pointing to the first element
+  // in the disparity_range which does not compare less than disp_val
+  // std::lower_bound uses a dichotomy algorithm, that is why we use this method instead of
+  // std::find
+  auto it = std::lower_bound(disp_range.begin(), disp_range.end(), disp_val);
+  // We measure distance between the beginning of the disparity range and the iterator returned by
+  // std::lower_bound.
+  return std::distance(disp_range.begin(), it);
 }

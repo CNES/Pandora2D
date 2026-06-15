@@ -25,7 +25,6 @@ This module contains tests associated to the operation functions define on opera
 #include <doctest.h>
 #include "operation.hpp"
 
-
 TEST_CASE("nanargmin & nanargmax") {
   SUBCASE("Positive value") {
     // Exemple d'utilisation
@@ -86,4 +85,3 @@ TEST_CASE("all_same") {
     CHECK(all_same(data) == false);
   }
 }
-

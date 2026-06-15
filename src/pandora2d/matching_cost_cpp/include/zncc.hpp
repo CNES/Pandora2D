@@ -196,15 +196,15 @@ inline void compute_right_integrals(const P2d::Matrixf& left,
  */
 template <typename T>
 inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
-			     const P2d::MatrixX<T>& integral_left_sq,
-			     const P2d::MatrixX<T>& integral_right,
-			     const P2d::MatrixX<T>& integral_right_sq,
-			     const P2d::MatrixX<T>& integral_cross,
-			     int top_row,
-			     int left_col,
-			     int bottom_row,
-			     int right_col,
-			     int window_size) {
+                             const P2d::MatrixX<T>& integral_left_sq,
+                             const P2d::MatrixX<T>& integral_right,
+                             const P2d::MatrixX<T>& integral_right_sq,
+                             const P2d::MatrixX<T>& integral_cross,
+                             int top_row,
+                             int left_col,
+                             int bottom_row,
+                             int right_col,
+                             int window_size) {
   const int window_area = window_size * window_size;
 
   T sum_left = sum_window(integral_left, top_row, left_col, bottom_row, right_col);
@@ -236,8 +236,7 @@ inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
  * @return T ZNCC value
  */
 template <typename T>
-inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
-			     const P2d::Matrixf& right_image) {
+inline T calculate_zncc_opt2(const P2d::Matrixf& left_image, const P2d::Matrixf& right_image) {
   // Compute sums (for the means), coefficient-wise / cross product (for the covariance)
   // and squared sums (for the variances) w.r.t. the images
   auto sum_left = left_image.sum();
@@ -257,7 +256,7 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
   // Type T imposed to not interpret the formula
   auto window_area = left_image.size();
   T var_left_wa = static_cast<T>(sum_left_sq) - sum_left_T * sum_left_T / window_area;
-  T var_right_wa = static_cast<T>(sum_right_sq) - sum_right_T * sum_right_T / window_area; 
+  T var_right_wa = static_cast<T>(sum_right_sq) - sum_right_T * sum_right_T / window_area;
 
   if (var_left_wa <= (VAR_EPSILON * window_area) || var_right_wa <= (VAR_EPSILON * window_area)) {
     return 0.0;
@@ -265,8 +264,10 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image,
 
   // We compute here : num_elem * covariance / (num_elem * sqrt( variance1 * variance2 )
   // num_elem * covariance is strictly equal to sum_cross - sum_left * sum_right / num_elem,
-  // num_elem * variances are provided previously, sqrt(num_elem * var1 * num_elem * var2) = num_elem*sqrt(var1*var2).
-  return ( static_cast<T>(sum_cross) - sum_left_T * sum_right_T / window_area ) / std::sqrt(var_left_wa * var_right_wa);
+  // num_elem * variances are provided previously, sqrt(num_elem * var1 * num_elem * var2) =
+  // num_elem*sqrt(var1*var2).
+  return (static_cast<T>(sum_cross) - sum_left_T * sum_right_T / window_area) /
+         std::sqrt(var_left_wa * var_right_wa);
 }
 
 #endif

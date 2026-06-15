@@ -70,11 +70,23 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
 
   imgs_right.push_back(right_1);
 
+  // Useful to initialize py array data
+  py::scoped_interpreter guard{};
+
+  // Initialized minimal and maximal disparity grids
+  std::vector<float> data_min_row(25, -1.);
+  std::vector<float> data_max_row(25, 1.);
+  std::vector<float> data_min_col(25, -2.);
+  std::vector<float> data_max_col(25, 2.);
+  py::array_t<float> min_disp_row({5, 5}, data_min_row.data());
+  py::array_t<float> max_disp_row({5, 5}, data_max_row.data());
+  py::array_t<float> min_disp_col({5, 5}, data_min_col.data());
+  py::array_t<float> max_disp_col({5, 5}, data_max_col.data());
+
   // CV size
   CostVolumeSize cv_size = CostVolumeSize(5, 5, 3, 5);
 
   // Initialized cv values
-  py::scoped_interpreter guard{};
   std::vector<CostVolumeType> zeros(cv_size.size(), 0.);
   py::array_t<CostVolumeType> cv_values(
       {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, zeros.data());
@@ -105,9 +117,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     py::array_t<uint8_t> criteria_values =
         load_criteria_dataarray(data_path + "/data/top_left_criteria.bin", cv_size);
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
 
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
         cv_values, position2d_to_index(pixel, cv_size), cv_size);
@@ -130,9 +143,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     py::array_t<uint8_t> criteria_values =
         load_criteria_dataarray(data_path + "/data/center_criteria.bin", cv_size);
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -156,9 +170,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     py::array_t<CostVolumeType> criteria_values(
         {cv_size.nb_row, cv_size.nb_col, cv_size.nb_disp_row, cv_size.nb_disp_col}, ones.data());
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
     // Get a view on cv values
     auto cv_values_view = cv_values.template unchecked<4>();
 
@@ -173,6 +188,16 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
   }
 
   SUBCASE("Cost surface of center point with not centered disparities") {
+    // Minimal and maximal disparity grids
+    std::vector<float> data_min_row(25, -2.);
+    std::vector<float> data_max_row(25, 0.);
+    std::vector<float> data_min_col(25, 0.);
+    std::vector<float> data_max_col(25, 2.);
+    py::array_t<float> min_disp_row({5, 5}, data_min_row.data());
+    py::array_t<float> max_disp_row({5, 5}, data_max_row.data());
+    py::array_t<float> min_disp_col({5, 5}, data_min_col.data());
+    py::array_t<float> max_disp_col({5, 5}, data_max_col.data());
+
     // CV size
     CostVolumeSize cv_size = CostVolumeSize(5, 5, 3, 3);
 
@@ -191,9 +216,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     P2d::VectorD disp_range_col(3);
     disp_range_col << 0.0, 1.0, 2.0;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -212,6 +238,16 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
   }
 
   SUBCASE("Cost surface with step_row=2, step_col=3") {
+    // Minimal and maximal disparity grids
+    std::vector<float> roi_data_min_row(6, -1.);
+    std::vector<float> roi_data_max_row(6, 1.);
+    std::vector<float> roi_data_min_col(6, -2.);
+    std::vector<float> roi_data_max_col(6, 2.);
+    py::array_t<float> min_disp_row({3, 2}, roi_data_min_row.data());
+    py::array_t<float> max_disp_row({3, 2}, roi_data_max_row.data());
+    py::array_t<float> min_disp_col({3, 2}, roi_data_min_col.data());
+    py::array_t<float> max_disp_col({3, 2}, roi_data_max_col.data());
+
     // Smaller shape with step=[2,3]
     CostVolumeSize cv_size = CostVolumeSize(3, 2, 3, 5);
     std::vector<CostVolumeType> zeros(cv_size.size(), 0.);
@@ -224,9 +260,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
 
     step << 2, 3;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
 
     pixel = Position2D(1, 1);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -294,9 +331,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     P2d::VectorD disp_range_col(9);
     disp_range_col << -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -412,9 +450,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     Eigen::Vector2i step;
     step << 1, 1;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -499,6 +538,16 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
 
     imgs_right.push_back(right_1);
 
+    // Minimal and maximal disparity grids
+    std::vector<float> roi_data_min_row(20, -1.);
+    std::vector<float> roi_data_max_row(20, 1.);
+    std::vector<float> roi_data_min_col(20, -2.);
+    std::vector<float> roi_data_max_col(20, 2.);
+    py::array_t<float> min_disp_row({5, 4}, roi_data_min_row.data());
+    py::array_t<float> max_disp_row({5, 4}, roi_data_max_row.data());
+    py::array_t<float> min_disp_col({5, 4}, roi_data_min_col.data());
+    py::array_t<float> max_disp_col({5, 4}, roi_data_max_col.data());
+
     // Smallest shape with ROI
     CostVolumeSize cv_size = CostVolumeSize(5, 4, 3, 5);
     std::vector<CostVolumeType> zeros(cv_size.size(), 0.);
@@ -508,9 +557,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     py::array_t<uint8_t> criteria_values =
         load_criteria_dataarray(data_path + "/data/roi_criteria.bin", cv_size);
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -555,6 +605,16 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
 
     imgs_right.push_back(right_1);
 
+    // Minimal and maximal disparity grids
+    std::vector<float> roi_data_min_row(8, -1.);
+    std::vector<float> roi_data_max_row(8, 1.);
+    std::vector<float> roi_data_min_col(8, -2.);
+    std::vector<float> roi_data_max_col(8, 2.);
+    py::array_t<float> min_disp_row({4, 2}, roi_data_min_row.data());
+    py::array_t<float> max_disp_row({4, 2}, roi_data_max_row.data());
+    py::array_t<float> min_disp_col({4, 2}, roi_data_min_col.data());
+    py::array_t<float> max_disp_col({4, 2}, roi_data_max_col.data());
+
     // Smallest shape with ROI
     CostVolumeSize cv_size = CostVolumeSize(4, 2, 3, 5);
     std::vector<CostVolumeType> zeros(cv_size.size(), 0.);
@@ -572,9 +632,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
 
     step << 1, 2;
 
-    compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                             disp_range_row, disp_range_col, offset_cv_img_row, offset_cv_img_col,
-                             window_size, step, matching_cost_method);
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method);
 
     pixel = Position2D(1, 0);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -599,9 +660,10 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
         load_criteria_dataarray(data_path + "/data/top_left_criteria.bin", cv_size);
 
     CHECK_THROWS_WITH_AS(
-        compute_cost_volumes_cpp(img_left, imgs_right, cv_values, criteria_values, cv_size,
-                                 disp_range_row, disp_range_col, offset_cv_img_row,
-                                 offset_cv_img_col, window_size, step, matching_cost_method),
+        compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                                 imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                                 disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                                 step, matching_cost_method),
         "Unknown correlation method: wrong_matching_cost_method", std::invalid_argument);
   }
 };
