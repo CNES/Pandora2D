@@ -64,6 +64,21 @@ Download our data sample to start right away !
     # The row disparity map is saved in  "./data_samples/json_conf_files/a_basic_pipeline_output/disparity_map/row_map.tif".
 ```
 
+## Multiscale mode
+
+This version of pandora2d includes a Minimal Viable Product (MVP) designed to enable multiscale processing with pandora2d. 
+
+Instructions for using this multiscale mode are provided in the documentation in the following sections: 
+- Exploring the field: Multiscale mode
+- Userguide: Multiscale mode
+
+Custom configurations and image pyramids are available for testing this multiscale mode. 
+To test them, run this command: 
+
+```bash
+python -m src.pandora2d.multiscale.multiscale data_samples/json_conf_files/a_multiscale_pipeline.json
+```
+
 ## To go further
 
 To create your own coregistration pipeline and choose among the variety of
