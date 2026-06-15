@@ -25,6 +25,7 @@ Run pandora2d configurations from end to end.
 import json
 from copy import deepcopy
 from pathlib import Path
+import sys
 
 import numpy as np
 import pytest
@@ -783,6 +784,11 @@ class TestDataSamplesOutputConfigReusability:  # pylint: disable=too-few-public-
         configuration are not valid inputs for the estimation schema.
         """
         configuration, config_file = config_data
+
+        # We skip confidence pipeline on Windows due to known access violation in compute_ambiguity pandora method.
+        # This will be removed after completing issue 460.
+        if sys.platform.startswith("win") and "confidence" in config_file.name:
+            pytest.skip("Skipping confidence pipeline on Windows")
 
         configuration = transform_config_to_cones(configuration, cones_support_files)
 
