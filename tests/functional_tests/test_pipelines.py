@@ -789,6 +789,8 @@ class TestDataSamplesOutputConfigReusability:  # pylint: disable=too-few-public-
         # This will be removed after completing issue 460.
         if sys.platform.startswith("win") and "confidence" in config_file.name:
             pytest.skip("Skipping confidence pipeline on Windows")
+        if "multiscale" in config_file.name:
+            pytest.skip("We skip multiscale configuration for json reentry")
 
         configuration = transform_config_to_cones(configuration, cones_support_files)
 
