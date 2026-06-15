@@ -6,7 +6,7 @@ Multiscale mode
 In order to process an image more quickly and robustly with pandora2d, it is possible to use multiscale mode. 
 This mode launches pandora2d pipelines on a given image in different resolutions. 
 
-To use multiscale mode, you must be on the gitlab pandora2d **mvp-pandora2d-multiscale** branch.
+To use multiscale mode, you must install the **1.1.2.dev0**  pandora2d version.
 
 Multiscale mode can be launched with the following command: 
 
@@ -20,7 +20,8 @@ We can use a verbose mode:
     - -vv option prints informations about multiscale and pandora2d pipelines
 
 .. hint:: 
-    It is possible to run `a_multiscale_pipeline.json <https://gitlab.cnes.fr/dali/PandoraBox/pandora2d/-/blob/mvp-pandora2d-multiscale/data_samples/json_conf_files/a_multiscale_pipeline.json>`_ located in the pandora2d gitlab repository on the mvp-pandora2d-multiscale branch. 
+    It is possible to run `a_multiscale_pipeline.json <https://github.com/CNES/Pandora2D/blob/1.1.2.dev0/data_samples/json_conf_files/a_multiscale_pipeline.json>`_ 
+    located in the pandora2d github repository for the 1.1.2.dev0 version. 
     
     The image pyramids used are derived from the left.tif and right.tif images in the maricopa folder that were first downsampled by a factor 4.
     Then these images were downsampled again by factors 4 and 2 to create pyramids of 3 images with subsampling factors of 1, 2, and 4.
@@ -79,16 +80,16 @@ Multiscale section is composed of the following keys:
       - string
       - None
       - Yes
-    * - *right["img_pyramid"]*
-      - Path to the pyramid repository for right image
-      - string
-      - None
-      - Yes
     * - *left["mask_pyramid"]*
       - Path to the mask pyramid repository for left image
       - string
       - None
       - No
+    * - *right["img_pyramid"]*
+      - Path to the pyramid repository for right image
+      - string
+      - None
+      - Yes
     * - *right["mask_pyramid"]*
       - Path to the mask pyramid repository for right image
       - string
@@ -133,7 +134,7 @@ Multiscale section is composed of the following keys:
 .. note:: 
     The **minimal_nb_pixels_per_mesh** parameter allows to set a minimum number of pixels per mesh for it to be considered valid.
 
-    When exiting multiscale mode, a **MESH_validity** band is added to the pandora2d validity.tif file. 
+    When exiting multiscale mode, a **MESH_validity** band is added to the pandora2d *validity.tif* file. 
     This band provides an indication of the mesh's validity based on the minimum number of points specified in the **minimal_nb_pixels_per_mesh** parameter. 
 
     This number of pixels corresponds to the minimum number of points we wish to use to estimate our models in order to consider them sufficiently robust.
@@ -211,8 +212,8 @@ These masks will be used as input masks for the various pandora2d configurations
     As with images, the masks paths specified in the pandora2d configurations are overwritten by the masks contained in the pyramids specified in the multiscale key.
 
 .. hint:: 
-    It is possible to run `a_multiscale_pipeline_with_masks.json <https://gitlab.cnes.fr/dali/PandoraBox/pandora2d/-/blob/mvp-pandora2d-multiscale/data_samples/json_conf_files/a_multiscale_pipeline_with_masks.json>`_ 
-    located in the pandora2d gitlab repository on the mvp-pandora2d-multiscale branch. 
+    It is possible to run `a_multiscale_pipeline_with_masks.json <https://github.com/CNES/Pandora2D/blob/1.1.2.dev0/data_samples/json_conf_files/a_multiscale_pipeline_with_masks.json>`_ 
+    located in the pandora2d github repository for the 1.1.2.dev0 version.
 
 
 Outputs and results
