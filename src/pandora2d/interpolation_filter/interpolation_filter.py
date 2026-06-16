@@ -31,6 +31,7 @@ from collections.abc import Callable
 import numpy as np
 from json_checker import Checker
 
+from pandora2d.interpolation_filter_cpp import interpolation_filter_bind
 from pandora2d.margins import NullMargins
 
 if sys.version_info >= (3, 11):
@@ -47,7 +48,9 @@ class AbstractFilter(ABC):
     interpolation_filter_methods_avail: dict = {}
     _interpolation_filter_method = None
     _SIZE = 4
-    cpp_instance = None
+    # Precise FilterType to avoid mypy arror
+    FilterType = interpolation_filter_bind.CardinalSine | interpolation_filter_bind.Bicubic
+    cpp_instance: FilterType | None = None
 
     def __new__(cls, cfg: dict | None = None, **kwargs):
         """

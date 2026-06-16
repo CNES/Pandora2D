@@ -41,10 +41,7 @@ This module contains functions associated to the computation of cost volumes in 
  * @param index_col col index of the center of the window
  * @return P2d::Matrixf
  */
-P2d::Matrixf get_window(const P2d::Matrixf& image,
-			int window_size,
-			int index_row,
-			int index_col);
+P2d::Matrixf get_window(const P2d::Matrixf& image, int window_size, int index_row, int index_col);
 
 /**
  * @brief Get the index corresponding to the correct interpolated right image
@@ -66,6 +63,15 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
 bool all_non_zero_elements(const P2d::MatrixUI& mat);
 
 /**
+ * @brief Get the index corresponding to the disp_val value in the disparity range
+ *
+ * @param disp_range disparity range
+ * @param disp_val disparity value for which we want to find the index
+ * @return int index of the disparity value in the disparity range
+ */
+int disparity_index(const P2d::VectorD& disp_range, float disp_val);
+
+/**
  * @brief Compute correlation between two images (left_image and right_image)
  * The method is provided by "method" string
  *
@@ -79,11 +85,10 @@ T calculate_correlation(const std::string& method,
                         const P2d::Matrixf& left_image,
                         const P2d::Matrixf& right_image) {
   // Compute correlation between left and right image
-  
+
   if (method == "mutual_information") {
     return calculate_mutual_information<T>(left_image, right_image);
-  }
-  else { // Default targets ZNCC
+  } else {  // Default targets ZNCC
     return calculate_zncc_opt2<T>(left_image, right_image);
   }
 }
@@ -92,6 +97,10 @@ T calculate_correlation(const std::string& method,
  * @brief Compute the cost values loop with compatible metrics
  *
  * @param left image
+ * @param min_disp_row minimum row disparity grid
+ * @param max_disp_row maximum row disparity grid
+ * @param min_disp_col minimum col disparity grid
+ * @param max_disp_col maximum col disparity grid
  * @param right list of right images
  * @param cv_values 1D initialized cost values
  * @param criteria_values 1D criteria values
@@ -106,70 +115,78 @@ T calculate_correlation(const std::string& method,
  */
 template <typename T>
 void compute_cost_volumes_loop(const P2d::Matrixf& left,
-			       const std::vector<P2d::Matrixf>& right,
-			       py::array_t<T>& cv_values,
-			       const py::array_t<uint8_t>& criteria_values,
-			       CostVolumeSize& cv_size,
-			       const P2d::VectorD& disp_range_row,
-			       const P2d::VectorD& disp_range_col,
-			       int offset_cv_img_row,
-			       int offset_cv_img_col,
-			       int window_size,
-			       const Eigen::Vector2i& step,
-			       const std::string matching_cost_method) {
+                               const py::array_t<float>& min_disp_row,
+                               const py::array_t<float>& max_disp_row,
+                               const py::array_t<float>& min_disp_col,
+                               const py::array_t<float>& max_disp_col,
+                               const std::vector<P2d::Matrixf>& right,
+                               py::array_t<T>& cv_values,
+                               const py::array_t<uint8_t>& criteria_values,
+                               CostVolumeSize& cv_size,
+                               const P2d::VectorD& disp_range_row,
+                               const P2d::VectorD& disp_range_col,
+                               int offset_cv_img_row,
+                               int offset_cv_img_col,
+                               int window_size,
+                               const Eigen::Vector2i& step,
+                               const std::string matching_cost_method) {
   P2d::Matrixf left_window;
   P2d::Matrixf right_window;
+  int ind_cv;
+
+  auto criteria_value_view = criteria_values.unchecked<4>();
+  auto cv_mutable_view = cv_values.template mutable_unchecked<4>();
+  auto min_disp_row_view = min_disp_row.unchecked<2>();
+  auto max_disp_row_view = max_disp_row.unchecked<2>();
+  auto min_disp_col_view = min_disp_col.unchecked<2>();
+  auto max_disp_col_view = max_disp_col.unchecked<2>();
 
   int subpix = sqrt(right.size());
-
-  // ind_cv corresponds to:
-  // row * cv_size.nb_disps() * nb_col + col * cv_size.nb_disps()
-  int ind_cv = 0;
-
   int cost_surface_size = cv_size.nb_disps();
-
   P2d::MatrixUI criteria_cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
 
   for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
-    for (std::size_t col = 0; col < cv_size.nb_col; ++col)
+    for (std::size_t col = 0; col < cv_size.nb_col; ++col) {
+      // Compute ind_cv
+      ind_cv = (row * cv_size.nb_col + col) * cost_surface_size;
 
-    {
       // Get criteria cost surface to check if the entire cost surface is invalid
       criteria_cost_surface = get_cost_surface<uint8_t, uint8_t>(criteria_values, ind_cv, cv_size);
 
       // If the entire cost surface is invalid, we do not compute cost volumes for this point
       if (all_non_zero_elements(criteria_cost_surface)) {
-        ind_cv += cost_surface_size;
         continue;
       }
 
+      // Get local disparity range for pixel (row, col)
+      int d_row_start = disparity_index(disp_range_row, min_disp_row_view(row, col));
+      int d_row_end = disparity_index(disp_range_row, max_disp_row_view(row, col));
+      int d_col_start = disparity_index(disp_range_col, min_disp_col_view(row, col));
+      int d_col_end = disparity_index(disp_range_col, max_disp_col_view(row, col));
+
       // Window computation for left image for point (row,col)
       left_window = get_window(left, window_size, offset_cv_img_row + row * step[0],
-			       offset_cv_img_col + col * step[1]);
+                               offset_cv_img_col + col * step[1]);
 
-      for (std::size_t d_row = 0; d_row < cv_size.nb_disp_row; ++d_row) {
-        for (std::size_t d_col = 0; d_col < cv_size.nb_disp_col; ++d_col, ind_cv++) {
-          // Get a view on criteria value at point (row, col, d_row, d_col)
-          auto criteria_value_view = criteria_values.unchecked<4>();
+      for (int d_row = d_row_start; d_row <= d_row_end; ++d_row) {
+        for (int d_col = d_col_start; d_col <= d_col_end; ++d_col) {
+          // Check criteria value for point (row, col) and disparity (d_row, d_col)
           uint8_t criteria_value = criteria_value_view(row, col, d_row, d_col);
-
-          // Get access to cv_value at point (row, col, d_row, d_col) to be able to modify it
-          auto cv_mutable_view = cv_values.template mutable_unchecked<4>();
-
           if (criteria_value != 0) {
             continue;
           }
+
           int index_right =
               interpolated_right_image_index(subpix, disp_range_row[d_row], disp_range_col[d_col]);
 
           // Window computation for right image for point (row+d_row,col+d_col)
           right_window =
               get_window(right[index_right], window_size,
-			 offset_cv_img_row + row * step[0] + floor(disp_range_row[d_row]),
-			 offset_cv_img_col + col * step[1] + floor(disp_range_col[d_col]));
+                         offset_cv_img_row + row * step[0] + floor(disp_range_row[d_row]),
+                         offset_cv_img_col + col * step[1] + floor(disp_range_col[d_col]));
 
           cv_mutable_view(row, col, d_row, d_col) =
-	    calculate_correlation<T>(matching_cost_method, left_window, right_window);
+              calculate_correlation<T>(matching_cost_method, left_window, right_window);
         }
       }
     }
@@ -180,6 +197,10 @@ void compute_cost_volumes_loop(const P2d::Matrixf& left,
  * @brief Compute the cost values with zncc with optimisation 1 using integral images
  *
  * @param left image
+ * @param min_disp_row minimum row disparity grid
+ * @param max_disp_row maximum row disparity grid
+ * @param min_disp_col minimum col disparity grid
+ * @param max_disp_col maximum col disparity grid
  * @param right list of right images
  * @param cv_values 1D initialized cost values
  * @param criteria_values 1D criteria values
@@ -194,17 +215,21 @@ void compute_cost_volumes_loop(const P2d::Matrixf& left,
  */
 template <typename T>
 void compute_zncc_cv_opt1(const P2d::Matrixf& left,
-			  const std::vector<P2d::Matrixf>& right,
-			  py::array_t<T>& cv_values,
-			  const py::array_t<uint8_t>& criteria_values,
-			  CostVolumeSize& cv_size,
-			  const P2d::VectorD& disp_range_row,
-			  const P2d::VectorD& disp_range_col,
-			  int offset_cv_img_row,
-			  int offset_cv_img_col,
-			  int window_size,
-			  const Eigen::Vector2i& step,
-			  const std::string matching_cost_method) {
+                          const py::array_t<float>& min_disp_row,
+                          const py::array_t<float>& max_disp_row,
+                          const py::array_t<float>& min_disp_col,
+                          const py::array_t<float>& max_disp_col,
+                          const std::vector<P2d::Matrixf>& right,
+                          py::array_t<T>& cv_values,
+                          const py::array_t<uint8_t>& criteria_values,
+                          CostVolumeSize& cv_size,
+                          const P2d::VectorD& disp_range_row,
+                          const P2d::VectorD& disp_range_col,
+                          int offset_cv_img_row,
+                          int offset_cv_img_col,
+                          int window_size,
+                          const Eigen::Vector2i& step,
+                          const std::string matching_cost_method) {
   const int half_window = floor(window_size / 2);
   int subpix = sqrt(right.size());
 
@@ -219,6 +244,10 @@ void compute_zncc_cv_opt1(const P2d::Matrixf& left,
   // Declaration of variables used in for loop
   auto cv_mutable_view = cv_values.template mutable_unchecked<4>();
   auto criteria_value_view = criteria_values.template unchecked<4>();
+  auto min_disp_row_view = min_disp_row.unchecked<2>();
+  auto max_disp_row_view = max_disp_row.unchecked<2>();
+  auto min_disp_col_view = min_disp_col.unchecked<2>();
+  auto max_disp_col_view = max_disp_col.unchecked<2>();
 
   int disp_row_value;
   int disp_col_value;
@@ -251,23 +280,28 @@ void compute_zncc_cv_opt1(const P2d::Matrixf& left,
 
       for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
         for (std::size_t col = 0; col < cv_size.nb_col; ++col) {
-          if (criteria_value_view(row, col, d_row, d_col) != 0) {
+          if (criteria_value_view(row, col, d_row, d_col) != 0)
             continue;
-          }
+
+          // Skip if this disparity is outside the local range for (row, col)
+          if (disp_range_row[d_row] < min_disp_row_view(row, col) ||
+              disp_range_row[d_row] > max_disp_row_view(row, col) ||
+              disp_range_col[d_col] < min_disp_col_view(row, col) ||
+              disp_range_col[d_col] > max_disp_col_view(row, col))
+            continue;
 
           left_win_row_center = offset_cv_img_row + row * step[0];
           left_win_col_center = offset_cv_img_col + col * step[1];
-
           top_row = left_win_row_center - half_window;
           left_col = left_win_col_center - half_window;
           bottom_row = top_row + window_size - 1;
           right_col = left_col + window_size - 1;
 
           // Computation is done in double type to avoid rounding errors
-	  // Optimisation v1 is called, using integral images
-          zncc =
-              calculate_zncc_opt1(integral_left, integral_left_sq, integral_right, integral_right_sq,
-				  integral_cross, top_row, left_col, bottom_row, right_col, window_size);
+          // Optimisation v1 is called, using integral images
+          zncc = calculate_zncc_opt1(integral_left, integral_left_sq, integral_right,
+                                     integral_right_sq, integral_cross, top_row, left_col,
+                                     bottom_row, right_col, window_size);
 
           cv_mutable_view(row, col, d_row, d_col) = static_cast<T>(zncc);
         }
@@ -281,6 +315,10 @@ void compute_zncc_cv_opt1(const P2d::Matrixf& left,
  */
 template <typename T>
 using ComputeFunction = std::function<void(const P2d::Matrixf&,
+                                           const py::array_t<float>& min_disp_row,
+                                           const py::array_t<float>& max_disp_row,
+                                           const py::array_t<float>& min_disp_col,
+                                           const py::array_t<float>& max_disp_col,
                                            const std::vector<P2d::Matrixf>&,
                                            py::array_t<T>&,
                                            const py::array_t<uint8_t>&,
@@ -291,12 +329,16 @@ using ComputeFunction = std::function<void(const P2d::Matrixf&,
                                            int,
                                            int,
                                            const Eigen::Vector2i&,
-					   std::string)>;
+                                           std::string)>;
 
 /**
  * @brief Compute the cost values with method given as parameter
  *
  * @param left image
+ * @param min_disp_row minimum row disparity grid
+ * @param max_disp_row maximum row disparity grid
+ * @param min_disp_col minimum col disparity grid
+ * @param max_disp_col maximum col disparity grid
  * @param right list of right images
  * @param cv_values 1D initialized cost values
  * @param criteria_values 1D criteria values
@@ -311,6 +353,10 @@ using ComputeFunction = std::function<void(const P2d::Matrixf&,
  */
 template <typename T>
 void compute_cost_volumes_cpp(const P2d::Matrixf& left,
+                              const py::array_t<float>& min_disp_row,
+                              const py::array_t<float>& max_disp_row,
+                              const py::array_t<float>& min_disp_col,
+                              const py::array_t<float>& max_disp_col,
                               const std::vector<P2d::Matrixf>& right,
                               py::array_t<T>& cv_values,
                               const py::array_t<uint8_t>& criteria_values,
@@ -324,15 +370,15 @@ void compute_cost_volumes_cpp(const P2d::Matrixf& left,
                               const std::string& method) {
   static const std::map<std::string, ComputeFunction<T>> method_map = {
       {"mutual_information", compute_cost_volumes_loop<T>},
-      {"zncc", compute_zncc_cv_opt1<T>},        // Default ZNCC is currently optim-1 version
+      {"zncc", compute_zncc_cv_opt1<T>},  // Default ZNCC is currently optim-1 version
       {"zncc-optim-1", compute_zncc_cv_opt1<T>},
-      {"zncc-optim-2", compute_cost_volumes_loop<T>}
-  };
+      {"zncc-optim-2", compute_cost_volumes_loop<T>}};
 
   auto it = method_map.find(method);
   if (it != method_map.end()) {
-    it->second(left, right, cv_values, criteria_values, cv_size, disp_range_row, disp_range_col,
-               offset_cv_img_row, offset_cv_img_col, window_size, step, method);
+    it->second(left, min_disp_row, max_disp_row, min_disp_col, max_disp_col, right, cv_values,
+               criteria_values, cv_size, disp_range_row, disp_range_col, offset_cv_img_row,
+               offset_cv_img_col, window_size, step, method);
   } else {
     throw std::invalid_argument("Unknown correlation method: " + method);
   }

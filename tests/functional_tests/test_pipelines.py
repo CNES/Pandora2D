@@ -25,11 +25,14 @@ Run pandora2d configurations from end to end.
 import json
 from copy import deepcopy
 from pathlib import Path
+import sys
 
 import numpy as np
 import pytest
 import rasterio
+from json_checker.core.exceptions import MissKeyCheckerError
 
+import pandora2d
 from pandora2d import Pandora2DMachine
 from pandora2d.check_configuration import check_conf
 from pandora2d.img_tools import create_datasets_from_inputs
@@ -59,6 +62,86 @@ def remove_extra_keys(extended: dict, reference: dict) -> dict:
         if isinstance(extended_value, dict) and isinstance(reference_value, dict):
             extended_copy[extended_key] = remove_extra_keys(extended_value, reference_value)
     return extended_copy
+
+
+def transform_config_to_cones(config: dict, support_files: dict) -> dict:
+    """
+    Transform a configuration to use cones/monoband images from support_files.
+
+    Replaces maricopa image, mask and disparity grid paths with absolute paths
+    provided in support_files. Also adjusts the nodata value for cones (255 vs -9999).
+
+    :param config: Raw configuration dictionary (with maricopa paths).
+    :param support_files: Dict mapping file roles to absolute path strings.
+        Expected keys: 'left', 'right', 'left_mask', 'right_mask',
+        'init_col_disparity_grid', 'init_row_disparity_grid'.
+    :return: A copy of the configuration with cones absolute paths.
+    """
+    transformed = deepcopy(config)
+
+    transformed["input"]["left"]["img"] = support_files["left"]
+    transformed["input"]["right"]["img"] = support_files["right"]
+
+    if transformed["input"]["left"].get("mask"):
+        transformed["input"]["left"]["mask"] = support_files["left_mask"]
+    if transformed["input"]["right"].get("mask"):
+        transformed["input"]["right"]["mask"] = support_files["right_mask"]
+
+    if "col_disparity" in transformed["input"]:
+        if isinstance(transformed["input"]["col_disparity"]["init"], str):
+            transformed["input"]["col_disparity"]["init"] = support_files["init_col_disparity_grid"]
+    if "row_disparity" in transformed["input"]:
+        if isinstance(transformed["input"]["row_disparity"]["init"], str):
+            transformed["input"]["row_disparity"]["init"] = support_files["init_row_disparity_grid"]
+
+    # Update nodata value for cones (255 instead of -9999)
+    if "nodata" in transformed["input"]["left"]:
+        transformed["input"]["left"]["nodata"] = 255
+    if "nodata" in transformed["input"]["right"]:
+        transformed["input"]["right"]["nodata"] = 255
+
+    return transformed
+
+
+DATA_SAMPLES_CONFIG_DIR = Path(__file__).resolve().parents[2] / "data_samples" / "json_conf_files"
+
+# Configs excluded from reusability tests because they are too slow to run in CI.
+_SKIPPED_DATA_SAMPLES = {"a_dichotomy_python_pipeline"}
+
+
+def filelist_parametrize_generator():
+    """
+    Generate parametrized test data from sample JSON configurations.
+
+    Loads each raw JSON config and yields it with its source file path.
+    Path substitution (maricopa → cones) is deferred to test time via the
+    cones_support_files fixture so that support files are created in tmp_path.
+    Configs listed in _SKIPPED_DATA_SAMPLES are excluded.
+    """
+    for config_file in sorted(DATA_SAMPLES_CONFIG_DIR.glob("*.json")):
+        if config_file.suffix != ".json" or config_file.stem.endswith("_output"):
+            continue
+        if config_file.stem in _SKIPPED_DATA_SAMPLES:
+            continue
+
+        with config_file.open(encoding="utf8") as sample_file:
+            configuration = json.load(sample_file)
+
+        yield pytest.param((configuration, config_file), id=config_file.stem)
+
+
+def is_estimation_pipeline(config_file: Path) -> bool:
+    """
+    Check if a configuration file uses the estimation pipeline.
+
+    Estimation pipelines have known limitations with reentrance:
+    the output config contains estimated_shifts which causes validation errors
+    on second run (unless check_configuration.py is modified to support it).
+
+    :param config_file: Path to the configuration file
+    :return: True if the config uses estimation, False otherwise
+    """
+    return "estimation" in config_file.stem
 
 
 class TestRemoveExtrakeys:
@@ -681,3 +764,47 @@ class TestDeformationGridMode:
         # Checking that resulting deformation grids are not full of nans
         assert not np.all(np.isnan(row_deformation_map))
         assert not np.all(np.isnan(col_deformation_map))
+
+
+class TestDataSamplesOutputConfigReusability:  # pylint: disable=too-few-public-methods
+    """
+    Test that output configurations from data_samples pipelines can be re-executed.
+    """
+
+    @pytest.mark.parametrize("config_data", filelist_parametrize_generator())
+    def test_output_config_can_be_reused(self, run_pipeline, tmp_path, config_data, cones_support_files):
+        """
+        Description: Check that each output configuration generated from data_samples can be run again.
+
+        Runs each data_samples JSON config with cones/monoband images (support files generated
+        in tmp_path). Verifies that the output config.json can be re-executed as a second run.
+
+        Note: Estimation pipelines (an_estimation_pipeline.json) are expected to fail on re-execution
+        because the keys ``estimated_shifts``, ``phase_diff`` and ``error`` written into the output
+        configuration are not valid inputs for the estimation schema.
+        """
+        configuration, config_file = config_data
+
+        # We skip confidence pipeline on Windows due to known access violation in compute_ambiguity pandora method.
+        # This will be removed after completing issue 460.
+        if sys.platform.startswith("win") and "confidence" in config_file.name:
+            pytest.skip("Skipping confidence pipeline on Windows")
+
+        configuration = transform_config_to_cones(configuration, cones_support_files)
+
+        output_dir = tmp_path / config_file.stem
+        configuration["output"]["path"] = str(output_dir)
+
+        run_pipeline(configuration)
+
+        output_config_path = output_dir / "config.json"
+        assert output_config_path.exists()
+
+        if is_estimation_pipeline(config_file):
+            # Known limitation: estimation output configs cannot be re-run because the keys
+            # estimated_shifts, phase_diff and error written into the output config are not
+            # valid inputs for the estimation schema.
+            with pytest.raises(MissKeyCheckerError, match=r"Missing keys in expected schema.*estimated_shifts"):
+                pandora2d.main(output_config_path, verbose=False)
+        else:
+            pandora2d.main(output_config_path, verbose=False)

@@ -249,31 +249,13 @@ def get_min_max_disp_from_dicts(
 
     # Creates min and max disparity grids if initial disparities are variable (grid)
     elif isinstance(disparity["init"], str):
-        # Get dataset coordinates to select correct zone of disparity grids if we are using a ROI
-        rows = dataset.row.data
-        cols = dataset.col.data
-
-        row_offset = origin.row
-        col_offset = origin.col
-
-        window = Window(cols[0], rows[0], cols.size, rows.size)
 
         # Get disparity data
         reader = pandora_img_tools.rasterio_open(disparity["init"])
-        disp_data = reader.read(1, out_dtype=disparity_dtype, window=window)
-        # When using disparity maps from a previous execution as ROI,
-        # the initial disparity grids can be smaller than the image window.
-        # In this case, we use the entire initial disparity grid and ROI margins are included in disp_min_max.
-        if disp_data.shape < dataset["im"].data.shape:
-            disp_data = reader.read(1, out_dtype=disparity_dtype)
-            # If disp_min_max corresponds to a ROI, we need to convert origin coordinates as index
-            row_offset -= rows[0]
-            col_offset -= cols[0]
-
+        disp_data = reader.read(1, out_dtype=disparity_dtype)
         nodata = reader.meta.get("nodata")
         # Work on disp_data to avoid transformation on nodata
         is_data_mask = build_usable_data_mask(disp_data, nodata)
-
         # We use np.round to ensure that disp_interval and disp_min_max contains
         # integer disparity values in cases where sub-pixel disparity maps are reused as initial disparities
         disp_data = np.round(disp_data)
@@ -283,20 +265,65 @@ def get_min_max_disp_from_dicts(
             np.max(disp_data[is_data_mask] * pow(-1, right) + disparity["range"]),
         ]
 
-        last_row_index = row_offset + disp_data.shape[0] * step.row
-        last_col_index = col_offset + disp_data.shape[1] * step.col
-        row_slice = np.s_[row_offset : last_row_index : step.row]
-        col_slice = np.s_[col_offset : last_col_index : step.col]
+        # Get valid index to retrieve corresponding zones in dataset and disp_data
+        # based on the dataset coordinates, grid origin and step
+        dataset_row_index, disp_data_row_index = compute_valid_disparity_grid_index(
+            dataset.row.data, disp_data.shape[0], origin.row, step.row
+        )
+        dataset_col_index, disp_data_col_index = compute_valid_disparity_grid_index(
+            dataset.col.data, disp_data.shape[1], origin.col, step.col
+        )
 
-        # Use disparity data to creates min/max grids
-        disp_min_max[0, row_slice, col_slice] = disp_data * pow(-1, right) - disparity["range"]
-        disp_min_max[1, row_slice, col_slice] = disp_data * pow(-1, right) + disparity["range"]
+        valid_area_disp_data = disp_data[np.ix_(disp_data_row_index, disp_data_col_index)]
+        valid_area_is_data_mask = is_data_mask[np.ix_(disp_data_row_index, disp_data_col_index)]
+
+        # Compute min and max disparity grids
+        min_disparity = valid_area_disp_data * pow(-1, right) - disparity["range"]
+        max_disparity = valid_area_disp_data * pow(-1, right) + disparity["range"]
 
         # Restore nodata
-        disp_min_max[0, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
-        disp_min_max[1, row_slice, col_slice][~is_data_mask] = disp_data[~is_data_mask]
+        min_disparity[~valid_area_is_data_mask] = valid_area_disp_data[~valid_area_is_data_mask]
+        max_disparity[~valid_area_is_data_mask] = valid_area_disp_data[~valid_area_is_data_mask]
+
+        # Put min and max disparity grid in disp_min_max
+        disp_min_max[0][np.ix_(dataset_row_index, dataset_col_index)] = min_disparity
+        disp_min_max[1][np.ix_(dataset_row_index, dataset_col_index)] = max_disparity
 
     return disp_min_max, disp_interval, nodata
+
+
+def compute_valid_disparity_grid_index(
+    dataset_coordinates: NDArray, disparity_grid_shape: int, origin: int, step: int
+) -> tuple[NDArray, NDArray]:
+    """
+    Computes valid index between the dataset and the disparity grid.
+
+    :param dataset_coordinates: numpy array containing row or column coordinates of the dataset
+    :param disparity_grid_shape: shape of the disparity grid (row or column)
+    :param origin: origin of the grid (row or column)
+    :param step: step that separates two points in the disparity grid (row or column)
+    :return: tuple of 1D numpy arrays containing valid row and column indices for the disparity grid and the dataset
+    """
+
+    # Compute disparity grid index based on the dataset coordinates, grid origin and step
+    grid_indices = (dataset_coordinates - origin) / step
+    # Build a validity mask to identify dataset coordinates that correspond to an actual
+    # disparity grid point. Since the dataset and the disparity grid may not share the same
+    # origin and step, a dataset coordinate is only valid if:
+    # - it is not before the grid start: grid_indices >= 0
+    # - it is not beyond the grid end: grid_indices < disparity_grid_shape
+    # - it falls exactly on a grid point, i.e. it is reachable from origin by jumping
+    #   by step: (coordinate - origin) % step == 0
+    valid_mask = (
+        (grid_indices >= 0) & (grid_indices < disparity_grid_shape) & (np.mod(dataset_coordinates - origin, step) == 0)
+    )
+
+    # Valid index in disp_min_max
+    dataset_index = np.where(valid_mask)[0]
+    # Valid index in disparity grid
+    disparity_grid_index = grid_indices[valid_mask].astype(int)
+
+    return dataset_index, disparity_grid_index
 
 
 def shift_disp_row_img(img_right: xr.Dataset, dec_row: int) -> xr.Dataset:
@@ -353,7 +380,7 @@ def get_margins_values(init_value: int | np.ndarray, range_value: int, margins: 
     return max(margins[0] - disp_min, 0), max(margins[1] + disp_max, 0)
 
 
-def get_roi_processing(roi: dict, col_disparity: dict, row_disparity: dict) -> dict:
+def get_roi_processing(roi: dict, col_disparity: dict, row_disparity: dict, from_previous_run: bool = False) -> dict:
     """
     Return a roi which takes disparities into account.
     Update cfg roi with new margins.
@@ -367,12 +394,14 @@ def get_roi_processing(roi: dict, col_disparity: dict, row_disparity: dict) -> d
 
     :param col_disparity: init and range for disparities in columns.
     :param row_disparity: init and range for disparities in rows.
+    :param from_previous_run: True when initial disparity grids come from a previous Pandora2D run
+        (local coordinates); passed through to get_initial_disparity to skip ROI windowing.
     """
 
     new_roi = copy.deepcopy(roi)
 
-    disparity_row_init = get_initial_disparity(row_disparity)
-    disparity_col_init = get_initial_disparity(col_disparity)
+    disparity_row_init = get_initial_disparity(row_disparity, roi=roi, from_previous_run=from_previous_run)
+    disparity_col_init = get_initial_disparity(col_disparity, roi=roi, from_previous_run=from_previous_run)
 
     # for columns
     left, right = get_margins_values(disparity_col_init, col_disparity["range"], [roi["margins"][0], roi["margins"][2]])
@@ -455,7 +484,13 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: dict):
 
 
 def row_zoom_img(
-    img: np.ndarray, ny: int, subpix: int, coords: Coordinates, ind: int, no_data: float | int, order: int = 1
+    img: np.ndarray,
+    ny: int,
+    subpix: int,
+    coords: Coordinates,
+    ind: int,
+    no_data: float | int,
+    order: int = 1,
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in row
@@ -492,7 +527,13 @@ def row_zoom_img(
 
 
 def col_zoom_img(
-    img: np.ndarray, nx: int, subpix: int, coords: Coordinates, ind: int, no_data: float | int, order: int = 1
+    img: np.ndarray,
+    nx: int,
+    subpix: int,
+    coords: Coordinates,
+    ind: int,
+    no_data: float | int,
+    order: int = 1,
 ) -> xr.Dataset:
     """
     Return a list that contains the shifted right images in col
@@ -544,7 +585,7 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
         # To avoid propagation of nan in shifted data, we use -9999 instead of nan if necessary
         no_data = convert_no_data(img_right.attrs["no_data_img"])
 
-        for ind in np.arange(1, subpix, dtype=int):
+        for ind in range(1, subpix):
             if row:
                 img_right_shift.append(
                     row_zoom_img(
@@ -595,19 +636,36 @@ def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> l
     return img_right_shift_2d
 
 
-def get_initial_disparity(disparity: dict) -> NDArray | int:
+def get_initial_disparity(disparity: dict, roi: dict | None = None, from_previous_run: bool = False) -> NDArray | int:
     """
     Return initial disparity.
 
     When initial disparity is read from a file, nodata and infinite values are replaced by NaNs.
+    When a ROI is provided and the raster is NOT from a previous run, only the pixels within the
+    ROI are read, preventing border outliers from inflating the extrema used to compute ROI
+    processing margins.
+    When the raster comes from a previous run (``from_previous_run=True``), it is already cropped
+    to the relevant zone in local coordinates, so the full raster is read regardless of the ROI.
 
     :param disparity: init and range for disparities in columns.
+    :param roi: optional ROI dict with keys "row" and "col", each containing "first" and "last".
+    :param from_previous_run: True when the disparity raster was produced by a previous Pandora2D
+        run and is therefore stored in local (ROI-relative) coordinates.
     :return: initial disparity
     """
 
     if isinstance(disparity["init"], str):
         reader = pandora_img_tools.rasterio_open(disparity["init"])
-        disparity_init = reader.read()
+        if roi is not None and not from_previous_run:
+            window = Window(
+                col_off=roi["col"]["first"],
+                row_off=roi["row"]["first"],
+                width=roi["col"]["last"] - roi["col"]["first"] + 1,
+                height=roi["row"]["last"] - roi["row"]["first"] + 1,
+            )
+            disparity_init = reader.read(window=window)
+        else:
+            disparity_init = reader.read()
         nodata = reader.meta.get("nodata")
         return np.where(build_usable_data_mask(disparity_init, nodata), disparity_init, np.nan)
     return disparity["init"]

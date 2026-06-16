@@ -37,10 +37,7 @@ struct TypePairWindow {
 
 TYPE_TO_STRING_AS("Float", TypePairWindow<float, P2d::Matrixf>);
 
-TEST_CASE_TEMPLATE("Test get_window method",
-                   T,
-                   TypePairWindow<float, P2d::Matrixf>
-		   ) {
+TEST_CASE_TEMPLATE("Test get_window method", T, TypePairWindow<float, P2d::Matrixf>) {
   using WindowElementType = typename T::WindowElementType;
   using WindowMatrixType = typename T::WindowMatrixType;
 
@@ -211,5 +208,18 @@ TEST_CASE("Test has_only_non_zero_elements method") {
   SUBCASE("Test a vector with only zero elements") {
     P2d::MatrixUI mat_zero = P2d::MatrixUI::Zero(3, 3);
     CHECK(all_non_zero_elements(mat_zero) == false);
+  }
+}
+
+TEST_CASE("Test disparity_index method") {
+  P2d::VectorD disp_range(5);
+
+  SUBCASE("Classic case") {
+    disp_range << -2.0, -1.0, 0.0, 1.0, 2.0;
+    CHECK(disparity_index(disp_range, -2.0) == 0);
+    CHECK(disparity_index(disp_range, -1.0) == 1);
+    CHECK(disparity_index(disp_range, 0.0) == 2);
+    CHECK(disparity_index(disp_range, 1.0) == 3);
+    CHECK(disparity_index(disp_range, 2.0) == 4);
   }
 }

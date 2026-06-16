@@ -378,6 +378,23 @@ def wrong_size_grid(left_img_shape, create_disparity_grid_fixture):
     return create_disparity_grid_fixture(init_band, 3, "wrong_size_disparity.tif")
 
 
+@pytest.fixture
+def border_outliers_grid_data(left_img_shape):
+    """Array of size left_img_shape with high border values and 1.0 interior."""
+    height, width = left_img_shape
+
+    grid = np.full((height, width), 100.0, dtype=np.float32)
+    grid[2 : height - 2, 2 : width - 2] = 1.0
+
+    return grid
+
+
+@pytest.fixture
+def border_outliers_grid(border_outliers_grid_data, create_disparity_grid_fixture):
+    """Create a grid with high border values and controlled ROI interior."""
+    return create_disparity_grid_fixture(border_outliers_grid_data, 1, "border_outliers_disparity.tif")
+
+
 @pytest.fixture()
 def matching_cost_method():
     return "zncc"

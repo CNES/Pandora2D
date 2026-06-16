@@ -30,7 +30,7 @@ from numpy.typing import ArrayLike, DTypeLike, NDArray
 from scipy.ndimage import binary_dilation
 
 from pandora2d.constants import Criteria
-from pandora2d.common import build_usable_data_mask
+from pandora2d.common import build_usable_data_mask, get_disparity_grids
 
 DISPARITY_INDEPENDENT_CRITERIA = {
     Criteria.P2D_LEFT_BORDER,
@@ -76,29 +76,6 @@ class FlagArray(np.ndarray):
             max_line_width=max_line_width,
         )
         return f"{prefix}({array_repr}, {suffix})"
-
-
-def get_disparity_grids(
-    left_image: xr.Dataset, cv_coords: tuple[NDArray, NDArray]
-) -> tuple[NDArray, NDArray, NDArray, NDArray]:
-    """
-    Return disparity grid from left image according to cost_volumes row and col coordinates.
-    We need to use the cost volume coordinates to process the right points when the step is different from 1.
-
-    :param left_image: left image
-    :param cv_coords: cost volumes row and column coordinates
-    :return: 4 disparity grids
-    """
-
-    # Get rows disparity grid
-    d_min_row_grid = left_image["row_disparity"].sel(row=cv_coords[0], col=cv_coords[1], band_disp="min").data
-    d_max_row_grid = left_image["row_disparity"].sel(row=cv_coords[0], col=cv_coords[1], band_disp="max").data
-
-    # Get columns disparity grid
-    d_min_col_grid = left_image["col_disparity"].sel(row=cv_coords[0], col=cv_coords[1], band_disp="min").data
-    d_max_col_grid = left_image["col_disparity"].sel(row=cv_coords[0], col=cv_coords[1], band_disp="max").data
-
-    return d_min_row_grid, d_max_row_grid, d_min_col_grid, d_max_col_grid
 
 
 def binary_dilation_dataarray(img: xr.Dataset, window_size: int) -> xr.DataArray:

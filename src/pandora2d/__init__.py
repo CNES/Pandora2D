@@ -120,7 +120,12 @@ def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> 
         if "estimation" in cfg["pipeline"]:
             roi = cfg["ROI"]
         else:
-            roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+            roi = get_roi_processing(
+                cfg["ROI"],
+                cfg["input"]["col_disparity"],
+                cfg["input"]["row_disparity"],
+                from_previous_run="attributes" in cfg,
+            )
 
     # read images
     image_datasets = create_datasets_from_inputs(

@@ -110,6 +110,8 @@ def compute_effective_image_size(config: dict, image_margins: Margins) -> tuple[
             config["input"]["row_disparity"],
             config["input"]["col_disparity"],
             image_margins,
+            roi=config.get("ROI"),
+            from_previous_run="attributes" in config,
         )
     else:
         roi_margins = NullMargins()
@@ -156,7 +158,14 @@ def get_img_size(img_path: str, roi: dict = None) -> tuple[int, int]:
     return height, width
 
 
-def get_nb_disp(disparity: dict, before_margins: int = 0, after_margins: int = 0, subpix: int = 1) -> int:
+def get_nb_disp(
+    disparity: dict,
+    before_margins: int = 0,
+    after_margins: int = 0,
+    subpix: int = 1,
+    roi: dict | None = None,
+    from_previous_run: bool = False,
+) -> int:
     """
     Get number of disparities.
 
@@ -164,11 +173,13 @@ def get_nb_disp(disparity: dict, before_margins: int = 0, after_margins: int = 0
     :param before_margins: Margins before the minimum disparity.
     :param after_margins: Margins after the maximum disparity.
     :param subpix: subpix
+    :param roi: optional ROI dict with keys "row" and "col", each containing "first" and "last".
+    :param from_previous_run: True when disparity grids come from a previous Pandora2D run.
     :return:  number of disparities
     """
 
     # Get initial disparity values
-    initial_disparity = get_initial_disparity(disparity)
+    initial_disparity = get_initial_disparity(disparity, roi=roi, from_previous_run=from_previous_run)
 
     # Get minimum and maximum disparities
     min_disparity, max_disparity = get_extrema_disparity(initial_disparity, disparity["range"])
@@ -177,19 +188,27 @@ def get_nb_disp(disparity: dict, before_margins: int = 0, after_margins: int = 0
     return (max_disparity - min_disparity + before_margins + after_margins) * subpix + 1
 
 
-def get_roi_margins(row_disparity: dict, col_disparity: dict, global_margins: Margins) -> Margins:
+def get_roi_margins(
+    row_disparity: dict,
+    col_disparity: dict,
+    global_margins: Margins,
+    roi: dict | None = None,
+    from_previous_run: bool = False,
+) -> Margins:
     """
     Get ROI margins according to row and col disparities and global margins calculated in the check conf step.
 
     :param row_disparity: init and range for disparities in rows.
     :param col_disparity: init and range for disparities in columns.
     :param global_margins: global image margins computed in the check conf
+    :param roi: optional ROI dict with keys "row" and "col", each containing "first" and "last".
+    :param from_previous_run: True when initial disparity grids come from a previous Pandora2D run.
     :return: ROI margins updated according to disparity values
     """
 
     # Get initial disparity values
-    disparity_row_init = get_initial_disparity(row_disparity)
-    disparity_col_init = get_initial_disparity(col_disparity)
+    disparity_row_init = get_initial_disparity(row_disparity, roi=roi, from_previous_run=from_previous_run)
+    disparity_col_init = get_initial_disparity(col_disparity, roi=roi, from_previous_run=from_previous_run)
 
     # Get margins for columns
     left, right = get_margins_values(
@@ -252,8 +271,22 @@ def estimate_cost_volumes_size(
     subpix = user_cfg["pipeline"]["matching_cost"]["subpix"]
     step = user_cfg["pipeline"]["matching_cost"]["step"]
 
-    nb_disp_row = get_nb_disp(user_cfg["input"]["row_disparity"], margins_disp.up, margins_disp.down, subpix)
-    nb_disp_col = get_nb_disp(user_cfg["input"]["col_disparity"], margins_disp.left, margins_disp.right, subpix)
+    nb_disp_row = get_nb_disp(
+        user_cfg["input"]["row_disparity"],
+        margins_disp.up,
+        margins_disp.down,
+        subpix,
+        roi=user_cfg.get("ROI"),
+        from_previous_run="attributes" in user_cfg,
+    )
+    nb_disp_col = get_nb_disp(
+        user_cfg["input"]["col_disparity"],
+        margins_disp.left,
+        margins_disp.right,
+        subpix,
+        roi=user_cfg.get("ROI"),
+        from_previous_run="attributes" in user_cfg,
+    )
 
     # Get cost volumes shape
     cv_shape = math.ceil(height / step[0]) * math.ceil(width / step[1]) * nb_disp_row * nb_disp_col
@@ -294,7 +327,14 @@ def estimate_pandora_cost_volume_size(config: dict, height: int, width: int, mar
     """
     subpix = config["pipeline"]["matching_cost"]["subpix"]
     step = config["pipeline"]["matching_cost"]["step"]
-    disparity_size = get_nb_disp(config["input"]["col_disparity"], margins.left, margins.right, subpix)
+    disparity_size = get_nb_disp(
+        config["input"]["col_disparity"],
+        margins.left,
+        margins.right,
+        subpix,
+        roi=config.get("ROI"),
+        from_previous_run="attributes" in config,
+    )
 
     image_size = height * math.ceil(width / step[1])
 
@@ -398,6 +438,8 @@ def segment_image_by_rows(  # pylint: disable=too-many-locals
         config["input"]["row_disparity"],
         config["input"]["col_disparity"],
         image_margins,
+        roi=config.get("ROI"),
+        from_previous_run="attributes" in config,
     )
     height_margins = roi_margins.up + roi_margins.down
     width_margins = roi_margins.left + roi_margins.right

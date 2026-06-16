@@ -18,7 +18,7 @@
 #
 
 """
-Test get_roi_processing.
+Test get_roi_processing method.
 """
 
 # Make pylint happy with fixtures:
@@ -259,3 +259,21 @@ class TestNodataFiltering:
         result = img_tools.get_roi_processing(default_roi, second_correct_grid, correct_grid)
 
         assert result["margins"] == expected
+
+
+class TestGetRoiProcessingOutliers:
+    """Border outliers should not inflate ROI margins."""
+
+    def test_get_roi_processing(self, default_roi, border_outliers_grid):
+        """Check that only ROI values impact computed margins."""
+        result = img_tools.get_roi_processing(default_roi, border_outliers_grid, border_outliers_grid)
+
+        assert result["margins"] == (2, 2, 4, 4)
+
+    def test_get_roi_processing_from_previous_run(self, default_roi, border_outliers_grid):
+        """Check that full-raster outliers are used when from_previous_run=True."""
+        result = img_tools.get_roi_processing(
+            default_roi, border_outliers_grid, border_outliers_grid, from_previous_run=True
+        )
+
+        assert result["margins"] == (2, 2, 103, 103)

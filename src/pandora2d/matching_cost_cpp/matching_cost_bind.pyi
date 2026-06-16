@@ -26,6 +26,10 @@ from ..common_cpp.common_bind import CostVolumeSize
 
 def compute_cost_volumes_cpp_float(
     left: NDArray[np.float32],
+    min_disp_row: NDArray[np.float32],
+    max_disp_row: NDArray[np.float32],
+    min_disp_col: NDArray[np.float32],
+    max_disp_col: NDArray[np.float32],
     right: list[NDArray[np.float32]],
     cv_values: NDArray[np.floating],
     criteria_values: NDArray[np.uint8],
@@ -42,6 +46,10 @@ def compute_cost_volumes_cpp_float(
     Computes the cost values in float32
 
     :param left: left image
+    :param min_disp_row: minimum row disparity grid
+    :param max_disp_row: maximum row disparity grid
+    :param min_disp_col: minimum col disparity grid
+    :param max_disp_col: maximum col disparity grid
     :param right: list of right images
     :param cv_values:  cost volumes initialized values
     :param criteria_values:  criteria values
@@ -57,6 +65,10 @@ def compute_cost_volumes_cpp_float(
 
 def compute_cost_volumes_cpp_double(
     left: NDArray[np.float32],
+    min_disp_row: NDArray[np.float32],
+    max_disp_row: NDArray[np.float32],
+    min_disp_col: NDArray[np.float32],
+    max_disp_col: NDArray[np.float32],
     right: list[NDArray[np.float32]],
     cv_values: NDArray[np.floating],
     criteria_values: NDArray[np.uint8],
@@ -73,6 +85,10 @@ def compute_cost_volumes_cpp_double(
     Computes the cost values in float64
 
     :param left: left image
+    :param min_disp_row: minimum row disparity grid
+    :param max_disp_row: maximum row disparity grid
+    :param min_disp_col: minimum col disparity grid
+    :param max_disp_col: maximum col disparity grid
     :param right: list of right images
     :param cv_values:  cost volumes initialized values
     :param criteria_values:  criteria values

@@ -39,6 +39,7 @@ from pandora2d import disparity, matching_cost
 from pandora2d.constants import Criteria
 from pandora2d.img_tools import add_disparity_grid, create_datasets_from_inputs
 from pandora2d.margins import Margins
+from pandora2d.common import get_disparity_grids
 
 
 @pytest.mark.parametrize(
@@ -1030,6 +1031,141 @@ class TestDisparityGrid:
 
         assert np.all(result == 0)
         assert mock_set_out_of_disparity_range_to_nan.called
+
+    @pytest.fixture
+    def correct_input_with_disparity_grid(self, left_img_path, right_img_path, correct_grid, second_correct_grid):
+        """
+        Returns correct input configuration with disparity grids
+        """
+
+        return {
+            "left": {
+                "img": left_img_path,
+                "nodata": -9999,
+            },
+            "right": {
+                "img": right_img_path,
+                "nodata": -9999,
+            },
+            "row_disparity": correct_grid,
+            "col_disparity": second_correct_grid,
+        }
+
+    def get_outside_disparity_mask(
+        self,
+        disp_row_coords,
+        disp_col_coords,
+        refinement_margins,
+        min_disp_row,
+        max_disp_row,
+        min_disp_col,
+        max_disp_col,
+    ):
+        """
+        Get a mask of the disparities that are outside the disparity range defined
+        by min_disp_row, max_disp_row, min_disp_col and max_disp_col grids (to which we add the refinement margins).
+        """
+        disp_row = disp_row_coords[None, None, :, None]
+        disp_col = disp_col_coords[None, None, None, :]
+
+        min_disp_col -= refinement_margins.left
+        min_disp_row -= refinement_margins.up
+        max_disp_col += refinement_margins.right
+        max_disp_row += refinement_margins.down
+
+        return (
+            (disp_row < min_disp_row[..., None, None])
+            | (disp_row > max_disp_row[..., None, None])
+            | (disp_col < min_disp_col[..., None, None])
+            | (disp_col > max_disp_col[..., None, None])
+        )
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-2"])
+    @pytest.mark.parametrize(
+        ["step", "subpix", "roi", "refinement_margins"],
+        [
+            pytest.param(
+                [1, 1],
+                1,
+                None,
+                Margins(0, 0, 0, 0),
+                id="Classic case",
+            ),
+            pytest.param(
+                [1, 1],
+                1,
+                {"col": {"first": 2, "last": 14}, "row": {"first": 3, "last": 12}, "margins": [1, 2, 1, 2]},
+                Margins(1, 2, 1, 2),
+                id="ROI case",
+            ),
+            pytest.param(
+                [1, 1],
+                2,
+                {"col": {"first": 2, "last": 14}, "row": {"first": 3, "last": 12}, "margins": [1, 2, 1, 2]},
+                Margins(1, 1, 3, 3),
+                id="Subpix=2",
+            ),
+            pytest.param(
+                [2, 3],
+                1,
+                {"col": {"first": 2, "last": 14}, "row": {"first": 3, "last": 12}, "margins": [1, 2, 1, 2]},
+                Margins(1, 1, 1, 1),
+                id="Step=[2,3]",
+            ),
+        ],
+    )
+    def test_only_user_disparities_computed(
+        self,
+        correct_input_with_disparity_grid,
+        matching_cost_config,
+        matching_cost_object,
+        roi,
+        refinement_margins,
+        monkeypatch,
+    ):
+        """
+        Test that only the user disparities are computed in the cost volumes.
+        """
+
+        cfg = {"input": correct_input_with_disparity_grid, "pipeline": {"matching_cost": matching_cost_config}}
+        if roi is not None:
+            cfg["ROI"] = roi
+
+        img_left, img_right = create_datasets_from_inputs(correct_input_with_disparity_grid, roi=roi)
+
+        matching_cost_matcher = matching_cost_object(matching_cost_config)
+
+        matching_cost_matcher.allocate(img_left=img_left, img_right=img_right, cfg=cfg, margins=refinement_margins)
+
+        # We bypass set_out_of_row_disparity_range_to_other_value to check that
+        # out of user range disparity values are not computed
+        # (i.e. cost_volume value is 0 for these disparities).
+        monkeypatch.setattr(
+            matching_cost_matcher,
+            "set_out_of_disparity_range_to_other_value",
+            lambda *args, **kwargs: None,
+        )
+
+        cost_volumes = matching_cost_matcher.compute_cost_volumes(
+            img_left=img_left, img_right=img_right, margins=refinement_margins
+        )
+
+        min_disp_row, max_disp_row, min_disp_col, max_disp_col = get_disparity_grids(
+            img_left, (matching_cost_matcher.cost_volumes.row.values, matching_cost_matcher.cost_volumes.col.values)
+        )
+
+        outside_disp_mask = self.get_outside_disparity_mask(
+            cost_volumes.disp_row.values,
+            cost_volumes.disp_col.values,
+            refinement_margins,
+            min_disp_row,
+            max_disp_row,
+            min_disp_col,
+            max_disp_col,
+        )
+
+        # We check that all outside disparity range values are not computed
+        assert np.all(cost_volumes["cost_volumes"].values[outside_disp_mask] == 0)
 
 
 @pytest.fixture()

@@ -88,10 +88,7 @@ struct TypeStruct {
 
 TYPE_TO_STRING_AS("Float", TypeStruct<float, P2d::Vectorf, P2d::Matrixf>);
 
-TEST_CASE_TEMPLATE("Test Entropy1D",
-                   T,
-                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>
-		   ) {
+TEST_CASE_TEMPLATE("Test Entropy1D", T, TypeStruct<float, P2d::Vectorf, P2d::Matrixf>) {
   using Type = typename T::Type;
   using VectorType = typename T::VectorType;
   using MatrixType = typename T::MatrixType;
@@ -158,10 +155,7 @@ TEST_CASE_TEMPLATE("Test Entropy1D",
   }
 }
 
-TEST_CASE_TEMPLATE("Test Entropy2D",
-                   T,
-                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>
-		   ) {
+TEST_CASE_TEMPLATE("Test Entropy2D", T, TypeStruct<float, P2d::Vectorf, P2d::Matrixf>) {
   using Type = typename T::Type;
   using VectorType = typename T::VectorType;
   using MatrixType = typename T::MatrixType;
@@ -228,10 +222,7 @@ TEST_CASE_TEMPLATE("Test Entropy2D",
   }
 }
 
-TEST_CASE_TEMPLATE("Test MutualInformation",
-                   T,
-                   TypeStruct<float, P2d::Vectorf, P2d::Matrixf>
-		   ) {
+TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, P2d::Matrixf>) {
   using Type = typename T::Type;
   using VectorType = typename T::VectorType;
   using MatrixType = typename T::MatrixType;

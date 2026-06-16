@@ -102,7 +102,8 @@ class Ambiguity(CostVolumeConfidence):
             cost_volumes_to_use = cost_volumes
 
         # Using Pandora to perform calculations on columns only
-        etas = np.arange(self._eta_min, self._eta_max, self._eta_step)  # type: np.ndarray
+        # Cast to float to avoid mypy error
+        etas = np.arange(self._eta_min, float(self._eta_max), float(self._eta_step))  # type: np.ndarray
         nbr_etas = etas.shape[0]
         nbr_row = cost_volumes_to_use.sizes["row"]
         nbr_col = cost_volumes_to_use.sizes["col"]

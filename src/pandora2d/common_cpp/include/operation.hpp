@@ -26,7 +26,6 @@ This module contains functions, struct and other elements associated to the matc
 
 #include "pandora2d_type.hpp"
 
-
 /**
  * @brief Variance with Eigen matrix
  * Method used to center the histogram

@@ -29,6 +29,7 @@ from json_checker import And
 from pandora2d.img_tools import shift_subpix_img_2d
 from pandora2d.margins import Margins, UniformMargins
 from pandora2d.matching_cost.registry import MatchingCostRegistry
+from pandora2d.common import get_disparity_grids
 
 from ..common_cpp import common_bind
 from ..matching_cost_cpp import matching_cost_bind
@@ -108,9 +109,23 @@ class CorrelationMethods(BaseMatchingCost):
         else:
             raise TypeError("Cost volume must be in np.float32 or np.float64")
 
+        cv_coords = (self.cost_volumes.row.values, self.cost_volumes.col.values)
+
+        min_disp_row, max_disp_row, min_disp_col, max_disp_col = get_disparity_grids(img_left, cv_coords)
+
+        if margins is not None:
+            min_disp_row -= margins.up
+            max_disp_row += margins.down
+            min_disp_col -= margins.left
+            max_disp_col += margins.right
+
         # Call compute_cost_volumes_cpp
         compute_cost_volumes_cpp(
             img_left["im"].data,
+            min_disp_row,
+            max_disp_row,
+            min_disp_col,
+            max_disp_col,
             imgs_right,
             self.cost_volumes["cost_volumes"].data,
             self.cost_volumes["criteria"].data,

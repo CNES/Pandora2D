@@ -86,9 +86,10 @@ def pytest_html_results_table_row(report, cells):
     type_dict = {"unit": "TU", "functional": "TF", "resource": "TR", "performance": "TP"}
     pattern = r"tests/(?P<type>\w+)_tests.*test_(?P<function>\w+)\.py"
     match = re.match(pattern, report.nodeid)
-    cells.insert(1, f"<td>{type_dict[match.groupdict()['type']]}</td>")
-    cells.insert(2, f"<td>{match.groupdict()['function']}</td>")
-    cells.insert(3, f"<td>{'<br>'.join(report.requirement)}</td>")
+    cells.insert(1, f'<td>{type_dict[match.groupdict()["type"]]}</td>')
+    cells.insert(2, f'<td>{match.groupdict()["function"]}</td>')
+    requirement = "<br>".join(report.requirement)
+    cells.insert(3, f"<td>{requirement}</td>")
 
 
 @pytest.hookimpl(hookwrapper=True)

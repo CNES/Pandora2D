@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.1 (June 2026)
+
+### Added
+
+- Added Digital Object Identifier in README.md. [#461]
+- Added functional tests for JSON files re-entry. [#416]
+
+### Fixed
+
+- Fixed the reading of the initial disparity grid when using an ROI. [#421]
+- Fixed the use of segment mode with the re-entry of disparity maps. [#469]
+- Fixed number of computed disparities with variable initial disparity. [#468]
+
 ## 1.1.0 (April 2026)
 
 ### Added

@@ -30,7 +30,8 @@ This module contains functions associated to the binding pybind of cpp cost volu
 using namespace pybind11::literals;
 
 PYBIND11_MODULE(matching_cost_bind, m) {
-  m.def("compute_cost_volumes_cpp_float", &compute_cost_volumes_cpp<float>, "left"_a, "right"_a,
+  m.def("compute_cost_volumes_cpp_float", &compute_cost_volumes_cpp<float>, "left"_a,
+        "min_disp_row"_a, "max_disp_row"_a, "min_disp_col"_a, "max_disp_col"_a, "right"_a,
         "cv_values"_a, "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
         "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a,
         "matching_cost_method"_a,
@@ -39,6 +40,14 @@ PYBIND11_MODULE(matching_cost_bind, m) {
 
             :param left: left image
             :type left: NDArray[np.float32]
+            :param min_disp_row: minimum row disparity grid
+            :type min_disp_row: NDArray[np.float32]
+            :param max_disp_row: maximum row disparity grid
+            :type max_disp_row: NDArray[np.float32]
+            :param min_disp_col: minimum col disparity grid
+            :type min_disp_col: NDArray[np.float32]
+            :param max_disp_col: maximum col disparity grid
+            :type max_disp_col: NDArray[np.float32]
             :param right: list of right images
             :type right: List[NDArray[np.float32]]
             :param cv_values:  cost volumes initialized values
@@ -63,7 +72,8 @@ PYBIND11_MODULE(matching_cost_bind, m) {
             :type matching_cost_method: string
             )mydelimiter");
 
-  m.def("compute_cost_volumes_cpp_double", &compute_cost_volumes_cpp<double>, "left"_a, "right"_a,
+  m.def("compute_cost_volumes_cpp_double", &compute_cost_volumes_cpp<double>, "left"_a,
+        "min_disp_row"_a, "max_disp_row"_a, "min_disp_col"_a, "max_disp_col"_a, "right"_a,
         "cv_values"_a, "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
         "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a,
         "matching_cost_method"_a,
@@ -72,6 +82,14 @@ PYBIND11_MODULE(matching_cost_bind, m) {
 
             :param left: left image
             :type left: NDArray[np.float32]
+            :param min_disp_row: minimum row disparity
+            :type min_disp_row: NDArray[np.float32]
+            :param max_disp_row: maximum row disparity
+            :type max_disp_row: NDArray[np.float32]
+            :param min_disp_col: minimum column disparity
+            :type min_disp_col: NDArray[np.float32]
+            :param max_disp_col: maximum column disparity
+            :type max_disp_col: NDArray[np.float32]
             :param right: list of right images
             :type right: List[NDArray[np.float32]]
             :param cv_values:  cost volumes initialized values

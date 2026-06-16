@@ -44,7 +44,7 @@ class Bicubic(AbstractFilter):
 
         self.schema = {"method": "bicubic"}
         super().__init__(cfg)
-        self.cpp_instance = interpolation_filter_bind.Bicubic()
+        self.cpp_instance: interpolation_filter_bind.Bicubic = interpolation_filter_bind.Bicubic()
 
     @property
     def margins(self):

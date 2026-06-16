@@ -47,7 +47,7 @@ class AbstractEstimation:
 
     estimation_methods_avail: dict = {}
     _estimation_method = None
-    cfg = None
+    cfg: dict | None = None
 
     def __new__(cls, cfg: dict | None = None):
         """

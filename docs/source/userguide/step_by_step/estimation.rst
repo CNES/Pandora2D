@@ -100,3 +100,9 @@ Outputs:
 - Showed in log in verbose mode
 - Written in the output configuration file
 - Stored in the inputs_dataset
+
+.. warning::
+
+    The output configuration file generated after an estimation pipeline **cannot be used as input for a new run**.
+    The keys ``estimated_shifts``, ``phase_diff`` and ``error`` written into the output configuration
+    are not valid inputs for the estimation schema, and will cause a validation error on re-execution.
