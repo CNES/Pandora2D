@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.1.2.dev0 (June 2026)
+
+### Added
+
+- Added check configuration for multiscale mode. [#365]
+- Added least squares resolution implementation. [#367]
+- Added the loop that calls pandora2d. [#368]
+- Added compression factor to prevent numerical instability. [#380]
+- Added mesh in multiscale configuration. [#381]
+- Added mesh in multiscale computation. [#382]
+- Added the option to use different pandora2d configurations for different resolutions. [#384]
+- Added documentation for multiscale mode. [#374]
+- Added input masks to multiscale configuration. [#443]
+- Added new criteria for invalid meshes. [#445]
+
+### Changed
+
+- Updated multiscale documentation after adding masks. [#446]
+
 ## 1.1.1 (June 2026)
 
 ### Added
