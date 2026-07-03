@@ -93,7 +93,7 @@ CorrelationFunction<T> calculate_correlation(const std::string& method) {
   if (it != method_map.end()) {
     return it->second;
   }
-  return calculate_zncc_opt2<T>;
+  throw std::invalid_argument("Unknown correlation method: " + method);
 }
 
 /**
