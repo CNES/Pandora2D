@@ -107,7 +107,7 @@ class Dichotomy(refinement.AbstractRefinement):
         criteria_map = (
             (disp_map["validity"].sel(criteria="partial_validity_mask") == 1).astype(int)  # select invalids
             | disp_map["validity"].sel(criteria=Criteria.P2D_PEAK_ON_EDGE.name)
-        ).data
+        ).data.astype(np.uint8)
 
         subpixel = cost_volumes.attrs["subpixel"]
         cost_volume_type = cost_volumes["cost_volumes"].data.dtype
