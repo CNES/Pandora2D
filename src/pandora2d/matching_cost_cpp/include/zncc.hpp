@@ -75,7 +75,7 @@ inline P2d::Matrixf shift_image(const P2d::Matrixf& image, int disp_row, int dis
  * @param integral_image_sq integral of squared image to complete
  */
 template <typename T>
-void compute_integral_image(const P2d::Matrixf& image,
+void compute_integral_image(const Eigen::Ref<const P2d::Matrixf>& image,
                             P2d::MatrixX<T>& integral_image,
                             P2d::MatrixX<T>& integral_image_sq) {
   int rows = image.rows();
@@ -138,7 +138,7 @@ inline T sum_window(const P2d::MatrixX<T>& integral, int top, int left, int bott
  * @param integral_cross product of left and right integral image to complete
  */
 template <typename T>
-inline void compute_right_integrals(const P2d::Matrixf& left,
+inline void compute_right_integrals(const Eigen::Ref<const P2d::Matrixf>& left,
                                     const P2d::Matrixf& shifted_right,
                                     P2d::MatrixX<T>& integral_right,
                                     P2d::MatrixX<T>& integral_right_sq,

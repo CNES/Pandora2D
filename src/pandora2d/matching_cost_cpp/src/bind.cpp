@@ -30,7 +30,7 @@ This module contains functions associated to the binding pybind of cpp cost volu
 using namespace pybind11::literals;
 
 PYBIND11_MODULE(matching_cost_bind, m) {
-  m.def("compute_cost_volumes_cpp_float", &compute_cost_volumes_cpp<float>, "left"_a,
+  m.def("compute_cost_volumes_cpp_float", &compute_cost_volumes_cpp<float>, "left"_a.noconvert(),
         "min_disp_row"_a, "max_disp_row"_a, "min_disp_col"_a, "max_disp_col"_a, "right"_a,
         "cv_values"_a, "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
         "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a,
@@ -72,7 +72,7 @@ PYBIND11_MODULE(matching_cost_bind, m) {
             :type matching_cost_method: string
             )mydelimiter");
 
-  m.def("compute_cost_volumes_cpp_double", &compute_cost_volumes_cpp<double>, "left"_a,
+  m.def("compute_cost_volumes_cpp_double", &compute_cost_volumes_cpp<double>, "left"_a.noconvert(),
         "min_disp_row"_a, "max_disp_row"_a, "min_disp_col"_a, "max_disp_col"_a, "right"_a,
         "cv_values"_a, "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
         "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a,

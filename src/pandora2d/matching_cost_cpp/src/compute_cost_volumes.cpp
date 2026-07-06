@@ -35,7 +35,10 @@ This module contains functions associated to the computation of cost volumes in 
  * @param index_col col index of the center of the window
  * @return P2d::Matrixf
  */
-P2d::Matrixf get_window(const P2d::Matrixf& image, int window_size, int index_row, int index_col) {
+P2d::Matrixf get_window(const Eigen::Ref<const P2d::Matrixf>& image,
+                        int window_size,
+                        int index_row,
+                        int index_col) {
   // Constant to use, ZERO is required for std::min / std::max
   const Eigen::Index offset = static_cast<Eigen::Index>(window_size) / 2;
   const Eigen::Index zero = 0;
