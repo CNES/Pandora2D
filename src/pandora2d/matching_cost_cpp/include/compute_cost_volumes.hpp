@@ -72,25 +72,28 @@ bool all_non_zero_elements(const P2d::MatrixUI& mat);
 int disparity_index(const P2d::VectorD& disp_range, float disp_val);
 
 /**
- * @brief Compute correlation between two images (left_image and right_image)
- * The method is provided by "method" string
- *
- * @param method correlation method
- * @param left_image left image
- * @param right_image right image
- * @return correlation value
+ * @brief Correlation function type: takes two image windows and returns a cost value
  */
 template <typename T>
-T calculate_correlation(const std::string& method,
-                        const P2d::Matrixf& left_image,
-                        const P2d::Matrixf& right_image) {
-  // Compute correlation between left and right image
+using CorrelationFunction = std::function<T(const P2d::Matrixf&, const P2d::Matrixf&)>;
 
-  if (method == "mutual_information") {
-    return calculate_mutual_information<T>(left_image, right_image);
-  } else {  // Default targets ZNCC
-    return calculate_zncc_opt2<T>(left_image, right_image);
+/**
+ * @brief Return the correlation function corresponding to the given method
+ *
+ * @param method correlation method ("mutual_information" or "zncc-optim-2")
+ * @return CorrelationFunction<T> pointer to the matching cost function
+ */
+template <typename T>
+CorrelationFunction<T> calculate_correlation(const std::string& method) {
+  static const std::map<std::string, CorrelationFunction<T>> method_map = {
+      {"mutual_information", calculate_mutual_information<T>},
+      {"zncc-optim-2", calculate_zncc_opt2<T>},
+  };
+  auto it = method_map.find(method);
+  if (it != method_map.end()) {
+    return it->second;
   }
+  throw std::invalid_argument("Unknown correlation method: " + method);
 }
 
 /**
@@ -130,6 +133,8 @@ void compute_cost_volumes_loop(const P2d::Matrixf& left,
                                int window_size,
                                const Eigen::Vector2i& step,
                                const std::string matching_cost_method) {
+  auto correlation_fn = calculate_correlation<T>(matching_cost_method);
+
   P2d::Matrixf left_window;
   P2d::Matrixf right_window;
   int ind_cv;
@@ -185,8 +190,7 @@ void compute_cost_volumes_loop(const P2d::Matrixf& left,
                          offset_cv_img_row + row * step[0] + floor(disp_range_row[d_row]),
                          offset_cv_img_col + col * step[1] + floor(disp_range_col[d_col]));
 
-          cv_mutable_view(row, col, d_row, d_col) =
-              calculate_correlation<T>(matching_cost_method, left_window, right_window);
+          cv_mutable_view(row, col, d_row, d_col) = correlation_fn(left_window, right_window);
         }
       }
     }
