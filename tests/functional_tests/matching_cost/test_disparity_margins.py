@@ -42,7 +42,7 @@ class TestDisparityMargins:
         Creates left and right datasets
         """
 
-        data = np.full((10, 10), 1)
+        data = np.full((10, 10), 1, dtype=np.float32)
         left = xr.Dataset(
             {"im": (["row", "col"], data)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
@@ -60,7 +60,7 @@ class TestDisparityMargins:
             }
         )
 
-        data = np.full((10, 10), 1)
+        data = np.full((10, 10), 1, dtype=np.float32)
         right = xr.Dataset(
             {"im": (["row", "col"], data)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},

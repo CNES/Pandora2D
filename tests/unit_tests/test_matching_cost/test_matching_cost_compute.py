@@ -244,7 +244,7 @@ def test_compute_cv_zncc(matching_cost_config, matching_cost_object):
     """
     data = np.array(
         ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
-        dtype=np.float64,
+        dtype=np.float32,
     )
     mask = np.array(
         ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
@@ -264,7 +264,7 @@ def test_compute_cv_zncc(matching_cost_config, matching_cost_object):
 
     data = np.array(
         ([[1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
-        dtype=np.float64,
+        dtype=np.float32,
     )
     mask = np.array(
         ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
@@ -433,7 +433,7 @@ def right_dataset(make_dataset, right_data):
                     [1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             np.array(
                 [
@@ -443,7 +443,7 @@ def right_dataset(make_dataset, right_data):
                     [1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             id="Row shift",
         ),
@@ -456,7 +456,7 @@ def right_dataset(make_dataset, right_data):
                     [1, 4, 1, 1, 1],
                     [1, 5, 1, 1, 1],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             np.array(
                 [
@@ -466,11 +466,11 @@ def right_dataset(make_dataset, right_data):
                     [1, 1, 1, 4, 1],
                     [1, 1, 1, 5, 1],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             id="Col shift",
         ),
-        pytest.param(np.full((7, 6), 50), np.full((7, 6), 50), id="Correlated"),
+        pytest.param(np.full((7, 6), 50, dtype=np.float32), np.full((7, 6), 50, dtype=np.float32), id="Correlated"),
         pytest.param(
             np.array(
                 [
@@ -480,7 +480,7 @@ def right_dataset(make_dataset, right_data):
                     [4, 4, 4, 4, 4],
                     [4, 4, 4, 4, 4],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             np.array(
                 [
@@ -490,7 +490,7 @@ def right_dataset(make_dataset, right_data):
                     [6, 6, 6, 6, 6],
                     [6, 6, 6, 6, 6],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             id="Anti-correlated",
         ),
@@ -1186,8 +1186,8 @@ class TestSubpix:
                     "subpix": 1,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (10, 10, 3, 5),  # (row, col, disp_row, disp_col)
                 np.arange(3),  # [0, 1, 2]
@@ -1200,8 +1200,8 @@ class TestSubpix:
                     "subpix": 2,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (10, 10, 5, 9),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2]
@@ -1214,8 +1214,8 @@ class TestSubpix:
                     "subpix": 2,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (5, 4, 5, 9),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2] # step has no influence on subpix disparity range
@@ -1228,8 +1228,8 @@ class TestSubpix:
                     "subpix": 4,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (10, 10, 9, 17),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.25, 0.25),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -1244,8 +1244,8 @@ class TestSubpix:
                     "subpix": 4,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (4, 5, 9, 17),  # (row, col, disp_row, disp_col)
                 np.arange(
@@ -1779,7 +1779,7 @@ class TestDisparityMargins:
         Creates left and right datasets
         """
 
-        data = np.full((5, 5), 1)
+        data = np.full((5, 5), 1, dtype=np.float32)
         left = xr.Dataset(
             {"im": (["row", "col"], data)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
@@ -1796,7 +1796,7 @@ class TestDisparityMargins:
             }
         )
 
-        data = np.full((5, 5), 1)
+        data = np.full((5, 5), 1, dtype=np.float32)
         right = xr.Dataset(
             {"im": (["row", "col"], data)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
