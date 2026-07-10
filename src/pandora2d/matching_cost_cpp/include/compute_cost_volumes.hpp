@@ -41,7 +41,10 @@ This module contains functions associated to the computation of cost volumes in 
  * @param index_col col index of the center of the window
  * @return P2d::Matrixf
  */
-P2d::Matrixf get_window(const P2d::Matrixf& image, int window_size, int index_row, int index_col);
+P2d::Matrixf get_window(const Eigen::Ref<const P2d::Matrixf>& image,
+                        int window_size,
+                        int index_row,
+                        int index_col);
 
 /**
  * @brief Get the index corresponding to the correct interpolated right image
@@ -117,7 +120,7 @@ CorrelationFunction<T> calculate_correlation(const std::string& method) {
  * @param matching_cost_method is the method used within the loop
  */
 template <typename T>
-void compute_cost_volumes_loop(const P2d::Matrixf& left,
+void compute_cost_volumes_loop(const Eigen::Ref<const P2d::Matrixf>& left,
                                const py::array_t<float>& min_disp_row,
                                const py::array_t<float>& max_disp_row,
                                const py::array_t<float>& min_disp_col,
@@ -218,7 +221,7 @@ void compute_cost_volumes_loop(const P2d::Matrixf& left,
  * @param matching_cost_method unused, template of the main function
  */
 template <typename T>
-void compute_zncc_cv_opt1(const P2d::Matrixf& left,
+void compute_zncc_cv_opt1(const Eigen::Ref<const P2d::Matrixf>& left,
                           const py::array_t<float>& min_disp_row,
                           const py::array_t<float>& max_disp_row,
                           const py::array_t<float>& min_disp_col,
@@ -318,11 +321,11 @@ void compute_zncc_cv_opt1(const P2d::Matrixf& left,
  * @brief Methods used to compute the cost values
  */
 template <typename T>
-using ComputeFunction = std::function<void(const P2d::Matrixf&,
-                                           const py::array_t<float>& min_disp_row,
-                                           const py::array_t<float>& max_disp_row,
-                                           const py::array_t<float>& min_disp_col,
-                                           const py::array_t<float>& max_disp_col,
+using ComputeFunction = std::function<void(const Eigen::Ref<const P2d::Matrixf>&,
+                                           const py::array_t<float>&,
+                                           const py::array_t<float>&,
+                                           const py::array_t<float>&,
+                                           const py::array_t<float>&,
                                            const std::vector<P2d::Matrixf>&,
                                            py::array_t<T>&,
                                            const py::array_t<uint8_t>&,
@@ -356,7 +359,7 @@ using ComputeFunction = std::function<void(const P2d::Matrixf&,
  * @param method method used to compute cost values
  */
 template <typename T>
-void compute_cost_volumes_cpp(const P2d::Matrixf& left,
+void compute_cost_volumes_cpp(const Eigen::Ref<const P2d::Matrixf>& left,
                               const py::array_t<float>& min_disp_row,
                               const py::array_t<float>& max_disp_row,
                               const py::array_t<float>& min_disp_col,
