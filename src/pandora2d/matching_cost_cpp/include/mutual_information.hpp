@@ -40,7 +40,7 @@ template <typename T, typename U>
 T get_entropy(const T nb_pixel, const U& hist) {
   T entropy = 0.0;
 
-  for (auto bin_value : hist.values().reshaped()) {
+  for (auto bin_value : hist.values().template reshaped<Eigen::RowMajor>()) {
     if (bin_value != 0.) {
       entropy -= bin_value / nb_pixel * std::log2(bin_value / nb_pixel);
     }
@@ -48,42 +48,6 @@ T get_entropy(const T nb_pixel, const U& hist) {
 
   // Entropy cannot be negative
   return entropy < 0. ? 0. : entropy;
-};
-
-/**
- * @brief Compute entropy 1D of an image
- *
- * Entropy1D(img) = - sum(bin_value/nb_pixel * log2(bin_value/nb_pixel))
- * for each bin_value in Hist1D(img)
- *
- * @param image
- * @return T entropy1D
- */
-template <typename T>
-T calculate_entropy1D(const P2d::Matrixf& image) {
-  auto nb_pixel = static_cast<T>(image.size());
-  auto hist_1D = calculate_histogram1D<T>(image);
-
-  return get_entropy<T, Histogram1D<T>>(nb_pixel, hist_1D);
-};
-
-/**
- * @brief Compute entropy 2D of two images
- *
- * Entropy2D(img_l, img_r) = - sum(bin_value/nb_pixel * log2(bin_value/nb_pixel))
- * for each bin_value in Hist2D(img_l, img_r)
- *
- * @param left_image left image
- * @param right_image right image
- * @return T entropy 2D
- */
-template <typename T>
-T calculate_entropy2D(const P2d::Matrixf& left_image, const P2d::Matrixf& right_image) {
-  // same size for left and right images
-  auto nb_pixel = static_cast<T>(left_image.size());
-  auto hist_2D = calculate_histogram2D<T>(left_image, right_image);
-
-  return get_entropy<T, Histogram2D<T>>(nb_pixel, hist_2D);
 };
 
 /**
@@ -97,10 +61,19 @@ T calculate_entropy2D(const P2d::Matrixf& left_image, const P2d::Matrixf& right_
  */
 template <typename T>
 T calculate_mutual_information(const P2d::Matrixf& left_image, const P2d::Matrixf& right_image) {
-  T mutual_information = calculate_entropy1D<T>(left_image) + calculate_entropy1D<T>(right_image) -
-                         calculate_entropy2D<T>(left_image, right_image);
+  auto nb_pixel = static_cast<T>(left_image.size());
 
-  return mutual_information;
+  // We calculate the histograms to avoid allocating them twice in the entropy functions
+  auto hist_left = calculate_histogram1D<T>(left_image);
+  auto hist_right = calculate_histogram1D<T>(right_image);
+
+  T entropy_l = get_entropy<T, Histogram1D<T>>(nb_pixel, hist_left);
+  T entropy_r = get_entropy<T, Histogram1D<T>>(nb_pixel, hist_right);
+
+  auto hist_2d = calculate_histogram2D<T>(left_image, right_image, hist_left, hist_right);
+  T entropy_2d = get_entropy<T, Histogram2D<T>>(nb_pixel, hist_2d);
+
+  return entropy_l + entropy_r - entropy_2d;
 }
 
 #endif

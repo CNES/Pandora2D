@@ -86,28 +86,30 @@ class Histogram2D {
  *
  * @param left_image : left image
  * @param right_image : right image
+ * @param hist_left : Histogram1D of left image previously computed
+ * @param hist_right : Histogram1D of right image previously computed
  * @return Histogram2D
  */
 template <typename T>
 Histogram2D<T> calculate_histogram2D(const P2d::Matrixf& left_image,
-                                     const P2d::Matrixf& right_image) {
-  auto hist_l = Histogram1D<T>(left_image);
-  auto hist_r = Histogram1D<T>(right_image);
-  P2d::MatrixX<T> values = P2d::MatrixX<T>::Zero(hist_l.nb_bins(), hist_r.nb_bins());
+                                     const P2d::Matrixf& right_image,
+                                     const Histogram1D<T>& hist_left,
+                                     const Histogram1D<T>& hist_right) {
+  P2d::MatrixX<T> values = P2d::MatrixX<T>::Zero(hist_left.nb_bins(), hist_right.nb_bins());
   auto pixel_l = left_image.data();
   auto pixel_r = right_image.data();
-  auto nb_bins_l = static_cast<int>(hist_l.nb_bins());
-  auto nb_bins_r = static_cast<int>(hist_r.nb_bins());
+  auto nb_bins_l = static_cast<int>(hist_left.nb_bins());
+  auto nb_bins_r = static_cast<int>(hist_right.nb_bins());
   for (; pixel_l != (left_image.data() + left_image.size()); ++pixel_l, ++pixel_r) {
     auto index_l = std::max(
-        0, std::min(static_cast<int>((*pixel_l - hist_l.low_bound()) / hist_l.bins_width()),
+        0, std::min(static_cast<int>((*pixel_l - hist_left.low_bound()) / hist_left.bins_width()),
                     nb_bins_l - 1));
     auto index_r = std::max(
-        0, std::min(static_cast<int>((*pixel_r - hist_r.low_bound()) / hist_r.bins_width()),
+        0, std::min(static_cast<int>((*pixel_r - hist_right.low_bound()) / hist_right.bins_width()),
                     nb_bins_r - 1));
     values(index_l, index_r) += 1;
   }
-  return Histogram2D(values, hist_l, hist_r);
+  return Histogram2D(values, hist_left, hist_right);
 }
 
 #endif

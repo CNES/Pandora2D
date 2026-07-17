@@ -76,10 +76,13 @@ TEST_CASE_TEMPLATE("Test calculate_histogram2D function", T, TypePair<float, P2d
 
     right << 1, 1, 2, 3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 3, 3, 3;
 
+    Histogram1D hist_left = calculate_histogram1D<Type>(left);
+    Histogram1D hist_right = calculate_histogram1D<Type>(right);
+
     MatrixType expected_values(2, 2);
     expected_values << 8, 4, 0, 4;
 
-    Histogram2D hist = calculate_histogram2D<Type>(left, right);
+    Histogram2D hist = calculate_histogram2D<Type>(left, right, hist_left, hist_right);
     check_inside_eigen_element<MatrixType>(hist.values(), expected_values);
   }
 
@@ -91,10 +94,13 @@ TEST_CASE_TEMPLATE("Test calculate_histogram2D function", T, TypePair<float, P2d
 
     right << 1., 2., 3., 4., 2., 2., 2., 2., 4., 3., 2., 1., 1., 3., 3., 3.;
 
+    Histogram1D hist_left = calculate_histogram1D<Type>(left);
+    Histogram1D hist_right = calculate_histogram1D<Type>(right);
+
     MatrixType expected_values(3, 3);
     expected_values << 1, 3, 1, 0, 5, 1, 2, 3, 0;
 
-    Histogram2D hist = calculate_histogram2D<Type>(left, right);
+    Histogram2D hist = calculate_histogram2D<Type>(left, right, hist_left, hist_right);
     check_inside_eigen_element<MatrixType>(hist.values(), expected_values);
   }
 
@@ -102,7 +108,9 @@ TEST_CASE_TEMPLATE("Test calculate_histogram2D function", T, TypePair<float, P2d
     // Created images img_l and img_r produce histogram1D with 120 bins.
     auto img_l = create_image<Type>(std::size_t(81), 0., 0.5);
     auto img_r = create_image<Type>(std::size_t(81), 0., 0.5);
-    auto hist2d = calculate_histogram2D<Type>(img_l, img_r);
+    auto hist_left = calculate_histogram1D<Type>(img_l);
+    auto hist_right = calculate_histogram1D<Type>(img_r);
+    auto hist2d = calculate_histogram2D<Type>(img_l, img_r, hist_left, hist_right);
 
     // As the number of bins of the two histograms 1D is initially greater than NB_BINS_MAX,
     // it is fixed to 100 bins for each histogram 1D.
