@@ -24,6 +24,8 @@ This module contains functions associated to the mutual information in cpp.
 #ifndef MUTUAL_INFORMATION_HPP
 #define MUTUAL_INFORMATION_HPP
 
+#include <optional>
+
 #include "histogram1D.hpp"
 #include "histogram2D.hpp"
 #include "pandora2d_type.hpp"
@@ -75,5 +77,55 @@ T calculate_mutual_information(const P2d::Matrixf& left_image, const P2d::Matrix
 
   return entropy_l + entropy_r - entropy_2d;
 }
+
+/**
+ * @brief Mutual information correlator
+ */
+template <typename T>
+struct MutualInformationCorrelator {
+  // Pointer to the current left window
+  const P2d::Matrixf* left_window = nullptr;
+  // We use std::optional because Histogram1D does not have a default constructor
+  std::optional<Histogram1D<T>> hist_left;
+  // Initialized entropy of the left window
+  T entropy_left{};
+  // Initialized number of pixels in the windows
+  T nb_pixel{};
+
+  /**
+   * @brief Prepare the mutual information correlator for the left window.
+   *
+   * This function calculates and stores the histogram and entropy of the left window.
+   *
+   * @param new_left_window The new left image window
+   */
+  void prepare_left_window(const P2d::Matrixf& new_left_window) {
+    left_window = &new_left_window;
+    hist_left = calculate_histogram1D<T>(new_left_window);
+    nb_pixel = static_cast<T>(new_left_window.size());
+    entropy_left = get_entropy<T, Histogram1D<T>>(nb_pixel, *hist_left);
+  }
+
+  /**
+   * @brief Compute the mutual information between the prepared left window and a right window.
+   *
+   * This function calculates the mutual information using the stored histogram and entropy of the
+   * left window and computes the histogram and entropy of the right window.
+   *
+   * MutualInformation(img_l,img_r) = Entropy1D(img_l) + Entropy1D(img_r) - Entropy2D(img_l, img_r)
+   *
+   * @param right_window The right image window
+   * @return T The mutual information value
+   */
+  T operator()(const P2d::Matrixf& right_window) const {
+    Histogram1D<T> hist_right = calculate_histogram1D<T>(right_window);
+    T entropy_right = get_entropy<T, Histogram1D<T>>(nb_pixel, hist_right);
+
+    auto hist_2d = calculate_histogram2D<T>(*left_window, right_window, *hist_left, hist_right);
+    T entropy_2d = get_entropy<T, Histogram2D<T>>(nb_pixel, hist_2d);
+
+    return entropy_left + entropy_right - entropy_2d;
+  }
+};
 
 #endif

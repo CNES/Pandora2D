@@ -270,4 +270,76 @@ inline T calculate_zncc_opt2(const P2d::Matrixf& left_image, const P2d::Matrixf&
          std::sqrt(var_left_wa * var_right_wa);
 }
 
+/**
+ * @brief ZNCC optimisation 2 correlator
+ *
+ * Both prepare_left_window() and operator() compute a sum and a variance from the
+ * window they are given, using this formula :
+ *
+ * variance = sum.^2 / num_elem - (sum / num_elem )^2
+ * num_elem * variance = sum.^2 - sum*sum / num_elem
+ * NOTE: sum.^2 is the sum of the squared elements, sum*sum is the final sum squared
+ *
+ * To avoid very small values, we store window_area * variance.
+ * Type T is imposed to not interpret the formula.
+ *
+ */
+template <typename T>
+struct ZnccOpt2Correlator {
+  // Pointer to the current left window
+  const P2d::Matrixf* left_window = nullptr;
+  // Initialized left sum and variance
+  T sum_left_T{};
+  T var_left_wa{};
+  // Initialized window area
+  Eigen::Index window_area{};
+
+  /**
+   * @brief Prepare the ZNCC optimisation 2 correlator for the left window.
+   *
+   * This function calculates and stores the sum and variance of the left window.
+   *
+   * @param new_left_window The new left image window
+   */
+  void prepare_left_window(const P2d::Matrixf& new_left_window) {
+    left_window = &new_left_window;
+    window_area = new_left_window.size();
+
+    // Compute left sums (for the means), coefficient-wise / cross product (for the covariance)
+    // and left squared sums (for the variances) w.r.t. the images
+    auto sum_left = new_left_window.sum();
+    auto sum_left_sq = new_left_window.squaredNorm();
+    // Cast to T type to keep or increase precision (float32/64)
+    sum_left_T = static_cast<T>(sum_left);
+    var_left_wa = static_cast<T>(sum_left_sq) - sum_left_T * sum_left_T / window_area;
+  }
+
+  /**
+   * @brief Compute the ZNCC between the prepared left window and a right window of the same size.
+   *
+   * This function calculates the ZNCC using the stored sum and variance of the left window
+   * and computes the sum and variance of the right window.
+   *
+   * @param right_window The right image window
+   * @return T The ZNCC value
+   */
+  T operator()(const P2d::Matrixf& right_window) const {
+    // Compute right sums (for the means), coefficient-wise / cross product (for the covariance)
+    // and right squared sums (for the variances) w.r.t. the images
+    auto sum_right = right_window.sum();
+    auto sum_right_sq = right_window.squaredNorm();
+    auto sum_cross = left_window->cwiseProduct(right_window).sum();
+    // Cast to T type to keep or increase precision (float32/64)
+    auto sum_right_T = static_cast<T>(sum_right);
+    T var_right_wa = static_cast<T>(sum_right_sq) - sum_right_T * sum_right_T / window_area;
+
+    if (var_left_wa <= (VAR_EPSILON * window_area) || var_right_wa <= (VAR_EPSILON * window_area)) {
+      return 0.0;
+    }
+
+    return (static_cast<T>(sum_cross) - sum_left_T * sum_right_T / window_area) /
+           std::sqrt(var_left_wa * var_right_wa);
+  }
+};
+
 #endif

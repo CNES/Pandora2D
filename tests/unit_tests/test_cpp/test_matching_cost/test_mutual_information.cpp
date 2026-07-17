@@ -256,7 +256,6 @@ TEST_CASE_TEMPLATE("Test Entropy2D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
 
 TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, P2d::Matrixf>) {
   using Type = typename T::Type;
-  using VectorType = typename T::VectorType;
   using MatrixType = typename T::MatrixType;
 
   SUBCASE("4x4 matrix") {
@@ -268,7 +267,9 @@ TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, 
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)
     Type mutual_information_gt = 1.579434 + 1.19946029 - 2.55503653;  // 0.22385776
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 
@@ -280,7 +281,9 @@ TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, 
     img_r << 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0;
 
     Type mutual_information_gt = 1.0;
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 
@@ -294,7 +297,9 @@ TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, 
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)
     Type mutual_information_gt = 1.579434 + 1.5052408 - 3.0306390;  // 0.05403575564
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-6));
   }
 
@@ -306,20 +311,24 @@ TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, 
     img_r << 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0;
 
     Type mutual_information_gt = 0.;
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 
-  SUBCASE("Vector of size 5") {
-    VectorType img_l(5);
+  SUBCASE("Column matrix of size 5") {
+    MatrixType img_l(5, 1);
     img_l << 1, 5, 12, 4, 0;
 
-    VectorType img_r(5);
+    MatrixType img_r(5, 1);
     img_r << 2, 4, 18, 9, 25;
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)
     Type mutual_information_gt = 0.7219280 + 0.97095059 - 1.3709505;  // 0.32192809489
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 }
