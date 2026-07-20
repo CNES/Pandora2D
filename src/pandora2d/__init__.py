@@ -90,7 +90,7 @@ def run(
             - msk (optional): 2D (row, col) xarray.DataArray
     :param cfg: configuration
 
-    :return: None
+    :return: tuple[xr.Dataset, dict]
     """
 
     pandora2d_machine.run_prepare(img_left, img_right, cfg)
@@ -103,12 +103,13 @@ def run(
     return pandora2d_machine.dataset_disp_maps, pandora2d_machine.completed_cfg
 
 
-def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> tuple[xr.Dataset, dict]:
+def _run_pipeline(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> tuple[xr.Dataset, dict]:
     """
-    Process ROI, create image datasets and run pandora2d pipeline
+    Process ROI, create image datasets and run pandora2d pipeline for a given configuration
 
     :param pandora2d_machine: instance of Pandora2DMachine
     :param cfg: configuration
+    :return: tuple[xr.Dataset, dict]
     """
 
     # check roi in user configuration
@@ -148,12 +149,28 @@ def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> 
     return dataset_disp_maps, completed_cfg
 
 
-def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> tuple[xr.Dataset, dict]:
+def run_pandora2d(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> tuple[xr.Dataset, dict]:
+    """
+    Run pandora2d pipeline according to the configuration.
+
+    :param pandora2d_machine: instance of Pandora2DMachine
+    :param cfg: configuration
+    :return: tuple[xr.Dataset, dict]
+    """
+
+    if cfg.get("segment_mode", {}).get("enable") is True:
+        return _run_segment_mode(pandora2d_machine, cfg)
+
+    return _run_pipeline(pandora2d_machine, cfg)
+
+
+def _run_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: dict[str, dict]) -> tuple[xr.Dataset, dict]:
     """
     Run pandora2d pipeline with segment mode
 
     :param pandora2d_machine: instance of Pandora2DMachine
     :param cfg: configuration
+    :return: tuple[xr.Dataset, dict]
     """
 
     # Get the list of ROIs to iterate on
@@ -164,7 +181,7 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: dict[st
     log_list_elements(roi_list, logging.INFO)
 
     if not roi_list:
-        return run_pandora2d(pandora2d_machine, cfg)
+        return _run_pipeline(pandora2d_machine, cfg)
 
     # Initialisation of output objects
     completed_cfg: dict = {}
@@ -175,7 +192,7 @@ def run_pandora2d_segment_mode(pandora2d_machine: Pandora2DMachine, cfg: dict[st
     for roi in roi_list:
 
         cfg["ROI"] = cast(dict, roi)
-        dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
+        dataset_disp_maps, completed_cfg = _run_pipeline(pandora2d_machine, cfg)
 
         # If final_dataset_disp_maps is empty (computation of the first segment), initialize it directly,
         # xr.concat() doesn't work with an empty xarray.
@@ -228,10 +245,7 @@ def main(cfg_path: PathLike | str, verbose: bool) -> None:
     cfg = check_conf(user_cfg, pandora2d_machine)
     expert_mode_config.enable = "expert_mode" in cfg
 
-    if cfg.get("segment_mode", {}).get("enable") is True:
-        dataset_disp_maps, completed_cfg = run_pandora2d_segment_mode(pandora2d_machine, cfg)
-    else:
-        dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
+    dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
 
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):
