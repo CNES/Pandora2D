@@ -53,33 +53,10 @@ T get_entropy(const T nb_pixel, const U& hist) {
 };
 
 /**
- * @brief Compute mutual information between two images
+ * @brief Mutual information correlator
  *
  * MutualInformation(img_l,img_r) = Entropy1D(img_l) + Entropy1D(img_r) - Entropy2D(img_l, img_r)
  *
- * @param left_image left image
- * @param right_image right image
- * @return T mutual information value
- */
-template <typename T>
-T calculate_mutual_information(const P2d::Matrixf& left_image, const P2d::Matrixf& right_image) {
-  auto nb_pixel = static_cast<T>(left_image.size());
-
-  // We calculate the histograms to avoid allocating them twice in the entropy functions
-  auto hist_left = calculate_histogram1D<T>(left_image);
-  auto hist_right = calculate_histogram1D<T>(right_image);
-
-  T entropy_l = get_entropy<T, Histogram1D<T>>(nb_pixel, hist_left);
-  T entropy_r = get_entropy<T, Histogram1D<T>>(nb_pixel, hist_right);
-
-  auto hist_2d = calculate_histogram2D<T>(left_image, right_image, hist_left, hist_right);
-  T entropy_2d = get_entropy<T, Histogram2D<T>>(nb_pixel, hist_2d);
-
-  return entropy_l + entropy_r - entropy_2d;
-}
-
-/**
- * @brief Mutual information correlator
  */
 template <typename T>
 struct MutualInformationCorrelator {

@@ -229,49 +229,8 @@ inline T calculate_zncc_opt1(const P2d::MatrixX<T>& integral_left,
 }
 
 /**
- * @brief Compute ZNCC within a loop, computed for images of same size
- *
- * @param left image
- * @param right image
- * @return T ZNCC value
- */
-template <typename T>
-inline T calculate_zncc_opt2(const P2d::Matrixf& left_image, const P2d::Matrixf& right_image) {
-  // Compute sums (for the means), coefficient-wise / cross product (for the covariance)
-  // and squared sums (for the variances) w.r.t. the images
-  auto sum_left = left_image.sum();
-  auto sum_right = right_image.sum();
-  auto sum_left_sq = left_image.squaredNorm();  // The norm is the Frobenius norm
-  auto sum_right_sq = right_image.squaredNorm();
-  auto sum_cross = left_image.cwiseProduct(right_image).sum();
-
-  // Cast to T type to keep or increase precision (float32/64)
-  auto sum_left_T = static_cast<T>(sum_left);
-  auto sum_right_T = static_cast<T>(sum_right);
-  // Here it is straightforward that variance = sum.^2 / num_elem - (sum / num_elem )^2
-  //   num_elem * variance = sum.^2 - sum*sum / num_elem
-  // NOTE: sum.^2 is the sum of the squared elements, sum*sum is the final sum squared.
-
-  // var_wa as window_area * variance is stored, it avoids very small values
-  // Type T imposed to not interpret the formula
-  auto window_area = left_image.size();
-  T var_left_wa = static_cast<T>(sum_left_sq) - sum_left_T * sum_left_T / window_area;
-  T var_right_wa = static_cast<T>(sum_right_sq) - sum_right_T * sum_right_T / window_area;
-
-  if (var_left_wa <= (VAR_EPSILON * window_area) || var_right_wa <= (VAR_EPSILON * window_area)) {
-    return 0.0;
-  }
-
-  // We compute here : num_elem * covariance / (num_elem * sqrt( variance1 * variance2 )
-  // num_elem * covariance is strictly equal to sum_cross - sum_left * sum_right / num_elem,
-  // num_elem * variances are provided previously, sqrt(num_elem * var1 * num_elem * var2) =
-  // num_elem*sqrt(var1*var2).
-  return (static_cast<T>(sum_cross) - sum_left_T * sum_right_T / window_area) /
-         std::sqrt(var_left_wa * var_right_wa);
-}
-
-/**
- * @brief ZNCC optimisation 2 correlator
+ * @brief ZNCC optimisation 2 correlator : Compute ZNCC within a loop,
+ * computed for images of same size
  *
  * Both prepare_left_window() and operator() compute a sum and a variance from the
  * window they are given, using this formula :
