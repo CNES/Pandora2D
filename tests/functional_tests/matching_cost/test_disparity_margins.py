@@ -92,7 +92,7 @@ class TestDisparityMargins:
             },
         }
 
-    # /!\ "zncc" currently target "zncc-optim-1"
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
     @pytest.mark.parametrize(
         "matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc", "zncc-optim-2"]
     )

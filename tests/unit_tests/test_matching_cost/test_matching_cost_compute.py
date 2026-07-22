@@ -236,7 +236,7 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     np.testing.assert_allclose(sad["cost_volumes"].data[valid_mask], ad_ground_truth[valid_mask], atol=1e-06)
 
 
-# /!\ "zncc" currently target "zncc-optim-1"
+# "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
 @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
 def test_compute_cv_zncc(matching_cost_config, matching_cost_object):
     """
@@ -365,7 +365,7 @@ def python_matching_cost_instance(python_matching_cost_config):
     return matching_cost_class(python_matching_cost_config)
 
 
-# /!\ "zncc" currently target "zncc-optim-1"
+# "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
 @pytest.fixture(params=["zncc", "zncc-optim-2"])
 def cpp_matching_cost_config(matching_cost_config):
     config = deepcopy(matching_cost_config)
@@ -377,35 +377,6 @@ def cpp_matching_cost_config(matching_cost_config):
 def cpp_matching_cost_instance(cpp_matching_cost_config):
     matching_cost_class = matching_cost.MatchingCostRegistry.get(cpp_matching_cost_config["matching_cost_method"])
     return matching_cost_class(cpp_matching_cost_config)
-
-
-@pytest.fixture
-def make_dataset():
-    """Fixture factory to create an image dataset from a numpy array."""
-
-    def inner(data):
-
-        dataset = xr.Dataset(
-            {
-                "im": (["row", "col"], data),
-                "msk": (
-                    ["row", "col"],
-                    np.zeros_like(data, dtype=np.int16),
-                ),
-            },
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-            attrs={
-                "no_data_img": -9999,
-                "valid_pixels": 0,
-                "no_data_mask": 1,
-                "crs": None,
-                "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-            },
-        )
-        dataset.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
-        return dataset
-
-    return inner
 
 
 @pytest.fixture
@@ -665,7 +636,7 @@ def test_cost_volume_coordinates_with_roi(
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
-# /!\ "zncc" currently target "zncc-optim-1"
+# "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
 @pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
 @pytest.mark.parametrize(
     ["step", "col_expected", "row_expected"],
@@ -1813,7 +1784,7 @@ class TestDisparityMargins:
 
         return left, right
 
-    # /!\ "zncc" currently target "zncc-optim-1"
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
     @pytest.mark.parametrize(
         "matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc", "zncc-optim-2"]
     )

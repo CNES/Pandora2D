@@ -111,7 +111,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with zncc",
   step << 1, 1;
 
   // correlation method
-  std::string matching_cost_method = "zncc";
+  std::string matching_cost_method = "zncc-optim-1";
 
   SUBCASE("Left border") {
     py::array_t<uint8_t> criteria_values =

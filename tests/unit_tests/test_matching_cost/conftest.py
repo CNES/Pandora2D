@@ -141,6 +141,34 @@ def create_image():
 
 
 @pytest.fixture()
+def make_dataset():
+    """Fixture factory to create an image dataset (with mask and disparity grids) from a numpy array."""
+
+    def inner(data):
+        dataset = xr.Dataset(
+            {
+                "im": (["row", "col"], data),
+                "msk": (
+                    ["row", "col"],
+                    np.zeros_like(data, dtype=np.int16),
+                ),
+            },
+            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
+            attrs={
+                "no_data_img": -9999,
+                "valid_pixels": 0,
+                "no_data_mask": 1,
+                "crs": None,
+                "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            },
+        )
+        dataset.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
+        return dataset
+
+    return inner
+
+
+@pytest.fixture()
 def left_zncc(create_image):
     """Left image for Zncc."""
     data = np.array(

@@ -22,6 +22,8 @@ This module contains functions associated to the matching cost computation step
 with mutual information  and zncc methods.
 """
 
+import logging
+
 import numpy as np
 import xarray as xr
 from json_checker import And
@@ -34,6 +36,20 @@ from pandora2d.common import get_disparity_grids
 from ..common_cpp import common_bind
 from ..matching_cost_cpp import matching_cost_bind
 from .base import BaseMatchingCost
+
+
+def select_zncc_optim_method(window_size: int, step: list[int]) -> str:
+    """
+    Select the most appropriate ZNCC C++ implementation from window size and step.
+
+    :param window_size: correlation window size
+    :param step: step [row, col] for cost volume computation
+    :return: "zncc-optim-1" or "zncc-optim-2"
+    """
+    max_step = max(step)
+    if window_size / max_step > 3:
+        return "zncc-optim-1"
+    return "zncc-optim-2"
 
 
 @MatchingCostRegistry.add("mutual_information")
@@ -75,6 +91,20 @@ class CorrelationMethods(BaseMatchingCost):
         :return: None
         """
         self.shifted_right_images = shift_subpix_img_2d(img_right, self._subpix, order=self._spline_order)
+
+    def _resolve_cpp_correlation_method(self) -> str:
+        """
+        Resolve the C++ correlation method to pass to compute_cost_volumes_cpp.
+
+        :return: C++ correlation method name
+        """
+        if self._method in ("mutual_information", "zncc-optim-1", "zncc-optim-2"):
+            return self._method
+        if self._method == "zncc":
+            selected_method = select_zncc_optim_method(self._window_size, self.step)
+            logging.info("Auto-selected ZNCC implementation: %s", selected_method)
+            return selected_method
+        raise ValueError(f"Unsupported correlation method: {self._method}")
 
     def compute_cost_volumes(
         self,
@@ -119,6 +149,8 @@ class CorrelationMethods(BaseMatchingCost):
             min_disp_col -= margins.left
             max_disp_col += margins.right
 
+        cpp_correlation_method = self._resolve_cpp_correlation_method()
+
         # Call compute_cost_volumes_cpp
         compute_cost_volumes_cpp(
             img_left["im"].data,
@@ -136,7 +168,7 @@ class CorrelationMethods(BaseMatchingCost):
             offset_cv_img_col,
             self.cost_volumes.attrs["window_size"],
             self.cost_volumes.attrs["step"],
-            self.cost_volumes.attrs["measure"],
+            cpp_correlation_method,
         )
 
         self.set_out_of_disparity_range_to_other_value(img_left, -np.inf)

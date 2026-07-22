@@ -75,17 +75,17 @@ Configuration and parameters
     The order of steps should be [row, col].
 
 .. note::
-    Many implementations of zncc are available for matching cost method: two in C++ and one in Python. 
-    By default, the C++ zncc is used when using the “zncc” matching cost method, it targets the first kind of optimization. 
-    To use either the second kind of optimization or the Python version, enter “zncc-optim-2“ or “zncc_python” respectively as the matching cost method in the configuration file.
+    Many implementations of zncc are available for matching cost method: two in C++ and one in Python.
+    When using the ``zncc`` matching cost method, Pandora2D automatically selects the most appropriate C++ implementation
+    from ``window_size`` and ``step``.
+    Pandora2D chooses ``zncc-optim-1`` when ``window_size / max(step_row, step_col) > 3``, otherwise ``zncc-optim-2``.
+    To force a specific C++ implementation, use ``zncc-optim-1`` or ``zncc-optim-2`` in the configuration file.
+    To use the Python version, enter ``zncc_python`` as the matching cost method in the configuration file.
 
 .. note::
-    In C++, two versions of the “zncc” method are proposed.
-    We recommend to use the first optimization “zncc-optim-1” when all pixels are computed (step is small) and when the disparity range is small.
-    We recommend the second optimization “zncc-optim-2” when an important step is provided and disparity ranges are large.
-
-.. note::
-    Current “zncc” version links to “zncc-optim-1”.
+    In C++, two versions of the ``zncc`` method are proposed.
+    We recommend to use the first optimization ``zncc-optim-1`` when all pixels are computed (step is small) and when the disparity range is small.
+    We recommend the second optimization ``zncc-optim-2`` when an important step is provided and disparity ranges are large.
 
 .. note::
     To use ``mc_cnn`` as ``matching_cost_method``, the MCCNN plugin must be installed first.
@@ -99,6 +99,8 @@ Configuration and parameters
 
 .. warning::
     The subpix parameter can only take values 1, 2 and 4.
+    When ``matching_cost_method`` is set to ``zncc``, the C++ implementation is selected automatically but can still be
+    forced with ``zncc-optim-1`` or ``zncc-optim-2``.
 
 **Example**
 

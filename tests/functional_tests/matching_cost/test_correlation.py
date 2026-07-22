@@ -33,6 +33,7 @@ import pytest
 import pandora2d
 from pandora2d.check_configuration import check_conf
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
+from pandora2d.matching_cost.correlation import select_zncc_optim_method
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -85,7 +86,7 @@ class TestCorrelation:
     for different parameter panels
     """
 
-    # /!\ "zncc" currently target "zncc-optim-1"
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
     @pytest.mark.parametrize("method", ["mutual_information", "zncc", "zncc-optim-2"])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
@@ -118,7 +119,7 @@ class TestCorrelation:
         assert not np.all(np.isnan(dataset_disp_maps.col_map.data))
         assert pandora2d_machine.cost_volumes["cost_volumes"].data.dtype == np.dtype(float_precision)
 
-    # /!\ "zncc" currently target "zncc-optim-1"
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
     @pytest.mark.parametrize("method", ["mutual_information", "zncc", "zncc-optim-2"])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
@@ -208,6 +209,98 @@ class TestCorrelation:
 
         # Check that the more invalid points, the faster the mutual information computation.
         assert duration > duration_mask
+
+
+class TestZnccAutoSelectionPerformance:
+    """
+    Test that "zncc" auto-selection effectively runs as fast as the fastest of the two C++
+    implementations, both when zncc-optim-1 is expected to win (dense sampling, large window)
+    and when zncc-optim-2 is expected to win (sparse sampling).
+    """
+
+    @staticmethod
+    def run_matching_cost(correct_input_for_functional_tests, method, window_size, step):
+        """
+        Run the matching cost step with the given method and return its execution duration.
+        """
+        user_cfg = {
+            **correct_input_for_functional_tests,
+            "pipeline": {
+                "matching_cost": {
+                    "matching_cost_method": method,
+                    "window_size": window_size,
+                    "subpix": 1,
+                    "step": step,
+                    "float_precision": "float32",
+                },
+                "disparity": {
+                    "disparity_method": "wta",
+                    "invalid_disparity": -9999,
+                },
+            },
+            "output": {"path": "where"},
+        }
+
+        pandora2d_machine = Pandora2DMachine()
+        cfg = check_conf(user_cfg, pandora2d_machine)
+        image_datasets = create_datasets_from_inputs(input_config=cfg["input"])
+
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+        start_time = time.time()
+        pandora2d_machine.run("matching_cost", cfg)
+        return time.time() - start_time
+
+    @pytest.mark.parametrize(
+        ("window_size", "step", "expected_fastest"),
+        [
+            pytest.param(
+                15,
+                [1, 1],
+                "zncc-optim-1",
+                id="dense_sampling_favors_optim_1",
+            ),
+            pytest.param(
+                5,
+                [60, 60],
+                "zncc-optim-2",
+                id="sparse_sampling_favors_optim_2",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 3}])
+    @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
+    def test_zncc_auto_selection_matches_fastest_implementation(
+        self, correct_input_for_functional_tests, window_size, step, expected_fastest
+    ):
+        """
+        Description : With window_size=15 and step=[1, 1] (window_size / max(step) = 15 > 3),
+        dense sampling makes zncc-optim-1 faster: it builds integral images once per disparity
+        and reuses them for every output point, while zncc-optim-2 must correlate a full window
+        at each of the many densely sampled points.
+        Conversely, with window_size=5 and step=[60, 60] (window_size / max(step) = 0.08 <= 3),
+        zncc-optim-1 must still build full-image integral images for each disparity regardless
+        of how few output points are actually sampled, while zncc-optim-2 only correlates the
+        sparse output points directly, making it faster.
+        Test that "zncc" auto-selection effectively runs as fast as the fastest implementation
+        in both cases.
+        Data :
+            * Left_img : cones/monoband/left.png
+            * Right_img : cones/monoband/right.png
+        """
+        duration_optim_1 = self.run_matching_cost(correct_input_for_functional_tests, "zncc-optim-1", window_size, step)
+        duration_optim_2 = self.run_matching_cost(correct_input_for_functional_tests, "zncc-optim-2", window_size, step)
+        duration_auto = self.run_matching_cost(correct_input_for_functional_tests, "zncc", window_size, step)
+
+        durations = {"zncc-optim-1": duration_optim_1, "zncc-optim-2": duration_optim_2}
+        expected_slowest = next(method for method in durations if method != expected_fastest)
+
+        # Sanity check: this configuration must indeed favor expected_fastest in practice.
+        assert select_zncc_optim_method(window_size, step) == expected_fastest
+        assert durations[expected_fastest] < durations[expected_slowest]
+
+        # "zncc" must behave like the fastest implementation, not like the slowest one.
+        assert duration_auto < durations[expected_slowest]
+        assert abs(duration_auto - durations[expected_fastest]) < abs(duration_auto - durations[expected_slowest])
 
 
 class TestNbBinsMax:
