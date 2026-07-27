@@ -204,11 +204,12 @@ class CorrelationMethods(BaseMatchingCost):
 
         min_disp_row, max_disp_row, min_disp_col, max_disp_col = get_disparity_grids(img_left, cv_coords)
 
+        # We divide by subpix because margins are in pixel and disparity coordinates are in subpixel.
         if margins is not None:
-            min_disp_row -= margins.up
-            max_disp_row += margins.down
-            min_disp_col -= margins.left
-            max_disp_col += margins.right
+            min_disp_row -= margins.up / self._subpix
+            max_disp_row += margins.down / self._subpix
+            min_disp_col -= margins.left / self._subpix
+            max_disp_col += margins.right / self._subpix
 
         roi_area = get_user_roi_area(img_left, self.cost_volumes.attrs["roi_margins"])
         cpp_correlation_method = self._resolve_cpp_correlation_method(roi_area)

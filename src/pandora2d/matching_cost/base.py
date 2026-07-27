@@ -212,9 +212,10 @@ class BaseMatchingCost(ABC):
         min_row, max_row = img_left.attrs["row_disparity_source"]
 
         # Add refinement margins to disparity grids if needed.
+        # Divide by subpix because margins are in pixel and disparity coordinates are in subpixel.
         if margins is not None:
-            min_row -= margins.up
-            max_row += margins.down
+            min_row -= margins.up / self._subpix
+            max_row += margins.down / self._subpix
 
         # Array with all row disparities
         disps_row = pandora_matching_cost.AbstractMatchingCost.get_disparity_range(min_row, max_row, self._subpix)
@@ -235,9 +236,10 @@ class BaseMatchingCost(ABC):
         # Get min/max col disparity grids
         min_col, max_col = img_left.attrs["col_disparity_source"]
         # Add refinement margins to disparity grids if needed.
+        # Divide by subpix because margins are in pixel and disparity coordinates are in subpixel.
         if margins is not None:
-            min_col -= margins.left
-            max_col += margins.right
+            min_col -= margins.left / self._subpix
+            max_col += margins.right / self._subpix
 
         # Array with all col disparities
         disps_col = pandora_matching_cost.AbstractMatchingCost.get_disparity_range(min_col, max_col, self._subpix)
