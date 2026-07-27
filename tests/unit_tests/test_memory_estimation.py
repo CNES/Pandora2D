@@ -24,6 +24,7 @@ This file contains unit tests associated to the pandora2d memory estimation
 
 from copy import deepcopy
 from typing import cast
+import math
 
 import numpy as np
 import pandora
@@ -150,6 +151,14 @@ class TestInputSize:
                 4,
                 17,
                 id="Centered disparities with subpix",
+            ),
+            pytest.param(
+                {"init": 0, "range": 2},
+                1,
+                2,
+                2,
+                12,
+                id="Centered disparities with subpix and margins",
             ),
         ],
     )
@@ -461,7 +470,7 @@ class TestCostVolumesSize:
                 4,
                 Margins(1, 3, 2, 5),
                 ["cost_volumes_float", "criteria"],
-                611.964,
+                192.020,
                 id="Combinaison of parameters",
             ),
         ],
@@ -612,7 +621,7 @@ class TestPandoraCostVolumesSize:
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 4]])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("margins", [NullMargins(), Margins(1, 2, 3, 4)])
-    def test(self, MemoryTracer, image_datasets, config, margins):
+    def test(self, MemoryTracer, image_datasets, config, subpix, margins):
         """Test that cost volumes size computation works as expected."""
 
         height, width = image_datasets.left.sizes["row"], image_datasets.left.sizes["col"]
@@ -624,12 +633,18 @@ class TestPandoraCostVolumesSize:
             **pandora_matching_cost_config
         )
 
+        # Pandora get_min_max_from_grid() method rounds disparity bounds to int,
+        # truncating any fractional subpixel margin, so we need to round up the margins
+        # to ensure we have enough disparities in the cost volume.
+        margin_left_int = math.ceil(margins.left / subpix)
+        margin_right_int = math.ceil(margins.right / subpix)
+
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
             cost_volume = pandora_matching_cost.allocate_cost_volume(
                 image_datasets.left,
                 (
-                    image_datasets.left["col_disparity"].sel(band_disp="min").data - margins.left,
-                    image_datasets.left["col_disparity"].sel(band_disp="max").data + margins.right,
+                    image_datasets.left["col_disparity"].sel(band_disp="min").data - margin_left_int,
+                    image_datasets.left["col_disparity"].sel(band_disp="max").data + margin_right_int,
                 ),
                 config,
             )
