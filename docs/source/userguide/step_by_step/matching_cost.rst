@@ -79,6 +79,8 @@ Configuration and parameters
     When using the ``zncc`` matching cost method, Pandora2D automatically selects the most appropriate C++ implementation
     from ``window_size`` and ``step``.
     Pandora2D chooses ``zncc-optim-1`` when ``window_size / max(step_row, step_col) > 3``, otherwise ``zncc-optim-2``.
+    This threshold was determined empirically by measuring the execution time of both implementations on various
+    ``window_size``/``step`` configurations.
     To force a specific C++ implementation, use ``zncc-optim-1`` or ``zncc-optim-2`` in the configuration file.
     To use the Python version, enter ``zncc_python`` as the matching cost method in the configuration file.
 
@@ -99,6 +101,8 @@ Configuration and parameters
 
 .. warning::
     The subpix parameter can only take values 1, 2 and 4.
+
+.. warning::
     When ``matching_cost_method`` is set to ``zncc``, the C++ implementation is selected automatically but can still be
     forced with ``zncc-optim-1`` or ``zncc-optim-2``.
 

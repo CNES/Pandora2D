@@ -131,31 +131,30 @@ class TestComparisonMedicis:
                 "mi/gri_resultat_",
                 id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, mutual_information",
             ),
-            # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
             pytest.param(
                 "T19KER/r+0.00c+0.50/",
-                "zncc",
+                "zncc-optim-1",
                 2,
                 "zncc/gri_resultat_",
                 id="T19KER (Calama, Chile) shifted of 0.5 in columns with subpix=2, zncc",
             ),
             pytest.param(
                 "T50JML/r+0.00c+0.50/",
-                "zncc",
+                "zncc-optim-1",
                 2,
                 "zncc/gri_resultat_",
                 id="T50JML (Perth, Australia) shifted of 0.5 in columns with subpix=2, zncc",
             ),
             pytest.param(
                 "T19KER/r+0.00c-0.25/",
-                "zncc",
+                "zncc-optim-1",
                 4,
                 "zncc/gri_resultat_",
                 id="T19KER (Calama, Chile) shifted of -0.25 in columns with subpix=4, zncc",
             ),
             pytest.param(
                 "T50JML/r+0.00c-0.25/",
-                "zncc",
+                "zncc-optim-1",
                 4,
                 "zncc/gri_resultat_",
                 id="T50JML (Perth, Australia) shifted of -0.25 in columns with subpix=4, zncc",
@@ -314,7 +313,7 @@ class TestComparisonZncc:
     )
     @pytest.mark.parametrize(
         "zncc_method",
-        ["zncc", "zncc-optim-2"],  # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
+        ["zncc-optim-1", "zncc-optim-2"],
     )
     def test_compare_znccs(self, tmp_path, configuration, row_shift, col_shift, cpp_float_precision, zncc_method):
         """

@@ -64,6 +64,7 @@ def test_compute_cost_volumes_passes_resolved_cpp_method(
     step,
     expected_cpp_method,
     make_dataset,
+    matching_cost_config,
     mocker: MockerFixture,
 ):
     """
@@ -75,15 +76,30 @@ def test_compute_cost_volumes_passes_resolved_cpp_method(
     left_dataset = make_dataset(data)
     right_dataset = make_dataset(data)
 
-    cfg = {
-        "matching_cost_method": matching_cost_method,
-        "window_size": window_size,
-        "step": step,
-        "subpix": 1,
-        "float_precision": "float32",
-    }
-    correlation_matcher = matching_cost.CorrelationMethods(cfg)
-    correlation_matcher.allocate(left_dataset, right_dataset, cfg)
+    correlation_matcher = matching_cost.CorrelationMethods(matching_cost_config)
+    correlation_matcher.allocate(left_dataset, right_dataset, matching_cost_config)
     correlation_matcher.compute_cost_volumes(left_dataset, right_dataset)
 
     assert mock_cpp.call_args.args[-1] == expected_cpp_method
+
+
+def test_unsupported_correlation_method_raises_error(mocker: MockerFixture):
+    """
+    Description : Test that _resolve_cpp_correlation_method raises ValueError for unsupported methods.
+    """
+    cfg = {
+        "matching_cost_method": "mutual_information",
+        "window_size": 5,
+        "step": [1, 1],
+        "subpix": 1,
+        "float_precision": "float32",
+    }
+
+    correlation_matcher = matching_cost.CorrelationMethods(cfg)
+
+    # Simulate receiving an unsupported method by patching the internal _method attribute
+    # This tests the defensive programming layer in _resolve_cpp_correlation_method
+    correlation_matcher._method = "invalid_method"
+
+    with pytest.raises(ValueError, match="Unsupported correlation method"):
+        correlation_matcher._resolve_cpp_correlation_method()

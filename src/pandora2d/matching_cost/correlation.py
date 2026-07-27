@@ -42,6 +42,10 @@ def select_zncc_optim_method(window_size: int, step: list[int]) -> str:
     """
     Select the most appropriate ZNCC C++ implementation from window size and step.
 
+    The ``window_size / max(step) > 3`` threshold was determined empirically by measuring the execution
+    time of "zncc-optim-1" and "zncc-optim-2" on various window_size/step configurations
+    (see :ref:`matching_cost` in the user guide).
+
     :param window_size: correlation window size
     :param step: step [row, col] for cost volume computation
     :return: "zncc-optim-1" or "zncc-optim-2"

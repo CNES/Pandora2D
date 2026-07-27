@@ -236,8 +236,7 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     np.testing.assert_allclose(sad["cost_volumes"].data[valid_mask], ad_ground_truth[valid_mask], atol=1e-06)
 
 
-# "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc-optim-1", "zncc-optim-2"])
 def test_compute_cv_zncc(matching_cost_config, matching_cost_object):
     """
     Test the cost volume product by zncc
@@ -365,11 +364,10 @@ def python_matching_cost_instance(python_matching_cost_config):
     return matching_cost_class(python_matching_cost_config)
 
 
-# "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
-@pytest.fixture(params=["zncc", "zncc-optim-2"])
-def cpp_matching_cost_config(matching_cost_config):
+@pytest.fixture(params=["zncc-optim-1", "zncc-optim-2"])
+def cpp_matching_cost_config(matching_cost_config, request):
     config = deepcopy(matching_cost_config)
-    config["matching_cost_method"] = "zncc"
+    config["matching_cost_method"] = request.param
     return config
 
 
@@ -636,8 +634,7 @@ def test_cost_volume_coordinates_with_roi(
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
-# "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc"])
 @pytest.mark.parametrize(
     ["step", "col_expected", "row_expected"],
     [

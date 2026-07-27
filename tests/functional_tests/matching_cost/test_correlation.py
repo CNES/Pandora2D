@@ -86,8 +86,9 @@ class TestCorrelation:
     for different parameter panels
     """
 
-    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
-    @pytest.mark.parametrize("method", ["mutual_information", "zncc", "zncc-optim-2"])
+    # Both zncc-optim-1 and zncc-optim-2 are tested explicitly to ensure both C++ implementations
+    # remain valid, regardless of which one "zncc" would auto-select for a given configuration.
+    @pytest.mark.parametrize("method", ["mutual_information", "zncc-optim-1", "zncc-optim-2"])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
@@ -119,8 +120,7 @@ class TestCorrelation:
         assert not np.all(np.isnan(dataset_disp_maps.col_map.data))
         assert pandora2d_machine.cost_volumes["cost_volumes"].data.dtype == np.dtype(float_precision)
 
-    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
-    @pytest.mark.parametrize("method", ["mutual_information", "zncc", "zncc-optim-2"])
+    @pytest.mark.parametrize("method", ["mutual_information", "zncc-optim-1", "zncc-optim-2"])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("window_size", [1, 3, 5])
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 3], [5, 5]])
