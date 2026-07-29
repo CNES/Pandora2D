@@ -77,10 +77,10 @@ Configuration and parameters
 .. note::
     Many implementations of zncc are available for matching cost method: two in C++ and one in Python.
     When using the ``zncc`` matching cost method, Pandora2D automatically selects the most appropriate C++ implementation
-    from ``window_size`` and ``step``.
-    Pandora2D chooses ``zncc-optim-1`` when ``window_size / max(step_row, step_col) > 3``, otherwise ``zncc-optim-2``.
-    This threshold was determined empirically by measuring the execution time of both implementations on various
-    ``window_size``/``step`` configurations.
+    from ``window_size``, ``step`` and the area of the processed region (the ROI, or the whole image when no ROI is given).
+    The decision comes from a linear model fitted on execution times measured for both implementations over a wide range
+    of configurations: a large window and a small step favour ``zncc-optim-1``, while a large step or a large area
+    favour ``zncc-optim-2``.
     To force a specific C++ implementation, use ``zncc-optim-1`` or ``zncc-optim-2`` in the configuration file.
     To use the Python version, enter ``zncc_python`` as the matching cost method in the configuration file.
 

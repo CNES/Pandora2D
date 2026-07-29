@@ -218,6 +218,9 @@ class TestZnccAutoSelectionPerformance:
     and when zncc-optim-2 is expected to win (sparse sampling).
     """
 
+    # No ROI is used here, so the selection model sees the whole cones image.
+    IMAGE_AREA = 375 * 450
+
     @staticmethod
     def run_matching_cost(correct_input_for_functional_tests, method, window_size, step):
         """
@@ -273,14 +276,12 @@ class TestZnccAutoSelectionPerformance:
         self, correct_input_for_functional_tests, window_size, step, expected_fastest
     ):
         """
-        Description : With window_size=15 and step=[1, 1] (window_size / max(step) = 15 > 3),
-        dense sampling makes zncc-optim-1 faster: it builds integral images once per disparity
-        and reuses them for every output point, while zncc-optim-2 must correlate a full window
-        at each of the many densely sampled points.
-        Conversely, with window_size=5 and step=[60, 60] (window_size / max(step) = 0.08 <= 3),
-        zncc-optim-1 must still build full-image integral images for each disparity regardless
-        of how few output points are actually sampled, while zncc-optim-2 only correlates the
-        sparse output points directly, making it faster.
+        Description : With window_size=15 and step=[1, 1], dense sampling makes zncc-optim-1 faster:
+        it builds integral images once per disparity and reuses them for every output point, while
+        zncc-optim-2 must correlate a full window at each of the many densely sampled points.
+        Conversely, with window_size=5 and step=[60, 60], zncc-optim-1 must still build full-image
+        integral images for each disparity regardless of how few output points are actually sampled,
+        while zncc-optim-2 only correlates the sparse output points directly, making it faster.
         Test that "zncc" auto-selection effectively runs as fast as the fastest implementation
         in both cases.
         Data :
@@ -295,7 +296,7 @@ class TestZnccAutoSelectionPerformance:
         expected_slowest = next(method for method in durations if method != expected_fastest)
 
         # Sanity check: this configuration must indeed favor expected_fastest in practice.
-        assert select_zncc_optim_method(window_size, step) == expected_fastest
+        assert select_zncc_optim_method(window_size, step, self.IMAGE_AREA) == expected_fastest
         assert durations[expected_fastest] < durations[expected_slowest]
 
         # "zncc" must behave like the fastest implementation, not like the slowest one.

@@ -45,8 +45,10 @@ ZNCC between two image patches I, J is:
 .. warning::
    Two C++ implementations of ZNCC are available in Pandora2D.
    When ``matching_cost_method`` is set to ``zncc``, the most appropriate implementation is selected automatically
-   from ``window_size`` and ``step``.
-   Pandora2D chooses ``zncc-optim-1`` when ``window_size / max(step_row, step_col) > 3``, otherwise ``zncc-optim-2``.
+   from ``window_size``, ``max(step_row, step_col)`` and the area in pixels of the processed region (the ROI, or the
+   whole image when no ROI is given). These three quantities feed a linear model fitted on execution times measured
+   for both implementations: ``zncc-optim-1`` is chosen when its score is positive, ``zncc-optim-2`` otherwise.
+   A large window and a small step favour ``zncc-optim-1``, while a large step or a large area favour ``zncc-optim-2``.
    To force a specific implementation, use ``zncc-optim-1`` or ``zncc-optim-2`` in the configuration file.
 
 Mutual Information
