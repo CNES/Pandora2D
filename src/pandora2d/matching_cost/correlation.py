@@ -37,7 +37,6 @@ from ..common_cpp import common_bind
 from ..matching_cost_cpp import matching_cost_bind
 from .base import BaseMatchingCost
 
-
 # Weights of the linear model used to select the fastest ZNCC C++ implementation. They come from a
 # regularised least squares fit on a benchmark of 547 zncc-optim-1 / zncc-optim-2 pairs covering
 # window_size from 5 to 65, step from 4 to 250, subpix 1/2/4, disparity range from 2 to 50 and
@@ -49,20 +48,19 @@ ZNCC_ROI_AREA_WEIGHT = -1.58547e-07
 ZNCC_SELECTION_BIAS = 0.02
 
 
-def get_roi_area(cfg: dict, img_left: xr.Dataset) -> int:
+def get_roi_area(img_left: xr.Dataset, roi_margins: Margins) -> int:
     """
     Get the area, in pixels, of the region on which the cost volumes are computed.
 
-    :param cfg: matching_cost computation configuration
     :param img_left: xarray.Dataset containing :
             - im : 2D (row, col) xarray.DataArray
             - msk : 2D (row, col) xarray.DataArray
+    :param roi_margins: ROI margins
     :return: area in pixels of the ROI, or of the whole left image when no ROI is given
     """
-    roi = cfg.get("ROI")
-    if roi is None:
-        return img_left.sizes["row"] * img_left.sizes["col"]
-    return (roi["row"]["last"] - roi["row"]["first"] + 1) * (roi["col"]["last"] - roi["col"]["first"] + 1)
+    return (img_left.sizes["row"] - roi_margins.up - roi_margins.down) * (
+        img_left.sizes["col"] - roi_margins.left - roi_margins.right
+    )
 
 
 def select_zncc_optim_method(window_size: int, step: list[int], roi_area: int) -> str:
@@ -104,9 +102,6 @@ class CorrelationMethods(BaseMatchingCost):
     Mutual Information class
     """
 
-    #: area in pixels of the region on which cost volumes are computed, set by :meth:`allocate`
-    _roi_area: int = 0
-
     @property
     def margins(self) -> Margins:
         """Return matching costs' Margins."""
@@ -127,30 +122,6 @@ class CorrelationMethods(BaseMatchingCost):
 
         return schema
 
-    def allocate(
-        self,
-        img_left: xr.Dataset,
-        img_right: xr.Dataset,
-        cfg: dict,
-        margins: Margins = None,
-    ) -> None:
-        """
-        Allocate the cost volume
-
-        :param img_left: xarray.Dataset containing :
-                - im : 2D (row, col) xarray.DataArray
-                - msk : 2D (row, col) xarray.DataArray
-        :param img_right: xarray.Dataset containing :
-                - im : 2D (row, col) xarray.DataArray
-                - msk : 2D (row, col) xarray.DataArray
-        :param cfg: matching_cost computation configuration
-        :param margins: refinement margins
-        :return: None
-        """
-        self._roi_area = get_roi_area(cfg, img_left)
-
-        super().allocate(img_left, img_right, cfg, margins)
-
     def set_shifted_right_images(self, img_right: xr.Dataset) -> None:
         """
         Compute shifted by subpix right image and assign `shifted_right_images` attribute.
@@ -162,22 +133,23 @@ class CorrelationMethods(BaseMatchingCost):
         """
         self.shifted_right_images = shift_subpix_img_2d(img_right, self._subpix, order=self._spline_order)
 
-    def _resolve_cpp_correlation_method(self) -> str:
+    def _resolve_cpp_correlation_method(self, roi_area: int) -> str:
         """
         Resolve the C++ correlation method to pass to compute_cost_volumes_cpp.
 
+        :param roi_area: area in pixels of the region on which cost volumes are computed
         :return: C++ correlation method name
         """
         if self._method in ("mutual_information", "zncc-optim-1", "zncc-optim-2"):
             return self._method
         if self._method == "zncc":
-            selected_method = select_zncc_optim_method(self._window_size, self.step, self._roi_area)
+            selected_method = select_zncc_optim_method(self._window_size, self.step, roi_area)
             logging.info(
                 "Auto-selected ZNCC implementation: %s (window_size=%s, step=%s, roi_area=%s)",
                 selected_method,
                 self._window_size,
                 self.step,
-                self._roi_area,
+                roi_area,
             )
             return selected_method
         raise ValueError(f"Unsupported correlation method: {self._method}")
@@ -225,7 +197,8 @@ class CorrelationMethods(BaseMatchingCost):
             min_disp_col -= margins.left
             max_disp_col += margins.right
 
-        cpp_correlation_method = self._resolve_cpp_correlation_method()
+        roi_area = get_roi_area(img_left, self.cost_volumes.attrs["roi_margins"])
+        cpp_correlation_method = self._resolve_cpp_correlation_method(roi_area)
 
         # Call compute_cost_volumes_cpp
         compute_cost_volumes_cpp(

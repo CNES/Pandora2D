@@ -26,6 +26,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from pandora2d import matching_cost
+from pandora2d.margins import Margins, NullMargins
 from pandora2d.matching_cost.correlation import get_roi_area, select_zncc_optim_method
 
 # Areas of the ROI used in the ZNCC benchmark the selection model was fitted on.
@@ -58,25 +59,22 @@ def test_select_zncc_optim_method(window_size, step, roi_area, expected_method):
 
 
 @pytest.mark.parametrize(
-    ("roi", "expected_area"),
+    ("img_size", "roi_margins", "expected_area"),
     [
-        pytest.param(None, 25, id="no_roi_falls_back_to_image_area"),
-        pytest.param({"row": {"first": 0, "last": 2}, "col": {"first": 1, "last": 4}}, 12, id="rectangular_roi"),
-        pytest.param(
-            {"row": {"first": 128, "last": 895}, "col": {"first": 128, "last": 895}},
-            LARGE_ROI_AREA,
-            id="square_roi",
-        ),
+        pytest.param((5, 5), NullMargins(), 25, id="no_margins_full_image_area"),
+        pytest.param((3, 4), NullMargins(), 12, id="no_margins_rectangular_area"),
+        pytest.param((768, 768), NullMargins(), LARGE_ROI_AREA, id="no_margins_square_area"),
+        pytest.param((9, 9), Margins(2, 1, 2, 1), 35, id="margins_are_subtracted_from_image_size"),
     ],
 )
-def test_get_roi_area(roi, expected_area, make_dataset):
+def test_get_roi_area(img_size, roi_margins, expected_area, make_dataset):
     """
-    Description : Test that the ROI area is read from the configuration, or from the left image without ROI.
+    Description : Test that the ROI area is computed from the left image size, once ROI margins
+    (already included in that image, cf. BaseMatchingCost.allocate) are removed.
     """
-    left_dataset = make_dataset(np.ones((5, 5), dtype=np.float32))
-    cfg = {} if roi is None else {"ROI": roi}
+    left_dataset = make_dataset(np.ones(img_size, dtype=np.float32))
 
-    assert get_roi_area(cfg, left_dataset) == expected_area
+    assert get_roi_area(left_dataset, roi_margins) == expected_area
 
 
 @pytest.mark.parametrize(
@@ -119,17 +117,19 @@ def test_compute_cost_volumes_passes_resolved_cpp_method(
 @pytest.mark.parametrize("window_size", [5])
 @pytest.mark.parametrize("step", [[1, 1]])
 @pytest.mark.parametrize(
-    ("roi", "expected_cpp_method"),
+    ("img_size", "roi", "expected_cpp_method"),
     [
-        pytest.param(None, "zncc-optim-1", id="without_roi"),
+        pytest.param((5, 5), None, "zncc-optim-1", id="without_roi"),
         pytest.param(
-            {"row": {"first": 128, "last": 895}, "col": {"first": 128, "last": 895}, "margins": [0, 0, 0, 0]},
+            (768, 768),
+            {"row": {"first": 0, "last": 767}, "col": {"first": 0, "last": 767}, "margins": [0, 0, 0, 0]},
             "zncc-optim-2",
             id="with_large_roi",
         ),
     ],
 )
 def test_roi_area_is_taken_into_account(
+    img_size,
     roi,
     expected_cpp_method,
     make_dataset,
@@ -137,17 +137,16 @@ def test_roi_area_is_taken_into_account(
     mocker: MockerFixture,
 ):
     """
-    Description : Test that the ROI given at allocation switches the auto-selected implementation
-    for identical window size and step.
+    Description : Test that the actual size of the image processed (ROI included, cf.
+    BaseMatchingCost.allocate) switches the auto-selected implementation for identical window size
+    and step.
     """
     mock_cpp = mocker.patch("pandora2d.matching_cost.correlation.matching_cost_bind.compute_cost_volumes_cpp_float")
 
-    data = np.ones((5, 5), dtype=np.float32)
+    data = np.ones(img_size, dtype=np.float32)
     left_dataset = make_dataset(data)
     right_dataset = make_dataset(data)
 
-    # The C++ call is mocked, so the cost volumes are never filled: only the ROI area read from the
-    # configuration matters here, not the fact that it is wider than the test images.
     cfg = dict(matching_cost_config) if roi is None else {**matching_cost_config, "ROI": roi}
 
     correlation_matcher = matching_cost.CorrelationMethods(matching_cost_config)
@@ -176,4 +175,4 @@ def test_unsupported_correlation_method_raises_error(mocker: MockerFixture):
     correlation_matcher._method = "invalid_method"
 
     with pytest.raises(ValueError, match="Unsupported correlation method"):
-        correlation_matcher._resolve_cpp_correlation_method()
+        correlation_matcher._resolve_cpp_correlation_method(roi_area=0)
