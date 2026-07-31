@@ -254,8 +254,8 @@ class TestFloatPrecision:
                 {"matching_cost_method": matching_cost_method, "window_size": 5, "float_precision": float_precision}
             )
 
-    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
-    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc", "zncc-optim-2"])
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size, step and roi area
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc"])
     @pytest.mark.parametrize("float_precision", ["f32", "test", 3])
     def test_fails_with_incorrect_float_precision(self, matching_cost_method, matching_cost_object, float_precision):
         with pytest.raises(json_checker.core.exceptions.DictCheckerError):

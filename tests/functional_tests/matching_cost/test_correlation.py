@@ -222,27 +222,20 @@ class TestZnccAutoSelectionPerformance:
     IMAGE_AREA = 375 * 450
 
     @staticmethod
-    def run_matching_cost(correct_input_for_functional_tests, method, window_size, step):
+    def run_matching_cost(correct_input_for_functional_tests, correct_pipeline_with_step, method):
         """
         Run the matching cost step with the given method and return its execution duration.
+
+        correct_pipeline_with_step already carries window_size and step, both overridden by this
+        class' parametrize; only matching_cost_method varies between the three calls made by
+        test_zncc_auto_selection_matches_fastest_implementation, hence the explicit override below.
         """
         user_cfg = {
             **correct_input_for_functional_tests,
-            "pipeline": {
-                "matching_cost": {
-                    "matching_cost_method": method,
-                    "window_size": window_size,
-                    "subpix": 1,
-                    "step": step,
-                    "float_precision": "float32",
-                },
-                "disparity": {
-                    "disparity_method": "wta",
-                    "invalid_disparity": -9999,
-                },
-            },
+            **deepcopy(correct_pipeline_with_step),
             "output": {"path": "where"},
         }
+        user_cfg["pipeline"]["matching_cost"]["matching_cost_method"] = method
 
         pandora2d_machine = Pandora2DMachine()
         cfg = check_conf(user_cfg, pandora2d_machine)
@@ -273,7 +266,7 @@ class TestZnccAutoSelectionPerformance:
     @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 3}])
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
     def test_zncc_auto_selection_matches_fastest_implementation(
-        self, correct_input_for_functional_tests, window_size, step, expected_fastest
+        self, correct_input_for_functional_tests, correct_pipeline_with_step, window_size, step, expected_fastest
     ):
         """
         Description : With window_size=15 and step=[1, 1], dense sampling makes zncc-optim-1 faster:
@@ -288,9 +281,13 @@ class TestZnccAutoSelectionPerformance:
             * Left_img : cones/monoband/left.png
             * Right_img : cones/monoband/right.png
         """
-        duration_optim_1 = self.run_matching_cost(correct_input_for_functional_tests, "zncc-optim-1", window_size, step)
-        duration_optim_2 = self.run_matching_cost(correct_input_for_functional_tests, "zncc-optim-2", window_size, step)
-        duration_auto = self.run_matching_cost(correct_input_for_functional_tests, "zncc", window_size, step)
+        duration_optim_1 = self.run_matching_cost(
+            correct_input_for_functional_tests, correct_pipeline_with_step, "zncc-optim-1"
+        )
+        duration_optim_2 = self.run_matching_cost(
+            correct_input_for_functional_tests, correct_pipeline_with_step, "zncc-optim-2"
+        )
+        duration_auto = self.run_matching_cost(correct_input_for_functional_tests, correct_pipeline_with_step, "zncc")
 
         durations = {"zncc-optim-1": duration_optim_1, "zncc-optim-2": duration_optim_2}
         expected_slowest = next(method for method in durations if method != expected_fastest)

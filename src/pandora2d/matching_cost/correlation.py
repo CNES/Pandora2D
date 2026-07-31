@@ -48,15 +48,20 @@ ZNCC_ROI_AREA_WEIGHT = -1.58547e-07
 ZNCC_SELECTION_BIAS = 0.02
 
 
-def get_roi_area(img_left: xr.Dataset, roi_margins: Margins) -> int:
+def get_user_roi_area(img_left: xr.Dataset, roi_margins: Margins) -> int:
     """
-    Get the area, in pixels, of the region on which the cost volumes are computed.
+    Get the area, in pixels, of the ROI as requested by the user, i.e. without the margins added
+    around it to compute the correlation window.
+
+    ``img_left`` is already cropped to the ROI plus those margins (cf. BaseMatchingCost.allocate),
+    so its raw size would overestimate the area actually requested: the margins are subtracted
+    back out to match the area the ZNCC selection benchmark was fitted on.
 
     :param img_left: xarray.Dataset containing :
             - im : 2D (row, col) xarray.DataArray
             - msk : 2D (row, col) xarray.DataArray
     :param roi_margins: ROI margins
-    :return: area in pixels of the ROI, or of the whole left image when no ROI is given
+    :return: area in pixels of the user's ROI, or of the whole left image when no ROI is given
     """
     return (img_left.sizes["row"] - roi_margins.up - roi_margins.down) * (
         img_left.sizes["col"] - roi_margins.left - roi_margins.right
@@ -67,10 +72,18 @@ def select_zncc_optim_method(window_size: int, step: list[int], roi_area: int) -
     """
     Select the most appropriate ZNCC C++ implementation from window size, step and ROI area.
 
-    "zncc-optim-1" is chosen when the score of the linear model is positive. A large window and a
-    small step favour "zncc-optim-1", which builds integral images once per disparity and reuses
-    them for every output point, whereas a large ROI or a large step favour "zncc-optim-2", which
-    correlates each sampled point directly.
+    The weights of this linear model come from a regularised least squares fit (see
+    .cursor/skills/431-auto-zncc-selection/analysis.py) on a benchmark of timing pairs between the
+    original implementation (labelled "zncc" in the benchmark, "zncc-optim-1" here) and
+    "zncc-optim-2". Each pair is labelled +1 when "zncc-optim-1" was the faster of the two, -1
+    otherwise, and the fit learns weights so that `features @ weights + bias` approximates that
+    +1/-1 label. A positive score therefore means the model predicts "zncc-optim-1" is the faster
+    implementation, which is why the selection below thresholds the score at 0. This also explains
+    the sign of each weight: window_size has a positive weight because a large window favours
+    "zncc-optim-1" (it builds integral images once per disparity and reuses them for every output
+    point), pushing the score towards +1, while step and roi_area have negative weights because a
+    large step or a large ROI favour "zncc-optim-2" (which correlates each sampled point directly),
+    pushing the score towards -1.
 
     Examples taken from the benchmark grid:
 
@@ -197,7 +210,7 @@ class CorrelationMethods(BaseMatchingCost):
             min_disp_col -= margins.left
             max_disp_col += margins.right
 
-        roi_area = get_roi_area(img_left, self.cost_volumes.attrs["roi_margins"])
+        roi_area = get_user_roi_area(img_left, self.cost_volumes.attrs["roi_margins"])
         cpp_correlation_method = self._resolve_cpp_correlation_method(roi_area)
 
         # Call compute_cost_volumes_cpp

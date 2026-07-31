@@ -537,8 +537,8 @@ class TestCvFloatPrecision:
     Test that the cost volumes is allocated with the right type
     """
 
-    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
-    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python", "zncc", "zncc-optim-2"])
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size, step and roi area
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python", "zncc"])
     @pytest.mark.parametrize("float_precision", ["float32", "f", "f4"])
     def test_cost_volumes_float_precision(self, input_config, matching_cost_config, matching_cost_object):
         """

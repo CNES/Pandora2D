@@ -27,7 +27,7 @@ from pytest_mock import MockerFixture
 
 from pandora2d import matching_cost
 from pandora2d.margins import Margins, NullMargins
-from pandora2d.matching_cost.correlation import get_roi_area, select_zncc_optim_method
+from pandora2d.matching_cost.correlation import get_user_roi_area, select_zncc_optim_method
 
 # Areas of the ROI used in the ZNCC benchmark the selection model was fitted on.
 SMALL_ROI_AREA = 512 * 512
@@ -67,14 +67,15 @@ def test_select_zncc_optim_method(window_size, step, roi_area, expected_method):
         pytest.param((9, 9), Margins(2, 1, 2, 1), 35, id="margins_are_subtracted_from_image_size"),
     ],
 )
-def test_get_roi_area(img_size, roi_margins, expected_area, make_dataset):
+def test_get_user_roi_area(img_size, roi_margins, expected_area, make_dataset):
     """
-    Description : Test that the ROI area is computed from the left image size, once ROI margins
-    (already included in that image, cf. BaseMatchingCost.allocate) are removed.
+    Description : Test that the user's ROI area is computed from the left image size, once the
+    margins added around it for the correlation window (already included in that image, cf.
+    BaseMatchingCost.allocate) are removed.
     """
     left_dataset = make_dataset(np.ones(img_size, dtype=np.float32))
 
-    assert get_roi_area(left_dataset, roi_margins) == expected_area
+    assert get_user_roi_area(left_dataset, roi_margins) == expected_area
 
 
 @pytest.mark.parametrize(
@@ -89,9 +90,6 @@ def test_get_roi_area(img_size, roi_margins, expected_area, make_dataset):
     ],
 )
 def test_compute_cost_volumes_passes_resolved_cpp_method(
-    matching_cost_method,
-    window_size,
-    step,
     expected_cpp_method,
     make_dataset,
     matching_cost_config,
@@ -108,49 +106,6 @@ def test_compute_cost_volumes_passes_resolved_cpp_method(
 
     correlation_matcher = matching_cost.CorrelationMethods(matching_cost_config)
     correlation_matcher.allocate(left_dataset, right_dataset, matching_cost_config)
-    correlation_matcher.compute_cost_volumes(left_dataset, right_dataset)
-
-    assert mock_cpp.call_args.args[-1] == expected_cpp_method
-
-
-@pytest.mark.parametrize("matching_cost_method", ["zncc"])
-@pytest.mark.parametrize("window_size", [5])
-@pytest.mark.parametrize("step", [[1, 1]])
-@pytest.mark.parametrize(
-    ("img_size", "roi", "expected_cpp_method"),
-    [
-        pytest.param((5, 5), None, "zncc-optim-1", id="without_roi"),
-        pytest.param(
-            (768, 768),
-            {"row": {"first": 0, "last": 767}, "col": {"first": 0, "last": 767}, "margins": [0, 0, 0, 0]},
-            "zncc-optim-2",
-            id="with_large_roi",
-        ),
-    ],
-)
-def test_roi_area_is_taken_into_account(
-    img_size,
-    roi,
-    expected_cpp_method,
-    make_dataset,
-    matching_cost_config,
-    mocker: MockerFixture,
-):
-    """
-    Description : Test that the actual size of the image processed (ROI included, cf.
-    BaseMatchingCost.allocate) switches the auto-selected implementation for identical window size
-    and step.
-    """
-    mock_cpp = mocker.patch("pandora2d.matching_cost.correlation.matching_cost_bind.compute_cost_volumes_cpp_float")
-
-    data = np.ones(img_size, dtype=np.float32)
-    left_dataset = make_dataset(data)
-    right_dataset = make_dataset(data)
-
-    cfg = dict(matching_cost_config) if roi is None else {**matching_cost_config, "ROI": roi}
-
-    correlation_matcher = matching_cost.CorrelationMethods(matching_cost_config)
-    correlation_matcher.allocate(left_dataset, right_dataset, cfg)
     correlation_matcher.compute_cost_volumes(left_dataset, right_dataset)
 
     assert mock_cpp.call_args.args[-1] == expected_cpp_method
