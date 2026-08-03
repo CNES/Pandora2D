@@ -221,30 +221,30 @@ class TestZnccAutoSelectionPerformance:
     # No ROI is used here, so the selection model sees the whole cones image.
     IMAGE_AREA = 375 * 450
 
-    @staticmethod
-    def run_matching_cost(correct_input_for_functional_tests, correct_pipeline_with_step, method):
+    @pytest.fixture()
+    def run_matching_cost(self, correct_input_for_functional_tests, correct_pipeline_with_step):
         """
         Run the matching cost step with the given method and return its execution duration.
-
-        correct_pipeline_with_step already carries window_size and step, both overridden by this
-        class' parametrize; only matching_cost_method varies between the three calls made by
-        test_zncc_auto_selection_matches_fastest_implementation, hence the explicit override below.
         """
-        user_cfg = {
-            **correct_input_for_functional_tests,
-            **deepcopy(correct_pipeline_with_step),
-            "output": {"path": "where"},
-        }
-        user_cfg["pipeline"]["matching_cost"]["matching_cost_method"] = method
 
-        pandora2d_machine = Pandora2DMachine()
-        cfg = check_conf(user_cfg, pandora2d_machine)
-        image_datasets = create_datasets_from_inputs(input_config=cfg["input"])
+        def _run_matching_cost(method):
+            user_cfg = {
+                **correct_input_for_functional_tests,
+                **deepcopy(correct_pipeline_with_step),
+                "output": {"path": "where"},
+            }
+            user_cfg["pipeline"]["matching_cost"]["matching_cost_method"] = method
 
-        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
-        start_time = time.time()
-        pandora2d_machine.run("matching_cost", cfg)
-        return time.time() - start_time
+            pandora2d_machine = Pandora2DMachine()
+            cfg = check_conf(user_cfg, pandora2d_machine)
+            image_datasets = create_datasets_from_inputs(input_config=cfg["input"])
+
+            pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+            start_time = time.time()
+            pandora2d_machine.run("matching_cost", cfg)
+            return time.time() - start_time
+
+        return _run_matching_cost
 
     @pytest.mark.parametrize(
         ("window_size", "step", "expected_fastest"),
@@ -266,7 +266,7 @@ class TestZnccAutoSelectionPerformance:
     @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 3}])
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
     def test_zncc_auto_selection_matches_fastest_implementation(
-        self, correct_input_for_functional_tests, correct_pipeline_with_step, window_size, step, expected_fastest
+        self, run_matching_cost, window_size, step, expected_fastest
     ):
         """
         Description : With window_size=15 and step=[1, 1], dense sampling makes zncc-optim-1 faster:
@@ -281,13 +281,9 @@ class TestZnccAutoSelectionPerformance:
             * Left_img : cones/monoband/left.png
             * Right_img : cones/monoband/right.png
         """
-        duration_optim_1 = self.run_matching_cost(
-            correct_input_for_functional_tests, correct_pipeline_with_step, "zncc-optim-1"
-        )
-        duration_optim_2 = self.run_matching_cost(
-            correct_input_for_functional_tests, correct_pipeline_with_step, "zncc-optim-2"
-        )
-        duration_auto = self.run_matching_cost(correct_input_for_functional_tests, correct_pipeline_with_step, "zncc")
+        duration_optim_1 = run_matching_cost("zncc-optim-1")
+        duration_optim_2 = run_matching_cost("zncc-optim-2")
+        duration_auto = run_matching_cost("zncc")
 
         durations = {"zncc-optim-1": duration_optim_1, "zncc-optim-2": duration_optim_2}
         expected_slowest = next(method for method in durations if method != expected_fastest)
