@@ -305,6 +305,13 @@ class BaseMatchingCost(ABC):
 
         grid_attrs = img_left.attrs
 
+        if "ROI" in cfg:
+            roi_margins_attribute = Margins(
+                cfg["ROI"]["margins"][0], cfg["ROI"]["margins"][1], cfg["ROI"]["margins"][2], cfg["ROI"]["margins"][3]
+            )
+        else:
+            roi_margins_attribute = Margins(0, 0, 0, 0)
+
         grid_attrs.update(
             {
                 "window_size": self._window_size,
@@ -313,6 +320,7 @@ class BaseMatchingCost(ABC):
                 "measure": self._method,
                 "type_measure": "max",
                 "disparity_margins": margins,
+                "roi_margins": roi_margins_attribute,
                 "step": self.step,
                 "spline_order_filter": self._spline_order,
             }
