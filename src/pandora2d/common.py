@@ -109,6 +109,8 @@ class AllPrimitiveEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, CRS):
             return o.to_wkt()
+        if isinstance(o, Affine):
+            return list(o)
         if isinstance(o, np.floating):
             return float(o)
         if isinstance(o, np.integer):
