@@ -39,18 +39,6 @@ class TestCheckRoiSection:
         # with a correct ROI check_roi_section should return nothing
         check_roi_section(correct_roi_sensor)
 
-    def test_removes_margins_from_roi_section(self, correct_roi_sensor) -> None:
-        """
-        Description : Remove margins key from ROI section before schema validation.
-        Data :
-        Requirement : EX_ROI_04
-        """
-        correct_roi_sensor["ROI"]["margins"] = (2, 2, 2, 2)
-
-        check_roi_section(correct_roi_sensor)
-
-        assert "margins" not in correct_roi_sensor["ROI"]
-
     def test_dimension_lt_0_raises_exception(self, false_roi_sensor_negative):
         """
         Description : Raises an exception if the ROI dimensions are lower than 0

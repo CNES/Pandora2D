@@ -37,6 +37,7 @@ from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing,
 from pandora2d.memory_estimation import segment_image_by_rows
 from pandora2d.profiling import expert_mode_config, generate_summary
 from pandora2d.state_machine import Pandora2DMachine
+from pandora2d.margins import Margins, NullMargins
 
 
 def log_list_elements(list_to_log: list, log_level: int) -> None:
@@ -68,6 +69,36 @@ def setup_logging(verbose: int) -> None:
         for name in logging.root.manager.loggerDict:
             if not name.startswith(__name__):
                 logging.getLogger(name).setLevel(logging.WARNING)
+
+
+def update_output_config_with_info(output_cfg: dict, pandora2d_machine: Pandora2DMachine) -> dict:
+    """
+    Update output configuration with:
+     - pandora2d version
+     - miscellaneous section containing margins information (ROI margins and disparity margins)
+
+    :param output_cfg: output configuration to update
+    :param pandora2d_machine: pandora2d machine used to run the pipeline
+    :return: updated output configuration
+    """
+    # Add pandora2d version in output configuration
+    output_cfg["info"] = {"version": version("pandora2d")}
+
+    # Add miscellaneous section in output configuration
+    output_cfg["info"]["Pandora2DMachine_misc"] = {}
+
+    # Update miscellaneous section with ROI margins if ROI is present in user configuration
+    if "ROI" in output_cfg:
+        output_cfg["info"]["Pandora2DMachine_misc"]["roi_margins"] = Margins(*output_cfg["ROI"]["margins"]).asdict()
+        # remove margins from ROI in output configuration for not duplicating information
+        del output_cfg["ROI"]["margins"]
+    else:
+        output_cfg["info"]["Pandora2DMachine_misc"]["roi_margins"] = NullMargins().asdict()
+
+    # Update miscellaneous section with disparity margins
+    output_cfg["info"]["Pandora2DMachine_misc"]["disp_margins"] = pandora2d_machine.margins_disp.global_margins.asdict()
+
+    return output_cfg
 
 
 def run(
@@ -227,7 +258,6 @@ def main(cfg_path: PathLike | str, verbose: bool) -> None:
     :param verbose: verbose mode
     :return: None
     """
-
     # Import pandora plugins
     import_plugin()
 
@@ -251,10 +281,9 @@ def main(cfg_path: PathLike | str, verbose: bool) -> None:
     if bool(dataset_disp_maps.data_vars):
         common.save_disparity_maps(dataset_disp_maps, completed_cfg)
 
-    # Update output configuration with detailed margins
-    completed_cfg["margins_disp"] = pandora2d_machine.margins_disp.to_dict()
-    completed_cfg["margins"] = pandora2d_machine.margins_img.to_dict()
-    completed_cfg["info"] = {"version": version("pandora2d")}
+    # Update output configuration with pandora2d version and detailed margins
+    completed_cfg = update_output_config_with_info(completed_cfg, pandora2d_machine)
+
     # save config
     common.save_config(completed_cfg)
 
