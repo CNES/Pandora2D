@@ -1857,9 +1857,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(3, 3, 3, 3),
                 2,
-                (5, 5, 17, 17),
-                np.arange(-3, 5.25, 0.5),
-                np.arange(-5, 3.25, 0.5),
+                (5, 5, 11, 11),
+                np.arange(-1.5, 3.75, 0.5),
+                np.arange(-3.5, 1.75, 0.5),
                 # margins=(3,3,3,3) and subpix=2 -> we add a margin of 3x2 on disp_min_col, disp_max_col,
                 # disp_min_row, disp_max_row
                 id="Margins(left=3, up=3, right=3, down=3), subpix=2",
@@ -1867,9 +1867,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 1, 2, 3),
                 2,
-                (5, 5, 13, 9),
-                np.arange(0, 4.25, 0.5),
-                np.arange(-3, 3.25, 0.5),
+                (5, 5, 9, 7),
+                np.arange(0, 3.25, 0.5),
+                np.arange(-2.5, 1.75, 0.5),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x2 on disp_max_col,
                 # 1x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3)",
@@ -1877,9 +1877,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(6, 4, 2, 3),
                 2,
-                (5, 5, 19, 21),
-                np.arange(-6, 4.25, 0.5),
-                np.arange(-6, 3.25, 0.5),
+                (5, 5, 12, 13),
+                np.arange(-3, 3.25, 0.5),
+                np.arange(-4, 1.75, 0.5),
                 # margins=(6,4,2,3) -> we add a margin of 6x2 on disp_min_col, 2x2 on disp_max_col,
                 # 4x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=6, up=4, right=2, down=3)",
@@ -1895,9 +1895,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 1, 2, 3),
                 4,
-                (5, 5, 25, 17),
-                np.arange(0, 4.25, 0.25),
-                np.arange(-3, 3.25, 0.25),
+                (5, 5, 13, 11),
+                np.arange(0, 2.75, 0.25),
+                np.arange(-2.25, 1, 0.25),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x4 on disp_max_col,
                 # 1x4 on disp_min_row and 3x4 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3), subpix=4",
@@ -1905,9 +1905,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(3, 3, 3, 3),
                 4,
-                (5, 5, 33, 33),
-                np.arange(-3, 5.25, 0.25),
-                np.arange(-5, 3.25, 0.25),
+                (5, 5, 15, 15),
+                np.arange(-0.75, 3, 0.25),
+                np.arange(-2.75, 1, 0.25),
                 # margins=(3,3,3,3) and subpix=4 -> we add a margin of 3x4 on disp_min_col, disp_max_col,
                 # disp_min_row, disp_max_row
                 id="Margins(left=3, up=3, right=3, down=3), subpix=4",

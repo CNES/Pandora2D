@@ -495,7 +495,7 @@ def attributes(left_img_path, step, origin_coordinates, invalid_disp):
         "origin_coordinates": origin_coordinates,
         "step": {"row": step[0], "col": step[1]},
         "crs": crs,
-        "transform": transform * rasterio.Affine.scale(*step),
+        "transform": list(transform * rasterio.Affine.scale(*step)),
         "invalid_disp": invalid_disp,
     }
 

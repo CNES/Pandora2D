@@ -1036,7 +1036,7 @@ def test_build_usable_data_mask(disp_data, nodata, expected):
             (6, 6),
             Margins(1, 1, 1, 1),  # {"left": 1, "up": 1, "right": 1, "down": 1}
             2,  # subpixel scaling
-            (2, 2),
+            (4, 4),
             id="with subpixel",
         ),
         pytest.param(
