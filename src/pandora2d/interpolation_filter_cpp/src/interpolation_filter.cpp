@@ -28,7 +28,7 @@ This module contains functions associated to the Abstract filter class for cpp.
 namespace abstractfilter {
 
 // Constructor
-AbstractFilter::AbstractFilter(int size = 4, Margins margins = {0, 0, 0, 0})
+AbstractFilter::AbstractFilter(int size, Margins margins)
     : m_size(size), m_margins(margins) {}
 
 P2d::VectorD AbstractFilter::get_coeffs(const double fractional_shift) {
