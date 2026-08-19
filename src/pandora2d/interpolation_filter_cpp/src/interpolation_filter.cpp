@@ -1,4 +1,5 @@
 /* Copyright (c) 2026 Centre National d'Etudes Spatiales (CNES).
+ * Copyright (c) 2026 Institut Français de Recherche pour l'Exploitation de la MER (IFREMER).
  *
  * This file is part of PANDORA2D
  *
@@ -28,8 +29,7 @@ This module contains functions associated to the Abstract filter class for cpp.
 namespace abstractfilter {
 
 // Constructor
-AbstractFilter::AbstractFilter(int size, Margins margins)
-    : m_size(size), m_margins(margins) {}
+AbstractFilter::AbstractFilter(int size, Margins margins) : m_size(size), m_margins(margins) {}
 
 P2d::VectorD AbstractFilter::get_coeffs(const double fractional_shift) {
   return P2d::VectorD();
