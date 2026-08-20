@@ -71,14 +71,12 @@ def check_datasets(left: xr.Dataset, right: xr.Dataset) -> None:
         raise ValueError("left and right datasets must have the same shape")
 
 
-def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> dict:
+def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> None:
     """
     Validate and complete the user configuration.
 
     :param user_cfg: user configuration dictionary
     :param pandora2d_machine: Pandora2DMachine instance
-
-    :return: global configuration
     """
 
     # Check sections without dependencies
@@ -100,8 +98,6 @@ def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> dict:
     if "matching_cost" in user_cfg["pipeline"]:
         check_right_nodata_condition(user_cfg["input"], user_cfg["pipeline"])
         check_window_size_limit(user_cfg)
-
-    return user_cfg
 
 
 def get_section_config(user_cfg: dict[str, dict], key: str) -> dict[str, dict]:

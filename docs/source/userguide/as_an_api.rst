@@ -60,10 +60,10 @@ Pandora2D provides a full python API which can be used to compute disparity maps
     pandora2d_machine = Pandora2DMachine()
 
     # check the configurations and sequences steps
-    checked_cfg = check_conf(user_cfg, pandora2d_machine)
+    check_conf(user_cfg, pandora2d_machine)
 
     # run Pandora2D pipeline
-    dataset, completed_cfg = pandora2d.run_pandora2d(pandora2d_machine, checked_cfg)
+    dataset, completed_cfg = pandora2d.run_pandora2d(pandora2d_machine, user_cfg)
 
     # save dataset
     save_disparity_maps(dataset, completed_cfg)

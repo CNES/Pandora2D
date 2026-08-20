@@ -84,11 +84,11 @@ def test_criteria_datarray_created_in_cost_volumes(
 
     pandora2d_machine = Pandora2DMachine()
 
-    checked_cfg = check_conf(configuration, pandora2d_machine)
+    check_conf(configuration, pandora2d_machine)
 
-    img_left, img_right = create_datasets_from_inputs(input_config=checked_cfg["input"])
+    img_left, img_right = create_datasets_from_inputs(input_config=configuration["input"])
 
-    _, __ = run(pandora2d_machine, img_left, img_right, checked_cfg)
+    _, __ = run(pandora2d_machine, img_left, img_right, configuration)
 
     # Check that criteria dataarray contains correct criteria
     np.testing.assert_array_equal(pandora2d_machine.cost_volumes["criteria"].data, ground_truth_criteria_dataarray)
