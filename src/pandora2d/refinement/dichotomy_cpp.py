@@ -40,6 +40,7 @@ class Dichotomy(refinement.AbstractRefinement):
         "refinement_method": And(str, lambda x: x in ["dichotomy"]),
         "iterations": And(int, lambda it: it > 0),
         "filter": And(dict, lambda method: method["method"] in AbstractFilter.interpolation_filter_methods_avail),
+        "resampling_type": And(str, lambda x: x in ["cost_surface", "image"]),
     }
 
     def __init__(self, cfg: dict = None, _: list = None, __: int = 5) -> None:
@@ -55,6 +56,25 @@ class Dichotomy(refinement.AbstractRefinement):
         )
 
     @classmethod
+    def defaults(cls) -> dict:
+        """
+        Default values of the optional parameters.
+
+        :return: default values
+        """
+        return {"resampling_type": "cost_surface"}
+
+    @classmethod
+    def update_with_default_config_values(cls, cfg: dict) -> dict:
+        """
+        Add default values to the user configuration for missing optional parameters.
+
+        :param cfg: user_config for refinement method
+        :return: cfg: configuration completed with default values
+        """
+        return {**cls.defaults(), **cfg}
+
+    @classmethod
     def check_conf(cls, cfg: dict) -> dict:
         """
         Check the refinement method configuration.
@@ -64,7 +84,7 @@ class Dichotomy(refinement.AbstractRefinement):
         :param cfg: user_config for refinement method
         :return: cfg: global configuration
         """
-        cfg = super().check_conf(cfg)
+        cfg = super().check_conf(cls.update_with_default_config_values(cfg))
         if cfg["iterations"] > cls.NB_MAX_ITER:
             logging.warning(
                 "number_of_iterations %s is above maximum iteration. Maximum value of %s will be used instead.",

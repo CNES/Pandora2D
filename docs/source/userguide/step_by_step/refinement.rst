@@ -98,6 +98,13 @@ Available filters are described in :ref:`interpolation_filters`.
 
 .. warning::
     To avoid aliasing, it is strongly recommended to set the subpix parameter of the :ref:`matching_cost` step to a value greater than 1 when using dichotomy. 
+
+.. warning::
+    The *resampling_type* parameter is only available with the C++ dichotomy (*refinement_method* = "dichotomy").
+
+.. warning::
+    The image resampling option (*resampling_type* = "image") is being implemented:
+    a dichotomy on the cost surface is performed instead.
  
 
 Configuration and parameters
@@ -194,6 +201,13 @@ Configuration and parameters
                       - None
                       - {"method": "bicubic"}
                       - Yes
+                    * - *resampling_type*
+                      - | Data on which the 
+                        | dichotomy is performed
+                      - string
+                      - "cost_surface"
+                      - "cost_surface", "image"
+                      - No
 
                 Configuration example with dichotomy c++ : 
 
@@ -281,6 +295,13 @@ Configuration and parameters
                         |  "size" : 6 to 21, 
                         | }
                       - Yes
+                    * - *resampling_type*
+                      - | Data on which the 
+                        | dichotomy is performed
+                      - string
+                      - "cost_surface"
+                      - "cost_surface", "image"
+                      - No
 
                 Configuration example with dichotomy c++ : 
 

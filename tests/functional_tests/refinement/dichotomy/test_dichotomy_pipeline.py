@@ -116,6 +116,40 @@ def test_dichotomy_execution(make_cfg_for_dichotomy):
         assert np.all(np.isnan(dataset_disp_maps.col_map.data))
 
 
+@pytest.mark.parametrize("dicho_method", ["dichotomy"])
+@pytest.mark.parametrize("filter_method", ["bicubic"])
+@pytest.mark.parametrize("subpix", [2])
+@pytest.mark.parametrize("step", [[1, 1]])
+@pytest.mark.parametrize("iterations", [1])
+@pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
+@pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
+@pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
+def test_image_resampling_warning(make_cfg_for_dichotomy, caplog):
+    """
+    Description : Test that a warning is raised when the image resampling option is activated.
+    Data :
+           * Left_img : cones/monoband/left.png
+           * Right_img : cones/monoband/right.png
+    """
+    pandora2d_machine = Pandora2DMachine()
+
+    user_cfg = copy.deepcopy(make_cfg_for_dichotomy)
+    user_cfg["pipeline"]["refinement"]["resampling_type"] = "image"
+    cfg = check_conf(user_cfg, pandora2d_machine)
+
+    cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+    roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+
+    image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+
+    pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+
+    assert (
+        "Image resampling is being implemented: a dichotomy on the cost surface will be performed instead."
+        in caplog.messages
+    )
+
+
 @pytest.mark.parametrize(
     ("dicho_method", "filter_method"),
     [

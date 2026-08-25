@@ -228,6 +228,39 @@ class TestCheckConf:
             dichotomy_class(config_dichotomy)
         assert "Missing keys in expected schema: unexpected_key" in err.value.args[0]
 
+    @pytest.mark.parametrize("resampling_type", ["cost_surface", "image"])
+    def test_valid_resampling_type(self, config_dichotomy, resampling_type):
+        """It should not fail with the dichotomy c++ and an accepted resampling_type value."""
+        config_dichotomy["refinement_method"] = "dichotomy"
+        config_dichotomy["resampling_type"] = resampling_type
+
+        assert refinement.dichotomy_cpp.Dichotomy(config_dichotomy).cfg["resampling_type"] == resampling_type
+
+    @pytest.mark.parametrize("resampling_type", [3, ["image"], "invalid_name"])
+    def test_fails_with_wrong_resampling_type(self, config_dichotomy, resampling_type):
+        """Should raise an error when resampling_type has not an expected type or value."""
+        config_dichotomy["refinement_method"] = "dichotomy"
+        config_dichotomy["resampling_type"] = resampling_type
+
+        with pytest.raises(json_checker.core.exceptions.DictCheckerError) as err:
+            refinement.dichotomy_cpp.Dichotomy(config_dichotomy)
+        assert "resampling_type" in err.value.args[0]
+
+    def test_default_resampling_type(self, config_dichotomy):
+        """resampling_type should be `cost_surface` when it is not given by the user."""
+        config_dichotomy["refinement_method"] = "dichotomy"
+
+        assert refinement.dichotomy_cpp.Dichotomy(config_dichotomy).cfg["resampling_type"] == "cost_surface"
+
+    def test_resampling_type_fails_with_dichotomy_python(self, config_dichotomy):
+        """resampling_type is only available with the dichotomy c++."""
+        config_dichotomy["refinement_method"] = "dichotomy_python"
+        config_dichotomy["resampling_type"] = "image"
+
+        with pytest.raises(json_checker.core.exceptions.MissKeyCheckerError) as err:
+            refinement.dichotomy.DichotomyPython(config_dichotomy)
+        assert "Missing keys in expected schema: resampling_type" in err.value.args[0]
+
 
 @pytest.mark.parametrize(
     ["min_row", "max_row", "row_step"],
