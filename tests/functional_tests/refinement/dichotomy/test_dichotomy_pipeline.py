@@ -135,14 +135,14 @@ def test_image_resampling_warning(make_cfg_for_dichotomy, caplog):
 
     user_cfg = copy.deepcopy(make_cfg_for_dichotomy)
     user_cfg["pipeline"]["refinement"]["resampling_type"] = "image"
-    cfg = check_conf(user_cfg, pandora2d_machine)
+    check_conf(user_cfg, pandora2d_machine)
 
-    cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-    roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+    user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+    roi = get_roi_processing(user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"])
 
-    image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
 
-    pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+    pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg)
 
     assert (
         "Image resampling is being implemented: a dichotomy on the cost surface will be performed instead."
