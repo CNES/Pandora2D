@@ -905,9 +905,9 @@ def test_disparity_map_output_georef(correct_pipeline, correct_input_cfg):
     correct_input_cfg.update(correct_pipeline)
     correct_input_cfg.update({"output": {"path": "tatoo"}})
 
-    checked_cfg = check_conf(correct_input_cfg, pandora2d_machine)
+    check_conf(correct_input_cfg, pandora2d_machine)
 
-    dataset, _ = run(pandora2d_machine, img_left, img_right, checked_cfg)
+    dataset, _ = run(pandora2d_machine, img_left, img_right, correct_input_cfg)
 
     assert "EPSG:32632" == dataset.attrs["crs"]
     assert Affine(25.94, 0.00, -5278429.43, 0.00, -25.94, 14278941.03) == dataset.attrs["transform"]

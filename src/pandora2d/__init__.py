@@ -272,10 +272,10 @@ def main(cfg_path: PathLike | str, verbose: bool) -> None:
 
     pandora2d_machine = Pandora2DMachine()
 
-    cfg = check_conf(user_cfg, pandora2d_machine)
-    expert_mode_config.enable = "expert_mode" in cfg
+    check_conf(user_cfg, pandora2d_machine)
+    expert_mode_config.enable = "expert_mode" in user_cfg
 
-    dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, cfg)
+    dataset_disp_maps, completed_cfg = run_pandora2d(pandora2d_machine, user_cfg)
 
     # save dataset if not empty
     if bool(dataset_disp_maps.data_vars):

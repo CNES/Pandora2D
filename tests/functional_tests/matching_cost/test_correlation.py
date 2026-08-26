@@ -106,14 +106,16 @@ class TestCorrelation:
         pandora2d_machine = Pandora2DMachine()
 
         user_cfg = deepcopy(cfg_for_correlation_with_roi)
-        cfg = check_conf(user_cfg, pandora2d_machine)
+        check_conf(user_cfg, pandora2d_machine)
 
-        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-        roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+        user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(
+            user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"]
+        )
 
-        image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+        image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
 
-        dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+        dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg)
 
         # Checking that resulting disparity maps are not full of nans
         assert not np.all(np.isnan(dataset_disp_maps.row_map.data))
@@ -139,16 +141,18 @@ class TestCorrelation:
         pandora2d_machine = Pandora2DMachine()
 
         user_cfg = deepcopy(cfg_for_correlation_with_roi)
-        cfg = check_conf(user_cfg, pandora2d_machine)
+        check_conf(user_cfg, pandora2d_machine)
 
-        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-        roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+        user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(
+            user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"]
+        )
 
-        image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+        image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
 
         # Run matching cost step
-        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
-        pandora2d_machine.run("matching_cost", cfg)
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, user_cfg)
+        pandora2d_machine.run("matching_cost", user_cfg)
 
         invalid_point = np.where(pandora2d_machine.cost_volumes["criteria"].data != 0)
         assert np.all(pandora2d_machine.cost_volumes["cost_volumes"].data[invalid_point] == 0)
@@ -174,17 +178,19 @@ class TestCorrelation:
         pandora2d_machine = Pandora2DMachine()
 
         user_cfg = deepcopy(cfg_for_correlation_with_roi)
-        cfg = check_conf(user_cfg, pandora2d_machine)
+        check_conf(user_cfg, pandora2d_machine)
 
-        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-        roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+        user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(
+            user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"]
+        )
 
-        image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+        image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
 
         # Run matching cost step
-        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, user_cfg)
         start_time = time.time()
-        pandora2d_machine.run("matching_cost", cfg)
+        pandora2d_machine.run("matching_cost", user_cfg)
         duration = time.time() - start_time
 
         # Computation with mask
@@ -192,19 +198,21 @@ class TestCorrelation:
         pandora2d_machine = Pandora2DMachine()
 
         user_cfg = deepcopy(cfg_for_correlation_with_roi)
-        cfg = check_conf(user_cfg, pandora2d_machine)
+        check_conf(user_cfg, pandora2d_machine)
 
-        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-        roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+        user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(
+            user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"]
+        )
 
-        cfg["input"]["left"]["mask"] = full_invalid_mask_path
+        user_cfg["input"]["left"]["mask"] = full_invalid_mask_path
 
-        image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+        image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
 
         # Run matching cost step
-        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, user_cfg)
         start_time_mask = time.time()
-        pandora2d_machine.run("matching_cost", cfg)
+        pandora2d_machine.run("matching_cost", user_cfg)
         duration_mask = time.time() - start_time_mask
 
         # Check that the more invalid points, the faster the mutual information computation.
@@ -236,12 +244,12 @@ class TestZnccAutoSelectionPerformance:
             user_cfg["pipeline"]["matching_cost"]["matching_cost_method"] = method
 
             pandora2d_machine = Pandora2DMachine()
-            cfg = check_conf(user_cfg, pandora2d_machine)
-            image_datasets = create_datasets_from_inputs(input_config=cfg["input"])
+            check_conf(user_cfg, pandora2d_machine)
+            image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"])
 
-            pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+            pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, user_cfg)
             start_time = time.time()
-            pandora2d_machine.run("matching_cost", cfg)
+            pandora2d_machine.run("matching_cost", user_cfg)
             return time.time() - start_time
 
         return _run_matching_cost
@@ -330,11 +338,13 @@ class TestNbBinsMax:
         """
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(cfg_for_correlation, pandora2d_machine)
+        check_conf(cfg_for_correlation, pandora2d_machine)
 
-        image_datasets = create_datasets_from_inputs(input_config=cfg["input"])
+        image_datasets = create_datasets_from_inputs(input_config=cfg_for_correlation["input"])
 
-        dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+        dataset_disp_maps, _ = pandora2d.run(
+            pandora2d_machine, image_datasets.left, image_datasets.right, cfg_for_correlation
+        )
 
         # Checking that resulting disparity maps are not full of nans
         assert not np.all(np.isnan(dataset_disp_maps.row_map.data))

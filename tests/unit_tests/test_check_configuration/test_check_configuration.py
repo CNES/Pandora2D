@@ -29,6 +29,7 @@ import xarray as xr
 from json_checker import DictCheckerError
 
 from pandora2d.check_configuration import (
+    build_default_segment_mode_configuration,
     check_conf,
     check_datasets,
     check_right_nodata_condition,
@@ -261,3 +262,19 @@ def test_extra_section_is_allowed(correct_input_cfg, correct_pipeline, pandora2d
     configuration = {**correct_input_cfg, **correct_pipeline, "output": {"path": "here"}, extra_section_name: {}}
 
     check_conf(configuration, pandora2d_machine)
+
+
+def test_user_configuration_is_updated_in_place(correct_input_cfg, correct_pipeline, pandora2d_machine):
+    """
+    Description : Should complete the given configuration in place.
+    Data :
+    - Left image : cones/monoband/left.png
+    - Right image : cones/monoband/right.png
+    """
+    configuration = {**correct_input_cfg, **correct_pipeline, "output": {"path": "here"}}
+
+    check_conf(configuration, pandora2d_machine)
+
+    assert configuration["input"]["left"]["mask"] is None
+    assert configuration["pipeline"]["matching_cost"]["subpix"] == 1
+    assert configuration["segment_mode"] == build_default_segment_mode_configuration()["segment_mode"]
