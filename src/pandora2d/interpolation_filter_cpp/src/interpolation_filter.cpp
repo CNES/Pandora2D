@@ -98,4 +98,54 @@ P2d::VectorD AbstractFilter::interpolate(const P2d::MatrixD& image,
   return interpolated_positions;
 }
 
+// Interpolate window
+std::optional<P2d::Matrixf> AbstractFilter::interpolate_window(const P2d::MatrixD& image,
+                                                               int window_size,
+                                                               double center_row,
+                                                               double center_col) {
+  const int half_window = window_size / 2;
+  const int nb_pixels = window_size * window_size;
+
+  const Margins& margins = m_margins;
+  const int filter_size = m_size;
+
+  /*
+  The window can be interpolated only if the resampling areas of its extreme positions fit in the
+  image. We reproduce here the indexing used by the interpolate method, which uses margins.left for
+  rows and margins.up for cols.
+  */
+  const int first_area_row = static_cast<int>(center_row - half_window) - margins.left;
+  const int last_area_row = static_cast<int>(center_row + half_window) - margins.left;
+  const int first_area_col = static_cast<int>(center_col - half_window) - margins.up;
+  const int last_area_col = static_cast<int>(center_col + half_window) - margins.up;
+
+  if (first_area_row < 0 || last_area_row + filter_size > image.rows() || first_area_col < 0 ||
+      last_area_col + filter_size > image.cols()) {
+    return std::nullopt;
+  }
+
+  // Positions to be interpolated around the center of the window
+  P2d::VectorD row_positions(nb_pixels);
+  P2d::VectorD col_positions(nb_pixels);
+
+  int index = 0;
+  for (int row = -half_window; row <= half_window; ++row) {
+    for (int col = -half_window; col <= half_window; ++col) {
+      row_positions[index] = center_row + row;
+      col_positions[index] = center_col + col;
+      ++index;
+    }
+  }
+
+  P2d::VectorD interpolated_values =
+      interpolate(image, col_positions, row_positions, MAX_FRACTIONAL_VALUE);
+
+  P2d::Matrixf window(window_size, window_size);
+  for (int p = 0; p < nb_pixels; ++p) {
+    window(p / window_size, p % window_size) = static_cast<float>(interpolated_values[p]);
+  }
+
+  return window;
+}
+
 }  // namespace abstractfilter
