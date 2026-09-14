@@ -192,6 +192,13 @@ def check_pipeline_section(user_cfg: dict[str, dict], pandora2d_machine: Pandora
             user_cfg["pipeline"]["matching_cost"]["subpix"],
         )
 
+        # Check matching cost method with image resampling, only available with the cpp dichotomy
+        if user_cfg["pipeline"]["refinement"]["refinement_method"] == "dichotomy":
+            check_matching_cost_method_with_image_resampling(
+                user_cfg["pipeline"]["matching_cost"]["matching_cost_method"],
+                user_cfg["pipeline"]["refinement"]["resampling_type"],
+            )
+
     # Check the correlation metric if there is a ambiguity step
     if (
         "cost_volume_confidence" in user_cfg["pipeline"]
@@ -213,6 +220,24 @@ def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> No
         logging.warning(
             "To avoid aliasing, it is strongly recommended to set the subpix parameter of the matching cost step"
             " to a value greater than 1 when using dichotomy."
+        )
+
+
+def check_matching_cost_method_with_image_resampling(matching_cost_method: str, resampling_type: str) -> None:
+    """
+    Check that the image resampling refinement option is used with a supported matching cost method.
+
+    :param matching_cost_method: matching_cost method in user configuration
+    :param resampling_type: data on which the dichotomy is performed
+    :raises ValueError: If image resampling is used with an unsupported matching cost method.
+    """
+
+    accepted_methods = ["zncc", "zncc-optim-1", "zncc-optim-2", "mutual_information"]
+
+    if resampling_type == "image" and matching_cost_method not in accepted_methods:
+        raise ValueError(
+            f"Image resampling is only available with the {accepted_methods} matching cost methods, "
+            f"but {matching_cost_method} was given."
         )
 
 

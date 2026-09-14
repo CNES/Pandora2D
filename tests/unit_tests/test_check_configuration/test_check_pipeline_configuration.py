@@ -21,13 +21,15 @@
 Test check pipeline step configuration
 """
 
-from copy import deepcopy
 import importlib.util
 import pytest
 import transitions
 from json_checker import DictCheckerError
 
 from pandora2d.check_configuration import check_pipeline_section
+
+# Make pylint happy with fixtures:
+# pylint: disable=redefined-outer-name,unused-argument
 
 
 class TestCheckPipelineSection:
@@ -172,6 +174,46 @@ class TestCheckPipelineSection:
             "In the meantime, it is recommended to filter the confidence_measure map using the validity_mask"
             in caplog.messages
         )
+
+
+class TestCheckMatchingCostMethodWithImageResampling:
+    """Test check_matching_cost_method_with_image_resampling."""
+
+    @pytest.fixture()
+    def resampling_type(self):
+        return "image"
+
+    @pytest.fixture()
+    def pipeline_with_resampling_type(self, correct_pipeline_with_dichotomy_cpp, resampling_type):
+        """Cpp dichotomy pipeline with the resampling_type parameter given by the user."""
+        correct_pipeline_with_dichotomy_cpp["pipeline"]["refinement"]["resampling_type"] = resampling_type
+        return correct_pipeline_with_dichotomy_cpp
+
+    @pytest.mark.parametrize("matching_cost_method", ["ssd", "sad", "zncc_python"])
+    def test_fails_with_image_resampling_and_wrong_matching_cost_method(
+        self, pipeline_with_resampling_type, pandora2d_machine
+    ):
+        """Image resampling is not available with every matching cost method."""
+
+        with pytest.raises(ValueError, match="Image resampling is only available with"):
+            check_pipeline_section(pipeline_with_resampling_type, pandora2d_machine)
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-1", "zncc-optim-2", "mutual_information"])
+    def test_image_resampling_with_accepted_matching_cost_method(
+        self, pipeline_with_resampling_type, pandora2d_machine
+    ):
+        """It should not fail with image resampling and an accepted matching cost method."""
+
+        check_pipeline_section(pipeline_with_resampling_type, pandora2d_machine)
+
+    @pytest.mark.parametrize("resampling_type", ["cost_surface"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc_python"])
+    def test_cost_surface_resampling_with_any_matching_cost_method(
+        self, pipeline_with_resampling_type, pandora2d_machine
+    ):
+        """The matching cost method is only restricted when the dichotomy is performed on the image."""
+
+        check_pipeline_section(pipeline_with_resampling_type, pandora2d_machine)
 
 
 class TestCheckStep:

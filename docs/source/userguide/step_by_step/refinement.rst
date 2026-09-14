@@ -116,6 +116,10 @@ Available filters are described in :ref:`interpolation_filters`.
     The *resampling_type* parameter is only available with the C++ dichotomy (*refinement_method* = "dichotomy").
 
 .. warning::
+    The image resampling option (*resampling_type* = "image") is only available with the
+    "zncc", "zncc-optim-1", "zncc-optim-2" and "mutual_information" :ref:`matching_cost` methods.
+
+.. warning::
     The image resampling option (*resampling_type* = "image") is being implemented:
     a dichotomy on the cost surface is performed instead.
  
