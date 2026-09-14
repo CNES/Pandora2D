@@ -58,8 +58,7 @@ contributing on behalf of your company or another entity which retains copyright
 for your contribution.
 
 The copyright owner (or owner's agent) must be mentioned in headers of all
-modified source files and also added to the [NOTICE
-file](./NOTICE).
+modified source files.
 
 
 # Coding guide
