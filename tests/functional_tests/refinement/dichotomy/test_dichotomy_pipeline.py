@@ -52,7 +52,7 @@ def make_cfg_for_dichotomy(
         "ROI": roi,
         "pipeline": {
             "matching_cost": {
-                "matching_cost_method": "zncc_python",
+                "matching_cost_method": "zncc",
                 "window_size": 7,
                 "subpix": subpix,
                 "step": step,
