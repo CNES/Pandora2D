@@ -39,7 +39,7 @@ dependencies = [
     "matplotlib",
     "numpy",
     "pandas",
-    "pandora>=1.8.1",
+    "pandora>=1.9.0",
     "psutil",
     "rasterio",
     "scikit-image",

@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.2.0a1 (September 2026)
+
+### Added
+
+- Added automatic selection of the best ZNCC implementation. [#431]
+- Added unique run_pandora2d method. [#476]
+- Added margin specifications to the output file. [#475]
+- Added Tina Odaka as new contributor. [#502]
+- Added CITATION.cff file. [#359]
+- Added configuration for image resampling. [#466]
+- Added note about skipped dichotomy iteration when using subpix greater than one. [#503]
+- Added a restriction on using the image resampling for matching cost methods that are not suitable. [#480]
+
+### Fixed
+
+- Fixed usage_with_origin_coordinates-ipynb notebook. [#467]
+- Fixed mutual information execution time. [#497]
+- Fixed margin computation without subpix. [#494]
+
+### Changed
+
+- Updated matching cost method selection in cpp code. [#464]
+- Usage of Eigen RowMajor in cpp code. [#371]
+- Updated check_conf method return type. [#418]
+- Removed NOTICE file. [#147]
+- Updated dichotomy performance tests for all implementations of zncc. [#457]
+
 ## 1.1.1 (June 2026)
 
 ### Added
