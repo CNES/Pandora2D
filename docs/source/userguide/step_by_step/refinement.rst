@@ -98,6 +98,30 @@ Available filters are described in :ref:`interpolation_filters`.
 
 .. warning::
     To avoid aliasing, it is strongly recommended to set the subpix parameter of the :ref:`matching_cost` step to a value greater than 1 when using dichotomy. 
+
+.. note::
+    When the :ref:`matching_cost` step uses a *subpix* value greater than 1,
+    the first dichotomy iterations may be skipped. The matching cost step already
+    provides a subpixel precision of ``1/subpix`` pixel, so dichotomy iterations
+    targeting a coarser or equal precision are not executed.
+
+    For example, with ``subpix=4`` and ``iterations=3``, only the last iteration
+    is performed (target precision 0.125 pixel), because the initial precision
+    is already 0.25 pixel.
+
+    Run Pandora2D with the ``-v`` verbose flag to display the precision reached
+    by dichotomy in the logs (``Dichotomy precision reached``).
+
+.. warning::
+    The *resampling_type* parameter is only available with the C++ dichotomy (*refinement_method* = "dichotomy").
+
+.. warning::
+    The image resampling option (*resampling_type* = "image") is only available with the
+    "zncc", "zncc-optim-1", "zncc-optim-2" and "mutual_information" :ref:`matching_cost` methods.
+
+.. warning::
+    The image resampling option (*resampling_type* = "image") is being implemented:
+    a dichotomy on the cost surface is performed instead.
  
 
 Configuration and parameters
@@ -194,6 +218,13 @@ Configuration and parameters
                       - None
                       - {"method": "bicubic"}
                       - Yes
+                    * - *resampling_type*
+                      - | Data on which the 
+                        | dichotomy is performed
+                      - string
+                      - "cost_surface"
+                      - "cost_surface", "image"
+                      - No
 
                 Configuration example with dichotomy c++ : 
 
@@ -281,6 +312,13 @@ Configuration and parameters
                         |  "size" : 6 to 21, 
                         | }
                       - Yes
+                    * - *resampling_type*
+                      - | Data on which the 
+                        | dichotomy is performed
+                      - string
+                      - "cost_surface"
+                      - "cost_surface", "image"
+                      - No
 
                 Configuration example with dichotomy c++ : 
 

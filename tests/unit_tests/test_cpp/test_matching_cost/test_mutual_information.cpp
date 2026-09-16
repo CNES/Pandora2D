@@ -74,7 +74,9 @@ template <typename T>
 T calculate_entropy2D_medicis(const P2d::MatrixX<T>& img_l, const P2d::MatrixX<T>& img_r) {
   // same size for left and right images
   auto nb_pixel = static_cast<T>(img_l.size());
-  auto hist_2D = calculate_histogram2D<T>(img_l, img_r);
+  auto hist_left = calculate_histogram1D<T>(img_l);
+  auto hist_right = calculate_histogram1D<T>(img_r);
+  auto hist_2D = calculate_histogram2D<T>(img_l, img_r, hist_left, hist_right);
 
   return get_entropy_medicis<T, Histogram2D<T>>(nb_pixel, hist_2D);
 };
@@ -97,9 +99,11 @@ TEST_CASE_TEMPLATE("Test Entropy1D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
     MatrixType img(4, 4);
     img << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
 
+    auto hist = calculate_histogram1D<Type>(img);
+    Type entropy_1D_img = get_entropy<Type, Histogram1D<Type>>(static_cast<Type>(img.size()), hist);
+
     Type entropy_gt = 1.579434;
     Type entropy_medicis = calculate_entropy1D_medicis<Type>(img);
-    Type entropy_1D_img = calculate_entropy1D<Type>(img);
 
     CHECK(entropy_1D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_1D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -109,9 +113,11 @@ TEST_CASE_TEMPLATE("Test Entropy1D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
     MatrixType img(4, 4);
     img << 1., 2., 3., 4., 2., 2., 2., 2., 4., 3., 2., 1., 1., 3., 3., 3.;
 
+    auto hist = calculate_histogram1D<Type>(img);
+    Type entropy_1D_img = get_entropy<Type, Histogram1D<Type>>(static_cast<Type>(img.size()), hist);
+
     Type entropy_gt = 1.19946029;
     Type entropy_medicis = calculate_entropy1D_medicis<Type>(img);
-    Type entropy_1D_img = calculate_entropy1D<Type>(img);
 
     CHECK(entropy_1D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_1D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -122,9 +128,11 @@ TEST_CASE_TEMPLATE("Test Entropy1D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
     img << -2.0, -3.0, 10.0, -9.0, -11.0, -1.0, -2.0, -12.0, -5.0, 3.0, -13.0, -6.0, 6.0, -11.0,
         -4.0, -8.0;
 
+    auto hist = calculate_histogram1D<Type>(img);
+    Type entropy_1D_img = get_entropy<Type, Histogram1D<Type>>(static_cast<Type>(img.size()), hist);
+
     Type entropy_gt = 1.5052408;
     Type entropy_medicis = calculate_entropy1D_medicis<Type>(img);
-    Type entropy_1D_img = calculate_entropy1D<Type>(img);
 
     CHECK(entropy_1D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_1D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -134,9 +142,11 @@ TEST_CASE_TEMPLATE("Test Entropy1D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
     MatrixType img(4, 4);
     img << 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0;
 
+    auto hist = calculate_histogram1D<Type>(img);
+    Type entropy_1D_img = get_entropy<Type, Histogram1D<Type>>(static_cast<Type>(img.size()), hist);
+
     Type entropy_gt = 0.;
     Type entropy_medicis = calculate_entropy1D_medicis<Type>(img);
-    Type entropy_1D_img = calculate_entropy1D<Type>(img);
 
     CHECK(entropy_1D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_1D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -146,9 +156,11 @@ TEST_CASE_TEMPLATE("Test Entropy1D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
     VectorType img(5);
     img << 1, 5, 12, 4, 0;
 
+    auto hist = calculate_histogram1D<Type>(img);
+    Type entropy_1D_img = get_entropy<Type, Histogram1D<Type>>(static_cast<Type>(img.size()), hist);
+
     Type entropy_gt = 0.7219280;
     Type entropy_medicis = calculate_entropy1D_medicis<Type>(img);
-    Type entropy_1D_img = calculate_entropy1D<Type>(img);
 
     CHECK(entropy_1D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_1D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -163,13 +175,18 @@ TEST_CASE_TEMPLATE("Test Entropy2D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
   SUBCASE("4x4 matrix") {
     MatrixType img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
+    auto hist_left = calculate_histogram1D<Type>(img_l);
 
     MatrixType img_r(4, 4);
     img_r << 1., 2., 3., 4., 2., 2., 2., 2., 4., 3., 2., 1., 1., 3., 3., 3.;
+    auto hist_right = calculate_histogram1D<Type>(img_r);
+
+    auto hist_2D = calculate_histogram2D<Type>(img_l, img_r, hist_left, hist_right);
+    Type entropy_2D_img =
+        get_entropy<Type, Histogram2D<Type>>(static_cast<Type>(img_l.size()), hist_2D);
 
     Type entropy_gt = 2.55503653;
     Type entropy_medicis = calculate_entropy2D_medicis<Type>(img_l, img_r);
-    Type entropy_2D_img = calculate_entropy2D<Type>(img_l, img_r);
 
     CHECK(entropy_2D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_2D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -178,14 +195,19 @@ TEST_CASE_TEMPLATE("Test Entropy2D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
   SUBCASE("4x4 matrix with negative values in right img") {
     MatrixType img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
+    auto hist_left = calculate_histogram1D<Type>(img_l);
 
     MatrixType img_r(4, 4);
     img_r << -2.0, -3.0, 10.0, -9.0, -11.0, -1.0, -2.0, -12.0, -5.0, 3.0, -13.0, -6.0, 6.0, -11.0,
         -4.0, -8.0;
+    auto hist_right = calculate_histogram1D<Type>(img_r);
+
+    auto hist_2D = calculate_histogram2D<Type>(img_l, img_r, hist_left, hist_right);
+    Type entropy_2D_img =
+        get_entropy<Type, Histogram2D<Type>>(static_cast<Type>(img_l.size()), hist_2D);
 
     Type entropy_gt = 3.0306390;
     Type entropy_medicis = calculate_entropy2D_medicis<Type>(img_l, img_r);
-    Type entropy_2D_img = calculate_entropy2D<Type>(img_l, img_r);
 
     CHECK(entropy_2D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_2D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -194,13 +216,18 @@ TEST_CASE_TEMPLATE("Test Entropy2D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
   SUBCASE("4x4 matrix with identical values in right img") {
     MatrixType img_l(4, 4);
     img_l << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0;
+    auto hist_left = calculate_histogram1D<Type>(img_l);
 
     MatrixType img_r(4, 4);
     img_r << 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0;
+    auto hist_right = calculate_histogram1D<Type>(img_r);
+
+    auto hist_2D = calculate_histogram2D<Type>(img_l, img_r, hist_left, hist_right);
+    Type entropy_2D_img =
+        get_entropy<Type, Histogram2D<Type>>(static_cast<Type>(img_l.size()), hist_2D);
 
     Type entropy_gt = 1.579434;
     Type entropy_medicis = calculate_entropy2D_medicis<Type>(img_l, img_r);
-    Type entropy_2D_img = calculate_entropy2D<Type>(img_l, img_r);
 
     CHECK(entropy_2D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_2D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -209,13 +236,18 @@ TEST_CASE_TEMPLATE("Test Entropy2D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
   SUBCASE("Vectors of size 5") {
     VectorType img_l(5);
     img_l << 1, 5, 12, 4, 0;
+    auto hist_left = calculate_histogram1D<Type>(img_l);
 
     VectorType img_r(5);
     img_r << 2, 4, 18, 9, 25;
+    auto hist_right = calculate_histogram1D<Type>(img_r);
+
+    auto hist_2D = calculate_histogram2D<Type>(img_l, img_r, hist_left, hist_right);
+    Type entropy_2D_img =
+        get_entropy<Type, Histogram2D<Type>>(static_cast<Type>(img_l.size()), hist_2D);
 
     Type entropy_gt = 1.3709505;
     Type entropy_medicis = calculate_entropy2D_medicis<Type>(img_l, img_r);
-    Type entropy_2D_img = calculate_entropy2D<Type>(img_l, img_r);
 
     CHECK(entropy_2D_img == doctest::Approx(entropy_medicis).epsilon(1e-7));
     CHECK(entropy_2D_img == doctest::Approx(entropy_gt).epsilon(1e-7));
@@ -224,7 +256,6 @@ TEST_CASE_TEMPLATE("Test Entropy2D", T, TypeStruct<float, P2d::Vectorf, P2d::Mat
 
 TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, P2d::Matrixf>) {
   using Type = typename T::Type;
-  using VectorType = typename T::VectorType;
   using MatrixType = typename T::MatrixType;
 
   SUBCASE("4x4 matrix") {
@@ -236,7 +267,9 @@ TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, 
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)
     Type mutual_information_gt = 1.579434 + 1.19946029 - 2.55503653;  // 0.22385776
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 
@@ -248,7 +281,9 @@ TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, 
     img_r << 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0;
 
     Type mutual_information_gt = 1.0;
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 
@@ -262,7 +297,9 @@ TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, 
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)
     Type mutual_information_gt = 1.579434 + 1.5052408 - 3.0306390;  // 0.05403575564
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-6));
   }
 
@@ -274,20 +311,24 @@ TEST_CASE_TEMPLATE("Test MutualInformation", T, TypeStruct<float, P2d::Vectorf, 
     img_r << 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0;
 
     Type mutual_information_gt = 0.;
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 
-  SUBCASE("Vector of size 5") {
-    VectorType img_l(5);
+  SUBCASE("Column matrix of size 5") {
+    MatrixType img_l(5, 1);
     img_l << 1, 5, 12, 4, 0;
 
-    VectorType img_r(5);
+    MatrixType img_r(5, 1);
     img_r << 2, 4, 18, 9, 25;
 
     // mutual_information = E1D(img_l) + E1D(img_r) - E2D(img_l, img_r)
     Type mutual_information_gt = 0.7219280 + 0.97095059 - 1.3709505;  // 0.32192809489
-    Type mutual_information = calculate_mutual_information<Type>(img_l, img_r);
+    MutualInformationCorrelator<Type> correlator;
+    correlator.prepare_left_window(img_l);
+    Type mutual_information = correlator(img_r);
     CHECK(mutual_information == doctest::Approx(mutual_information_gt).epsilon(1e-7));
   }
 }

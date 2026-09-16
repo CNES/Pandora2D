@@ -42,7 +42,7 @@ class TestDisparityMargins:
         Creates left and right datasets
         """
 
-        data = np.full((10, 10), 1)
+        data = np.full((10, 10), 1, dtype=np.float32)
         left = xr.Dataset(
             {"im": (["row", "col"], data)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
@@ -60,7 +60,7 @@ class TestDisparityMargins:
             }
         )
 
-        data = np.full((10, 10), 1)
+        data = np.full((10, 10), 1, dtype=np.float32)
         right = xr.Dataset(
             {"im": (["row", "col"], data)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
@@ -92,10 +92,8 @@ class TestDisparityMargins:
             },
         }
 
-    # /!\ "zncc" currently target "zncc-optim-1"
-    @pytest.mark.parametrize(
-        "matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc", "zncc-optim-2"]
-    )
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc"])
     @pytest.mark.parametrize(
         ["subpix", "refinement_config", "cv_shape_expected", "disp_col_expected", "disp_row_expected"],
         [
@@ -128,17 +126,17 @@ class TestDisparityMargins:
             pytest.param(
                 2,
                 {"refinement_method": "dichotomy_python", "iterations": 1, "filter": {"method": "bicubic"}},
-                (10, 10, 15, 11),
-                [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
-                [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+                (10, 10, 12, 8),
+                [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+                [-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
                 id="Subpix=2 and refinement_method=dichotomy_python",
             ),
             pytest.param(
                 2,
                 {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
-                (10, 10, 15, 11),
-                [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
-                [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+                (10, 10, 12, 8),
+                [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
+                [-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
                 id="Subpix=2 and refinement_method=dichotomy_cpp",
             ),
             pytest.param(
@@ -146,25 +144,25 @@ class TestDisparityMargins:
                 {
                     "refinement_method": "optical_flow",
                 },
-                (10, 10, 13, 9),
-                [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4],
-                [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3],
+                (10, 10, 11, 7),
+                [0.5, 1, 1.5, 2, 2.5, 3, 3.5],
+                [-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5],
                 id="Subpix=2 and refinement_method=optical_flow",
             ),
             pytest.param(
                 4,
                 {"refinement_method": "dichotomy_python", "iterations": 1, "filter": {"method": "bicubic"}},
-                (10, 10, 29, 21),
-                np.arange(0, 5.25, 0.25),
-                np.arange(-3, 4.25, 0.25),
+                (10, 10, 20, 12),
+                np.arange(0.75, 3.75, 0.25),
+                np.arange(-2.25, 2.75, 0.25),
                 id="Subpix=4 and refinement_method=dichotomy_python",
             ),
             pytest.param(
                 4,
                 {"refinement_method": "dichotomy", "iterations": 1, "filter": {"method": "bicubic"}},
-                (10, 10, 29, 21),
-                np.arange(0, 5.25, 0.25),
-                np.arange(-3, 4.25, 0.25),
+                (10, 10, 20, 12),
+                np.arange(0.75, 3.75, 0.25),
+                np.arange(-2.25, 2.75, 0.25),
                 id="Subpix=4 and refinement_method=dichotomy_cpp",
             ),
             pytest.param(
@@ -172,9 +170,9 @@ class TestDisparityMargins:
                 {
                     "refinement_method": "optical_flow",
                 },
-                (10, 10, 25, 17),
-                [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4],
-                np.arange(-3, 3.25, 0.25),
+                (10, 10, 19, 11),
+                [0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25],
+                np.arange(-2.25, 2.5, 0.25),
                 id="Subpix=4 and refinement_method=optical_flow",
             ),
         ],

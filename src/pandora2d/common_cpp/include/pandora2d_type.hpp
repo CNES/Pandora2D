@@ -29,21 +29,29 @@ This module contains eigen types for cpp.
 namespace P2d {
 
 /**
+ * @brief Generic RowMajor dynamic matrix
+ *
+ * @tparam
+ */
+template <typename T>
+using RowMajorMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
+/**
  * @brief type used for double matrix
  *
  */
-using MatrixD = Eigen::MatrixXd;
+using MatrixD = RowMajorMatrix<double>;
 
 /**
  * @brief type used for float matrix
  *
  */
-using Matrixf = Eigen::MatrixXf;
+using Matrixf = RowMajorMatrix<float>;
 
 /**
  * @brief type used for unsigned int matrix
  */
-using MatrixUI = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>;
+using MatrixUI = RowMajorMatrix<uint8_t>;
 
 /**
  * @brief type used for template matrix
@@ -51,7 +59,7 @@ using MatrixUI = Eigen::Matrix<uint8_t, Eigen::Dynamic, Eigen::Dynamic>;
  * @tparam T
  */
 template <typename T>
-using MatrixX = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
+using MatrixX = RowMajorMatrix<T>;
 
 /**
  * @brief type used for double vectors

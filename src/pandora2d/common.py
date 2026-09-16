@@ -109,6 +109,8 @@ class AllPrimitiveEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, CRS):
             return o.to_wkt()
+        if isinstance(o, Affine):
+            return list(o)
         if isinstance(o, np.floating):
             return float(o)
         if isinstance(o, np.integer):
@@ -491,8 +493,6 @@ def get_cost_volume_without_margins(cost_volumes: xr.Dataset) -> xr.Dataset:
     :return: cost_volumes without margins
     """
     margins = cost_volumes.attrs["disparity_margins"].asdict()
-    for key in margins.keys():
-        margins[key] *= cost_volumes.attrs["subpixel"]
 
     return cost_volumes.isel(
         disp_row=slice(margins["up"], -margins["down"] or None),

@@ -55,8 +55,9 @@ class TestEstimateTotalMemoryConsumption:
 
     @pytest.fixture
     def checked_config(self, config, state_machine):
-        """Run check_conf on config and return the result."""
-        return check_conf(config, state_machine)
+        """Run check_conf on config and return the updated config."""
+        check_conf(config, state_machine)
+        return config
 
     @pytest.fixture
     def config(

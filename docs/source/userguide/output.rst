@@ -197,6 +197,19 @@ Saved configuration
 
 - `output/path/config.json` : the config file used to run Pandora2D and estimation information if computed.
 
+This file also contains an "info" section that provides:
+
+- The version of Pandora2D used to run this pipeline.
+- The margins used during Pandora2D pipeline execution. There are two types of margins:
+
+  - **ROI margins**, added around the user-defined ROI so that as many of its
+    points as possible can be processed. Each side of the ROI is extended
+    by half the correlation window size plus the corresponding minimum or
+    maximum disparity.
+  - **Disparity margins**, added on the cost volume's disparity dimensions
+    when the pipeline includes a refinement step, so the interpolation
+    filter used for refinement has enough disparity values to work with.
+
 Saved attributes
 ****************
 

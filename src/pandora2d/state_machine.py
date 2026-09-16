@@ -544,6 +544,11 @@ class Pandora2DMachine(BaseMachine):
             logging.warning("The optical flow method is still in an experimental phase.")
             logging.warning("The correlation score map is at a disparity level for the optical flow method.")
 
+        if cfg["pipeline"][input_step].get("resampling_type") == "image":
+            logging.warning(
+                "Image resampling is being implemented: a dichotomy on the cost surface will be performed instead."
+            )
+
         refinement_run = refinement.AbstractRefinement(
             cfg["pipeline"][input_step], self.step, self.window_size
         )  # type: ignore[abstract]

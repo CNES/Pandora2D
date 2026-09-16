@@ -123,9 +123,9 @@ struct Position2D {
  * (U can be either a float, a double or an uint_8)
  */
 template <typename T, typename U>
-Eigen::Matrix<U, Eigen::Dynamic, Eigen::Dynamic> get_cost_surface(const py::array_t<T>& cost_volume,
-                                                                  unsigned int index,
-                                                                  CostVolumeSize& cv_size) {
+P2d::MatrixX<U> get_cost_surface(const py::array_t<T>& cost_volume,
+                                 unsigned int index,
+                                 CostVolumeSize& cv_size) {
   auto index_to_position = [](unsigned int index, CostVolumeSize& cv_size) -> Position2D {
     int quot = index / (cv_size.nb_col * cv_size.nb_disps());
     int rem = index % (cv_size.nb_col * cv_size.nb_disps());
@@ -139,8 +139,7 @@ Eigen::Matrix<U, Eigen::Dynamic, Eigen::Dynamic> get_cost_surface(const py::arra
   auto r_cost_volume = cost_volume.template unchecked<4>();
 
   // Matrix creation
-  Eigen::Matrix<U, Eigen::Dynamic, Eigen::Dynamic> cost_surface(cv_size.nb_disp_row,
-                                                                cv_size.nb_disp_col);
+  P2d::MatrixX<U> cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
 
   // Data copy
   for (std::size_t k_disp_row = 0; k_disp_row < cv_size.nb_disp_row; ++k_disp_row) {

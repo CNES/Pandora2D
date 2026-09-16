@@ -236,15 +236,14 @@ def test_compute_cv_sad(left_stereo_object, right_stereo_object):
     np.testing.assert_allclose(sad["cost_volumes"].data[valid_mask], ad_ground_truth[valid_mask], atol=1e-06)
 
 
-# /!\ "zncc" currently target "zncc-optim-1"
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc-optim-1", "zncc-optim-2"])
 def test_compute_cv_zncc(matching_cost_config, matching_cost_object):
     """
     Test the cost volume product by zncc
     """
     data = np.array(
         ([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
-        dtype=np.float64,
+        dtype=np.float32,
     )
     mask = np.array(
         ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
@@ -264,7 +263,7 @@ def test_compute_cv_zncc(matching_cost_config, matching_cost_object):
 
     data = np.array(
         ([[1, 1, 1, 1, 1], [3, 4, 5, 6, 7], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]),
-        dtype=np.float64,
+        dtype=np.float32,
     )
     mask = np.array(
         ([0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]), dtype=np.int16
@@ -365,11 +364,10 @@ def python_matching_cost_instance(python_matching_cost_config):
     return matching_cost_class(python_matching_cost_config)
 
 
-# /!\ "zncc" currently target "zncc-optim-1"
-@pytest.fixture(params=["zncc", "zncc-optim-2"])
-def cpp_matching_cost_config(matching_cost_config):
+@pytest.fixture(params=["zncc-optim-1", "zncc-optim-2"])
+def cpp_matching_cost_config(matching_cost_config, request):
     config = deepcopy(matching_cost_config)
-    config["matching_cost_method"] = "zncc"
+    config["matching_cost_method"] = request.param
     return config
 
 
@@ -377,35 +375,6 @@ def cpp_matching_cost_config(matching_cost_config):
 def cpp_matching_cost_instance(cpp_matching_cost_config):
     matching_cost_class = matching_cost.MatchingCostRegistry.get(cpp_matching_cost_config["matching_cost_method"])
     return matching_cost_class(cpp_matching_cost_config)
-
-
-@pytest.fixture
-def make_dataset():
-    """Fixture factory to create an image dataset from a numpy array."""
-
-    def inner(data):
-
-        dataset = xr.Dataset(
-            {
-                "im": (["row", "col"], data),
-                "msk": (
-                    ["row", "col"],
-                    np.zeros_like(data, dtype=np.int16),
-                ),
-            },
-            coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
-            attrs={
-                "no_data_img": -9999,
-                "valid_pixels": 0,
-                "no_data_mask": 1,
-                "crs": None,
-                "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-            },
-        )
-        dataset.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
-        return dataset
-
-    return inner
 
 
 @pytest.fixture
@@ -433,7 +402,7 @@ def right_dataset(make_dataset, right_data):
                     [1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             np.array(
                 [
@@ -443,7 +412,7 @@ def right_dataset(make_dataset, right_data):
                     [1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             id="Row shift",
         ),
@@ -456,7 +425,7 @@ def right_dataset(make_dataset, right_data):
                     [1, 4, 1, 1, 1],
                     [1, 5, 1, 1, 1],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             np.array(
                 [
@@ -466,11 +435,11 @@ def right_dataset(make_dataset, right_data):
                     [1, 1, 1, 4, 1],
                     [1, 1, 1, 5, 1],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             id="Col shift",
         ),
-        pytest.param(np.full((7, 6), 50), np.full((7, 6), 50), id="Correlated"),
+        pytest.param(np.full((7, 6), 50, dtype=np.float32), np.full((7, 6), 50, dtype=np.float32), id="Correlated"),
         pytest.param(
             np.array(
                 [
@@ -480,7 +449,7 @@ def right_dataset(make_dataset, right_data):
                     [4, 4, 4, 4, 4],
                     [4, 4, 4, 4, 4],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             np.array(
                 [
@@ -490,7 +459,7 @@ def right_dataset(make_dataset, right_data):
                     [6, 6, 6, 6, 6],
                     [6, 6, 6, 6, 6],
                 ],
-                dtype=np.float64,
+                dtype=np.float32,
             ),
             id="Anti-correlated",
         ),
@@ -665,8 +634,7 @@ def test_cost_volume_coordinates_with_roi(
     np.testing.assert_array_equal(cost_volumes_with_roi["cost_volumes"].coords["row"], row_expected)
 
 
-# /!\ "zncc" currently target "zncc-optim-1"
-@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc", "zncc-optim-2"])
+@pytest.mark.parametrize("matching_cost_method", ["zncc_python", "zncc"])
 @pytest.mark.parametrize(
     ["step", "col_expected", "row_expected"],
     [
@@ -1186,8 +1154,8 @@ class TestSubpix:
                     "subpix": 1,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (10, 10, 3, 5),  # (row, col, disp_row, disp_col)
                 np.arange(3),  # [0, 1, 2]
@@ -1200,8 +1168,8 @@ class TestSubpix:
                     "subpix": 2,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (10, 10, 5, 9),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2]
@@ -1214,8 +1182,8 @@ class TestSubpix:
                     "subpix": 2,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (5, 4, 5, 9),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.5, 0.5),  # [0, 0.5, 1, 1.5, 2] # step has no influence on subpix disparity range
@@ -1228,8 +1196,8 @@ class TestSubpix:
                     "subpix": 4,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (10, 10, 9, 17),  # (row, col, disp_row, disp_col)
                 np.arange(0, 2.25, 0.25),  # [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -1244,8 +1212,8 @@ class TestSubpix:
                     "subpix": 4,
                     "disp_row": {"init": 1, "range": 1},
                     "disp_col": {"init": 0, "range": 2},
-                    "data_left": np.full((10, 10), 1),
-                    "data_right": np.full((10, 10), 1),
+                    "data_left": np.full((10, 10), 1, dtype=np.float32),
+                    "data_right": np.full((10, 10), 1, dtype=np.float32),
                 },
                 (4, 5, 9, 17),  # (row, col, disp_row, disp_col)
                 np.arange(
@@ -1779,7 +1747,7 @@ class TestDisparityMargins:
         Creates left and right datasets
         """
 
-        data = np.full((5, 5), 1)
+        data = np.full((5, 5), 1, dtype=np.float32)
         left = xr.Dataset(
             {"im": (["row", "col"], data)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
@@ -1796,7 +1764,7 @@ class TestDisparityMargins:
             }
         )
 
-        data = np.full((5, 5), 1)
+        data = np.full((5, 5), 1, dtype=np.float32)
         right = xr.Dataset(
             {"im": (["row", "col"], data)},
             coords={"row": np.arange(data.shape[0]), "col": np.arange(data.shape[1])},
@@ -1813,7 +1781,7 @@ class TestDisparityMargins:
 
         return left, right
 
-    # /!\ "zncc" currently target "zncc-optim-1"
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size and step
     @pytest.mark.parametrize(
         "matching_cost_method", ["sad", "ssd", "zncc_python", "mutual_information", "zncc", "zncc-optim-2"]
     )
@@ -1889,9 +1857,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(3, 3, 3, 3),
                 2,
-                (5, 5, 17, 17),
-                np.arange(-3, 5.25, 0.5),
-                np.arange(-5, 3.25, 0.5),
+                (5, 5, 11, 11),
+                np.arange(-1.5, 3.75, 0.5),
+                np.arange(-3.5, 1.75, 0.5),
                 # margins=(3,3,3,3) and subpix=2 -> we add a margin of 3x2 on disp_min_col, disp_max_col,
                 # disp_min_row, disp_max_row
                 id="Margins(left=3, up=3, right=3, down=3), subpix=2",
@@ -1899,9 +1867,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 1, 2, 3),
                 2,
-                (5, 5, 13, 9),
-                np.arange(0, 4.25, 0.5),
-                np.arange(-3, 3.25, 0.5),
+                (5, 5, 9, 7),
+                np.arange(0, 3.25, 0.5),
+                np.arange(-2.5, 1.75, 0.5),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x2 on disp_max_col,
                 # 1x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3)",
@@ -1909,9 +1877,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(6, 4, 2, 3),
                 2,
-                (5, 5, 19, 21),
-                np.arange(-6, 4.25, 0.5),
-                np.arange(-6, 3.25, 0.5),
+                (5, 5, 12, 13),
+                np.arange(-3, 3.25, 0.5),
+                np.arange(-4, 1.75, 0.5),
                 # margins=(6,4,2,3) -> we add a margin of 6x2 on disp_min_col, 2x2 on disp_max_col,
                 # 4x2 on disp_min_row and 3x2 on disp_max_row
                 id="Margins(left=6, up=4, right=2, down=3)",
@@ -1927,9 +1895,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(0, 1, 2, 3),
                 4,
-                (5, 5, 25, 17),
-                np.arange(0, 4.25, 0.25),
-                np.arange(-3, 3.25, 0.25),
+                (5, 5, 13, 11),
+                np.arange(0, 2.75, 0.25),
+                np.arange(-2.25, 1, 0.25),
                 # margins=(0,1,2,3) -> we add a margin of 0 on disp_min_col, 2x4 on disp_max_col,
                 # 1x4 on disp_min_row and 3x4 on disp_max_row
                 id="Margins(left=0, up=1, right=2, down=3), subpix=4",
@@ -1937,9 +1905,9 @@ class TestDisparityMargins:
             pytest.param(
                 Margins(3, 3, 3, 3),
                 4,
-                (5, 5, 33, 33),
-                np.arange(-3, 5.25, 0.25),
-                np.arange(-5, 3.25, 0.25),
+                (5, 5, 15, 15),
+                np.arange(-0.75, 3, 0.25),
+                np.arange(-2.75, 1, 0.25),
                 # margins=(3,3,3,3) and subpix=4 -> we add a margin of 3x4 on disp_min_col, disp_max_col,
                 # disp_min_row, disp_max_row
                 id="Margins(left=3, up=3, right=3, down=3), subpix=4",

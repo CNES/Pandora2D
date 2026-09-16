@@ -80,7 +80,7 @@ void compute_dichotomy(py::array_t<T> cost_volume,
                        Eigen::Ref<U> disparity_map_col,
                        Eigen::Ref<U> disparity_map_row,
                        Eigen::Ref<U> score_map,
-                       U& invalid_map,
+                       const Eigen::Ref<const P2d::VectorX<uint8_t>>& invalid_map,
                        py::array_t<T> criteria_map,
                        int subpixel,
                        int nb_iterations,
@@ -110,7 +110,7 @@ void compute_dichotomy(py::array_t<T> cost_volume,
     index += nb_disps;
 
     // taking into account the peak at the edge & invalid disparities (== 1 in the array)
-    if (*invalid_it == 1.)
+    if (*invalid_it == 1)
       continue;
 
     // Check initial disparity is not nan

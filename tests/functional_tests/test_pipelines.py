@@ -699,21 +699,21 @@ class TestEstimation:
         pandora2d_machine = Pandora2DMachine()
 
         # Check estimation configuration
-        checked_cfg = check_conf(estimation_cfg, pandora2d_machine)
+        check_conf(estimation_cfg, pandora2d_machine)
 
         # Get ROI margins
-        checked_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        estimation_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
 
         # Create image datasets
         image_datasets = create_datasets_from_inputs(
-            input_config=checked_cfg["input"],
-            roi=checked_cfg["ROI"],
+            input_config=estimation_cfg["input"],
+            roi=estimation_cfg["ROI"],
             estimation_cfg=estimation_cfg["pipeline"].get("estimation"),
         )
 
         # Run estimation
-        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, checked_cfg)
-        pandora2d_machine.run("estimation", checked_cfg)
+        pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, estimation_cfg)
+        pandora2d_machine.run("estimation", estimation_cfg)
 
         img_shape = pandora2d_machine.left_img["im"].shape
 

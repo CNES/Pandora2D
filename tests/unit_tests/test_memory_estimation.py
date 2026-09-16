@@ -24,6 +24,7 @@ This file contains unit tests associated to the pandora2d memory estimation
 
 from copy import deepcopy
 from typing import cast
+import math
 
 import numpy as np
 import pandora
@@ -150,6 +151,14 @@ class TestInputSize:
                 4,
                 17,
                 id="Centered disparities with subpix",
+            ),
+            pytest.param(
+                {"init": 0, "range": 2},
+                1,
+                2,
+                2,
+                12,
+                id="Centered disparities with subpix and margins",
             ),
         ],
     )
@@ -349,18 +358,20 @@ class TestInputSize:
 
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(user_cfg, pandora2d_machine)
+        check_conf(user_cfg, pandora2d_machine)
         # Get roi processing to call create_dataset_from_inputs with ROI
-        cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-        roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+        user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(
+            user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"]
+        )
 
         # Memory computed by input_size method
-        height, width = memory_estimation.get_img_size(correct_input_cfg["input"]["left"]["img"], roi=cfg["ROI"])
+        height, width = memory_estimation.get_img_size(correct_input_cfg["input"]["left"]["img"], roi=user_cfg["ROI"])
         roi_margins = memory_estimation.get_roi_margins(
             correct_input_cfg["input"]["row_disparity"],
             correct_input_cfg["input"]["col_disparity"],
             pandora2d_machine.margins_img.global_margins,
-            roi=cfg["ROI"],
+            roi=user_cfg["ROI"],
         )
         # Final height and width are ROI size + margins
         height += roi_margins.up + roi_margins.down
@@ -373,7 +384,7 @@ class TestInputSize:
 
         # Memory consumed when creating the two images datasets
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
-            image_datasets = create_datasets_from_inputs(cfg["input"], roi)
+            image_datasets = create_datasets_from_inputs(user_cfg["input"], roi)
 
         # Check that the estimated image dataset memory corresponds to the measured memory within 25%.
         # Estimated dataset size is 0.37 and measured dataset size is 0.39.
@@ -461,7 +472,7 @@ class TestCostVolumesSize:
                 4,
                 Margins(1, 3, 2, 5),
                 ["cost_volumes_float", "criteria"],
-                611.964,
+                192.020,
                 id="Combinaison of parameters",
             ),
         ],
@@ -554,23 +565,29 @@ class TestCostVolumesSize:
 
         pandora2d_machine = Pandora2DMachine()
 
-        cfg = check_conf(user_cfg_cv_memory, pandora2d_machine)
+        check_conf(user_cfg_cv_memory, pandora2d_machine)
 
         # Compute cost volumes size estimation
-        height, width = memory_estimation.get_img_size(cfg["input"]["left"]["img"])
+        height, width = memory_estimation.get_img_size(user_cfg_cv_memory["input"]["left"]["img"])
         memory_computed = memory_estimation.estimate_cost_volumes_size(
-            cfg, height, width, pandora2d_machine.margins_disp.global_margins, memory_estimation.CV_FLOAT_DATA_VAR
+            user_cfg_cv_memory,
+            height,
+            width,
+            pandora2d_machine.margins_disp.global_margins,
+            memory_estimation.CV_FLOAT_DATA_VAR,
         )
 
-        image_datasets = create_datasets_from_inputs(cfg["input"])
+        image_datasets = create_datasets_from_inputs(user_cfg_cv_memory["input"])
 
-        matching_cost_ = matching_cost_object(cfg["pipeline"]["matching_cost"])
+        matching_cost_ = matching_cost_object(user_cfg_cv_memory["pipeline"]["matching_cost"])
 
         # Get cost volumes coordinates and attributes
         row_coords, col_coords, disps_row_coords, disps_col_coords = self.get_cv_coords(
-            image_datasets.left, cfg, matching_cost_, pandora2d_machine
+            image_datasets.left, user_cfg_cv_memory, matching_cost_, pandora2d_machine
         )
-        grid_attrs = self.get_cv_attributes(image_datasets.left, cfg["pipeline"]["matching_cost"], pandora2d_machine)
+        grid_attrs = self.get_cv_attributes(
+            image_datasets.left, user_cfg_cv_memory["pipeline"]["matching_cost"], pandora2d_machine
+        )
 
         # Memory consumed when allocating the 4D cost volumes dataset
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
@@ -612,7 +629,7 @@ class TestPandoraCostVolumesSize:
     @pytest.mark.parametrize("step", [[1, 1], [2, 1], [1, 4]])
     @pytest.mark.parametrize("subpix", [1, 2, 4])
     @pytest.mark.parametrize("margins", [NullMargins(), Margins(1, 2, 3, 4)])
-    def test(self, MemoryTracer, image_datasets, config, margins):
+    def test(self, MemoryTracer, image_datasets, config, subpix, margins):
         """Test that cost volumes size computation works as expected."""
 
         height, width = image_datasets.left.sizes["row"], image_datasets.left.sizes["col"]
@@ -624,12 +641,18 @@ class TestPandoraCostVolumesSize:
             **pandora_matching_cost_config
         )
 
+        # Pandora get_min_max_from_grid() method rounds disparity bounds to int,
+        # truncating any fractional subpixel margin, so we need to round up the margins
+        # to ensure we have enough disparities in the cost volume.
+        margin_left_int = math.ceil(margins.left / subpix)
+        margin_right_int = math.ceil(margins.right / subpix)
+
         with MemoryTracer(memory_estimation.BYTE_TO_MB) as memory_tracer:
             cost_volume = pandora_matching_cost.allocate_cost_volume(
                 image_datasets.left,
                 (
-                    image_datasets.left["col_disparity"].sel(band_disp="min").data - margins.left,
-                    image_datasets.left["col_disparity"].sel(band_disp="max").data + margins.right,
+                    image_datasets.left["col_disparity"].sel(band_disp="min").data - margin_left_int,
+                    image_datasets.left["col_disparity"].sel(band_disp="max").data + margin_right_int,
                 ),
                 config,
             )
@@ -757,8 +780,9 @@ class TestSegmentImageByRows:
 
     @pytest.fixture
     def checked_config(self, config, state_machine):
-        """Run check_conf on config and return the result."""
-        return check_conf(config, state_machine)
+        """Run check_conf on config and return the updated config."""
+        check_conf(config, state_machine)
+        return config
 
     @pytest.fixture
     def segment_mode(self, memory_per_work):

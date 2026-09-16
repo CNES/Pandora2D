@@ -25,6 +25,7 @@ This file keeps track of authors contributions.
 * Tommy Calendini <tommy.calendini@cs-soprasteria.com>
 * Philippe Mallet-Ladeira <philippe.mallet-ladeira@cs-soprasteria.com>
 * Pierrick Koch <pierrick.koch@cs-soprasteria.com>
+* Tina Odaka
 
 Update here with new contributors.
 

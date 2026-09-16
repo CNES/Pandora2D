@@ -185,7 +185,7 @@ def get_nb_disp(
     min_disparity, max_disparity = get_extrema_disparity(initial_disparity, disparity["range"])
 
     # Get number of disparities
-    return (max_disparity - min_disparity + before_margins + after_margins) * subpix + 1
+    return (max_disparity - min_disparity) * subpix + before_margins + after_margins + 1
 
 
 def get_roi_margins(
@@ -327,10 +327,18 @@ def estimate_pandora_cost_volume_size(config: dict, height: int, width: int, mar
     """
     subpix = config["pipeline"]["matching_cost"]["subpix"]
     step = config["pipeline"]["matching_cost"]["step"]
+
+    # Pandora get_min_max_from_grid() method rounds disparity bounds to int,
+    # truncating any fractional subpixel margin. We need to round up the margins
+    # to the smallest integer that still covers the requested subpixel margin,
+    # so the memory estimate matches the disparity range Pandora actually allocates.
+    nb_left_disparity_margin = math.ceil(margins.left / subpix) * subpix
+    nb_right_disparity_margin = math.ceil(margins.right / subpix) * subpix
+
     disparity_size = get_nb_disp(
         config["input"]["col_disparity"],
-        margins.left,
-        margins.right,
+        nb_left_disparity_margin,
+        nb_right_disparity_margin,
         subpix,
         roi=config.get("ROI"),
         from_previous_run="attributes" in config,

@@ -52,7 +52,7 @@ def make_cfg_for_dichotomy(
         "ROI": roi,
         "pipeline": {
             "matching_cost": {
-                "matching_cost_method": "zncc_python",
+                "matching_cost_method": "zncc",
                 "window_size": 7,
                 "subpix": subpix,
                 "step": step,
@@ -101,19 +101,53 @@ def test_dichotomy_execution(make_cfg_for_dichotomy):
     pandora2d_machine = Pandora2DMachine()
 
     user_cfg = copy.deepcopy(make_cfg_for_dichotomy)
-    cfg = check_conf(user_cfg, pandora2d_machine)
+    check_conf(user_cfg, pandora2d_machine)
 
-    cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-    roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+    user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+    roi = get_roi_processing(user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"])
 
-    image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
 
-    dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+    dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg)
 
     # Checking that resulting disparity maps are not full of nans
     with np.testing.assert_raises(AssertionError):
         assert np.all(np.isnan(dataset_disp_maps.row_map.data))
         assert np.all(np.isnan(dataset_disp_maps.col_map.data))
+
+
+@pytest.mark.parametrize("dicho_method", ["dichotomy"])
+@pytest.mark.parametrize("filter_method", ["bicubic"])
+@pytest.mark.parametrize("subpix", [2])
+@pytest.mark.parametrize("step", [[1, 1]])
+@pytest.mark.parametrize("iterations", [1])
+@pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
+@pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
+@pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
+def test_image_resampling_warning(make_cfg_for_dichotomy, caplog):
+    """
+    Description : Test that a warning is raised when the image resampling option is activated.
+    Data :
+           * Left_img : cones/monoband/left.png
+           * Right_img : cones/monoband/right.png
+    """
+    pandora2d_machine = Pandora2DMachine()
+
+    user_cfg = copy.deepcopy(make_cfg_for_dichotomy)
+    user_cfg["pipeline"]["refinement"]["resampling_type"] = "image"
+    check_conf(user_cfg, pandora2d_machine)
+
+    user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+    roi = get_roi_processing(user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"])
+
+    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
+
+    pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg)
+
+    assert (
+        "Image resampling is being implemented: a dichotomy on the cost surface will be performed instead."
+        in caplog.messages
+    )
 
 
 @pytest.mark.parametrize(
@@ -147,23 +181,23 @@ def test_extrema_disparities_not_processed(make_cfg_for_dichotomy):
     pandora2d_machine = pandora2d.state_machine.Pandora2DMachine()
 
     user_cfg = copy.deepcopy(make_cfg_for_dichotomy)
-    cfg = check_conf(user_cfg, pandora2d_machine)
+    check_conf(user_cfg, pandora2d_machine)
 
-    cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
-    roi = get_roi_processing(cfg["ROI"], cfg["input"]["col_disparity"], cfg["input"]["row_disparity"])
+    user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+    roi = get_roi_processing(user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"])
 
-    image_datasets = create_datasets_from_inputs(input_config=cfg["input"], roi=roi)
+    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
 
     # Prepare Pandora2D machine
-    pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, cfg)
+    pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, user_cfg)
     # Run matching cost step
-    pandora2d_machine.run("matching_cost", cfg)
+    pandora2d_machine.run("matching_cost", user_cfg)
     # Run disparity step
-    pandora2d_machine.run("disparity", cfg)
+    pandora2d_machine.run("disparity", user_cfg)
     # Make a copy of disparity maps before refinement step
     copy_disp_maps = copy.deepcopy(pandora2d_machine.dataset_disp_maps)
     # Run refinement step
-    pandora2d_machine.run("refinement", cfg)
+    pandora2d_machine.run("refinement", user_cfg)
 
     # Select correct rows and columns in case of a step different from 1.
     row_cv = pandora2d_machine.cost_volumes.row.values

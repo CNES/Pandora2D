@@ -96,7 +96,9 @@ def make_cost_volumes(make_image, request):
 
         matching_cost_.allocate(img_left=img_left, img_right=img_right, cfg=cfg, margins=refinement_margins)
 
-        cost_volumes = matching_cost_.compute_cost_volumes(img_left=img_left, img_right=img_right)
+        cost_volumes = matching_cost_.compute_cost_volumes(
+            img_left=img_left, img_right=img_right, margins=refinement_margins
+        )
 
         return cost_volumes
 

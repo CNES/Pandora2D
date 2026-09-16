@@ -110,11 +110,11 @@ class TestAmbiguity:
         pandora2d_machine = Pandora2DMachine()
 
         user_cfg = copy.deepcopy(make_cfg_for_confidence)
-        cfg = check_conf(user_cfg, pandora2d_machine)
+        check_conf(user_cfg, pandora2d_machine)
 
-        image_datasets = create_datasets_from_inputs(input_config=cfg["input"])
+        image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"])
 
-        dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, cfg)
+        dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg)
 
         confidence_data = dataset_disp_maps.confidence_measure.data
 

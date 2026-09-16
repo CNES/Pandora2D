@@ -75,12 +75,12 @@ def correct_pipeline_with_step_and_refinement(matching_cost_method, subpix, step
 
 
 @pytest.fixture()
-def correct_pipeline_with_step(matching_cost_method, subpix, step):
+def correct_pipeline_with_step(matching_cost_method, window_size, subpix, step):
     return {
         "pipeline": {
             "matching_cost": {
                 "matching_cost_method": matching_cost_method,
-                "window_size": 5,
+                "window_size": window_size,
                 "subpix": subpix,
                 "step": step,
             },

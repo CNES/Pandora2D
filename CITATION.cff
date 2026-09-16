@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: 'Pandora2D: CNES Image registration framework'
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Alexandre
+    family-names: Constantin
+    email: alexandre.constantin@cnes.fr
+    affiliation: CNES, 18 avenue Edouard Belin, Toulouse, France 
+    orcid: 'https://orcid.org/0000-0001-9537-3640'
+  - given-names: Elisa
+    family-names: Duz
+    email: elisa.duz@cs-soprasteria.com
+    affiliation: CS Group - Sopra Steria, 6 rue Brindejonc des Moulinais, Toulouse, France 
+  - given-names: Alexandre
+    family-names: Vinas
+    email: alexandre.vinas@cs-soprasteria.com
+    affiliation: CS Group - Sopra Steria, 6 rue Brindejonc des Moulinais, Toulouse, France 
+version: 1.2.0
+doi: https://zenodo.org/records/19630034
+url: https://github.com/CNES/Pandora2D

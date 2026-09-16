@@ -71,6 +71,7 @@ def test_allocate_cost_volume(left_stereo_object, right_stereo_object):
     cost_volumes_test.attrs["valid_pixels"] = 0
     cost_volumes_test.attrs["step"] = [1, 1]
     cost_volumes_test.attrs["disparity_margins"] = None
+    cost_volumes_test.attrs["roi_margins"] = Margins(0, 0, 0, 0)
     cost_volumes_test.attrs["spline_order_filter"] = 1
 
     # data by function compute_cost_volume
@@ -536,8 +537,8 @@ class TestCvFloatPrecision:
     Test that the cost volumes is allocated with the right type
     """
 
-    # /!\ "zncc" currently target "zncc-optim-1"
-    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python", "zncc", "zncc-optim-2"])
+    # "zncc" auto-selects zncc-optim-1 or zncc-optim-2 depending on window_size, step and roi area
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc_python", "zncc"])
     @pytest.mark.parametrize("float_precision", ["float32", "f", "f4"])
     def test_cost_volumes_float_precision(self, input_config, matching_cost_config, matching_cost_object):
         """
@@ -554,8 +555,7 @@ class TestCvFloatPrecision:
 
         assert matching_cost_test.cost_volumes["cost_volumes"].dtype == np.float32
 
-    # /!\ "zncc" currently target "zncc-optim-1"
-    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc", "zncc-optim-2"])
+    @pytest.mark.parametrize("matching_cost_method", ["mutual_information", "zncc"])
     @pytest.mark.parametrize("float_precision", ["float64", "d", "f8"])
     def test_cost_volumes_double_precision(self, input_config, matching_cost_config, matching_cost_object):
         """

@@ -22,6 +22,7 @@ This module contains functions associated to the matching cost computation step.
 """
 
 import copy
+import math
 
 import numpy as np
 import xarray as xr
@@ -55,6 +56,8 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         )
 
         self.grid: xr.Dataset | None = None
+        # Number of extra column disparity values pandora adds due to integer margin rounding (see allocate() method).
+        self._disp_col_index_offset: int = 0
 
     @property
     def cfg(self) -> dict[str, str | int | list[int]]:
@@ -206,8 +209,16 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         grid_max_col = np.where(build_usable_data_mask(grid_max_col, no_data_disp), grid_max_col, np.nan)
 
         if margins is not None:
-            grid_min_col -= margins.left
-            grid_max_col += margins.right
+            # Pandora get_min_max_from_grid() method rounds disparity bounds to int,
+            # truncating any fractional subpixel margin. We round the margins
+            # outward (ceil) to fully cover the fractional subpixel margin we
+            # actually need, then keep the resulting index offset to slice the
+            # exact subpixel range back out in compute_cost_volumes.
+            margin_left_int = math.ceil(margins.left / self._subpix)
+            margin_right_int = math.ceil(margins.right / self._subpix)
+            grid_min_col -= margin_left_int
+            grid_max_col += margin_right_int
+            self._disp_col_index_offset = self._subpix * margin_left_int - margins.left
 
         # Get updated ROI left margin for pandora method get_coordinates()
         # To get right coordinates in cost_volume when initial left_margin > cfg["ROI"]["col"]["first"]
@@ -252,15 +263,14 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
         :return: cost_volumes: 4D Dataset containing the cost_volumes
         """
 
-        grid_min_col = img_left["col_disparity"].sel(band_disp="min").data.copy()
-        grid_max_col = img_left["col_disparity"].sel(band_disp="max").data.copy()
-
-        if margins is not None:
-            grid_min_col -= margins.left
-            grid_max_col += margins.right
-
         # Get disparity coordinates for cost_volumes
         disps_row = self.get_disp_row_coords(img_left, margins)
+        disps_col = self.get_disp_col_coords(img_left, margins)
+
+        # Get column disparities index to select correct disparity range from Pandora's cost-volume result,
+        # which is wider than the exact subpixel range we need.
+        disp_col_start = self._disp_col_index_offset
+        disp_col_end = disp_col_start + len(disps_col)
 
         row_index = self.cost_volumes.coords["row"] - img_left.coords["row"].data[0]
 
@@ -287,8 +297,10 @@ class PandoraMatchingCostMethods(BaseMatchingCost):
             # Compute cost volume
             cost_volume = self.pandora_matching_cost_.compute_cost_volume(img_left, img_right_shift, self.grid)
 
-            # Add current cost volume to the cost_volumes dataset
-            self.cost_volumes["cost_volumes"].data[:, :, idx, :] = cost_volume["cost_volume"].data[row_index, :, :]
+            # Slice out the exact subpixel col range from Pandora's wider (integer-margin) result
+            self.cost_volumes["cost_volumes"].data[:, :, idx, :] = cost_volume["cost_volume"].data[
+                row_index, :, disp_col_start:disp_col_end
+            ]
 
         # Add type measure to attributes for WTA
         self.cost_volumes.attrs["type_measure"] = cost_volume.attrs["type_measure"]

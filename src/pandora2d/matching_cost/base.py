@@ -212,9 +212,10 @@ class BaseMatchingCost(ABC):
         min_row, max_row = img_left.attrs["row_disparity_source"]
 
         # Add refinement margins to disparity grids if needed.
+        # Divide by subpix because margins are in pixel and disparity coordinates are in subpixel.
         if margins is not None:
-            min_row -= margins.up
-            max_row += margins.down
+            min_row -= margins.up / self._subpix
+            max_row += margins.down / self._subpix
 
         # Array with all row disparities
         disps_row = pandora_matching_cost.AbstractMatchingCost.get_disparity_range(min_row, max_row, self._subpix)
@@ -235,9 +236,10 @@ class BaseMatchingCost(ABC):
         # Get min/max col disparity grids
         min_col, max_col = img_left.attrs["col_disparity_source"]
         # Add refinement margins to disparity grids if needed.
+        # Divide by subpix because margins are in pixel and disparity coordinates are in subpixel.
         if margins is not None:
-            min_col -= margins.left
-            max_col += margins.right
+            min_col -= margins.left / self._subpix
+            max_col += margins.right / self._subpix
 
         # Array with all col disparities
         disps_col = pandora_matching_cost.AbstractMatchingCost.get_disparity_range(min_col, max_col, self._subpix)
@@ -305,6 +307,13 @@ class BaseMatchingCost(ABC):
 
         grid_attrs = img_left.attrs
 
+        if "ROI" in cfg:
+            roi_margins_attribute = Margins(
+                cfg["ROI"]["margins"][0], cfg["ROI"]["margins"][1], cfg["ROI"]["margins"][2], cfg["ROI"]["margins"][3]
+            )
+        else:
+            roi_margins_attribute = Margins(0, 0, 0, 0)
+
         grid_attrs.update(
             {
                 "window_size": self._window_size,
@@ -313,6 +322,7 @@ class BaseMatchingCost(ABC):
                 "measure": self._method,
                 "type_measure": "max",
                 "disparity_margins": margins,
+                "roi_margins": roi_margins_attribute,
                 "step": self.step,
                 "spline_order_filter": self._spline_order,
             }

@@ -31,7 +31,7 @@ from importlib.metadata import version
 import pytest
 from transitions.core import MachineError
 
-from pandora2d import state_machine
+from pandora2d import state_machine, update_output_config_with_info
 from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d.margins import Margins
 
@@ -154,4 +154,48 @@ class TestPandora2D:
         with open(run_dir / "relative" / "config.json", encoding="utf8") as output_file:
             result = json.load(output_file)
 
-        assert result["info"] == {"version": version("pandora2d")}
+        assert result["info"]["version"] == version("pandora2d")
+
+    @pytest.mark.parametrize(
+        ["output_cfg", "disparity_margins", "expected"],
+        [
+            pytest.param(
+                {"ROI": {"margins": (1, 2, 3, 4)}},
+                (2, 1, 2, 1),
+                {
+                    "ROI": {},
+                    "info": {
+                        "version": version("pandora2d"),
+                        "Pandora2DMachine_misc": {
+                            "roi_margins": {"left": 1, "up": 2, "right": 3, "down": 4},
+                            "disp_margins": {"left": 2, "up": 1, "right": 2, "down": 1},
+                        },
+                    },
+                },
+                id="With ROI",
+            ),
+            pytest.param(
+                {},
+                (2, 1, 2, 1),
+                {
+                    "info": {
+                        "version": version("pandora2d"),
+                        "Pandora2DMachine_misc": {
+                            "roi_margins": {"left": 0, "up": 0, "right": 0, "down": 0},
+                            "disp_margins": {"left": 2, "up": 1, "right": 2, "down": 1},
+                        },
+                    },
+                },
+                id="Without ROI",
+            ),
+        ],
+    )
+    def test_update_output_config_with_info(self, output_cfg, disparity_margins, expected):
+        """
+        Test that the update_output_config_with_info method correctly updates the output configuration
+        """
+        pandora2d_machine = state_machine.Pandora2DMachine()
+        pandora2d_machine.margins_disp.add_non_cumulative("disparity", Margins(*disparity_margins))
+
+        update_output_config_with_info(output_cfg, pandora2d_machine)
+        assert output_cfg == expected
