@@ -85,11 +85,6 @@ Configuration and parameters
     To use the Python version, enter ``zncc_python`` as the matching cost method in the configuration file.
 
 .. note::
-    In C++, two versions of the ``zncc`` method are proposed.
-    We recommend to use the first optimization ``zncc-optim-1`` when all pixels are computed (step is small) and when the disparity range is small.
-    We recommend the second optimization ``zncc-optim-2`` when an important step is provided and disparity ranges are large.
-
-.. note::
     To use ``mc_cnn`` as ``matching_cost_method``, the MCCNN plugin must be installed first.
     Install it with:
 
