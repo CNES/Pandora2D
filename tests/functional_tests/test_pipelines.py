@@ -432,7 +432,7 @@ class TestAttributes:
         assert attrs["step"]["col"] == step[1]
         assert attrs["crs"] == left_crs
         # Apply the same transformation as the one done in common.adjust_georeferencement because we have a step
-        assert attrs["transform"] == left_transform * rasterio.Affine.scale(step[1], step[0])
+        assert attrs["transform"] == left_transform @ rasterio.Affine.scale(step[1], step[0])
         assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]
 
     @pytest.mark.parametrize(
@@ -480,9 +480,9 @@ class TestAttributes:
         assert attrs["step"]["col"] == step[1]
         assert attrs["crs"] == left_crs
         # Apply the same transformation as the one done in common.adjust_georeferencement because we have a ROI and step
-        assert attrs["transform"] == left_transform * rasterio.Affine.translation(
+        assert attrs["transform"] == left_transform @ rasterio.Affine.translation(
             roi["col"]["first"], roi["row"]["first"]
-        ) * rasterio.Affine.scale(step[1], step[0])
+        ) @ rasterio.Affine.scale(step[1], step[0])
         assert attrs["invalid_disp"] == configuration["pipeline"]["disparity"]["invalid_disparity"]
 
     def test_attributes_without_step(
@@ -771,7 +771,7 @@ class TestDataSamplesOutputConfigReusability:  # pylint: disable=too-few-public-
     Test that output configurations from data_samples pipelines can be re-executed.
     """
 
-    @pytest.mark.parametrize("config_data", filelist_parametrize_generator())
+    @pytest.mark.parametrize("config_data", list(filelist_parametrize_generator()))
     def test_output_config_can_be_reused(self, run_pipeline, tmp_path, config_data, cones_support_files):
         """
         Description: Check that each output configuration generated from data_samples can be run again.

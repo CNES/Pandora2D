@@ -288,7 +288,7 @@ def adjust_georeferencement(dataset: xr.Dataset, cfg: dict) -> None:
     """
     if "ROI" in cfg:
         # Translate georeferencement origin to ROI origin:
-        dataset.attrs["transform"] *= Affine.translation(cfg["ROI"]["col"]["first"], cfg["ROI"]["row"]["first"])
+        dataset.attrs["transform"] @= Affine.translation(cfg["ROI"]["col"]["first"], cfg["ROI"]["row"]["first"])
     row_step, col_step = get_step(cfg)
     set_pixel_size(dataset, row_step, col_step)
 
@@ -315,7 +315,7 @@ def set_pixel_size(dataset: xr.Dataset, row_step: int = 1, col_step: int = 1) ->
     :param row_step: step used in row
     :param col_step: step used in column
     """
-    dataset.attrs["transform"] *= Affine.scale(col_step, row_step)
+    dataset.attrs["transform"] @= Affine.scale(col_step, row_step)
 
 
 def dataset_disp_maps(
