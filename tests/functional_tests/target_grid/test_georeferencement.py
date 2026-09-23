@@ -57,8 +57,8 @@ def test_georeferencement(
     assert output.crs == crs
     # assert that new georeferencement origin correspond to upper left corner of the ROI:
     upper_left_corner_indexes = (0, 0)
-    assert output.transform * (0, 0) == transform * upper_left_corner_indexes
-    assert output.transform * bottom_right_disparity_indexes == transform * bottom_right_corner_indexes
+    assert output.transform @ (0, 0) == transform @ upper_left_corner_indexes
+    assert output.transform @ bottom_right_disparity_indexes == transform @ bottom_right_corner_indexes
 
 
 @pytest.fixture()
@@ -130,5 +130,5 @@ def test_roi_georeferencement(
         configuration_with_roi["ROI"]["col"]["first"],
         configuration_with_roi["ROI"]["row"]["first"],
     )
-    assert output.transform * (0, 0) == transform * upper_left_corner_indexes
-    assert output.transform * bottom_right_disparity_indexes == transform * bottom_right_corner_indexes
+    assert output.transform @ (0, 0) == transform @ upper_left_corner_indexes
+    assert output.transform @ bottom_right_disparity_indexes == transform @ bottom_right_corner_indexes

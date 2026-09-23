@@ -198,7 +198,8 @@ class TestSaveDisparityMaps:
     """Test save_disparity_maps method"""
 
     @pytest.fixture(scope="class")
-    def create_test_dataset(self, attributes):
+    @classmethod
+    def create_test_dataset(cls, attributes):
         """
         Create a test dataset
         """
@@ -231,12 +232,14 @@ class TestSaveDisparityMaps:
         return dataset
 
     @pytest.fixture(scope="class")
-    def fake_report_data(self):
+    @classmethod
+    def fake_report_data(cls):
         return {"answer": 42}
 
     @pytest.fixture(scope="class")
+    @classmethod
     def save_disparity_maps(
-        self,
+        cls,
         save_folder,
         class_scoped_correct_input_cfg,
         create_test_dataset,

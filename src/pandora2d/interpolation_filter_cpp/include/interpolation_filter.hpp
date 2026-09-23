@@ -24,6 +24,8 @@ This module contains functions associated to the Abstract filter class for cpp.
 #ifndef INTERPOLATIONFILTER_HPP
 #define INTERPOLATIONFILTER_HPP
 
+#include <optional>
+
 #include "constant.hpp"
 #include "margins.hpp"
 #include "pandora2d_type.hpp"
@@ -94,6 +96,24 @@ class AbstractFilter {
                            const double max_fractional_value = MAX_FRACTIONAL_VALUE);
 
   /**
+   * @brief Interpolate a window of the image around a subpixel center
+   *
+   * The fractional part of center_row and center_col gives the subpixel precision
+   * of the returned window.
+   *
+   * @param image image
+   * @param window_size size of the window to interpolate
+   * @param center_row row position of the center of the window
+   * @param center_col col position of the center of the window
+   * @return std::optional<P2d::Matrixf>, the interpolated window or std::nullopt when the window
+   * and the filter margins do not fit in the image
+   */
+  std::optional<P2d::Matrixf> interpolate_window(const P2d::MatrixD& image,
+                                                 int window_size,
+                                                 double center_row,
+                                                 double center_col);
+
+  /**
    * @brief Get the size attribute
    *
    * @return int
@@ -111,6 +131,7 @@ class AbstractFilter {
   int m_size = 4;                 ///< filter size
   Margins m_margins{0, 0, 0, 0};  ///< filter margins
 };
+
 }  // namespace abstractfilter
 
 #endif  // namespace filter

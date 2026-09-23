@@ -266,7 +266,7 @@ def generate_box_figure(dataframe: pd.DataFrame, title: str = "", xlabel: str = 
     """
     fig = plt.figure(figsize=(12, 12))
     plt.tight_layout()
-    dataframe.T.boxplot(vert=False, showfliers=False)
+    dataframe.T.boxplot(orientation="horizontal", showfliers=False)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
 

@@ -45,10 +45,10 @@ optical flow method.
         "input":
         {
             "left": {
-                "img": "img_left.png"
+                "img": "img_left.tif"
             },
             "right": {
-                "img": "img_left.png"
+                "img": "img_right.tif"
             },
             "col_disparity": {"init": 0, "range": 2},
             "row_disparity": {"init": 0, "range": 2}

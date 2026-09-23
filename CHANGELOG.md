@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 (September 2026)
+
+### Added
+
+- Added window interpolation method for image resampling. [#481]
+
 ## 1.2.0a1 (September 2026)
 
 ### Added
