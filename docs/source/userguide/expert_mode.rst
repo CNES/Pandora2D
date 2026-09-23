@@ -64,11 +64,10 @@ Expert mode profiling section is composed of the following keys:
         {
             // pipeline content
         },
-        "expert_mode":
-        {
-            "profiling":
-            {
-                "folder_name": "profiling_output"
+        "expert_mode": {
+            "profiling": {
+            "folder_name": "profiling_output"
+            }
         },
         "output": {
             "path": "expert_mode_output"
