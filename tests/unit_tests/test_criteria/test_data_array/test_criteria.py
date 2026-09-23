@@ -56,7 +56,8 @@ class TestFlagArray:
     """Test flag array."""
 
     @pytest.fixture(scope="class")
-    def flag_array(self):
+    @classmethod
+    def flag_array(cls):
         return criteria.FlagArray(
             [
                 Criteria.P2D_PEAK_ON_EDGE,

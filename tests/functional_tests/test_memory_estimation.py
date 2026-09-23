@@ -34,7 +34,8 @@ class TestEstimateTotalMemoryConsumption:
     """Test the estimation of memory consumption."""
 
     @pytest.fixture(scope="class")
-    def result_store(self, request, tmp_path_factory):
+    @classmethod
+    def result_store(cls, request, tmp_path_factory):
         """Yield a list of objects that will be dumped to JSON file."""
         store: list = []
 
