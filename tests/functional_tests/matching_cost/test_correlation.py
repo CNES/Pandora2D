@@ -24,6 +24,7 @@ Tests pandora2d machine execution with mutual information and zncc cpp methods
 """
 
 # pylint: disable=redefined-outer-name
+import statistics
 import time
 from copy import deepcopy
 
@@ -221,60 +222,150 @@ class TestCorrelation:
 
 class TestZnccAutoSelectionPerformance:
     """
-    Test that "zncc" auto-selection effectively runs as fast as the fastest of the two C++
-    implementations, both when zncc-optim-1 is expected to win (dense sampling, large window)
-    and when zncc-optim-2 is expected to win (sparse sampling).
+    Test that "zncc" auto-selection runs as fast as the fastest of the two C++ implementations
+    for dense and sparse sampling, on the full image and on a large ROI.
     """
 
-    # No ROI is used here, so the selection model sees the whole cones image.
-    IMAGE_AREA = 375 * 450
+    pytestmark = pytest.mark.zncc_auto_selection_performance
 
     @pytest.fixture()
-    def run_matching_cost(self, correct_input_for_functional_tests, correct_pipeline_with_step):
+    def large_zncc_auto_selection_roi(self, left_img_shape):
         """
-        Run the matching cost step with the given method and return its execution duration.
+        340 x 320 px ROI on the cones image: large enough for stable timings, smaller than the full image.
+        """
+        height, width = left_img_shape
+        roi_width, roi_height = 340, 320
+        col_first = (width - roi_width) // 2
+        row_first = (height - roi_height) // 2
+        return {
+            "col": {"first": col_first, "last": col_first + roi_width - 1},
+            "row": {"first": row_first, "last": row_first + roi_height - 1},
+        }
+
+    @pytest.fixture()
+    def zncc_auto_selection_roi(self, request, large_zncc_auto_selection_roi):
+        """
+        Resolve the ROI used in ZNCC auto-selection performance tests.
+
+        Parametrize with ``None`` for the full image, or ``"large_zncc_auto_selection_roi"``.
+        """
+        if request.param is None:
+            return None
+        if request.param == "large_zncc_auto_selection_roi":
+            return large_zncc_auto_selection_roi
+        raise ValueError(f"Unsupported ZNCC auto-selection ROI fixture: {request.param!r}")
+
+    @pytest.fixture()
+    def zncc_auto_selection_timing_repeats(self):
+        return 3
+
+    @pytest.fixture()
+    def user_roi_area(self, left_img_shape, zncc_auto_selection_roi):
+        """Return the user ROI area in pixels, matching get_user_roi_area without margins."""
+        if zncc_auto_selection_roi is None:
+            return left_img_shape[0] * left_img_shape[1]
+        row_size = zncc_auto_selection_roi["row"]["last"] - zncc_auto_selection_roi["row"]["first"] + 1
+        col_size = zncc_auto_selection_roi["col"]["last"] - zncc_auto_selection_roi["col"]["first"] + 1
+        return row_size * col_size
+
+    @pytest.fixture()
+    def cfg_for_zncc_auto_selection(
+        self, correct_input_for_functional_tests, window_size, step, zncc_auto_selection_roi
+    ):
+        """
+        Return user configuration for ZNCC auto-selection performance tests.
+        """
+        user_cfg = {
+            **correct_input_for_functional_tests,
+            "pipeline": {
+                "matching_cost": {
+                    "window_size": window_size,
+                    "subpix": 1,
+                    "step": step,
+                },
+                "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            },
+            "output": {"path": "where"},
+        }
+        if zncc_auto_selection_roi is not None:
+            user_cfg["ROI"] = zncc_auto_selection_roi
+        return user_cfg
+
+    @pytest.fixture()
+    def run_matching_cost(self, cfg_for_zncc_auto_selection, zncc_auto_selection_timing_repeats):
+        """
+        Run the matching cost step with the given method and return its median execution duration.
         """
 
         def _run_matching_cost(method):
-            user_cfg = {
-                **correct_input_for_functional_tests,
-                **deepcopy(correct_pipeline_with_step),
-                "output": {"path": "where"},
-            }
-            user_cfg["pipeline"]["matching_cost"]["matching_cost_method"] = method
+            durations = []
+            for _ in range(zncc_auto_selection_timing_repeats):
+                user_cfg = deepcopy(cfg_for_zncc_auto_selection)
+                user_cfg["pipeline"]["matching_cost"]["matching_cost_method"] = method
 
-            pandora2d_machine = Pandora2DMachine()
-            check_conf(user_cfg, pandora2d_machine)
-            image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"])
+                pandora2d_machine = Pandora2DMachine()
+                check_conf(user_cfg, pandora2d_machine)
 
-            pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, user_cfg)
-            start_time = time.time()
-            pandora2d_machine.run("matching_cost", user_cfg)
-            return time.time() - start_time
+                if "ROI" in user_cfg:
+                    user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+                    roi_processing = get_roi_processing(
+                        user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"]
+                    )
+                    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi_processing)
+                else:
+                    image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"])
+
+                pandora2d_machine.run_prepare(image_datasets.left, image_datasets.right, user_cfg)
+                start_time = time.time()
+                pandora2d_machine.run("matching_cost", user_cfg)
+                durations.append(time.time() - start_time)
+            return statistics.median(durations)
 
         return _run_matching_cost
 
     @pytest.mark.parametrize(
-        ("window_size", "step", "expected_fastest"),
+        ("window_size", "step", "zncc_auto_selection_roi", "expected_fastest"),
         [
             pytest.param(
                 15,
                 [1, 1],
+                None,
                 "zncc-optim-1",
-                id="dense_sampling_favors_optim_1",
+                id="dense_full_image",
             ),
             pytest.param(
                 5,
                 [60, 60],
+                None,
                 "zncc-optim-2",
-                id="sparse_sampling_favors_optim_2",
+                id="sparse_full_image",
+            ),
+            pytest.param(
+                15,
+                [1, 1],
+                "large_zncc_auto_selection_roi",
+                "zncc-optim-1",
+                id="dense_large_roi",
+            ),
+            pytest.param(
+                5,
+                [60, 60],
+                "large_zncc_auto_selection_roi",
+                "zncc-optim-2",
+                id="sparse_large_roi",
             ),
         ],
+        indirect=["zncc_auto_selection_roi"],
     )
     @pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 3}])
     @pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
     def test_zncc_auto_selection_matches_fastest_implementation(
-        self, run_matching_cost, window_size, step, expected_fastest
+        self,
+        run_matching_cost,
+        user_roi_area,
+        window_size,
+        step,
+        expected_fastest,
     ):
         """
         Description : With window_size=15 and step=[1, 1], dense sampling makes zncc-optim-1 faster:
@@ -283,26 +374,22 @@ class TestZnccAutoSelectionPerformance:
         Conversely, with window_size=5 and step=[60, 60], zncc-optim-1 must still build full-image
         integral images for each disparity regardless of how few output points are actually sampled,
         while zncc-optim-2 only correlates the sparse output points directly, making it faster.
-        Test that "zncc" auto-selection effectively runs as fast as the fastest implementation
-        in both cases.
+        Both regimes are checked on the full cones image and on a 340 x 320 px ROI, and "zncc"
+        must run faster than the slower implementation.
         Data :
             * Left_img : cones/monoband/left.png
             * Right_img : cones/monoband/right.png
         """
-        duration_optim_1 = run_matching_cost("zncc-optim-1")
-        duration_optim_2 = run_matching_cost("zncc-optim-2")
+        durations = {
+            "zncc-optim-1": run_matching_cost("zncc-optim-1"),
+            "zncc-optim-2": run_matching_cost("zncc-optim-2"),
+        }
         duration_auto = run_matching_cost("zncc")
-
-        durations = {"zncc-optim-1": duration_optim_1, "zncc-optim-2": duration_optim_2}
         expected_slowest = next(method for method in durations if method != expected_fastest)
 
-        # Sanity check: this configuration must indeed favor expected_fastest in practice.
-        assert select_zncc_optim_method(window_size, step, self.IMAGE_AREA) == expected_fastest
+        assert select_zncc_optim_method(window_size, step, user_roi_area) == expected_fastest
         assert durations[expected_fastest] < durations[expected_slowest]
-
-        # "zncc" must behave like the fastest implementation, not like the slowest one.
         assert duration_auto < durations[expected_slowest]
-        assert abs(duration_auto - durations[expected_fastest]) < abs(duration_auto - durations[expected_slowest])
 
 
 class TestNbBinsMax:

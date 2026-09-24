@@ -100,7 +100,12 @@ test-unit-cpp: install-test ## run unit cpp tests only for dev
 .PHONY: test-functional
 test-functional: install-test reports_dir ## run functional tests only (for dev and validation plan)
 	@echo "Run functional tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests" --html=functional-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage-functional.cobertura.xml --cov-report term --cov
+	@${PANDORA2D_VENV}/bin/pytest -m "functional_tests and not zncc_auto_selection_performance" --html=functional-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage-functional.cobertura.xml --cov-report term --cov
+
+.PHONY: test-zncc-auto-selection
+test-zncc-auto-selection: install-test ## run ZNCC auto-selection timing tests (manual / optional CI)
+	@echo "Run ZNCC auto-selection performance tests"
+	@${PANDORA2D_VENV}/bin/pytest -m "zncc_auto_selection_performance" -vv
 
 .PHONY: test-resource
 test-resource: install-test test-resource-estimation test-resource-matching-cost test-resource-refinement ## run resource tests only (for validation plan)
