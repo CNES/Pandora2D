@@ -287,6 +287,7 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
 
+@pytest.mark.additional_functional_test
 def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pipeline_with_optical_flow, tmp_path):
     """
     Description : Test optical_flow configuration has a window_size and a step identical to matching_cost step.
@@ -748,6 +749,7 @@ class TestDeformationGridMode:
             **{"output": {"path": str(tmp_path), "deformation_grid": {"init_pixel_conv_grid": init_pixel_conv_grid}}},
         }
 
+    @pytest.mark.additional_functional_test
     @pytest.mark.parametrize("init_pixel_conv_grid", [[0, 0], [0.5, 0.5]])
     def test_deformation_grid_pipeline(self, configuration, run_pipeline, tmp_path):
         """
@@ -771,6 +773,7 @@ class TestDataSamplesOutputConfigReusability:  # pylint: disable=too-few-public-
     Test that output configurations from data_samples pipelines can be re-executed.
     """
 
+    @pytest.mark.additional_functional_test
     @pytest.mark.parametrize("config_data", list(filelist_parametrize_generator()))
     def test_output_config_can_be_reused(self, run_pipeline, tmp_path, config_data, cones_support_files):
         """

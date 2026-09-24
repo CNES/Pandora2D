@@ -3,7 +3,7 @@
 #  |_ py-pytest (Python unit tests)
 #  |_ functional-test (functional tests)
 #  |_ performance-test (performance tests)
-#  |_ zncc-auto-selection-test (ZNCC auto-selection timing tests)
+#  |_ additional-functional-test (optional functional tests)
 #  |_ notebook-test (notebook tests)
 #  |_ unit-cpp-test (C++ unit tests)
 #  |_ plugin-mccnn-test (MCCNN plugin tests)
@@ -30,7 +30,7 @@ spec:
     test-performance:
       type: boolean
       default: false
-    test-zncc-auto-selection:
+    test-additional-functional:
       type: boolean
       default: false
     test-functional:
@@ -111,7 +111,7 @@ variables:
   TEST_CPP: $[[ inputs.test-cpp ]]
   TEST_FUNCTIONAL: $[[ inputs.test-functional ]]
   TEST_PERFORMANCE: $[[ inputs.test-performance ]]
-  TEST_ZNCC_AUTO_SELECTION: $[[ inputs.test-zncc-auto-selection ]]
+  TEST_ADDITIONAL_FUNCTIONAL: $[[ inputs.test-additional-functional ]]
   TEST_MCCNN: $[[ inputs.test-mccnn ]]
   TEST_NOTEBOOK: $[[ inputs.test-notebook ]]
   TEST_RESOURCE: $[[ inputs.test-resource ]]
@@ -207,15 +207,15 @@ performance-test:
       allow_failure: true
     - !reference [.test-policy, rules]
 
-# ZNCC auto-selection timing tests
-zncc-auto-selection-test:
+# Additional functional tests
+additional-functional-test:
   extends: py-pytest
   script:
     # ${TRACE+-d} define the log level
-    - make ${TRACE+-d} test-zncc-auto-selection
+    - make ${TRACE+-d} test-additional-functional
   rules:
-    # exclude if $TEST_ZNCC_AUTO_SELECTION not set
-    - if: '$TEST_ZNCC_AUTO_SELECTION != "true"'
+    # exclude if $TEST_ADDITIONAL_FUNCTIONAL not set
+    - if: '$TEST_ADDITIONAL_FUNCTIONAL != "true"'
       when: manual
       allow_failure: true
     - !reference [.test-policy, rules]

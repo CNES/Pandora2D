@@ -28,6 +28,8 @@ import numpy as np
 import pytest
 import rasterio
 
+pytestmark = pytest.mark.additional_functional_test
+
 
 # /!\ "zncc" currently target "zncc-optim-1"
 @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-2", "zncc_python", "mutual_information"])
