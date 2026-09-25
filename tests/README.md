@@ -61,7 +61,7 @@ There are several options for launching the various tests:
     - `make test-all` : run all tests in this directory and sub-directory
     - `make test-unit` : run unit tests only
     - `make test-functional` : run functional tests only, excluding tests marked `additional_functional_test`
-    - `make test-additional-functional` : run optional functional tests marked `additional_functional_test` (manual GitLab job `additional-functional-test`)
+    - `make test-additional-functional` : run optional functional tests marked `additional_functional_test` (manual GitLab jobs of the `test-additional-functional` stage). Use `ADDITIONAL_FUNCTIONAL_TESTS="<paths>"` to restrict the test paths
     - `make test-resource` : run resource tests only
     - `make test-performance` : run performance tests only
 
