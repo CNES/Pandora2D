@@ -63,6 +63,7 @@ There are several options for launching the various tests:
     - `make test-functional` : run functional tests only
     - `make test-resource` : run resource tests only
     - `make test-performance` : run performance tests only
+    - `make test-zncc-auto-selection` : run ZNCC auto-selection timing tests (excluded from default functional CI, manual GitLab job `zncc-auto-selection-test`)
 
 2. Using the command line with pytest with virtual environment `venv` directory:
     ```shell
