@@ -244,6 +244,7 @@ class DichotomyPython(refinement.AbstractRefinement):
                 # pos_disp_col_init = 3
 
                 for precision in precisions:
+                    # fmt: off
                     # Syntax disp_row_init[...] is for assign value back to row_map with np.nditer
                     (pos_disp_row_init, pos_disp_col_init), disp_row_init[...], disp_col_init[...], cost_value[...] = (
                         search_new_best_point(
@@ -256,6 +257,7 @@ class DichotomyPython(refinement.AbstractRefinement):
                             cost_selection_method,
                         )
                     )
+                    # fmt: on
 
         logging.info(
             "Dichotomy precision reached: %s", precisions[-1] if precisions else 1 / 2 ** (first_iteration - 1)
