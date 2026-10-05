@@ -24,6 +24,9 @@ endif
 # Example: make test-additional-functional ADDITIONAL_FUNCTIONAL_TESTS="tests/functional_tests/test_segment_mode.py"
 ADDITIONAL_FUNCTIONAL_TESTS ?= tests/functional_tests
 
+# Set coverage report path for additional functional tests
+ADDITIONAL_FUNCTIONAL_COVERAGE ?= reports/py-coverage-additional-functional.cobertura.xml
+
 # Check python3 globally
 PYTHON=$(shell command -v python3)
 ifeq (, $(PYTHON))
@@ -109,7 +112,7 @@ test-functional: install-test reports_dir ## run functional tests only (for dev 
 .PHONY: test-additional-functional
 test-additional-functional: install-test reports_dir ## run additional functional tests only (manual / optional CI)
 	@echo "Run additional functional tests"
-	@${PANDORA2D_VENV}/bin/pytest -m "additional_functional_test" ${ADDITIONAL_FUNCTIONAL_TESTS} --html=additional-functional-test-report.html --cov-config=.coveragerc --cov-report xml:reports/py-coverage-additional-functional.cobertura.xml --cov-report term --cov
+	@${PANDORA2D_VENV}/bin/pytest -m "additional_functional_test" ${ADDITIONAL_FUNCTIONAL_TESTS} --html=additional-functional-test-report.html --cov-config=.coveragerc --cov-report xml:${ADDITIONAL_FUNCTIONAL_COVERAGE} --cov-report term --cov
 
 .PHONY: test-resource
 test-resource: install-test test-resource-estimation test-resource-matching-cost test-resource-refinement ## run resource tests only (for validation plan)

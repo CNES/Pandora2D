@@ -94,9 +94,10 @@ stages:
   - publish
   - infra-prod
   - production
-  # Our stages
-  - test-resource
+    # Our stages
   - test-additional-functional
+  - coverage
+  - test-resource
 
 variables:
   # default production ref name (pattern)
@@ -147,6 +148,10 @@ py-pytest:
     # ${TRACE+-d} define the log level
     # Install in editable mode to compute coverage
     - make ${TRACE+-d} test-unit
+
+# Run Sonar after the additional functional tests so their coverage reports are available
+sonar:
+  stage: coverage
 
 # Set the version of Pandora to use
 pandora-version:
@@ -302,8 +307,7 @@ optical-flow-resource-test:
       allow_failure: true
     - !reference [.test-policy, rules]
 
-# Matching-cost Additional Functional Test
-matching-cost-additional-functional-test:
+.additional-functional-test:
   stage: test-additional-functional
   extends: py-pytest
   # Allow manual trigger without waiting for previous stages
@@ -312,100 +316,48 @@ matching-cost-additional-functional-test:
       optional: true
   script:
     # ${TRACE+-d} define the log level
-    - make ${TRACE+-d} test-additional-functional ADDITIONAL_FUNCTIONAL_TESTS="tests/functional_tests/matching_cost"
+    - make ${TRACE+-d} test-additional-functional
+        ADDITIONAL_FUNCTIONAL_TESTS="$AF_TESTS"
+        ADDITIONAL_FUNCTIONAL_COVERAGE="reports/py-coverage-additional-functional-${CI_JOB_NAME}.cobertura.xml"
   artifacts:
     paths:
-      - reports/py-coverage-additional-functional.cobertura.xml
+      - reports/py-coverage-additional-functional-*.cobertura.xml
   rules:
     # exclude if $TEST_ADDITIONAL_FUNCTIONAL not set
     - if: '$TEST_ADDITIONAL_FUNCTIONAL != "true"'
       when: manual
       allow_failure: true
     - !reference [.test-policy, rules]
+
+# Matching-cost Additional Functional Test
+matching-cost-additional-functional-test:
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/matching_cost"
 
 # Dichotomy Additional Functional Test
 dichotomy-additional-functional-test:
-  stage: test-additional-functional
-  extends: py-pytest
-  # Allow manual trigger without waiting for previous stages
-  needs:
-    - job: pandora-version
-      optional: true
-  script:
-    # ${TRACE+-d} define the log level
-    - make ${TRACE+-d} test-additional-functional ADDITIONAL_FUNCTIONAL_TESTS="tests/functional_tests/refinement/dichotomy"
-  artifacts:
-    paths:
-      - reports/py-coverage-additional-functional.cobertura.xml
-  rules:
-    # exclude if $TEST_ADDITIONAL_FUNCTIONAL not set
-    - if: '$TEST_ADDITIONAL_FUNCTIONAL != "true"'
-      when: manual
-      allow_failure: true
-    - !reference [.test-policy, rules]
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/refinement/dichotomy"
 
 # Pipelines and criteria Additional Functional Test
 pipelines-additional-functional-test:
-  stage: test-additional-functional
-  extends: py-pytest
-  # Allow manual trigger without waiting for previous stages
-  needs:
-    - job: pandora-version
-      optional: true
-  script:
-    # ${TRACE+-d} define the log level
-    - make ${TRACE+-d} test-additional-functional ADDITIONAL_FUNCTIONAL_TESTS="tests/functional_tests/test_pipelines.py tests/functional_tests/test_criteria_pipeline.py"
-  artifacts:
-    paths:
-      - reports/py-coverage-additional-functional.cobertura.xml
-  rules:
-    # exclude if $TEST_ADDITIONAL_FUNCTIONAL not set
-    - if: '$TEST_ADDITIONAL_FUNCTIONAL != "true"'
-      when: manual
-      allow_failure: true
-    - !reference [.test-policy, rules]
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/test_pipelines.py tests/functional_tests/test_criteria_pipeline.py"
 
 # Segment mode Additional Functional Test
 segment-mode-additional-functional-test:
-  stage: test-additional-functional
-  extends: py-pytest
-  # Allow manual trigger without waiting for previous stages
-  needs:
-    - job: pandora-version
-      optional: true
-  script:
-    # ${TRACE+-d} define the log level
-    - make ${TRACE+-d} test-additional-functional ADDITIONAL_FUNCTIONAL_TESTS="tests/functional_tests/test_segment_mode.py tests/functional_tests/test_memory_estimation.py"
-  artifacts:
-    paths:
-      - reports/py-coverage-additional-functional.cobertura.xml
-  rules:
-    # exclude if $TEST_ADDITIONAL_FUNCTIONAL not set
-    - if: '$TEST_ADDITIONAL_FUNCTIONAL != "true"'
-      when: manual
-      allow_failure: true
-    - !reference [.test-policy, rules]
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/test_segment_mode.py tests/functional_tests/test_memory_estimation.py"
 
 # Variable initial disparity Additional Functional Test
 variable-initial-disparity-additional-functional-test:
-  stage: test-additional-functional
-  extends: py-pytest
-  # Allow manual trigger without waiting for previous stages
-  needs:
-    - job: pandora-version
-      optional: true
-  script:
-    # ${TRACE+-d} define the log level
-    - make ${TRACE+-d} test-additional-functional ADDITIONAL_FUNCTIONAL_TESTS="tests/functional_tests/test_variable_initial_disparity.py"
-  artifacts:
-    paths:
-      - reports/py-coverage-additional-functional.cobertura.xml
-  rules:
-    # exclude if $TEST_ADDITIONAL_FUNCTIONAL not set
-    - if: '$TEST_ADDITIONAL_FUNCTIONAL != "true"'
-      when: manual
-      allow_failure: true
-    - !reference [.test-policy, rules]
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/test_variable_initial_disparity.py"
 
 # Mypy check
 py-mypy:
