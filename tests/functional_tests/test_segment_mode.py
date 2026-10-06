@@ -27,6 +27,8 @@ import rasterio
 
 from pandora2d import memory_estimation
 
+pytestmark = pytest.mark.additional_functional_test
+
 # pylint: disable=too-many-positional-arguments,invalid-name,too-many-arguments
 
 

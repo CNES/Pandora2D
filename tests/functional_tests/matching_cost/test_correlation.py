@@ -159,6 +159,7 @@ class TestCorrelation:
         assert np.all(pandora2d_machine.cost_volumes["cost_volumes"].data[invalid_point] == 0)
 
     @pytest.mark.parametrize("method", ["mutual_information"])
+    @pytest.mark.additional_functional_test
     @pytest.mark.parametrize("subpix", [1])
     @pytest.mark.parametrize("window_size", [5])
     @pytest.mark.parametrize("step", [[1, 1]])
@@ -226,7 +227,7 @@ class TestZnccAutoSelectionPerformance:
     for dense and sparse sampling, on the full image and on a large ROI.
     """
 
-    pytestmark = pytest.mark.zncc_auto_selection_performance
+    pytestmark = pytest.mark.additional_functional_test
 
     @pytest.fixture()
     def large_zncc_auto_selection_roi(self, left_img_shape):

@@ -3,7 +3,6 @@
 #  |_ py-pytest (Python unit tests)
 #  |_ functional-test (functional tests)
 #  |_ performance-test (performance tests)
-#  |_ zncc-auto-selection-test (ZNCC auto-selection timing tests)
 #  |_ notebook-test (notebook tests)
 #  |_ unit-cpp-test (C++ unit tests)
 #  |_ plugin-mccnn-test (MCCNN plugin tests)
@@ -17,6 +16,19 @@
 # test:
 #  |_ py-trivy (dependency scanning)
 #  |_ sonar (SonarQube analysis)
+#
+# test-resource:
+#  |_ estimation-resource-test (estimation resource tests)
+#  |_ matching-resource-test (matching cost resource tests)
+#  |_ dichotomy-resource-test (dichotomy resource tests)
+#  |_ optical-flow-resource-test (optical flow resource tests)
+#
+# test-additional-functional:
+#  |_ matching-cost-additional-functional-test (optional matching cost functional tests)
+#  |_ dichotomy-additional-functional-test (optional dichotomy functional tests)
+#  |_ pipelines-additional-functional-test (optional pipelines and criteria functional tests)
+#  |_ segment-mode-additional-functional-test (optional segment mode functional tests)
+#  |_ variable-initial-disparity-additional-functional-test (optional variable initial disparity functional tests)
 
 
 spec:
@@ -30,7 +42,7 @@ spec:
     test-performance:
       type: boolean
       default: false
-    test-zncc-auto-selection:
+    test-additional-functional:
       type: boolean
       default: false
     test-functional:
@@ -82,7 +94,9 @@ stages:
   - publish
   - infra-prod
   - production
-  # Our stages
+    # Our stages
+  - test-additional-functional
+  - coverage
   - test-resource
 
 variables:
@@ -111,7 +125,7 @@ variables:
   TEST_CPP: $[[ inputs.test-cpp ]]
   TEST_FUNCTIONAL: $[[ inputs.test-functional ]]
   TEST_PERFORMANCE: $[[ inputs.test-performance ]]
-  TEST_ZNCC_AUTO_SELECTION: $[[ inputs.test-zncc-auto-selection ]]
+  TEST_ADDITIONAL_FUNCTIONAL: $[[ inputs.test-additional-functional ]]
   TEST_MCCNN: $[[ inputs.test-mccnn ]]
   TEST_NOTEBOOK: $[[ inputs.test-notebook ]]
   TEST_RESOURCE: $[[ inputs.test-resource ]]
@@ -134,6 +148,10 @@ py-pytest:
     # ${TRACE+-d} define the log level
     # Install in editable mode to compute coverage
     - make ${TRACE+-d} test-unit
+
+# Run Sonar after the additional functional tests so their coverage reports are available
+sonar:
+  stage: coverage
 
 # Set the version of Pandora to use
 pandora-version:
@@ -203,19 +221,6 @@ performance-test:
   rules:
     # exclude if $TEST_PERFORMANCE not set
     - if: '$TEST_PERFORMANCE != "true"'
-      when: manual
-      allow_failure: true
-    - !reference [.test-policy, rules]
-
-# ZNCC auto-selection timing tests
-zncc-auto-selection-test:
-  extends: py-pytest
-  script:
-    # ${TRACE+-d} define the log level
-    - make ${TRACE+-d} test-zncc-auto-selection
-  rules:
-    # exclude if $TEST_ZNCC_AUTO_SELECTION not set
-    - if: '$TEST_ZNCC_AUTO_SELECTION != "true"'
       when: manual
       allow_failure: true
     - !reference [.test-policy, rules]
@@ -301,6 +306,58 @@ optical-flow-resource-test:
       when: manual
       allow_failure: true
     - !reference [.test-policy, rules]
+
+.additional-functional-test:
+  stage: test-additional-functional
+  extends: py-pytest
+  # Allow manual trigger without waiting for previous stages
+  needs:
+    - job: pandora-version
+      optional: true
+  script:
+    # ${TRACE+-d} define the log level
+    - make ${TRACE+-d} test-additional-functional
+        ADDITIONAL_FUNCTIONAL_TESTS="$AF_TESTS"
+        ADDITIONAL_FUNCTIONAL_COVERAGE="reports/py-coverage-additional-functional-${CI_JOB_NAME}.cobertura.xml"
+  artifacts:
+    paths:
+      - reports/py-coverage-additional-functional-*.cobertura.xml
+  rules:
+    # exclude if $TEST_ADDITIONAL_FUNCTIONAL not set
+    - if: '$TEST_ADDITIONAL_FUNCTIONAL != "true"'
+      when: manual
+      allow_failure: true
+    - !reference [.test-policy, rules]
+
+# Matching-cost Additional Functional Test
+matching-cost-additional-functional-test:
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/matching_cost"
+
+# Dichotomy Additional Functional Test
+dichotomy-additional-functional-test:
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/refinement/dichotomy"
+
+# Pipelines and criteria Additional Functional Test
+pipelines-additional-functional-test:
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/test_pipelines.py tests/functional_tests/test_criteria_pipeline.py"
+
+# Segment mode Additional Functional Test
+segment-mode-additional-functional-test:
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/test_segment_mode.py tests/functional_tests/test_memory_estimation.py"
+
+# Variable initial disparity Additional Functional Test
+variable-initial-disparity-additional-functional-test:
+  extends: .additional-functional-test
+  variables:
+    AF_TESTS: "tests/functional_tests/test_variable_initial_disparity.py"
 
 # Mypy check
 py-mypy:

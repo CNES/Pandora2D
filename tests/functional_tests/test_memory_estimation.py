@@ -26,6 +26,8 @@ import pytest
 from pandora2d import Pandora2DMachine, memory_estimation
 from pandora2d.check_configuration import check_conf
 
+pytestmark = pytest.mark.additional_functional_test
+
 # pylint: disable=redefined-outer-name,too-few-public-methods,invalid-name,too-many-arguments,
 # pylint: disable=too-many-positional-arguments
 
@@ -174,7 +176,7 @@ class TestEstimateTotalMemoryConsumption:
 
     # /!\ "zncc" currently targets "zncc-optim-1"
     @pytest.mark.usefixtures("add_roi_to_config")
-    @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-2"])
+    @pytest.mark.parametrize("matching_cost_method", ["zncc-optim-1", "zncc-optim-2"])
     @pytest.mark.parametrize("step", [[1, 1], [1, 4], [4, 1]])
     @pytest.mark.parametrize("subpix", [1, 4])
     @pytest.mark.parametrize("deformation_grid_mode", [True, False])
