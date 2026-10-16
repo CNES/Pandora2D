@@ -182,6 +182,16 @@ def correct_segment_mode():
     }
 
 
+@pytest.fixture
+def correct_skip_mode():
+    return {
+        "skip_mode": {
+            "type": "custom",
+            "rules": [{"type": "incomplete_disparity_range"}],
+        }
+    }
+
+
 @pytest.fixture()
 def image_size() -> tuple[int, int]:
     return 1000, 1000
