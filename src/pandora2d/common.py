@@ -118,6 +118,25 @@ class AllPrimitiveEncoder(json.JSONEncoder):
         return super().default(o)
 
 
+def _get_invalid_disparity_mask(dataset: xr.Dataset, var_names: list[str]) -> np.ndarray:
+    """
+    Compute the mask of invalid disparity pixels (True where the value equals invalid_disp).
+
+    :param dataset: dataset containing the maps
+    :param var_names: names of the variables to check
+    """
+    invalid_value = dataset.attrs["invalid_disp"]
+
+    mask = np.zeros(dataset[var_names[0]].shape, dtype=bool)
+    for name in var_names:
+        data = dataset[name].values
+        if np.isnan(invalid_value):
+            mask |= np.isnan(data)
+        else:
+            mask |= data == invalid_value
+    return mask
+
+
 def convert_disp_to_grid(dataset: xr.Dataset, pixel_convention: list[int]) -> xr.Dataset:
     """
     Convert disparity maps to deformation grids
@@ -126,11 +145,16 @@ def convert_disp_to_grid(dataset: xr.Dataset, pixel_convention: list[int]) -> xr
     :param pixel_convention: initial pixel convention for grid
     """
 
+    # Get the mask of invalid disparity pixels
+    invalid_disparity_mask = _get_invalid_disparity_mask(dataset, ["row_map", "col_map"])
+
     dataset = dataset.rename_vars({"row_map": "row_deformation_map", "col_map": "col_deformation_map"})
 
     col_coords_2d, row_coords_2d = np.meshgrid(dataset["col"].values, dataset["row"].values)
-    dataset["row_deformation_map"].data += row_coords_2d + pixel_convention[0]
-    dataset["col_deformation_map"].data += col_coords_2d + pixel_convention[1]
+
+    # Invalid disparity pixels keep their original value
+    dataset["row_deformation_map"].data += np.where(invalid_disparity_mask, 0, row_coords_2d + pixel_convention[0])
+    dataset["col_deformation_map"].data += np.where(invalid_disparity_mask, 0, col_coords_2d + pixel_convention[1])
 
     return dataset
 
@@ -143,12 +167,16 @@ def convert_grid_to_disp(dataset: xr.Dataset, pixel_convention: list[int]) -> xr
     :param pixel_convention: initial pixel convention for grid
     """
 
+    # Get the mask of invalid disparity pixels
+    invalid_disparity_mask = _get_invalid_disparity_mask(dataset, ["row_deformation_map", "col_deformation_map"])
+
     dataset = dataset.rename_vars({"row_deformation_map": "row_map", "col_deformation_map": "col_map"})
 
     col_coords_2d, row_coords_2d = np.meshgrid(dataset["col"].values, dataset["row"].values)
 
-    dataset["row_map"].data -= row_coords_2d + pixel_convention[0]
-    dataset["col_map"].data -= col_coords_2d + pixel_convention[1]
+    # Invalid disparity pixels keep their original value
+    dataset["row_map"].data -= np.where(invalid_disparity_mask, 0, row_coords_2d + pixel_convention[0])
+    dataset["col_map"].data -= np.where(invalid_disparity_mask, 0, col_coords_2d + pixel_convention[1])
 
     return dataset
 
