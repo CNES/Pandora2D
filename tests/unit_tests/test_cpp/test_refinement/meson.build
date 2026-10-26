@@ -13,6 +13,7 @@ test(
         include_directories: [
             refinement_includes,
             interpolation_filter_includes,
+            matching_cost_includes,
             test_includes,
             common_includes,
         ],
