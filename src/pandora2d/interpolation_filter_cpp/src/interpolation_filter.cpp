@@ -24,7 +24,7 @@ This module contains functions associated to the Abstract filter class for cpp.
 
 #include "interpolation_filter.hpp"
 #include <cmath>
-#include <utility>
+#include <limits>
 
 namespace abstractfilter {
 
@@ -98,54 +98,150 @@ P2d::VectorD AbstractFilter::interpolate(const P2d::MatrixD& image,
   return interpolated_positions;
 }
 
-// Interpolate window
-std::optional<P2d::Matrixf> AbstractFilter::interpolate_window(const P2d::MatrixD& image,
-                                                               int window_size,
-                                                               double center_row,
-                                                               double center_col) {
-  const int half_window = window_size / 2;
-  const int nb_pixels = window_size * window_size;
-
-  const Margins& margins = m_margins;
-  const int filter_size = m_size;
-
-  /*
-  The window can be interpolated only if the resampling areas of its extreme positions fit in the
-  image. We reproduce here the indexing used by the interpolate method, which uses margins.left for
-  rows and margins.up for cols.
-  */
-  const int first_area_row = static_cast<int>(center_row - half_window) - margins.left;
-  const int last_area_row = static_cast<int>(center_row + half_window) - margins.left;
-  const int first_area_col = static_cast<int>(center_col - half_window) - margins.up;
-  const int last_area_col = static_cast<int>(center_col + half_window) - margins.up;
-
-  if (first_area_row < 0 || last_area_row + filter_size > image.rows() || first_area_col < 0 ||
-      last_area_col + filter_size > image.cols()) {
-    return std::nullopt;
+// Build the mapping from the compact grid to the window pixels
+Eigen::VectorXi AbstractFilter::build_grid_to_window_mapping(int window_size,
+                                                             int inverse_precision) const {
+  // We construct the idx vector to establish a correspondence between the positions in the grid and
+  // the positions in the right image.
+  // We have: k: the index in the grid where the interpolated values are stored
+  // and idx[k]: the position in the corresponding right image,
+  // starting from the first point to be interpolated (first_row or first_col).
+  // Only the points contained in one of the correlation windows for the 8 candidates are present in
+  // the grid.
+  if (inverse_precision == 2) {
+    // For window_size = 3 and inverse_precision = 2, idx = [0, 1, 2, 3, 4, 5, 6]
+    // For origin_row = 3, we obtain first_row = 1.5 and image row positions equal to
+    // [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5]
+    return Eigen::VectorXi::LinSpaced(2 * window_size + 1, 0, 2 * window_size);
   }
 
-  // Positions to be interpolated around the center of the window
-  P2d::VectorD row_positions(nb_pixels);
-  P2d::VectorD col_positions(nb_pixels);
+  // We reserve the size in advance for idx.
+  Eigen::VectorXi idx(3 * window_size);
 
-  int index = 0;
-  for (int row = -half_window; row <= half_window; ++row) {
-    for (int col = -half_window; col <= half_window; ++col) {
-      row_positions[index] = center_row + row;
-      col_positions[index] = center_col + col;
-      ++index;
+  // For inverse_precision != 2 the grid is ordered "by block".
+  // Each candidate window is stored contiguously in its own window_size x window_size block.
+  // Thus, for window_size = 3 and inverse_precision = 4, the second point (index 1 in row or
+  // column) to be interpolated in the right image corresponds to index 4 in the grid. Then we have
+  // : idx = [0, 4, 8, 1, 5, 9, 2, 6, 10] For origin_row = 3, we obtain first row = 1.75 and image
+  // row positions equal to [1.75, 2.75, 3.75, 2., 3., 4., 2.25, 3.25, 4.25]
+
+  idx << Eigen::VectorXi::LinSpaced(window_size, 0, (window_size - 1) * inverse_precision),
+      Eigen::VectorXi::LinSpaced(window_size, 1, 1 + (window_size - 1) * inverse_precision),
+      Eigen::VectorXi::LinSpaced(window_size, 2, 2 + (window_size - 1) * inverse_precision);
+
+  return idx;
+}
+
+// Build the candidate window positions for interpolation
+P2d::VectorD AbstractFilter::build_candidate_window_positions(const Eigen::VectorXi& indices,
+                                                              double origin,
+                                                              double precision,
+                                                              int half_window) const {
+  // We calculate the position of the top-left corner of the grid that will store the interpolated
+  // values. We subtract a half window to cover the entire window, then subtract another precision
+  // to cover the candidate shift = -1.
+  const double first_position = origin - half_window - precision;
+
+  // We calculate the correspondences between the positions in the right image
+  // (starting from first row and first col) and the grid indices.
+  return indices.cast<double>() * precision +
+         P2d::VectorD::Constant(indices.size(), first_position);
+}
+
+// Interpolate candidate windows
+std::optional<P2d::Matrixf> AbstractFilter::interpolate_candidate_windows(const P2d::MatrixD& image,
+                                                                          int window_size,
+                                                                          double origin_row,
+                                                                          double origin_col,
+                                                                          double precision) {
+  const Margins& margins = m_margins;
+  const int filter_size = m_size;
+  const int half_window = window_size / 2;
+  const int inverse_precision = static_cast<int>(1. / precision);
+  // Build the mapping from the compact grid which will store the interpolated values
+  // to the window pixels of the 8 candidate positions around the current best point
+  const Eigen::VectorXi idx = build_grid_to_window_mapping(window_size, inverse_precision);
+  const int axis_size = static_cast<int>(idx.size());
+
+  const P2d::VectorD candidate_image_rows =
+      build_candidate_window_positions(idx, origin_row, precision, half_window);
+  const P2d::VectorD candidate_image_cols =
+      build_candidate_window_positions(idx, origin_col, precision, half_window);
+
+  // We initialize the grid to NaN. The points that will be skipped will remain NaN.
+  P2d::Matrixf grid =
+      P2d::Matrixf::Constant(axis_size, axis_size, std::numeric_limits<float>::quiet_NaN());
+
+  const int max_positions = axis_size * axis_size;
+  P2d::VectorD interpolation_rows(max_positions);
+  P2d::VectorD interpolation_cols(max_positions);
+  Eigen::VectorXi grid_rows(max_positions);
+  Eigen::VectorXi grid_cols(max_positions);
+
+  int nb_positions = 0;
+
+  // We iterate through the grid and keep only the points that must be interpolated.
+  // For each kept point, we store its position in the right image and its row and column in the
+  // grid.
+  for (int axis_row = 0; axis_row < axis_size; ++axis_row) {
+    // We skip the rows for which the filter area would go outside the right image
+    const int top_left_area_row = candidate_image_rows[axis_row] - margins.left;
+    if (top_left_area_row < 0 || top_left_area_row + filter_size > image.rows()) {
+      continue;
+    }
+    for (int axis_col = 0; axis_col < axis_size; ++axis_col) {
+      // The points of the correlation window of the the initial best candidate (shift 0, 0)
+      // verify idx % inverse_precision == 1 on both axes.
+      // The initial best candidate score is already known, so we skip its window.
+      if (idx[axis_row] % inverse_precision == 1 && idx[axis_col] % inverse_precision == 1) {
+        continue;
+      }
+      // We skip the columns for which the filter area would go outside the right image
+      const int top_left_area_col = candidate_image_cols[axis_col] - margins.up;
+      if (top_left_area_col < 0 || top_left_area_col + filter_size > image.cols()) {
+        continue;
+      }
+      // interpolation_rows and interpolation_cols are the list of points sent to interpolate:
+      // one entry per kept point, so each value of candidate_image_rows is repeated once per kept
+      // column. grid_rows and grid_cols store the row and column of the grid where the result will
+      // be written. For inverse_precision = 2, window_size = 3 and origin_row = 3,
+      // candidate_image_rows = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5],
+      // andconsidering the filter area fits in the right image,
+      // Row 0 (1.5) keeps its 7 columns, so 1.5 is written 7 times.
+      // Row 1 (2.0) loses columns 1, 3 and 5 (window of the best candidate), so 2.0 is written 4
+      // times.
+      interpolation_rows[nb_positions] = candidate_image_rows[axis_row];
+      interpolation_cols[nb_positions] = candidate_image_cols[axis_col];
+      grid_rows[nb_positions] = axis_row;
+      grid_cols[nb_positions] = axis_col;
+      ++nb_positions;
     }
   }
 
-  P2d::VectorD interpolated_values =
-      interpolate(image, col_positions, row_positions, MAX_FRACTIONAL_VALUE);
-
-  P2d::Matrixf window(window_size, window_size);
-  for (int p = 0; p < nb_pixels; ++p) {
-    window(p / window_size, p % window_size) = static_cast<float>(interpolated_values[p]);
+  if (nb_positions == 0) {
+    return std::nullopt;
   }
 
-  return window;
+  // Vectors allocated to axis_size² (max_positions) at initialization, but borders and
+  // best candidate window skip indices, leaving uninitialized tail from nb_positions to
+  // max_positions. conservativeResize(nb_positions) trims the uninitialized tail while
+  // preserving computed values, since interpolate() would process the full allocation size.
+  interpolation_rows.conservativeResize(nb_positions);
+  interpolation_cols.conservativeResize(nb_positions);
+
+  const P2d::VectorD interpolated_values =
+      interpolate(image, interpolation_cols, interpolation_rows, MAX_FRACTIONAL_VALUE);
+  // interpolate keeps the order of the points, so the i-th interpolated value is written
+  // at the i-th stored row and column of the grid.
+  // The points that were skipped remain NaN.
+  // For inverse_precision = 2 and window_size = 3, the 9 points with row and column in {1, 3, 5}
+  // stay NaN. For inverse_precision = 4 and window_size = 3, the central block (rows 3 to 5,
+  // columns 3 to 5) stays NaN.
+  for (int index = 0; index < nb_positions; ++index) {
+    grid(grid_rows[index], grid_cols[index]) = static_cast<float>(interpolated_values[index]);
+  }
+
+  return grid;
 }
 
 }  // namespace abstractfilter

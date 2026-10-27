@@ -11,6 +11,7 @@ py.extension_module(
     include_directories: [
         refinement_includes,
         interpolation_filter_includes,
+        matching_cost_includes,
         common_includes,
     ],
     dependencies: [pybind11_dep, eigen_dep],

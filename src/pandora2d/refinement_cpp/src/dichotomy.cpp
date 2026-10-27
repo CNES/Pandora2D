@@ -22,6 +22,8 @@ This module contains functions associated to the Dichotomy refinement method.
 */
 
 #include "dichotomy.hpp"
+#include <array>
+#include <utility>
 #include "constant.hpp"
 
 /**
@@ -74,5 +76,114 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
     pos_row_disp = new_row_pos[best_index];
     pos_col_disp = new_col_pos[best_index];
     score = candidates[best_index];
+  }
+}
+
+/**
+ * @brief Search for the new best position by interpolating the right image
+ *
+ * @param left_window : left window centered on the current pixel
+ * @param right_image : right image
+ * @param precision : search precision (1/pow(2,n), in pixels at the nth iteration)
+ * @param pixel_row : row of the current pixel
+ * @param pixel_col : col of the current pixel
+ * @param window_size : size of the correlation window
+ * @param best_row_disp : initial best row disparity, updated with the new best one
+ * @param best_col_disp : initial best col disparity, updated with the new best one
+ * @param best_score : initial best score, updated with the new best one (maximum)
+ * @param filter : interpolation filter
+ * @param method_matching_cost : zncc, zncc-optim-1, zncc-optim-2 or mutual_information
+ */
+void search_new_best_point_on_image(const P2d::Matrixf& left_window,
+                                    const P2d::MatrixD& right_image,
+                                    double precision,
+                                    int pixel_row,
+                                    int pixel_col,
+                                    int window_size,
+                                    double& best_row_disp,
+                                    double& best_col_disp,
+                                    double& best_score,
+                                    abstractfilter::AbstractFilter& filter,
+                                    const std::string& method_matching_cost) {
+  // zncc-optim-1 relies on integral images, which are useless on a single window
+  // So we replace "zncc-optim-1" with "zncc-optim-2"
+  const std::string correlator_method =
+      (method_matching_cost == "zncc" || method_matching_cost == "zncc-optim-1")
+          ? "zncc-optim-2"
+          : method_matching_cost;
+
+  // Prepare the left window before the for loop so that the operation isn't repeated multiple times
+  auto correlator = make_correlator<double>(correlator_method);
+  auto prepare_left = [&](auto& correlator_impl) {
+    correlator_impl.prepare_left_window(left_window);
+  };
+  std::visit(prepare_left, correlator);
+
+  // 8 neighbours of the initial best position
+  constexpr std::array<std::pair<int, int>, 8> disp_shifts = {
+      {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}};
+  // We save the initial best row and column disparities
+  // because best_row_disp and best_col_disp will be updated during the search
+  const double init_row_disp = best_row_disp;
+  const double init_col_disp = best_col_disp;
+  const int precision_inverse = static_cast<int>(1. / precision);
+
+  // We interpolate all the correlation windows in the right image for the 8 candidates.
+  // The interpolated values are stored in "grid".
+  const std::optional<P2d::Matrixf> grid = filter.interpolate_candidate_windows(
+      right_image, window_size, pixel_row + init_row_disp, pixel_col + init_col_disp, precision);
+  if (!grid.has_value()) {
+    return;
+  }
+
+  // We iterate through the candidate positions around the initial best point
+  // For each candidate position, the corresponding correlation window is extracted from the
+  // interpolated right image
+  for (const auto& [shift_row, shift_col] : disp_shifts) {
+    // Centers of the interpolated correlation windows
+    const double candidate_row_disp = init_row_disp + shift_row * precision;
+    const double candidate_col_disp = init_col_disp + shift_col * precision;
+
+    // The grid is ordered differently depending on whether inverse_precision=2 or not.
+    // For precision_inverse == 2, the grid is in "normal" increasing spatial order (one point every
+    // half pixel). The start index is shift + 1 and the step is precision_inverse. For example, for
+    // shift={-1,0}, the start index would be 0 for row and 1 for column and we must use a
+    // precision_inverse step from that point to find the other points in the window.
+
+    // For precision_inverse != 2, the grid is ordered "by block".
+    // Each candidate window is stored contiguously in its own window_size x window_size block,
+    // the top-left block corresponds to shift {-1, -1} and the bottom-right block to shift {1, 1})
+    // the start index is (shift + 1) * window_size and the step is 1.
+    // For example, for shift={-1,0}, precision_inverse=4 and window_size = 3 :
+    // the start index would be 0 for row and 3 for column,
+    // and we must use a step of 1 to find the other points in the window.
+    const int grid_start_row =
+        (precision_inverse == 2) ? (shift_row + 1) : (shift_row + 1) * window_size;
+    const int grid_start_col =
+        (precision_inverse == 2) ? (shift_col + 1) : (shift_col + 1) * window_size;
+    const int grid_step = (precision_inverse == 2) ? precision_inverse : 1;
+
+    // We extract the correlation window from the interpolated right image for the current candidate
+    P2d::Matrixf right_window(window_size, window_size);
+    for (int row = 0; row < window_size; ++row) {
+      for (int col = 0; col < window_size; ++col) {
+        right_window(row, col) =
+            (*grid)(grid_start_row + row * grid_step, grid_start_col + col * grid_step);
+      }
+    }
+    // NaN values would make the histograms of the mutual information undefined
+    if (right_window.hasNaN())
+      continue;
+    // We compute correlation between the left window and the right window of the current candidate
+    auto compute_score = [&](const auto& correlator_impl) -> double {
+      return correlator_impl(right_window);
+    };
+    const double candidate_score = std::visit(compute_score, correlator);
+    // Update the best score and disparities if the current candidate has a better score
+    if (candidate_score > best_score) {
+      best_score = candidate_score;
+      best_row_disp = candidate_row_disp;
+      best_col_disp = candidate_col_disp;
+    }
   }
 }

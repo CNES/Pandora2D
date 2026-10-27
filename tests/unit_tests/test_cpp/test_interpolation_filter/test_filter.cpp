@@ -23,8 +23,11 @@ This module contains tests associated to the filter class for cpp.
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
+#include <cmath>
 #include <functional>
+#include <limits>
 #include "bicubic.hpp"
+#include "global_conftest.hpp"
 
 namespace abstractfilter {
 
@@ -138,8 +141,11 @@ TEST_CASE("AbstractFilter interpolate") {
     image << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
     col_positions << 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.5, 2.5, 2.5;
     row_positions << 1.5, 2.0, 2.5, 1.5, 2.0, 2.5, 1.5, 2.0, 2.5;
-    expected_positions << 0.31640625, 0.5625, 0.31640625, 0.5625, 1.0, 0.5625, 0.31640625, 0.5625,
-        0.31640625;
+    // clang-format off
+    expected_positions << 0.31640625, 0.5625, 0.31640625,
+                         0.5625,      1.0,    0.5625,
+                         0.31640625,  0.5625, 0.31640625;
+    // clang-format on
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
   }
@@ -149,8 +155,11 @@ TEST_CASE("AbstractFilter interpolate") {
 
     col_positions << 1.75, 1.75, 1.75, 2.0, 2.0, 2.0, 2.25, 2.25, 2.25;
     row_positions << 1.75, 2.0, 2.25, 1.75, 2.0, 2.25, 1.75, 2.0, 2.25;
-    expected_positions << 0.75201416015625, 0.8671875, 0.75201416015625, 0.8671875, 1.0, 0.8671875,
-        0.75201416015625, 0.8671875, 0.75201416015625;
+    // clang-format off
+    expected_positions << 0.75201416015625, 0.8671875, 0.75201416015625,
+                         0.8671875,         1.0,       0.8671875,
+                         0.75201416015625,  0.8671875, 0.75201416015625;
+    // clang-format on
 
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
@@ -161,8 +170,11 @@ TEST_CASE("AbstractFilter interpolate") {
 
     col_positions << 1.99999999, 1.99999999, 1.99999999, 2.0, 2.0, 2.0, 2.25, 2.25, 2.25;
     row_positions << 1.99999999, 2.0, 2.25, 1.99999999, 2.0, 2.25, 1.99999999, 2.0, 2.25;
+    // clang-format off
     expected_positions << 0.9999809489561501, 0.9999904744327068, 0.867179239547113,
-        0.9999904744327068, 1.0, 0.8671875, 0.867179239547113, 0.8671875, 0.75201416015625;
+                         0.9999904744327068,  1.0,                0.8671875,
+                         0.867179239547113,   0.8671875,          0.75201416015625;
+    // clang-format on
 
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
@@ -173,7 +185,11 @@ TEST_CASE("AbstractFilter interpolate") {
 
     col_positions << 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.5, 2.5, 2.5;
     row_positions << 1.5, 2.0, 2.5, 1.5, 2.0, 2.5, 1.5, 2.0, 2.5;
-    expected_positions << 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.5, 2.5, 2.5;
+    // clang-format off
+    expected_positions << 1.5, 1.5, 1.5,
+                         2.0, 2.0, 2.0,
+                         2.5, 2.5, 2.5;
+    // clang-format on
 
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
@@ -184,7 +200,11 @@ TEST_CASE("AbstractFilter interpolate") {
 
     col_positions << 1.75, 1.75, 1.75, 2.0, 2.0, 2.0, 2.25, 2.25, 2.25;
     row_positions << 1.75, 2.0, 2.25, 1.75, 2.0, 2.25, 1.75, 2.0, 2.25;
-    expected_positions << 1.75, 1.75, 1.75, 2.0, 2.0, 2.0, 2.25, 2.25, 2.25;
+    // clang-format off
+    expected_positions << 1.75, 1.75, 1.75,
+                         2.0,  2.0,  2.0,
+                         2.25, 2.25, 2.25;
+    // clang-format on
 
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
@@ -195,7 +215,11 @@ TEST_CASE("AbstractFilter interpolate") {
 
     col_positions << 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.5, 2.5, 2.5;
     row_positions << 1.5, 2.0, 2.5, 1.5, 2.0, 2.5, 1.5, 2.0, 2.5;
-    expected_positions << 1.5, 2.0, 2.5, 1.5, 2.0, 2.5, 1.5, 2.0, 2.5;
+    // clang-format off
+    expected_positions << 1.5, 2.0, 2.5,
+                         1.5, 2.0, 2.5,
+                         1.5, 2.0, 2.5;
+    // clang-format on
 
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
@@ -206,7 +230,11 @@ TEST_CASE("AbstractFilter interpolate") {
 
     col_positions << 1.75, 1.75, 1.75, 2.0, 2.0, 2.0, 2.25, 2.25, 2.25;
     row_positions << 1.75, 2.0, 2.25, 1.75, 2.0, 2.25, 1.75, 2.0, 2.25;
-    expected_positions << 1.75, 2.0, 2.25, 1.75, 2.0, 2.25, 1.75, 2.0, 2.25;
+    // clang-format off
+    expected_positions << 1.75, 2.0, 2.25,
+                         1.75, 2.0, 2.25,
+                         1.75, 2.0, 2.25;
+    // clang-format on
 
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
@@ -217,7 +245,11 @@ TEST_CASE("AbstractFilter interpolate") {
 
     col_positions << 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.5, 2.5, 2.5;
     row_positions << 1.5, 2.0, 2.5, 1.5, 2.0, 2.5, 1.5, 2.0, 2.5;
-    expected_positions << 4.03125, 6.0, 4.03125, 6.5, 10.0, 6.5, 5.03125, 7.0, 5.03125;
+    // clang-format off
+    expected_positions << 4.03125, 6.0,  4.03125,
+                         6.5,     10.0,  6.5,
+                         5.03125,  7.0,  5.03125;
+    // clang-format on
 
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
@@ -228,7 +260,11 @@ TEST_CASE("AbstractFilter interpolate") {
 
     col_positions << 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.5, 2.5, 2.5;
     row_positions << 1.5, 2.0, 2.5, 1.5, 2.0, 2.5, 1.5, 2.0, 2.5;
-    expected_positions << 4.03125, 6.5, 5.03125, 6.0, 10.0, 7.0, 4.03125, 6.5, 5.03125;
+    // clang-format off
+    expected_positions << 4.03125,  6.5, 5.03125,
+                         6.0,      10.0, 7.0,
+                         4.03125,   6.5, 5.03125;
+    // clang-format on
 
     interpolated_positions = filter.interpolate(image, col_positions, row_positions);
     CHECK(interpolated_positions == expected_positions);
@@ -251,134 +287,149 @@ P2d::MatrixD make_image(const std::function<double(int, int)>& value) {
   return image;
 }
 
-TEST_CASE("AbstractFilter interpolate_window") {
+TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   Bicubic filter;
 
   /*
-  Bicubic filter dimensions (not repeated here): size 4x4 (AbstractFilter::m_size in
-  interpolation_filter.hpp), margins {1, 1, 2, 2} set in bicubic.cpp (Margins: left, up, right,
-  down). Asserted in test_bicubic.cpp. interpolate_window reads them via filter.get_size() and
-  filter.get_margins(). Test images are 9x9 (make_image). For a 3x3 window, valid centers lie in
-  [2, 6) on each axis; see border SUBCASEs below.
+  Bicubic filter dimensions (not repeated here): size 4x4, margins {1, 1, 2, 2}. Test images are
+  9x9 (make_image). interpolate_candidate_windows returns a compact grid of the 8 neighbour windows
+  around origin.
   */
 
   // Bicubic interpolation is exact on an affine image, then expected windows are known analytically
   const P2d::MatrixD col_ramp = make_image([](int, int col) { return col; });
-  const P2d::MatrixD row_ramp = make_image([](int row, int) { return row; });
   const P2d::MatrixD sum_ramp = make_image([](int row, int col) { return row + col; });
   const P2d::MatrixD dirac =
       make_image([](int row, int col) { return row == 4 && col == 4 ? 1.0 : 0.0; });
 
-  P2d::Matrixf expected_window(3, 3);
+  const float nan = std::numeric_limits<float>::quiet_NaN();
 
-  SUBCASE("Integer center") {
-    auto window = filter.interpolate_window(col_ramp, 3, 4.0, 4.0);
-    REQUIRE(window.has_value());
-    CHECK(*window == col_ramp.block(3, 3, 3, 3).cast<float>());
+  // col_ramp is exact under bicubic: grid(i, j) equals the column sampling position, except the
+  // (0, 0) window which stays NaN.
+  SUBCASE("Full compact grid at precision=0.5") {
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.0, 0.5);
+    REQUIRE(grid.has_value());
+    P2d::Matrixf expected(7, 7);
+    // clang-format off
+    expected << 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5,
+                2.5, nan, 3.5, nan, 4.5, nan, 5.5,
+                2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5,
+                2.5, nan, 3.5, nan, 4.5, nan, 5.5,
+                2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5,
+                2.5, nan, 3.5, nan, 4.5, nan, 5.5,
+                2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5;
+    // clang-format on
+    CHECK(matrixf_equal_with_nan(*grid, expected));
   }
 
-  SUBCASE("Fractional center in columns and precision=0.5") {
-    auto window = filter.interpolate_window(col_ramp, 3, 4.0, 3.5);
-    REQUIRE(window.has_value());
-    expected_window << 2.5, 3.5, 4.5, 2.5, 3.5, 4.5, 2.5, 3.5, 4.5;
-    CHECK(*window == expected_window);
+  SUBCASE("Full compact grid at precision=0.25") {
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.0, 0.25);
+    REQUIRE(grid.has_value());
+    P2d::Matrixf expected(9, 9);
+    // Families {-1, 0, +1} are concatenated, so the 9x9 is nine 3x3 neighbour blocks (center NaN).
+    // clang-format off
+    expected << 2.75, 3.75, 4.75, 3.00, 4.00, 5.00, 3.25, 4.25, 5.25,
+                2.75, 3.75, 4.75, 3.00, 4.00, 5.00, 3.25, 4.25, 5.25,
+                2.75, 3.75, 4.75, 3.00, 4.00, 5.00, 3.25, 4.25, 5.25,
+                2.75, 3.75, 4.75, nan,  nan,  nan,  3.25, 4.25, 5.25,
+                2.75, 3.75, 4.75, nan,  nan,  nan,  3.25, 4.25, 5.25,
+                2.75, 3.75, 4.75, nan,  nan,  nan,  3.25, 4.25, 5.25,
+                2.75, 3.75, 4.75, 3.00, 4.00, 5.00, 3.25, 4.25, 5.25,
+                2.75, 3.75, 4.75, 3.00, 4.00, 5.00, 3.25, 4.25, 5.25,
+                2.75, 3.75, 4.75, 3.00, 4.00, 5.00, 3.25, 4.25, 5.25;
+    // clang-format on
+    CHECK(matrixf_equal_with_nan(*grid, expected));
   }
 
-  SUBCASE("Fractional center in columns and precision=0.25") {
-    auto window = filter.interpolate_window(col_ramp, 3, 4.0, 3.25);
-    REQUIRE(window.has_value());
-    expected_window << 2.25, 3.25, 4.25, 2.25, 3.25, 4.25, 2.25, 3.25, 4.25;
-    CHECK(*window == expected_window);
-  }
-
-  SUBCASE("Fractional center in columns and precision=0.75") {
-    auto window = filter.interpolate_window(col_ramp, 3, 4.0, 3.75);
-    REQUIRE(window.has_value());
-    expected_window << 2.75, 3.75, 4.75, 2.75, 3.75, 4.75, 2.75, 3.75, 4.75;
-    CHECK(*window == expected_window);
-  }
-
-  SUBCASE("Fractional center in rows and precision=0.5") {
-    auto window = filter.interpolate_window(row_ramp, 3, 3.5, 4.0);
-    REQUIRE(window.has_value());
-    expected_window << 2.5, 2.5, 2.5, 3.5, 3.5, 3.5, 4.5, 4.5, 4.5;
-    CHECK(*window == expected_window);
-  }
-
-  SUBCASE("Fractional center in rows and precision=0.25") {
-    auto window = filter.interpolate_window(row_ramp, 3, 3.25, 4.0);
-    REQUIRE(window.has_value());
-    expected_window << 2.25, 2.25, 2.25, 3.25, 3.25, 3.25, 4.25, 4.25, 4.25;
-    CHECK(*window == expected_window);
-  }
-
-  SUBCASE("Fractional center in rows and columns") {
-    auto window = filter.interpolate_window(sum_ramp, 3, 3.5, 3.25);
-    REQUIRE(window.has_value());
-    expected_window << 4.75, 5.75, 6.75, 5.75, 6.75, 7.75, 6.75, 7.75, 8.75;
-    CHECK(*window == expected_window);
+  SUBCASE("Distinct row and column origins") {
+    auto grid = filter.interpolate_candidate_windows(sum_ramp, 3, 4.0, 3.0, 0.5);
+    REQUIRE(grid.has_value());
+    P2d::Matrixf expected(7, 7);
+    // clang-format off
+    expected << 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0,
+                4.5, nan, 5.5, nan, 6.5, nan, 7.5,
+                5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0,
+                5.5, nan, 6.5, nan, 7.5, nan, 8.5,
+                6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0,
+                6.5, nan, 7.5, nan, 8.5, nan, 9.5,
+                7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0;
+    // clang-format on
+    CHECK(matrixf_equal_with_nan(*grid, expected));
   }
 
   SUBCASE("Dirac image and precision=0.5") {
-    auto window = filter.interpolate_window(dirac, 3, 3.5, 3.5);
-    REQUIRE(window.has_value());
-    expected_window << 0.00390625, -0.03515625, -0.03515625, -0.03515625, 0.31640625, 0.31640625,
-        -0.03515625, 0.31640625, 0.31640625;
-    CHECK(*window == expected_window);
+    auto grid = filter.interpolate_candidate_windows(dirac, 3, 4.0, 4.0, 0.5);
+    REQUIRE(grid.has_value());
+    P2d::Matrixf expected_top_left_window(3, 3);
+    // clang-format off
+    expected_top_left_window <<  0.00390625, -0.03515625, -0.03515625,
+                   -0.03515625,  0.31640625,  0.31640625,
+                   -0.03515625,  0.31640625,  0.31640625;
+    // clang-format on
+    P2d::Matrixf top_left_window(3, 3);
+    top_left_window << (*grid)(0, 0), (*grid)(0, 2), (*grid)(0, 4), (*grid)(2, 0), (*grid)(2, 2),
+        (*grid)(2, 4), (*grid)(4, 0), (*grid)(4, 2), (*grid)(4, 4);
+    CHECK(top_left_window == expected_top_left_window);
   }
 
   SUBCASE("Dirac image and precision=0.25") {
-    auto window = filter.interpolate_window(dirac, 3, 3.25, 3.25);
-    REQUIRE(window.has_value());
-    expected_window << 0.00054931640625, -0.00531005859375, -0.02032470703125, -0.00531005859375,
-        0.05133056640625, 0.19647216796875, -0.02032470703125, 0.19647216796875, 0.75201416015625;
-    CHECK(*window == expected_window);
+    auto grid = filter.interpolate_candidate_windows(dirac, 3, 3.5, 3.5, 0.25);
+    REQUIRE(grid.has_value());
+    P2d::Matrixf expected_top_left_window(3, 3);
+    // clang-format off
+    expected_top_left_window <<  0.00054931640625, -0.00531005859375, -0.02032470703125,
+                   -0.00531005859375,  0.05133056640625,  0.19647216796875,
+                   -0.02032470703125,  0.19647216796875,  0.75201416015625;
+    // clang-format on
+    CHECK(grid->block(0, 0, 3, 3) == expected_top_left_window);
   }
 
   SUBCASE("Subpixel shift close to 1") {
     // The fractional shift is replaced by MAX_FRACTIONAL_VALUE to avoid rounding
-    auto window = filter.interpolate_window(col_ramp, 3, 4.0, 3.99999999);
-    REQUIRE(window.has_value());
-    expected_window << 2.998046875, 3.998046875, 4.998046875, 2.998046875, 3.998046875, 4.998046875,
-        2.998046875, 3.998046875, 4.998046875;
-    CHECK(*window == expected_window);
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.49999999, 0.5);
+    REQUIRE(grid.has_value());
+    CHECK((*grid)(1, 0) == 2.998046875f);
+    CHECK((*grid)(1, 2) == 3.998046875f);
+    CHECK((*grid)(1, 4) == 4.998046875f);
   }
 
   SUBCASE("Window size of 1") {
-    auto window = filter.interpolate_window(col_ramp, 1, 4.0, 3.5);
-    REQUIRE(window.has_value());
-    P2d::Matrixf expected_single_pixel(1, 1);
-    expected_single_pixel << 3.5;
-    CHECK(*window == expected_single_pixel);
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 1, 4.0, 4.0, 0.5);
+    REQUIRE(grid.has_value());
+    P2d::Matrixf expected(3, 3);
+    // clang-format off
+    expected << 3.5, 4.0, 4.5,
+                3.5, nan, 4.5,
+                3.5, 4.0, 4.5;
+    // clang-format on
+    CHECK(matrixf_equal_with_nan(*grid, expected));
   }
 
   SUBCASE("Window size of 5") {
-    auto window = filter.interpolate_window(col_ramp, 5, 4.0, 4.5);
-    REQUIRE(window.has_value());
-    P2d::Matrixf expected_large_window(5, 5);
-    expected_large_window << 2.5, 3.5, 4.5, 5.5, 6.5, 2.5, 3.5, 4.5, 5.5, 6.5, 2.5, 3.5, 4.5, 5.5,
-        6.5, 2.5, 3.5, 4.5, 5.5, 6.5, 2.5, 3.5, 4.5, 5.5, 6.5;
-    CHECK(*window == expected_large_window);
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 5, 4.0, 4.0, 0.5);
+    REQUIRE(grid.has_value());
+    P2d::Matrixf expected(11, 11);
+    for (int row = 0; row < 11; ++row) {
+      for (int col = 0; col < 11; ++col) {
+        // inverse_precision = 2 and first column is 1.5.
+        expected(row, col) = (row % 2 == 1 && col % 2 == 1) ? nan : (1.5f + col * 0.5f);
+      }
+    }
+    CHECK(matrixf_equal_with_nan(*grid, expected));
   }
 
-  SUBCASE("Centers on the limits of the interpolable area") {
-    CHECK(filter.interpolate_window(col_ramp, 3, 2.0, 2.0).has_value());
-    CHECK(filter.interpolate_window(col_ramp, 3, 5.0, 5.0).has_value());
+  SUBCASE("Partial window leaves NaN on the outside neighbour") {
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 1.0, 0.5);
+    REQUIRE(grid.has_value());
+    CHECK(std::isnan((*grid)(1, 0)));
+    CHECK_FALSE(std::isnan((*grid)(1, 6)));
   }
 
-  SUBCASE("Window out of the image") {
-    CHECK_FALSE(filter.interpolate_window(col_ramp, 3, 0.0, 4.0).has_value());
-    CHECK_FALSE(filter.interpolate_window(col_ramp, 3, 8.0, 4.0).has_value());
-    CHECK_FALSE(filter.interpolate_window(col_ramp, 3, 4.0, 0.0).has_value());
-    CHECK_FALSE(filter.interpolate_window(col_ramp, 3, 4.0, 8.0).has_value());
-  }
-
-  SUBCASE("Window in the image but filter margins out of the image") {
-    // The 3x3 windows fit in the 9x9 image, but not the resampling areas of the filter
-    CHECK_FALSE(filter.interpolate_window(col_ramp, 3, 1.0, 4.0).has_value());
-    CHECK_FALSE(filter.interpolate_window(col_ramp, 3, 7.0, 4.0).has_value());
-    CHECK_FALSE(filter.interpolate_window(col_ramp, 3, 4.0, 1.0).has_value());
-    CHECK_FALSE(filter.interpolate_window(col_ramp, 3, 4.0, 7.0).has_value());
+  SUBCASE("Grid entirely out of the image") {
+    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, -5.0, 4.0, 0.5).has_value());
+    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 15.0, 4.0, 0.5).has_value());
+    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 4.0, -5.0, 0.5).has_value());
+    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 15.0, 0.5).has_value());
   }
 }
 

@@ -27,6 +27,7 @@ This module contains functions associated to the Dichotomy refinement method.
 #include <Eigen/Dense>
 #include <map>
 
+#include "compute_cost_volumes.hpp"
 #include "cost_volume.hpp"
 #include "interpolation_filter.hpp"
 #include "operation.hpp"
@@ -60,6 +61,38 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
                            double& score,
                            abstractfilter::AbstractFilter& filter,
                            std::string method_matching_cost);
+
+/**
+ * @brief Search for the new best position by interpolating the right image
+ *
+ * The 8 neighbours of the current best disparity, shifted by precision, are tested. Their right
+ * windows are interpolated in one call as the union of the 8 grids, then each window is extracted
+ * and correlated with the left window. Neighbours whose extracted window contains NaN (window or
+ * filter margins outside the right image) are ignored.
+ *
+ * @param left_window : left window centered on the current pixel
+ * @param right_image : right image
+ * @param precision : search precision (1/pow(2,n), in pixels, at the nth iteration)
+ * @param pixel_row : row of the current pixel
+ * @param pixel_col : col of the current pixel
+ * @param window_size : size of the correlation window
+ * @param best_row_disp : initial best row disparity, updated with the new best one
+ * @param best_col_disp : initial best col disparity, updated with the new best one
+ * @param best_score : initial best score, updated with the new best one (maximum)
+ * @param filter : interpolation filter
+ * @param method_matching_cost : zncc, zncc-optim-1, zncc-optim-2 or mutual_information
+ */
+void search_new_best_point_on_image(const P2d::Matrixf& left_window,
+                                    const P2d::MatrixD& right_image,
+                                    double precision,
+                                    int pixel_row,
+                                    int pixel_col,
+                                    int window_size,
+                                    double& best_row_disp,
+                                    double& best_col_disp,
+                                    double& best_score,
+                                    abstractfilter::AbstractFilter& filter,
+                                    const std::string& method_matching_cost);
 
 /**
  * @brief Dichotomy calculation
