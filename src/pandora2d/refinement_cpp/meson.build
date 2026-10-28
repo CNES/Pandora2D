@@ -5,7 +5,13 @@ bind_src = files('src/bind.cpp')
 
 py.extension_module(
     'refinement_bind',
-    [refinement_src, interpolation_filter_src, bind_src, common_src],
+    [
+        refinement_src,
+        interpolation_filter_src,
+        bind_src,
+        common_src,
+        matching_cost_src,
+    ],
     subdir: 'pandora2d/refinement_cpp',
     install: true,
     include_directories: [

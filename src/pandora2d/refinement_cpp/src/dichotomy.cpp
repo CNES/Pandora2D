@@ -24,6 +24,7 @@ This module contains functions associated to the Dichotomy refinement method.
 #include "dichotomy.hpp"
 #include <array>
 #include <utility>
+#include "compute_cost_volumes.hpp"
 #include "constant.hpp"
 
 /**
@@ -82,7 +83,7 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
 /**
  * @brief Search for the new best position by interpolating the right image
  *
- * @param left_window : left window centered on the current pixel
+ * @param correlator : correlator prepared with the left window centered on the current pixel
  * @param right_image : right image
  * @param precision : search precision (1/pow(2,n), in pixels at the nth iteration)
  * @param pixel_row : row of the current pixel
@@ -92,9 +93,8 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
  * @param best_col_disp : initial best col disparity, updated with the new best one
  * @param best_score : initial best score, updated with the new best one (maximum)
  * @param filter : interpolation filter
- * @param method_matching_cost : zncc, zncc-optim-1, zncc-optim-2 or mutual_information
  */
-void search_new_best_point_on_image(const P2d::Matrixf& left_window,
+void search_new_best_point_on_image(const Correlator<double>& correlator,
                                     const P2d::MatrixD& right_image,
                                     double precision,
                                     int pixel_row,
@@ -103,22 +103,7 @@ void search_new_best_point_on_image(const P2d::Matrixf& left_window,
                                     double& best_row_disp,
                                     double& best_col_disp,
                                     double& best_score,
-                                    abstractfilter::AbstractFilter& filter,
-                                    const std::string& method_matching_cost) {
-  // zncc-optim-1 relies on integral images, which are useless on a single window
-  // So we replace "zncc-optim-1" with "zncc-optim-2"
-  const std::string correlator_method =
-      (method_matching_cost == "zncc" || method_matching_cost == "zncc-optim-1")
-          ? "zncc-optim-2"
-          : method_matching_cost;
-
-  // Prepare the left window before the for loop so that the operation isn't repeated multiple times
-  auto correlator = make_correlator<double>(correlator_method);
-  auto prepare_left = [&](auto& correlator_impl) {
-    correlator_impl.prepare_left_window(left_window);
-  };
-  std::visit(prepare_left, correlator);
-
+                                    abstractfilter::AbstractFilter& filter) {
   // 8 neighbours of the initial best position
   constexpr std::array<std::pair<int, int>, 8> disp_shifts = {
       {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}};
@@ -186,4 +171,93 @@ void search_new_best_point_on_image(const P2d::Matrixf& left_window,
       best_col_disp = candidate_col_disp;
     }
   }
+}
+
+/**
+ * @brief Create and prepare a correlator with the given left window
+ *
+ * @param left_window left window to prepare
+ * @param method_matching_cost matching cost method
+ * @return Correlator<double>
+ */
+Correlator<double> make_prepared_left_window(const P2d::Matrixf& left_window,
+                                             const std::string& method_matching_cost) {
+  // zncc-optim-1 relies on integral images, which are useless on a single window
+  const std::string correlator_method =
+      (method_matching_cost == "zncc" || method_matching_cost == "zncc-optim-1")
+          ? "zncc-optim-2"
+          : method_matching_cost;
+
+  Correlator<double> correlator = make_correlator<double>(correlator_method);
+  // clang-format off
+  std::visit(
+      [&](auto& correlator_impl) {
+        correlator_impl.prepare_left_window(left_window);
+      },
+      correlator);
+  // clang-format on
+  return correlator;
+}
+
+/**
+ * @brief Resample the right image to refine the disparity estimation at a given position.
+ *
+ * @param left_image left image
+ * @param right_image_double right image in double precision
+ * @param pixel_row row of the current pixel
+ * @param pixel_col column of the current pixel
+ * @param window_size size of the correlation window
+ * @param nb_iterations number of iterations of the dichotomy
+ * @param first_iteration index of the first dichotomy iteration
+ * @param filter interpolation filter
+ * @param method_matching_cost matching cost method
+ * @param subpixel sub-sampling of the cost volume
+ * @param disp_row_min minimum row disparity
+ * @param disp_col_min minimum column disparity
+ * @param pos_row_disp position of the initial best row disparity
+ * @param pos_col_disp position of the initial best column disparity
+ * @param score matching cost score at the initial best disparity position
+ */
+void image_resampling(const P2d::Matrixf& left_image,
+                      const P2d::MatrixD& right_image_double,
+                      int pixel_row,
+                      int pixel_col,
+                      int window_size,
+                      int nb_iterations,
+                      int first_iteration,
+                      abstractfilter::AbstractFilter& filter,
+                      const std::string& method_matching_cost,
+                      int subpixel,
+                      double disp_row_min,
+                      double disp_col_min,
+                      double& pos_row_disp,
+                      double& pos_col_disp,
+                      double& score) {
+  // pos_row_disp and pos_col_disp correspond to the indices of the best initial disparities
+  // We must convert these indices to disparity values in order to locate the central pixel in the
+  // window of the right image that we want to interpolate.
+  double init_best_row_disp = disp_row_min + pos_row_disp / subpixel;
+  double init_best_col_disp = disp_col_min + pos_col_disp / subpixel;
+
+  // Extract the left window centered on the current pixel to prepare the correlator.
+  P2d::Matrixf left_window = get_window(left_image, window_size, pixel_row, pixel_col);
+  const Correlator<double> correlator =
+      make_prepared_left_window(left_window, method_matching_cost);
+
+  double precision = 1. / pow(2, first_iteration);
+
+  // Dichotomy loop: at each iteration, search around the current best disparities
+  // with the current precision, and keep the candidate with the best score.
+  // init_best_row_disp, init_best_col_disp and score are updated in place.
+  for (auto it = first_iteration; it <= nb_iterations; ++it) {
+    search_new_best_point_on_image(correlator, right_image_double, precision, pixel_row, pixel_col,
+                                   window_size, init_best_row_disp, init_best_col_disp, score,
+                                   filter);
+    // Update precision
+    precision /= 2.;
+  }
+
+  // Convert the refined disparity values back to indices (output values)
+  pos_row_disp = (init_best_row_disp - disp_row_min) * subpixel;
+  pos_col_disp = (init_best_col_disp - disp_col_min) * subpixel;
 }

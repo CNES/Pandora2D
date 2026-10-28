@@ -7,6 +7,7 @@ test(
             refinement_src,
             interpolation_filter_src,
             bicubic_src,
+            matching_cost_src,
             test_src,
             common_src,
         ],
