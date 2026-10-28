@@ -289,12 +289,16 @@ TEST_CASE("search_new_best_point_on_image") {
   Bicubic bicubic;
   P2d::MatrixD right_image = make_right_image(15, 15);
 
+  // Mask with only valid pixels (1 = valid), same shape as the 15x15 test images
+  const P2d::MatrixUI right_valid_mask = P2d::MatrixUI::Ones(15, 15);
+
   SUBCASE("Initial is best") {
     P2d::Matrixf left_window = right_image.block(5, 5, window_size, window_size).cast<float>();
     const Correlator<double> correlator = make_prepared_left_window(left_window, "zncc-optim-2");
     best_score = 1.;
     search_new_best_point_on_image(correlator, right_image, precision, pixel_row, pixel_col,
-                                   window_size, best_row_disp, best_col_disp, best_score, bicubic);
+                                   window_size, best_row_disp, best_col_disp, best_score, bicubic,
+                                   right_valid_mask);
     CHECK(best_row_disp == 0.);
     CHECK(best_col_disp == 0.);
     CHECK(best_score == 1.);
@@ -305,7 +309,8 @@ TEST_CASE("search_new_best_point_on_image") {
         single_window(bicubic, right_image, window_size, pixel_row + 0.5, pixel_col - 0.5);
     const Correlator<double> correlator = make_prepared_left_window(left_window, "zncc-optim-2");
     search_new_best_point_on_image(correlator, right_image, precision, pixel_row, pixel_col,
-                                   window_size, best_row_disp, best_col_disp, best_score, bicubic);
+                                   window_size, best_row_disp, best_col_disp, best_score, bicubic,
+                                   right_valid_mask);
     CHECK(best_row_disp == 0.5);
     CHECK(best_col_disp == -0.5);
     CHECK(best_score == doctest::Approx(1.));
@@ -317,7 +322,8 @@ TEST_CASE("search_new_best_point_on_image") {
     const Correlator<double> correlator =
         make_prepared_left_window(left_window, "mutual_information");
     search_new_best_point_on_image(correlator, right_image, precision, pixel_row, pixel_col,
-                                   window_size, best_row_disp, best_col_disp, best_score, bicubic);
+                                   window_size, best_row_disp, best_col_disp, best_score, bicubic,
+                                   right_valid_mask);
     CHECK(best_row_disp == 0.5);
     CHECK(best_col_disp == -0.5);
     CHECK(best_score > 0.);
@@ -331,7 +337,8 @@ TEST_CASE("search_new_best_point_on_image") {
     best_col_disp = 0.5;
     precision = 0.25;
     search_new_best_point_on_image(correlator, right_image, precision, pixel_row, pixel_col,
-                                   window_size, best_row_disp, best_col_disp, best_score, bicubic);
+                                   window_size, best_row_disp, best_col_disp, best_score, bicubic,
+                                   right_valid_mask);
     CHECK(best_row_disp == 0.75);
     CHECK(best_col_disp == 0.25);
     CHECK(best_score == doctest::Approx(1.));
@@ -346,7 +353,7 @@ TEST_CASE("search_new_best_point_on_image") {
     const Correlator<double> correlator = make_prepared_left_window(left_window, "zncc-optim-2");
     search_new_best_point_on_image(correlator, right_image, precision, pixel_row, pixel_col,
                                    window_size, clean_best_row_disp, clean_best_col_disp,
-                                   clean_best_score, bicubic);
+                                   clean_best_score, bicubic, right_valid_mask);
     // The best neighbour (0.5, 0.5) should be selected as it has the best score
     CHECK((clean_best_row_disp == 0.5 && clean_best_col_disp == 0.5));
     // The score must be valid (not NaN) when best neighbour is clean
@@ -360,7 +367,8 @@ TEST_CASE("search_new_best_point_on_image") {
     right_image(pixel_row + 4, pixel_col + 4) = std::numeric_limits<double>::quiet_NaN();
     best_score = 0.5;
     search_new_best_point_on_image(correlator, right_image, precision, pixel_row, pixel_col,
-                                   window_size, best_row_disp, best_col_disp, best_score, bicubic);
+                                   window_size, best_row_disp, best_col_disp, best_score, bicubic,
+                                   right_valid_mask);
     CHECK((best_row_disp != 0.5 || best_col_disp != 0.5));
     // Ensure NaN in the interpolated window does not propagate to the final score
     CHECK_FALSE(std::isnan(best_score));
@@ -371,7 +379,8 @@ TEST_CASE("search_new_best_point_on_image") {
         single_window(bicubic, right_image, window_size, pixel_row + 0.5, pixel_col + 0.5);
     const Correlator<double> correlator = make_prepared_left_window(left_window, "zncc-optim-2");
     search_new_best_point_on_image(correlator, right_image, precision, pixel_row, pixel_col,
-                                   window_size, best_row_disp, best_col_disp, best_score, bicubic);
+                                   window_size, best_row_disp, best_col_disp, best_score, bicubic,
+                                   right_valid_mask);
     CHECK(best_row_disp == 0.5);
     CHECK(best_col_disp == 0.5);
     CHECK(best_score == doctest::Approx(1.));
@@ -383,7 +392,8 @@ TEST_CASE("search_new_best_point_on_image") {
     const Correlator<double> correlator = make_prepared_left_window(left_window, "zncc-optim-2");
     best_score = 0.5;
     search_new_best_point_on_image(correlator, small_image, precision, 1, 1, window_size,
-                                   best_row_disp, best_col_disp, best_score, bicubic);
+                                   best_row_disp, best_col_disp, best_score, bicubic,
+                                   right_valid_mask);
     CHECK(best_row_disp == 0.);
     CHECK(best_col_disp == 0.);
     CHECK(best_score == 0.5);
@@ -398,8 +408,8 @@ TEST_CASE("search_new_best_point_on_image") {
       best_col_disp = 0.;
       best_score = -1.;
       search_new_best_point_on_image(correlator, right_image, precision, pixel_row, pixel_col,
-                                     window_size, best_row_disp, best_col_disp, best_score,
-                                     bicubic);
+                                     window_size, best_row_disp, best_col_disp, best_score, bicubic,
+                                     right_valid_mask);
       CHECK(best_row_disp == 0.5);
       CHECK(best_col_disp == -0.5);
       CHECK(best_score == doctest::Approx(1.));
@@ -411,7 +421,7 @@ TEST_CASE("search_new_best_point_on_image") {
     CHECK_THROWS_AS(
         search_new_best_point_on_image(make_prepared_left_window(left_window, "ssd"), right_image,
                                        precision, pixel_row, pixel_col, window_size, best_row_disp,
-                                       best_col_disp, best_score, bicubic),
+                                       best_col_disp, best_score, bicubic, right_valid_mask),
         std::invalid_argument);
   }
 }
@@ -452,13 +462,16 @@ TEST_CASE("image resampling") {
   Bicubic bicubic;
   P2d::MatrixD right_image = make_right_image(15, 15);
 
+  // Mask with only valid pixels (1 = valid), same shape as the 15x15 test images
+  const P2d::MatrixUI right_valid_mask = P2d::MatrixUI::Ones(15, 15);
+
   SUBCASE("Initial is best") {
     const P2d::Matrixf left_image = right_image.cast<float>();
     score = 1.;
 
     image_resampling(left_image, right_image, pixel_row, pixel_col, window_size, nb_iterations,
-                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min, disp_col_min,
-                     pos_row_disp, pos_col_disp, score);
+                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min,
+                     disp_col_min, pos_row_disp, pos_col_disp, score, right_valid_mask);
 
     // No neighbour can do better than a perfect score: nothing is updated
     CHECK(pos_row_disp == 2.);
@@ -476,9 +489,9 @@ TEST_CASE("image resampling") {
     pos_row_disp = 1.;
     pos_col_disp = 1.;
     image_resampling(left_image, right_image, pixel_row, pixel_col, window_size, nb_iterations,
-                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min, disp_col_min,
-                     pos_row_disp, pos_col_disp, score);
-    // disparities (0, -0.5) -> position indexes ((0 + 1) * 1, (-0.5 + 1) * 1) = (1, 0.5)
+                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min,
+                     disp_col_min, pos_row_disp, pos_col_disp, score, right_valid_mask);
+    // disparities (0, -0.5) -> position index ((0 + 1) * 1, (-0.5 + 1) * 1) = (1, 0.5)
     CHECK(pos_row_disp == 1.);
     CHECK(pos_col_disp == 0.5);
     CHECK(score == doctest::Approx(1.));
@@ -489,8 +502,8 @@ TEST_CASE("image resampling") {
         make_left_image(bicubic, right_image, window_size, pixel_row, pixel_col, 0.25, -0.25);
 
     image_resampling(left_image, right_image, pixel_row, pixel_col, window_size, nb_iterations,
-                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min, disp_col_min,
-                     pos_row_disp, pos_col_disp, score);
+                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min,
+                     disp_col_min, pos_row_disp, pos_col_disp, score, right_valid_mask);
 
     // We return disparities as position indexes, not raw disparity values
     // disparities (0.25, -0.25) -> indexes ((0.25 - (-1)) * 2, (-0.25 - (-1)) * 2)
@@ -506,8 +519,8 @@ TEST_CASE("image resampling") {
     pos_row_disp = 3.;
     pos_col_disp = 3.;
     image_resampling(left_image, right_image, pixel_row, pixel_col, window_size, nb_iterations,
-                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min, disp_col_min,
-                     pos_row_disp, pos_col_disp, score);
+                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min,
+                     disp_col_min, pos_row_disp, pos_col_disp, score, right_valid_mask);
 
     // We return disparities as position indexes, not raw disparity values
     // disparities (0.75, 0.25) -> position indexes (3.5, 2.5)
@@ -526,10 +539,10 @@ TEST_CASE("image resampling") {
     pos_row_disp = 5.;
     pos_col_disp = 5.;
     image_resampling(left_image, right_image, pixel_row, pixel_col, window_size, nb_iterations,
-                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min, disp_col_min,
-                     pos_row_disp, pos_col_disp, score);
-    // We return disparities as position indexes, not raw disparity values
-    // disparities (0.375, 0.125) -> position indexes (5.5, 4.5)
+                     first_iteration, bicubic, "zncc-optim-2", subpixel, disp_row_min,
+                     disp_col_min, pos_row_disp, pos_col_disp, score, right_valid_mask);
+    // We return disparities as position index, not raw disparity values
+    // disparities (0.375, 0.125) -> position index (5.5, 4.5)
     CHECK(pos_row_disp == 5.5);
     CHECK(pos_col_disp == 4.5);
     CHECK(score == doctest::Approx(1.));
@@ -544,9 +557,9 @@ TEST_CASE("image resampling") {
       score = -1.;
       image_resampling(left_image, right_image, pixel_row, pixel_col, window_size, nb_iterations,
                        first_iteration, bicubic, method, subpixel, disp_row_min, disp_col_min,
-                       pos_row_disp, pos_col_disp, score);
-      // We return disparities as position indexes, not raw disparity values
-      // disparities (0.25, -0.25) -> position indexes (2.5, 1.5)
+                       pos_row_disp, pos_col_disp, score, right_valid_mask);
+      // We return disparities as position index, not raw disparity values
+      // disparities (0.25, -0.25) -> position index (2.5, 1.5)
       CHECK(pos_row_disp == 2.5);
       CHECK(pos_col_disp == 1.5);
       CHECK(score == doctest::Approx(1.));
@@ -555,9 +568,10 @@ TEST_CASE("image resampling") {
 
   SUBCASE("Unknown method throws") {
     const P2d::Matrixf left_image = right_image.cast<float>();
-    CHECK_THROWS_AS(image_resampling(left_image, right_image, pixel_row, pixel_col, window_size,
-                                     nb_iterations, first_iteration, bicubic, "ssd", subpixel,
-                                     disp_row_min, disp_col_min, pos_row_disp, pos_col_disp, score),
-                    std::invalid_argument);
+    CHECK_THROWS_AS(
+        image_resampling(left_image, right_image, pixel_row, pixel_col, window_size, nb_iterations,
+                         first_iteration, bicubic, "ssd", subpixel, disp_row_min, disp_col_min,
+                         pos_row_disp, pos_col_disp, score, right_valid_mask),
+        std::invalid_argument);
   }
 }
