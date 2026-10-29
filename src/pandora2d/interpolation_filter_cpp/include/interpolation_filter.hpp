@@ -108,6 +108,7 @@ class AbstractFilter {
    * @param origin_row row of the current best point
    * @param origin_col col of the current best point
    * @param precision search precision (1/pow(2,n), in pixels, at the nth iteration)
+   * @param right_valid_mask mask of valid pixels in the right image
    * @return std::optional<P2d::Matrixf>, the interpolated grid or std::nullopt when no position
    * can be interpolated
    */
@@ -115,7 +116,8 @@ class AbstractFilter {
                                                             int window_size,
                                                             double origin_row,
                                                             double origin_col,
-                                                            double precision);
+                                                            double precision,
+                                                            const P2d::MatrixUI& right_valid_mask);
 
   /**
    * @brief Get the size attribute
@@ -158,6 +160,20 @@ class AbstractFilter {
                                                 double origin,
                                                 double precision,
                                                 int half_window) const;
+
+  /**
+   * @brief Check if the filter area contains at least one invalid pixel in the right image
+   *
+   * @param right_valid_mask valid point mask in right image
+   * @param top_left_row top left row point in filter area
+   * @param top_left_col top left col point in filter area
+   * @param filter_size filter size
+   * @return bool true if the filter area contains only valid pixels, false otherwise
+   */
+  bool has_only_valid_pixels(const P2d::MatrixUI& right_valid_mask,
+                             int top_left_row,
+                             int top_left_col,
+                             int filter_size);
 };
 
 }  // namespace abstractfilter

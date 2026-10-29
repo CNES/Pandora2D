@@ -124,6 +124,10 @@ class Dichotomy(refinement.AbstractRefinement):
         # Get score map
         cost_values = create_cost_values_map(cost_volumes, disp_map)
 
+        # Get valid mask for right image to avoid interpolation on invalid pixels
+        # when using image resampling
+        # right_valid_mask = get_right_valid_mask(img_right)
+
         criteria_map = (
             (disp_map["validity"].sel(criteria="partial_validity_mask") == 1).astype(int)  # select invalids
             | disp_map["validity"].sel(criteria=Criteria.P2D_PEAK_ON_EDGE.name)
@@ -246,3 +250,24 @@ def create_cost_values_map(cost_volumes: xr.Dataset, disp_map: xr.Dataset) -> np
         disp_row=row_map.where(~invalid_row_disparity_map_mask, cost_volumes.coords["disp_row"][0]),
         disp_col=col_map.where(~invalid_col_disparity_map_mask, cost_volumes.coords["disp_col"][0]),
     ).data
+
+
+def get_right_valid_mask(img_right: xr.Dataset) -> np.ndarray:
+    """
+    Return the valid mask of the right image, used to avoid interpolation
+    on invalid pixels when using image resampling
+
+    :param img_right: right image dataset
+    :return: boolean array, True where the right image pixels are valid
+    """
+    image = img_right["im"].data
+    right_valid_mask = np.isfinite(image)
+
+    no_data = img_right.attrs.get("no_data_img")
+    if no_data is not None and np.isfinite(no_data):
+        right_valid_mask &= image != no_data
+
+    if "msk" in img_right.data_vars:
+        right_valid_mask &= img_right["msk"].data == img_right.attrs["valid_pixels"]
+
+    return right_valid_mask

@@ -98,6 +98,15 @@ P2d::VectorD AbstractFilter::interpolate(const P2d::MatrixD& image,
   return interpolated_positions;
 }
 
+// Check if the filter area contains at least one invalid pixel in the right image
+bool AbstractFilter::has_only_valid_pixels(const P2d::MatrixUI& right_valid_mask,
+                                           int top_left_row,
+                                           int top_left_col,
+                                           int filter_size) {
+  return right_valid_mask.block(top_left_row, top_left_col, filter_size, filter_size).minCoeff() !=
+         0;
+}
+
 // Build the mapping from the compact grid to the window pixels
 Eigen::VectorXi AbstractFilter::build_grid_to_window_mapping(int window_size,
                                                              int inverse_precision) const {
@@ -149,11 +158,13 @@ P2d::VectorD AbstractFilter::build_candidate_window_positions(const Eigen::Vecto
 }
 
 // Interpolate candidate windows
-std::optional<P2d::Matrixf> AbstractFilter::interpolate_candidate_windows(const P2d::MatrixD& image,
-                                                                          int window_size,
-                                                                          double origin_row,
-                                                                          double origin_col,
-                                                                          double precision) {
+std::optional<P2d::Matrixf> AbstractFilter::interpolate_candidate_windows(
+    const P2d::MatrixD& image,
+    int window_size,
+    double origin_row,
+    double origin_col,
+    double precision,
+    const P2d::MatrixUI& right_valid_mask) {
   const Margins& margins = m_margins;
   const int filter_size = m_size;
   const int half_window = window_size / 2;
@@ -185,7 +196,8 @@ std::optional<P2d::Matrixf> AbstractFilter::interpolate_candidate_windows(const 
   // grid.
   for (int axis_row = 0; axis_row < axis_size; ++axis_row) {
     // We skip the rows for which the filter area would go outside the right image
-    const int top_left_area_row = candidate_image_rows[axis_row] - margins.left;
+    const int top_left_area_row =
+        static_cast<int>(std::floor(candidate_image_rows[axis_row])) - margins.left;
     if (top_left_area_row < 0 || top_left_area_row + filter_size > image.rows()) {
       continue;
     }
@@ -197,10 +209,17 @@ std::optional<P2d::Matrixf> AbstractFilter::interpolate_candidate_windows(const 
         continue;
       }
       // We skip the columns for which the filter area would go outside the right image
-      const int top_left_area_col = candidate_image_cols[axis_col] - margins.up;
+      const int top_left_area_col =
+          static_cast<int>(std::floor(candidate_image_cols[axis_col])) - margins.up;
       if (top_left_area_col < 0 || top_left_area_col + filter_size > image.cols()) {
         continue;
       }
+
+      if (!has_only_valid_pixels(right_valid_mask, top_left_area_row, top_left_area_col,
+                                 filter_size)) {
+        continue;
+      }
+
       // interpolation_rows and interpolation_cols are the list of points sent to interpolate:
       // one entry per kept point, so each value of candidate_image_rows is repeated once per kept
       // column. grid_rows and grid_cols store the row and column of the grid where the result will

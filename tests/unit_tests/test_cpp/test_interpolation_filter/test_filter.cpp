@@ -302,12 +302,15 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   const P2d::MatrixD dirac =
       make_image([](int row, int col) { return row == 4 && col == 4 ? 1.0 : 0.0; });
 
+  // Mask with only valid pixels (1 = valid), same shape as the 9x9 test images
+  const P2d::MatrixUI right_valid_mask = P2d::MatrixUI::Ones(9, 9);
+
   const float nan = std::numeric_limits<float>::quiet_NaN();
 
   // col_ramp is exact under bicubic: grid(i, j) equals the column sampling position, except the
   // (0, 0) window which stays NaN.
   SUBCASE("Full compact grid at precision=0.5") {
-    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.0, 0.5);
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.0, 0.5, right_valid_mask);
     REQUIRE(grid.has_value());
     P2d::Matrixf expected(7, 7);
     // clang-format off
@@ -323,7 +326,7 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   }
 
   SUBCASE("Full compact grid at precision=0.25") {
-    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.0, 0.25);
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.0, 0.25, right_valid_mask);
     REQUIRE(grid.has_value());
     P2d::Matrixf expected(9, 9);
     // Families {-1, 0, +1} are concatenated, so the 9x9 is nine 3x3 neighbour blocks (center NaN).
@@ -342,7 +345,7 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   }
 
   SUBCASE("Distinct row and column origins") {
-    auto grid = filter.interpolate_candidate_windows(sum_ramp, 3, 4.0, 3.0, 0.5);
+    auto grid = filter.interpolate_candidate_windows(sum_ramp, 3, 4.0, 3.0, 0.5, right_valid_mask);
     REQUIRE(grid.has_value());
     P2d::Matrixf expected(7, 7);
     // clang-format off
@@ -358,7 +361,7 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   }
 
   SUBCASE("Dirac image and precision=0.5") {
-    auto grid = filter.interpolate_candidate_windows(dirac, 3, 4.0, 4.0, 0.5);
+    auto grid = filter.interpolate_candidate_windows(dirac, 3, 4.0, 4.0, 0.5, right_valid_mask);
     REQUIRE(grid.has_value());
     P2d::Matrixf expected_top_left_window(3, 3);
     // clang-format off
@@ -373,7 +376,7 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   }
 
   SUBCASE("Dirac image and precision=0.25") {
-    auto grid = filter.interpolate_candidate_windows(dirac, 3, 3.5, 3.5, 0.25);
+    auto grid = filter.interpolate_candidate_windows(dirac, 3, 3.5, 3.5, 0.25, right_valid_mask);
     REQUIRE(grid.has_value());
     P2d::Matrixf expected_top_left_window(3, 3);
     // clang-format off
@@ -386,7 +389,8 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
 
   SUBCASE("Subpixel shift close to 1") {
     // The fractional shift is replaced by MAX_FRACTIONAL_VALUE to avoid rounding
-    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.49999999, 0.5);
+    auto grid =
+        filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.49999999, 0.5, right_valid_mask);
     REQUIRE(grid.has_value());
     CHECK((*grid)(1, 0) == 2.998046875f);
     CHECK((*grid)(1, 2) == 3.998046875f);
@@ -394,7 +398,7 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   }
 
   SUBCASE("Window size of 1") {
-    auto grid = filter.interpolate_candidate_windows(col_ramp, 1, 4.0, 4.0, 0.5);
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 1, 4.0, 4.0, 0.5, right_valid_mask);
     REQUIRE(grid.has_value());
     P2d::Matrixf expected(3, 3);
     // clang-format off
@@ -406,7 +410,7 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   }
 
   SUBCASE("Window size of 5") {
-    auto grid = filter.interpolate_candidate_windows(col_ramp, 5, 4.0, 4.0, 0.5);
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 5, 4.0, 4.0, 0.5, right_valid_mask);
     REQUIRE(grid.has_value());
     P2d::Matrixf expected(11, 11);
     for (int row = 0; row < 11; ++row) {
@@ -419,17 +423,69 @@ TEST_CASE("AbstractFilter interpolate_candidate_windows") {
   }
 
   SUBCASE("Partial window leaves NaN on the outside neighbour") {
-    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 1.0, 0.5);
+    auto grid = filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 1.0, 0.5, right_valid_mask);
     REQUIRE(grid.has_value());
     CHECK(std::isnan((*grid)(1, 0)));
     CHECK_FALSE(std::isnan((*grid)(1, 6)));
   }
 
   SUBCASE("Grid entirely out of the image") {
-    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, -5.0, 4.0, 0.5).has_value());
-    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 15.0, 4.0, 0.5).has_value());
-    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 4.0, -5.0, 0.5).has_value());
-    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 15.0, 0.5).has_value());
+    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, -5.0, 4.0, 0.5, right_valid_mask)
+                    .has_value());
+    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 15.0, 4.0, 0.5, right_valid_mask)
+                    .has_value());
+    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 4.0, -5.0, 0.5, right_valid_mask)
+                    .has_value());
+    CHECK_FALSE(filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 15.0, 0.5, right_valid_mask)
+                    .has_value());
+  }
+
+  SUBCASE("Candidate with an invalid interpolation support stays NaN") {
+    P2d::MatrixUI mask_with_invalid_pixel = right_valid_mask;
+    // Mark one pixel as invalid. An interpolation point is skipped if its
+    // filter support contains this pixel.
+    mask_with_invalid_pixel(1, 1) = 0;
+
+    // Build the grid of interpolation windows around the current best position.
+    // The filter support for grid(0, 0) includes pixel (1, 1), while the support
+    // for grid(0, 6) does not.
+    auto grid =
+        filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.0, 0.5, mask_with_invalid_pixel);
+
+    REQUIRE(grid.has_value());
+
+    // Skipped points keep the NaN value used to initialize the grid.
+    CHECK(std::isnan((*grid)(0, 0)));
+    // This point has a fully valid interpolation support. Since col_ramp
+    // stores each pixel's column as its value, interpolation at column 5.5
+    // should return 5.5.
+    CHECK((*grid)(0, 6) == doctest::Approx(5.5f));
+  }
+
+  SUBCASE("Multiple interpolation points are skipped for an invalid pixel") {
+    P2d::MatrixUI mask_with_invalid_pixel = right_valid_mask;
+
+    // This pixel is inside the bicubic support of several grid points.
+    mask_with_invalid_pixel(3, 3) = 0;
+
+    auto grid =
+        filter.interpolate_candidate_windows(col_ramp, 3, 4.0, 4.0, 0.5, mask_with_invalid_pixel);
+
+    REQUIRE(grid.has_value());
+
+    // Every sample in this 5x5 region has a bicubic support containing pixel (3, 3).
+    // Four points — (1, 1), (1, 3), (3, 1), and (3, 3) — also belong to the
+    // initial best candidate window and are skipped independently of the mask.
+    // The other samples in this region are skipped because their support contains
+    // the invalid pixel.
+    for (int row = 0; row <= 4; ++row) {
+      for (int col = 0; col <= 4; ++col) {
+        CHECK(std::isnan((*grid)(row, col)));
+      }
+    }
+
+    // The support of this point does not include pixel (3, 3), so it is still interpolated.
+    CHECK((*grid)(6, 6) == doctest::Approx(5.5f));
   }
 }
 

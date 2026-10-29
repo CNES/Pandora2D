@@ -80,6 +80,7 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
  * @param best_col_disp : initial best col disparity, updated with the new best one
  * @param best_score : initial best score, updated with the new best one (maximum)
  * @param filter : interpolation filter
+ * @param right_valid_mask mask of valid pixels in the right image
  */
 void search_new_best_point_on_image(const Correlator<double>& correlator,
                                     const P2d::MatrixD& right_image,
@@ -90,7 +91,8 @@ void search_new_best_point_on_image(const Correlator<double>& correlator,
                                     double& best_row_disp,
                                     double& best_col_disp,
                                     double& best_score,
-                                    abstractfilter::AbstractFilter& filter);
+                                    abstractfilter::AbstractFilter& filter,
+                                    const P2d::MatrixUI& right_valid_mask);
 
 /**
  * @brief Create and prepare a correlator with the given left window
@@ -120,6 +122,7 @@ Correlator<double> make_prepared_left_window(const P2d::Matrixf& left_window,
  * @param pos_row_disp position of the initial best row disparity
  * @param pos_col_disp position of the initial best column disparity
  * @param score matching cost score at the initial best disparity position
+ * @param right_valid_mask mask of valid pixels in the right image
  */
 void image_resampling(const P2d::Matrixf& left_image,
                       const P2d::MatrixD& right_image_double,
@@ -135,7 +138,8 @@ void image_resampling(const P2d::Matrixf& left_image,
                       double disp_col_min,
                       double& pos_row_disp,
                       double& pos_col_disp,
-                      double& score);
+                      double& score,
+                      const P2d::MatrixUI& right_valid_mask);
 
 /**
  * @brief Resample the cost surface to refine the disparity estimation at a given position.
