@@ -81,6 +81,7 @@ def check_conf(user_cfg: dict, pandora2d_machine: Pandora2DMachine) -> None:
 
     # Check sections without dependencies
     check_segment_mode_section(user_cfg)
+    check_skip_mode_section(user_cfg)
     check_pipeline_section(user_cfg, pandora2d_machine)
     check_output_section(user_cfg)
     check_expert_mode_section(user_cfg)
@@ -159,6 +160,52 @@ def check_segment_mode_section(user_cfg: dict[str, dict]) -> None:
     checker = Checker(configuration_schema)
     checker.validate(cfg)
 
+    update_global_conf(user_cfg, cfg)
+
+
+def check_skip_mode_section(user_cfg: dict[str, dict]) -> None:
+    """
+    Complete and check the skip mode section.
+
+    An absent section is left unchanged. The saved section keeps the given mode
+    and lists every applied rule, including defaults that were not given in input.
+    fast and complete may override default rule parameters through rules.
+    custom activates only the listed rules and requires a non-empty rules list.
+
+    :param user_cfg: user configuration dictionary
+    :raises ValueError: If custom has no rules, or a rule is duplicated
+    """
+
+    # Skip if section is absent
+    if "skip_mode" not in user_cfg:
+        return
+
+    # Get skip mode config
+    user_cfg_skip_mode = get_section_config(user_cfg, "skip_mode")
+
+    # Check custom rules requirement on the user section, before defaults fill the missing rules
+    user_section = user_cfg_skip_mode["skip_mode"]
+    if isinstance(user_section, dict) and user_section.get("type") == "custom" and not user_section.get("rules"):
+        raise ValueError("skip_mode type custom requires rules")
+
+    # Add missing defaults values in user_cfg
+    cfg = build_default_skip_mode_configuration()
+    update_global_conf(cfg, user_cfg_skip_mode)
+
+    # Check schema
+    checker = Checker({"skip_mode": skip_mode_configuration_schema})
+    checker.validate(cfg)
+
+    # Check for duplicated rules
+    rules = cfg["skip_mode"].get("rules", [])
+    seen_rule_types: set[str] = set()
+    for rule in rules:
+        rule_type = rule["type"]
+        if rule_type in seen_rule_types:
+            raise ValueError(f"duplicated skip_mode rule: {rule_type}")
+        seen_rule_types.add(rule_type)
+
+    # Update user config with completed configuration
     update_global_conf(user_cfg, cfg)
 
 
@@ -702,6 +749,15 @@ def build_default_segment_mode_configuration() -> dict:
     }
 
 
+def build_default_skip_mode_configuration() -> dict:
+    """Default skip mode rule. The section mode comes from the user configuration."""
+    return {
+        "skip_mode": {
+            "rules": [{"type": "incomplete_disparity_range"}],
+        },
+    }
+
+
 input_configuration_schema = {
     "left": {
         "img": And(str, rasterio_can_open_mandatory),
@@ -723,6 +779,12 @@ disparity_schema = {
 segment_mode_configuration_schema = {
     "enable": bool,
     "memory_per_work": And(int, lambda x: x > 0),
+}
+
+
+skip_mode_configuration_schema = {
+    "type": And(str, lambda value: value in ("fast", "complete", "custom")),
+    OptionalKey("rules"): [{"type": "incomplete_disparity_range"}],
 }
 
 roi_configuration_schema = {
