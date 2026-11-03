@@ -22,7 +22,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from ..common_cpp.common_bind import CostVolumeSize
+from ..common_cpp.common_bind import CostVolumeSize, Margins
 
 def compute_cost_volumes_cpp_float(
     left: NDArray[np.float32],
@@ -41,6 +41,8 @@ def compute_cost_volumes_cpp_float(
     window_size: int,
     step: NDArray[np.integer],
     matching_cost_method: str,
+    incomplete_disparity_range: bool,
+    disparity_margins: Margins = ...,
 ) -> None:
     """
     Computes the cost values in float32
@@ -61,6 +63,8 @@ def compute_cost_volumes_cpp_float(
     :param window_size: size of the correlation window
     :param step: [step_row, step_col]
     :param matching_cost_method: correlation method
+    :param incomplete_disparity_range: if True, points with at least one invalid user-range disparity are not computed
+    :param disparity_margins: refinement margins on the cost surface edges
     """
 
 def compute_cost_volumes_cpp_double(
@@ -80,6 +84,8 @@ def compute_cost_volumes_cpp_double(
     window_size: int,
     step: NDArray[np.integer],
     matching_cost_method: str,
+    incomplete_disparity_range: bool,
+    disparity_margins: Margins = ...,
 ) -> None:
     """
     Computes the cost values in float64
@@ -100,5 +106,6 @@ def compute_cost_volumes_cpp_double(
     :param window_size: size of the correlation window
     :param step: [step_row, step_col]
     :param matching_cost_method: correlation method
-
+    :param incomplete_disparity_range: if True, points with at least one invalid user-range disparity are not computed
+    :param disparity_margins: refinement margins on the cost surface edges
     """

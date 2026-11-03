@@ -16,6 +16,11 @@ When it is absent, no skip mode is active.
    skip rule is implemented. Other rules like ``score_threshold`` will be added
    in future releases. Additional rules may have restrictions or be adjusted as implementation progresses.
 
+.. warning::
+   The ``incomplete_disparity_range`` rule is not compatible with Pandora matching cost
+   methods (``sad``, ``ssd``, ``zncc_python``, ``mc_cnn``). These metrics are computed outside
+   the C++ matching cost implementation.
+
 
 Configuration and parameters
 ****************************
@@ -74,7 +79,7 @@ Available rules
      - Description
    * - **incomplete_disparity_range**
      - skip
-     - Skip rule with no parameter.
+     - Rule with no parameter. A point is not computed as soon as at least one disparity of its user search range is invalid. Disparities added by refinement margins are ignored by this check. Without this rule, a point is skipped only if every disparity of its cost surface is invalid.
 
 
 **Examples**

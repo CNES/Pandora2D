@@ -39,3 +39,11 @@ class CostVolumeSize:
         """
         Returns the disparity number : nb_disp_row * nb_disp_col.
         """
+
+class Margins:
+    left: int
+    up: int
+    right: int
+    down: int
+
+    def __init__(self, left: int, up: int, right: int, down: int) -> None: ...

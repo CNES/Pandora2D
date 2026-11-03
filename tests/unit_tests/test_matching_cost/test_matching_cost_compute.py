@@ -2157,3 +2157,198 @@ class TestMutualInformation:
         np.testing.assert_array_almost_equal(
             cost_volumes["cost_volumes"][point[0], point[1], :, :], expected, decimal=6
         )
+
+
+class TestIncompleteDisparityRange:
+    """
+    Test the incomplete_disparity_range rule in compute_cost_volumes
+    """
+
+    @pytest.fixture()
+    def window_size(self):
+        """Return the matching cost window size."""
+        return 3
+
+    @pytest.fixture()
+    def image_shape(self):
+        """Return the synthetic image shape."""
+        return (7, 7)
+
+    @pytest.fixture()
+    def image_data(self, image_shape):
+        """Random image data, so that computed cost values are different from the initial value 0"""
+        return np.random.default_rng(seed=0).uniform(0, 100, image_shape).astype(np.float32)
+
+    @pytest.fixture()
+    def matching_cost_matcher(self, make_dataset, image_data, matching_cost_config):
+        """Allocated matching cost where only disparity (0, 0) of point (3, 3) is invalid, point (4, 3) is valid."""
+        left_dataset = make_dataset(image_data)
+        right_dataset = make_dataset(image_data)
+
+        matcher = matching_cost.MatchingCostRegistry.get(matching_cost_config["matching_cost_method"])(
+            matching_cost_config
+        )
+        matcher.allocate(img_left=left_dataset, img_right=right_dataset, cfg=matching_cost_config)
+        criteria = matcher.cost_volumes["criteria"].data
+        # window_size 3 (offset 1) on a 7x7 image, with make_dataset disparities
+        # (col init 1 range 1, row init -1 range 1): points (3, 3) and (4, 3) are fully valid.
+        # Only disparity (0, 0) of (3, 3) is then marked invalid. (4, 3) stays the valid control point.
+        criteria[3, 3, 0, 0] = Criteria.P2D_RIGHT_NODATA
+        return matcher, left_dataset, right_dataset
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc-optim-1", "zncc-optim-2", "mutual_information"])
+    @pytest.mark.parametrize("incomplete_disparity_range", [True, False, None])
+    def test_point_with_invalid_disparity(self, matching_cost_matcher, incomplete_disparity_range):
+        """
+        Description : With incomplete_disparity_range, a point with at least one invalid disparity is not computed.
+        Without it (or without the attribute), only its invalid disparity is not computed.
+        """
+        matcher, left_dataset, right_dataset = matching_cost_matcher
+        if incomplete_disparity_range is not None:
+            matcher.cost_volumes.attrs["incomplete_disparity_range"] = incomplete_disparity_range
+
+        cost_volumes = matcher.compute_cost_volumes(img_left=left_dataset, img_right=right_dataset)["cost_volumes"].data
+
+        # Point (3, 3): only disparity (0, 0) is invalid (see matching_cost_matcher fixture).
+        partially_invalid_point = cost_volumes[3, 3]
+        if incomplete_disparity_range:
+            # Rule on: the whole point stays at the initial fill (0).
+            np.testing.assert_array_equal(partially_invalid_point, 0)
+        else:
+            # Rule off or absent: MI/ZNCC on valid disparities only.
+            assert partially_invalid_point[0, 0] == 0
+            assert np.count_nonzero(partially_invalid_point) == partially_invalid_point.size - 1
+
+        # Point (4, 3): fully valid; must be computed whether the rule is active or not.
+        assert np.count_nonzero(cost_volumes[4, 3]) == cost_volumes[4, 3].size
+
+    @pytest.fixture()
+    def refinement_margins(self):
+        """One cost surface edge margin on each side."""
+        return Margins(1, 1, 1, 1)
+
+    @pytest.fixture()
+    def matcher_with_refinement_margins(self, make_dataset, image_data, matching_cost_config, refinement_margins):
+        """Allocated matching cost whose disparity axes include refinement margins."""
+        left_dataset = make_dataset(image_data)
+        right_dataset = make_dataset(image_data)
+        matcher = matching_cost.MatchingCostRegistry.get(matching_cost_config["matching_cost_method"])(
+            matching_cost_config
+        )
+        matcher.allocate(
+            img_left=left_dataset, img_right=right_dataset, cfg=matching_cost_config, margins=refinement_margins
+        )
+        return matcher, left_dataset, right_dataset
+
+    @staticmethod
+    def _user_range_slice(margins):
+        """Disparity slice of the user range, excluding refinement margins."""
+        return slice(margins.up, -margins.down or None), slice(margins.left, -margins.right or None)
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc-optim-1", "zncc-optim-2", "mutual_information"])
+    @pytest.mark.parametrize("incomplete_disparity_range", [True, False])
+    def test_invalid_margin_disparity_does_not_skip_the_point(
+        self, matcher_with_refinement_margins, refinement_margins, incomplete_disparity_range
+    ):
+        """
+        Description : An invalid disparity that exists only in the refinement margins does not skip the point,
+        whether incomplete_disparity_range is active or not.
+        """
+        matcher, left_dataset, right_dataset = matcher_with_refinement_margins
+        criteria = matcher.cost_volumes["criteria"].data
+        row_slice, col_slice = self._user_range_slice(refinement_margins)
+        # Point (3, 3) stays inside the 7x7 image for the user disparity range of make_dataset.
+        assert not criteria[3, 3, row_slice, col_slice].any()
+        # Disparity (0, 0) is the first sample of both axes, so it belongs to the margins.
+        criteria[3, 3, 0, 0] = Criteria.P2D_RIGHT_NODATA
+        matcher.cost_volumes.attrs["incomplete_disparity_range"] = incomplete_disparity_range
+
+        cost_volumes = matcher.compute_cost_volumes(
+            img_left=left_dataset, img_right=right_dataset, margins=refinement_margins
+        )["cost_volumes"].data
+
+        # Extract user disparity range (excluding refinement margins)
+        user_range = cost_volumes[3, 3, row_slice, col_slice]
+        # All user-range disparities are computed (no invalid criterion in user range)
+        assert np.count_nonzero(user_range) == user_range.size
+        # Disparity (0,0) is in the refinement margin and has invalid criterion (no data),
+        # so it was not computed; cost remains 0
+        assert cost_volumes[3, 3, 0, 0] == 0
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc-optim-1", "zncc-optim-2", "mutual_information"])
+    def test_invalid_user_disparity_skips_the_point(self, matcher_with_refinement_margins, refinement_margins):
+        """
+        Description : With incomplete_disparity_range, one invalid disparity of the user range skips the whole point.
+        """
+        matcher, left_dataset, right_dataset = matcher_with_refinement_margins
+        criteria = matcher.cost_volumes["criteria"].data
+        row_slice, col_slice = self._user_range_slice(refinement_margins)
+        assert not criteria[4, 3, row_slice, col_slice].any()
+        criteria[3, 3, refinement_margins.up, refinement_margins.left] = Criteria.P2D_RIGHT_NODATA
+        matcher.cost_volumes.attrs["incomplete_disparity_range"] = True
+
+        cost_volumes = matcher.compute_cost_volumes(
+            img_left=left_dataset, img_right=right_dataset, margins=refinement_margins
+        )["cost_volumes"].data
+
+        # Point (3,3) has an invalid disparity in its user range, so it is completely skipped
+        np.testing.assert_array_equal(cost_volumes[3, 3], 0)
+        # Point (4,3) has no invalid disparities in its user range, so it is fully computed
+        user_range = cost_volumes[4, 3, row_slice, col_slice]
+        assert np.count_nonzero(user_range) == user_range.size
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc-optim-1", "zncc-optim-2", "mutual_information"])
+    @pytest.mark.parametrize("incomplete_disparity_range", [True, False])
+    @pytest.mark.parametrize(
+        ["image_shape", "correct_grid_shape", "second_correct_grid_shape"],
+        [pytest.param((12, 12), (12, 12), (12, 12), id="Variable initial disparity grids")],
+    )
+    def test_incomplete_disparity_range_with_variable_initial_grids(
+        self,
+        make_dataset_with_variable_initial_disparity,
+        image_data,
+        matching_cost_config,
+        incomplete_disparity_range,
+    ):
+        """
+        Description : With incomplete_disparity_range and variable initial disparity grids,
+        partially invalid points are handled per-pixel based on their own grid ranges.
+
+        The test verifies that when two pixels have different initial grid ranges,
+        an invalid disparity can be:
+        - Inside one pixel's user range (skipped with incomplete_disparity_range)
+        - Outside another pixel's user range (computed with or without the rule)
+
+        This ensures that with incomplete_disparity_range, pixels with invalid disparities
+        in their own user range are skipped, while others are computed.
+        """
+        left_dataset = make_dataset_with_variable_initial_disparity(image_data)
+        right_dataset = make_dataset_with_variable_initial_disparity(image_data)
+        matcher = matching_cost.MatchingCostRegistry.get(matching_cost_config["matching_cost_method"])(
+            matching_cost_config
+        )
+        matcher.allocate(img_left=left_dataset, img_right=right_dataset, cfg=matching_cost_config)
+        # Point (row=3, col=5): disp_row in [1, 3], disp_col in [-2, 0].
+        # Point (row=4, col=3): disp_row in [-1, 1], disp_col in [4, 6].
+        # Both user ranges are fully valid before injecting the invalid disparity below.
+        # Mark (disp_row=2, disp_col=-1) invalid for both image points:
+        # it is inside (3,5) point user range, but outside (4,3) point user range on both axes.
+        criteria = matcher.cost_volumes["criteria"]
+        criteria.loc[dict(row=3, col=5, disp_row=2, disp_col=-1)] = Criteria.P2D_RIGHT_NODATA
+        criteria.loc[dict(row=4, col=3, disp_row=2, disp_col=-1)] = Criteria.P2D_RIGHT_NODATA
+        matcher.cost_volumes.attrs["incomplete_disparity_range"] = incomplete_disparity_range
+
+        cost_volumes = matcher.compute_cost_volumes(img_left=left_dataset, img_right=right_dataset)["cost_volumes"]
+
+        user_range = cost_volumes.sel(row=3, col=5, disp_row=slice(1, 3), disp_col=slice(-2, 0)).data
+        if incomplete_disparity_range:
+            # Point (row=3, col=5) has an invalid disparity in its user range: all costs remain at 0.
+            np.testing.assert_array_equal(user_range, 0)
+        else:
+            # Without the rule, only the invalid disparity (disp_row=2, disp_col=-1) stays at 0.
+            # After slicing, its local array indices are [1, 1], not its disparity coordinates.
+            assert user_range[1, 1] == 0
+            assert np.count_nonzero(user_range) == user_range.size - 1
+        # Point (row=4, col=3) has no invalid disparity in its own user range: all costs are computed with or without the rule.
+        control_range = cost_volumes.sel(row=4, col=3, disp_row=slice(-1, 1), disp_col=slice(4, 6)).data
+        assert np.count_nonzero(control_range) == control_range.size

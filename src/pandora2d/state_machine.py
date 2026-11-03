@@ -401,6 +401,14 @@ class Pandora2DMachine(BaseMachine):
 
         self.matching_cost_.allocate(self.left_img, self.right_img, cfg, self.margins_disp.get("refinement"))
 
+        incomplete_disparity_range = common.is_incomplete_disparity_range_enabled(cfg)
+        self.matching_cost_.cost_volumes.attrs["incomplete_disparity_range"] = incomplete_disparity_range
+        if incomplete_disparity_range:
+            logging.info(
+                "incomplete_disparity_range rule is activated: only points with all disparities "
+                "of the user disparity range valid will be computed."
+            )
+
         # Compute validity dataset
         dataset_validity = criteria.get_validity_dataset(
             self.matching_cost_.cost_volumes["criteria"],

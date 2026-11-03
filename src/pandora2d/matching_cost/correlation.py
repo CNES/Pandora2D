@@ -29,7 +29,7 @@ import xarray as xr
 from json_checker import And
 
 from pandora2d.img_tools import shift_subpix_img_2d
-from pandora2d.margins import Margins, UniformMargins
+from pandora2d.margins import Margins, NullMargins, UniformMargins
 from pandora2d.matching_cost.registry import MatchingCostRegistry
 from pandora2d.common import get_disparity_grids
 
@@ -214,6 +214,15 @@ class CorrelationMethods(BaseMatchingCost):
         roi_area = get_user_roi_area(img_left, self.cost_volumes.attrs["roi_margins"])
         cpp_correlation_method = self._resolve_cpp_correlation_method(roi_area)
 
+        # Margins are stored at allocation and match the disparity axes. None means no refinement.
+        disparity_margins_py = self.cost_volumes.attrs.get("disparity_margins") or NullMargins()
+        cpp_disparity_margins = common_bind.Margins(
+            int(disparity_margins_py.left),
+            int(disparity_margins_py.up),
+            int(disparity_margins_py.right),
+            int(disparity_margins_py.down),
+        )
+
         # Call compute_cost_volumes_cpp
         compute_cost_volumes_cpp(
             img_left["im"].data,
@@ -232,6 +241,8 @@ class CorrelationMethods(BaseMatchingCost):
             self.cost_volumes.attrs["window_size"],
             self.cost_volumes.attrs["step"],
             cpp_correlation_method,
+            self.cost_volumes.attrs.get("incomplete_disparity_range", False),
+            disparity_margins=cpp_disparity_margins,
         )
 
         self.set_out_of_disparity_range_to_other_value(img_left, -np.inf)

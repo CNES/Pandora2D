@@ -44,7 +44,9 @@ from pandora.check_configuration import (
 from pandora.img_tools import rasterio_open
 from rasterio.io import DatasetReader
 
-from pandora2d.common import all_same
+from pandora2d.common import all_same, is_incomplete_disparity_range_enabled
+from pandora2d.matching_cost.pandora import PandoraMatchingCostMethods
+from pandora2d.matching_cost.registry import MatchingCostRegistry
 from pandora2d.state_machine import Pandora2DMachine
 
 
@@ -253,6 +255,9 @@ def check_pipeline_section(user_cfg: dict[str, dict], pandora2d_machine: Pandora
     ):
         check_matching_cost_method_with_ambiguity(user_cfg["pipeline"]["matching_cost"]["matching_cost_method"])
 
+    # The matching cost section is completed above, so the method is known.
+    check_skip_mode_with_matching_cost(user_cfg)
+
 
 def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> None:
     """
@@ -285,6 +290,27 @@ def check_matching_cost_method_with_image_resampling(matching_cost_method: str, 
         raise ValueError(
             f"Image resampling is only available with the {accepted_methods} matching cost methods, "
             f"but {matching_cost_method} was given."
+        )
+
+
+def check_skip_mode_with_matching_cost(user_cfg: dict[str, dict]) -> None:
+    """
+    Check that the incomplete_disparity_range rule is used with a supported matching cost method.
+
+    :param user_cfg: user configuration dictionary
+    :raises ValueError: If incomplete_disparity_range is used with a pandora matching cost method.
+    """
+
+    if not is_incomplete_disparity_range_enabled(user_cfg):
+        return
+
+    matching_cost_method = user_cfg["pipeline"]["matching_cost"]["matching_cost_method"]
+    matching_cost_class = MatchingCostRegistry.get(matching_cost_method)
+
+    if issubclass(matching_cost_class, PandoraMatchingCostMethods):
+        raise ValueError(
+            "The incomplete_disparity_range rule is not available with pandora matching cost methods "
+            f"(sad, ssd, zncc_python, mc_cnn), but {matching_cost_method} was given."
         )
 
 
