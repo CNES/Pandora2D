@@ -51,7 +51,7 @@ const std::map<std::string, int (*)(const P2d::VectorD&)> COST_SELECTION_METHOD_
  * @param pos_col_disp : initial position on col
  * @param score : best score on cost surface (minimum or maximum)
  * @param filter : interpolation filter
- * @param method_matching_cost : max or min
+ * @param type_method_matching_cost : max or min
  */
 void search_new_best_point(const P2d::MatrixD& cost_surface,
                            const double precision,
@@ -60,7 +60,7 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
                            double& pos_col_disp,
                            double& score,
                            abstractfilter::AbstractFilter& filter,
-                           std::string method_matching_cost);
+                           std::string type_method_matching_cost);
 
 /**
  * @brief Search for the new best position by interpolating the right image
@@ -105,7 +105,7 @@ Correlator<double> make_prepared_left_window(const P2d::Matrixf& left_window,
                                              const std::string& method_matching_cost);
 
 /**
- * @brief Resample the right image to refine the disparity estimation at a given position.
+ * @brief Resample the right image to refine the disparity estimation
  *
  * @param left_image left image
  * @param right_image_double right image in double precision
@@ -142,7 +142,7 @@ void image_resampling(const P2d::Matrixf& left_image,
                       const P2d::MatrixUI& right_valid_mask);
 
 /**
- * @brief Resample the cost surface to refine the disparity estimation at a given position.
+ * @brief Resample the cost surface to refine the disparity estimation
  *
  * @param cost_volume 1D data of size nb_row * nb_col * nb_disp_row * nb_disp_col
  * @param index_disp pixel index used to find its cost surface
@@ -151,7 +151,7 @@ void image_resampling(const P2d::Matrixf& left_image,
  * @param nb_iterations number of iterations of the dichotomy
  * @param first_iteration index of the first dichotomy iteration
  * @param filter interpolation filter
- * @param method_matching_cost matching cost method
+ * @param type_method_matching_cost type of matching cost (max or min)
  * @param pos_row_disp position of initial row disparity
  * @param pos_col_disp position of initial column disparity
  * @param score matching cost score at the initial disparity position
@@ -164,23 +164,24 @@ void cost_surface_resampling(py::array_t<T>& cost_volume,
                              int nb_iterations,
                              int first_iteration,
                              abstractfilter::AbstractFilter& filter,
-                             const std::string& method_matching_cost,
+                             const std::string& type_method_matching_cost,
                              double& pos_row_disp,
                              double& pos_col_disp,
                              double& score) {
-  P2d::MatrixD cost_surface = get_cost_surface<T, double>(cost_volume, index_disp, cv_size);
+  P2d::MatrixD cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
+  cost_surface = get_cost_surface<T, double>(cost_volume, index_disp, cv_size);
 
   double precision = 1. / pow(2, first_iteration);
   for (auto it = first_iteration; it <= nb_iterations; ++it) {
     search_new_best_point(cost_surface, precision, subpixel, pos_row_disp, pos_col_disp, score,
-                          filter, method_matching_cost);
+                          filter, type_method_matching_cost);
     // update precision
     precision /= 2.;
   }
 }
 
 /**
- * @brief Dichotomy calculation
+ * @brief Refine disparities by resampling the cost surface
  *
  * @param cost_volume : 1D data of size nb_row * nb_col * nb_disp_row * nb_disp_col
  * @param disparity_map_col : 1D col disparity data of size nb_row * nb_col
@@ -191,19 +192,19 @@ void cost_surface_resampling(py::array_t<T>& cost_volume,
  * @param subpixel : sub-sampling of cost_volume
  * @param nb_iterations : number of iterations of the dichotomy
  * @param filter : interpolation filter
- * @param method_matching_cost : max or min
+ * @param type_method_matching_cost : max or min
  */
 template <typename T, typename U>
-void compute_dichotomy(py::array_t<T> cost_volume,
-                       Eigen::Ref<U> disparity_map_col,
-                       Eigen::Ref<U> disparity_map_row,
-                       Eigen::Ref<U> score_map,
-                       const Eigen::Ref<const P2d::VectorX<uint8_t>>& invalid_map,
-                       py::array_t<T> criteria_map,
-                       int subpixel,
-                       int nb_iterations,
-                       abstractfilter::AbstractFilter& filter,
-                       std::string method_matching_cost) {
+void compute_dichotomy_cost_surface(py::array_t<T> cost_volume,
+                                    Eigen::Ref<U> disparity_map_col,
+                                    Eigen::Ref<U> disparity_map_row,
+                                    Eigen::Ref<U> score_map,
+                                    const Eigen::Ref<const P2d::VectorX<uint8_t>>& invalid_map,
+                                    py::array_t<T> criteria_map,
+                                    int subpixel,
+                                    int nb_iterations,
+                                    abstractfilter::AbstractFilter& filter,
+                                    std::string type_method_matching_cost) {
   // Get parameters
   auto first_iteration = (subpixel != 4) ? subpixel : 3;  //< subpixel is 1, 2 or 4
   auto pos_disp_col_it = disparity_map_col.begin();
@@ -213,34 +214,19 @@ void compute_dichotomy(py::array_t<T> cost_volume,
   CostVolumeSize cv_size = CostVolumeSize(cost_volume.shape(0), cost_volume.shape(1),
                                           cost_volume.shape(2), cost_volume.shape(3));
   auto nb_disps = cv_size.nb_disps();
-
-  unsigned int index = -nb_disps;  //< Index on disparity_map less the first occurance
-  P2d::MatrixD cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
   P2d::MatrixUI criteria_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
   auto margins = filter.get_margins();
   auto filter_size = filter.get_size();
 
-  // Loop on each image point calculated
+  // Loop on each image calculated point
+  std::size_t index = 0;
   for (; pos_disp_col_it != disparity_map_col.end();
-       ++pos_disp_col_it, ++pos_disp_row_it, ++score_it, ++invalid_it) {
-    // update index
-    index += nb_disps;
-
-    // taking into account the peak at the edge & invalid disparities (== 1 in the array)
+       ++pos_disp_col_it, ++pos_disp_row_it, ++score_it, ++invalid_it, ++index) {
+    // Taking into account the peak at the edge & invalid disparities (== 1 in the array)
     if (*invalid_it == 1)
       continue;
-
     // Check initial disparity is not nan
     if (std::isnan(*pos_disp_row_it) or std::isnan(*pos_disp_col_it))
-      continue;
-
-    // Check filter area
-    criteria_surface = get_cost_surface<T, uint8_t>(criteria_map, index, cv_size);
-    int top_left_area_row = *pos_disp_row_it - margins.left;
-    int top_left_area_col = *pos_disp_col_it - margins.up;
-    P2d::MatrixUI filter_area =
-        criteria_surface.block(top_left_area_row, top_left_area_col, filter_size, filter_size);
-    if (not filter_area.isZero())
       continue;
 
     double pos_row_disp =
@@ -249,14 +235,101 @@ void compute_dichotomy(py::array_t<T> cost_volume,
         (std::is_same_v<T, float>) ? static_cast<double>(*pos_disp_col_it) : *pos_disp_col_it;
     double score = (std::is_same_v<T, float>) ? static_cast<double>(*score_it) : *score_it;
 
-    cost_surface_resampling<T>(cost_volume, index, cv_size, subpixel, nb_iterations,
-                               first_iteration, filter, method_matching_cost, pos_row_disp,
+    const std::size_t index_disp = index * nb_disps;
+    // Check filter area
+    criteria_surface = get_cost_surface<T, uint8_t>(criteria_map, index_disp, cv_size);
+    const int top_left_area_row = *pos_disp_row_it - margins.left;
+    const int top_left_area_col = *pos_disp_col_it - margins.up;
+    const P2d::MatrixUI filter_area =
+        criteria_surface.block(top_left_area_row, top_left_area_col, filter_size, filter_size);
+    if (not filter_area.isZero())
+      continue;
+    // Compute resampling on cost surface
+    cost_surface_resampling<T>(cost_volume, index_disp, cv_size, subpixel, nb_iterations,
+                               first_iteration, filter, type_method_matching_cost, pos_row_disp,
                                pos_col_disp, score);
 
-    // update information
+    // Update information
     *pos_disp_row_it = (std::is_same_v<T, float>) ? static_cast<float>(pos_row_disp) : pos_row_disp;
     *pos_disp_col_it = (std::is_same_v<T, float>) ? static_cast<float>(pos_col_disp) : pos_col_disp;
     *score_it = (std::is_same_v<T, float>) ? static_cast<float>(score) : score;
+  }
+}
+
+/**
+ * @brief Refine disparities by resampling the right image
+ *
+ * @param nb_cols : number of columns in the cost volumes
+ * @param left_image : left image
+ * @param right_image : right image
+ * @param disparity_map_col : 1D col disparity data of size nb_row * nb_col
+ * @param disparity_map_row : 1D row disparity data of size nb_row * nb_col
+ * @param score_map : 1D score data of size nb_row * nb_col
+ * @param invalid_map : 1D invalid (peak on edge and invalid) data of size nb_row * nb_col
+ * @param subpixel : sub-sampling of cost_volume
+ * @param nb_iterations : number of iterations of the dichotomy
+ * @param filter : interpolation filter
+ * @param method_matching_cost : matching cost measure
+ * @param window_size : size of the correlation window
+ * @param step : step of the matching cost
+ * @param offset_cv_img : offset of the cost volume in the image
+ * @param disp_min : minimum disparity values
+ * @param right_valid_mask : mask of valid pixels in the right image
+ */
+template <typename U>
+void compute_dichotomy_image(int nb_cols,
+                             const P2d::Matrixf& left_image,
+                             const P2d::Matrixf& right_image,
+                             Eigen::Ref<U> disparity_map_col,
+                             Eigen::Ref<U> disparity_map_row,
+                             Eigen::Ref<U> score_map,
+                             const Eigen::Ref<const P2d::VectorX<uint8_t>>& invalid_map,
+                             int subpixel,
+                             int nb_iterations,
+                             abstractfilter::AbstractFilter& filter,
+                             std::string method_matching_cost,
+                             int window_size,
+                             const Eigen::Vector2i& step,
+                             const Eigen::Vector2i& offset_cv_img,
+                             const Eigen::Vector2d& disp_min,
+                             const P2d::MatrixUI& right_valid_mask) {
+  // Get parameters
+  const auto first_iteration = (subpixel != 4) ? subpixel : 3;  //< subpixel is 1, 2 or 4
+  auto pos_disp_col_it = disparity_map_col.begin();
+  auto pos_disp_row_it = disparity_map_row.begin();
+  auto score_it = score_map.begin();
+  auto invalid_it = invalid_map.begin();
+  std::size_t index = 0;
+  const P2d::MatrixD right_image_double = right_image.cast<double>();
+
+  // Loop on each image calculated point
+  for (; pos_disp_col_it != disparity_map_col.end();
+       ++pos_disp_col_it, ++pos_disp_row_it, ++score_it, ++invalid_it, ++index) {
+    // Taking into account the peak at the edge & invalid disparities (== 1 in the array)
+    if (*invalid_it == 1)
+      continue;
+    // Check initial disparity is not nan
+    if (std::isnan(*pos_disp_row_it) or std::isnan(*pos_disp_col_it))
+      continue;
+
+    double pos_row_disp = static_cast<double>(*pos_disp_row_it);
+    double pos_col_disp = static_cast<double>(*pos_disp_col_it);
+    double score = static_cast<double>(*score_it);
+    // Compute pixel positions in the right image
+    const std::size_t row = index / nb_cols;
+    const std::size_t col = index % nb_cols;
+    const int pixel_row = offset_cv_img[0] + static_cast<int>(row) * step[0];
+    const int pixel_col = offset_cv_img[1] + static_cast<int>(col) * step[1];
+
+    // Compute resampling on right image
+    image_resampling(left_image, right_image_double, pixel_row, pixel_col, window_size,
+                     nb_iterations, first_iteration, filter, method_matching_cost, subpixel,
+                     disp_min[0], disp_min[1], pos_row_disp, pos_col_disp, score, right_valid_mask);
+
+    // Update information
+    *pos_disp_row_it = static_cast<typename U::Scalar>(pos_row_disp);
+    *pos_disp_col_it = static_cast<typename U::Scalar>(pos_col_disp);
+    *score_it = static_cast<typename U::Scalar>(score);
   }
 }
 

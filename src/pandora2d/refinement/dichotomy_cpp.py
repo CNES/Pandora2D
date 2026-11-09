@@ -124,10 +124,7 @@ class Dichotomy(refinement.AbstractRefinement):
         # Get score map
         cost_values = create_cost_values_map(cost_volumes, disp_map)
 
-        # Get valid mask for right image to avoid interpolation on invalid pixels
-        # when using image resampling
-        # right_valid_mask = get_right_valid_mask(img_right)
-
+        refine_on_right_image = self.cfg.get("resampling_type") == "image"
         criteria_map = (
             (disp_map["validity"].sel(criteria="partial_validity_mask") == 1).astype(int)  # select invalids
             | disp_map["validity"].sel(criteria=Criteria.P2D_PEAK_ON_EDGE.name)
@@ -142,24 +139,52 @@ class Dichotomy(refinement.AbstractRefinement):
         col_map = disparity_to_index(col_map, cost_volumes.disp_col.values[0], subpixel).astype(cost_volume_type)
 
         if np.issubdtype(cost_volume_type, np.float32):
-            compute_dichotomy = refinement_bind.compute_dichotomy_float
+            compute_dichotomy_cost_surface = refinement_bind.compute_dichotomy_cost_surface_float
+            compute_dichotomy_image = refinement_bind.compute_dichotomy_image_float
         elif np.issubdtype(cost_volume_type, np.float64):
-            compute_dichotomy = refinement_bind.compute_dichotomy_double
+            compute_dichotomy_cost_surface = refinement_bind.compute_dichotomy_cost_surface_double
+            compute_dichotomy_image = refinement_bind.compute_dichotomy_image_double
         else:
             raise TypeError("Cost volume must be in np.float32 or np.float64")
 
-        compute_dichotomy(
-            cost_volumes.cost_volumes.data,
-            col_map.ravel(),
-            row_map.ravel(),
-            cost_values.ravel(),
-            criteria_map.ravel(),
-            cost_volumes.criteria.data,
-            subpixel,
-            self.cfg["iterations"],
-            self.filter.cpp_instance,
-            cost_volumes.attrs["type_measure"],
-        )
+        # Select if dichotomy is applied to cost surface or right image
+        if refine_on_right_image:
+            right_valid_mask = get_right_valid_mask(img_right).astype(np.uint8)
+            offset_cv_img = [
+                cost_volumes.row.data[0] - img_left.row.data[0],
+                cost_volumes.col.data[0] - img_left.col.data[0],
+            ]
+            compute_dichotomy_image(
+                cost_volumes.cost_volumes.shape[1],
+                img_left.im.data,
+                img_right.im.data,
+                col_map.ravel(),
+                row_map.ravel(),
+                cost_values.ravel(),
+                criteria_map.ravel(),
+                subpixel,
+                self.cfg["iterations"],
+                self.filter.cpp_instance,
+                cost_volumes.attrs["measure"],
+                cost_volumes.attrs["window_size"],
+                cost_volumes.attrs["step"],
+                offset_cv_img,
+                [cost_volumes.disp_row.values[0], cost_volumes.disp_col.values[0]],
+                right_valid_mask,
+            )
+        else:
+            compute_dichotomy_cost_surface(
+                cost_volumes.cost_volumes.data,
+                col_map.ravel(),
+                row_map.ravel(),
+                cost_values.ravel(),
+                criteria_map.ravel(),
+                cost_volumes.criteria.data,
+                subpixel,
+                self.cfg["iterations"],
+                self.filter.cpp_instance,
+                cost_volumes.attrs["type_measure"],
+            )
 
         # Inverse transforming index maps into disparity maps
         col_map = index_to_disparity(col_map, cost_volumes.disp_col.values[0], subpixel)
