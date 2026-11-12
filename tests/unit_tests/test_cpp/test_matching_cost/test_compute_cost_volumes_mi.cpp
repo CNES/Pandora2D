@@ -40,6 +40,14 @@ struct TypePairCV {
 TYPE_TO_STRING_AS("Float", TypePairCV<float, P2d::Matrixf>);
 TYPE_TO_STRING_AS("Double", TypePairCV<double, P2d::MatrixD>);
 
+namespace {
+// Python cannot be initialized twice in the same process (doctest re-enters the TEST_CASE
+// for each SUBCASE and for each template type).
+void ensure_python_interpreter() {
+  static py::scoped_interpreter guard{};
+}
+}  // namespace
+
 TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information",
                    T,
                    TypePairCV<float, P2d::Matrixf>,
@@ -71,7 +79,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
   imgs_right.push_back(right_1);
 
   // Useful to initialize py array data
-  py::scoped_interpreter guard{};
+  ensure_python_interpreter();
 
   // Initialized minimal and maximal disparity grids
   std::vector<float> data_min_row(25, -1.);
@@ -113,6 +121,9 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
   // correlation method
   std::string matching_cost_method = "mutual_information";
 
+  // incomplete_disparity_range rule
+  bool incomplete_disparity_range = false;
+
   SUBCASE("Cost surface of top left point") {
     py::array_t<uint8_t> criteria_values =
         load_criteria_dataarray(data_path + "/data/top_left_criteria.bin", cv_size);
@@ -120,7 +131,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
 
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
         cv_values, position2d_to_index(pixel, cv_size), cv_size);
@@ -139,6 +150,9 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     check_inside_eigen_element<CostSurfaceType>(cost_surface, cost_surface_gt);
   }
 
+  // center_criteria.bin: at pixel (2, 2) some disparities are invalid (criteria != 0), others
+  // valid. incomplete_disparity_range is false (default above): MI is still computed for valid
+  // disparities.
   SUBCASE("Cost surface of center point") {
     py::array_t<uint8_t> criteria_values =
         load_criteria_dataarray(data_path + "/data/center_criteria.bin", cv_size);
@@ -146,7 +160,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -154,11 +168,36 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
 
     CostSurfaceType cost_surface_gt(disp_range_row.size(), disp_range_col.size());
 
+    // INIT_VALUE_CV where the disparity is invalid; MI scores elsewhere (compare SUBCASE below).
     // clang-format off
     cost_surface_gt << INIT_VALUE_CV, 0.22478750958935989, 0.22478750958935989, 0.072780225783732888, INIT_VALUE_CV,
                        INIT_VALUE_CV, 0.22478750958935989, 0.10218717094933361, 0.37887883713522919, INIT_VALUE_CV, 
                        INIT_VALUE_CV, 0.0072146184745172093, 0.22478750958935989, 0.0072146184745172093, INIT_VALUE_CV;
     // clang-format on
+
+    CHECK(cv_values.size() == cv_size.size());
+    check_inside_eigen_element<CostSurfaceType>(cost_surface, cost_surface_gt);
+  }
+
+  // Same fixture and pixel as above, but incomplete_disparity_range skips the whole point.
+  SUBCASE("Cost surface of center point with incomplete_disparity_range") {
+    py::array_t<uint8_t> criteria_values =
+        load_criteria_dataarray(data_path + "/data/center_criteria.bin", cv_size);
+
+    incomplete_disparity_range = true;
+
+    compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
+                             imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
+                             disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
+                             step, matching_cost_method, incomplete_disparity_range);
+
+    pixel = Position2D(2, 2);
+    CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
+        cv_values, position2d_to_index(pixel, cv_size), cv_size);
+
+    // No MI computed: cost surface stays at the initial fill (no scores like in the SUBCASE above).
+    CostSurfaceType cost_surface_gt =
+        CostSurfaceType::Constant(disp_range_row.size(), disp_range_col.size(), INIT_VALUE_CV);
 
     CHECK(cv_values.size() == cv_size.size());
     check_inside_eigen_element<CostSurfaceType>(cost_surface, cost_surface_gt);
@@ -173,7 +212,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
     // Get a view on cv values
     auto cv_values_view = cv_values.template unchecked<4>();
 
@@ -219,7 +258,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -263,7 +302,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
 
     pixel = Position2D(1, 1);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -334,7 +373,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -453,7 +492,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -560,7 +599,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
 
     pixel = Position2D(2, 2);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -635,7 +674,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
     compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                              imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                              disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                             step, matching_cost_method);
+                             step, matching_cost_method, incomplete_disparity_range);
 
     pixel = Position2D(1, 0);
     CostSurfaceType cost_surface = get_cost_surface<CostVolumeType, CostVolumeType>(
@@ -663,7 +702,7 @@ TEST_CASE_TEMPLATE("Test compute_cost_volumes_cpp method with mutual information
         compute_cost_volumes_cpp(img_left, min_disp_row, max_disp_row, min_disp_col, max_disp_col,
                                  imgs_right, cv_values, criteria_values, cv_size, disp_range_row,
                                  disp_range_col, offset_cv_img_row, offset_cv_img_col, window_size,
-                                 step, matching_cost_method),
+                                 step, matching_cost_method, incomplete_disparity_range),
         "Unknown correlation method: wrong_matching_cost_method", std::invalid_argument);
   }
 };

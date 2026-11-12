@@ -493,6 +493,17 @@ def all_same(iterable: Iterable) -> bool:
     return len(set(iterable)) == 1
 
 
+def is_incomplete_disparity_range_enabled(cfg: dict) -> bool:
+    """
+    Return True if the incomplete_disparity_range rule is activated in the configuration.
+
+    :param cfg: configuration with a completed skip_mode section
+    :return: True if the incomplete_disparity_range rule is present
+    """
+    rules = cfg.get("skip_mode", {}).get("rules", [])
+    return any(rule.get("type") == "incomplete_disparity_range" for rule in rules)
+
+
 def build_usable_data_mask(disp_data: NDArray, nodata: float | None) -> NDArray[np.bool_]:
     """
     Build a boolean mask indicating which elements of the input array are usable.

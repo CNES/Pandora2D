@@ -191,23 +191,126 @@ TEST_CASE("Test get_index_right method") {
   }
 }
 
+// In a criteria cost surface, 0 means no criterion is raised (disparity valid);
+// any non-zero value means at least one criterion is raised (disparity invalid).
 TEST_CASE("Test has_only_non_zero_elements method") {
   P2d::MatrixUI mat(3, 3);
   ;
 
   SUBCASE("Test a vector with only non zero elements") {
-    mat << 1, 2, 3, 4, 3, 1, 2, 1, 4;
+    // clang-format off
+    mat << 1, 2, 3,
+           4, 3, 1,
+           2, 1, 4;
+    // clang-format on
     CHECK(all_non_zero_elements(mat) == true);
   }
 
   SUBCASE("Test a vector with some zero elements") {
-    mat << 1, 0, 0, 4, 3, 0, 2, 1, 0;
+    // clang-format off
+    mat << 1, 0, 0,
+           4, 3, 0,
+           2, 1, 0;
+    // clang-format on
     CHECK(all_non_zero_elements(mat) == false);
   }
 
   SUBCASE("Test a vector with only zero elements") {
     P2d::MatrixUI mat_zero = P2d::MatrixUI::Zero(3, 3);
     CHECK(all_non_zero_elements(mat_zero) == false);
+  }
+}
+
+TEST_CASE("Test any_non_zero_element method") {
+  P2d::MatrixUI mat(3, 3);
+
+  SUBCASE("Test a matrix with only non zero elements") {
+    // clang-format off
+    mat << 1, 2, 3,
+           4, 3, 1,
+           2, 1, 4;
+    // clang-format on
+    CHECK(any_non_zero_element(mat) == true);
+  }
+
+  SUBCASE("Test a matrix with only one non zero element") {
+    // clang-format off
+    mat << 0, 0, 0,
+           0, 3, 0,
+           0, 0, 0;
+    // clang-format on
+    CHECK(any_non_zero_element(mat) == true);
+  }
+
+  SUBCASE("Test a matrix with only zero elements") {
+    P2d::MatrixUI mat_zero = P2d::MatrixUI::Zero(3, 3);
+    CHECK(any_non_zero_element(mat_zero) == false);
+  }
+}
+
+TEST_CASE("Test is_point_skipped method") {
+  P2d::MatrixUI mat(3, 3);
+
+  SUBCASE("Test a fully valid cost surface") {
+    mat = P2d::MatrixUI::Zero(3, 3);
+    // Computed when incomplete_disparity_range is false.
+    CHECK(is_point_skipped(mat, false) == false);
+    // Still computed when incomplete_disparity_range is true (full user range on 3x3 surface).
+    CHECK(is_point_skipped(mat, true, 0, 2, 0, 2) == false);
+  }
+
+  SUBCASE("Test a partially invalid cost surface") {
+    // clang-format off
+    mat << 0, 0, 0,
+           0, 3, 0,
+           0, 0, 0;
+    // clang-format on
+    CHECK(is_point_skipped(mat, false) == false);  // one invalid disparity does not skip the point
+    CHECK(is_point_skipped(mat, true, 0, 2, 0, 2) == true);  // one invalid disparity skips the point
+  }
+
+  SUBCASE("Test a fully invalid cost surface") {
+    // clang-format off
+    mat << 1, 2, 3,
+           4, 3, 1,
+           2, 1, 4;
+    // clang-format on
+    // Skipped when incomplete_disparity_range is false.
+    CHECK(is_point_skipped(mat, false) == true);
+    // Skipped when incomplete_disparity_range is true.
+    CHECK(is_point_skipped(mat, true, 0, 2, 0, 2) == true);
+  }
+
+  SUBCASE("Test an invalid disparity only in the refinement margins") {
+    // clang-format off
+    mat << 1, 1, 1,
+           1, 0, 1,
+           1, 1, 1;
+    // clang-format on
+    // User range is the center cell only (indices 1,1), which is valid.
+    CHECK(is_point_skipped(mat, false, 1, 1, 1, 1) == false);
+    CHECK(is_point_skipped(mat, true, 1, 1, 1, 1) == false);
+  }
+
+  SUBCASE("Test an invalid disparity in the user range") {
+    // clang-format off
+    mat << 0, 0, 0,
+           0, 3, 0,
+           0, 0, 0;
+    // clang-format on
+    // false still looks at the whole surface, which is not fully invalid.
+    CHECK(is_point_skipped(mat, false, 1, 1, 1, 1) == false);
+    // true looks at the user range only (center), which is invalid.
+    CHECK(is_point_skipped(mat, true, 1, 1, 1, 1) == true);
+  }
+
+  SUBCASE("Test per-pixel user range on a larger surface") {
+    P2d::MatrixUI large_mat = P2d::MatrixUI::Zero(5, 5);
+    large_mat(4, 4) = 2;
+    // Invalid disparity outside a reduced user range must not skip the point.
+    CHECK(is_point_skipped(large_mat, true, 0, 2, 0, 2) == false);
+    // Same invalid cell is inside a user range that covers it.
+    CHECK(is_point_skipped(large_mat, true, 0, 4, 0, 4) == true);
   }
 }
 

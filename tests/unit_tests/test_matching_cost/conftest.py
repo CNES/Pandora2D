@@ -144,7 +144,11 @@ def create_image():
 def make_dataset():
     """Fixture factory to create an image dataset (with mask and disparity grids) from a numpy array."""
 
-    def inner(data):
+    def inner(data, col_disparity=None, row_disparity=None):
+        if col_disparity is None:
+            col_disparity = {"init": 1, "range": 1}
+        if row_disparity is None:
+            row_disparity = {"init": -1, "range": 1}
         dataset = xr.Dataset(
             {
                 "im": (["row", "col"], data),
@@ -162,8 +166,21 @@ def make_dataset():
                 "transform": Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
             },
         )
-        dataset.pipe(add_disparity_grid, {"init": 1, "range": 1}, {"init": -1, "range": 1})
+        dataset.pipe(add_disparity_grid, col_disparity, row_disparity)
         return dataset
+
+    return inner
+
+
+@pytest.fixture()
+def make_dataset_with_variable_initial_disparity(make_dataset, correct_grid, second_correct_grid):
+    """Fixture factory to create an image dataset with variable initial disparities on both axes."""
+
+    def inner(data):
+        """Create a dataset with variable initial disparities and a search range of one pixel."""
+        return make_dataset(
+            data, col_disparity={**second_correct_grid, "range": 1}, row_disparity={**correct_grid, "range": 1}
+        )
 
     return inner
 

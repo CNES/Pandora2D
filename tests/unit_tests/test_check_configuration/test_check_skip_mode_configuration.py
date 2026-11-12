@@ -24,7 +24,11 @@ Test check skip mode configuration
 import pytest
 from json_checker import DictCheckerError
 
-from pandora2d.check_configuration import build_default_skip_mode_configuration, check_skip_mode_section
+from pandora2d.check_configuration import (
+    build_default_skip_mode_configuration,
+    check_conf,
+    check_skip_mode_section,
+)
 
 
 class TestCheckSkipMode:
@@ -131,3 +135,45 @@ class TestCheckSkipMode:
 
         assert cfg["skip_mode"]["type"] == mode_type
         assert cfg["skip_mode"]["rules"] == build_default_skip_mode_configuration()["skip_mode"]["rules"]
+
+
+class TestIncompleteDisparityRangeWithMatchingCost:
+    """
+    Description : Test that incomplete_disparity_range rule is forbidden with pandora matching cost methods.
+    """
+
+    @pytest.fixture()
+    def configuration(self, correct_input_cfg, correct_pipeline_without_refinement, correct_skip_mode):
+        return {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            **correct_skip_mode,
+            "output": {"path": "here"},
+        }
+
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python"])
+    @pytest.mark.parametrize("mode_type", ["custom", "fast", "complete"])
+    def test_pandora_method_raises_exception(self, configuration, pandora2d_machine, mode_type):
+        """
+        Description : incomplete_disparity_range cannot be used with a pandora matching cost method.
+        """
+        configuration["skip_mode"]["type"] = mode_type
+
+        with pytest.raises(ValueError, match="incomplete_disparity_range rule is not available"):
+            check_conf(configuration, pandora2d_machine)
+
+    @pytest.mark.parametrize("matching_cost_method", ["zncc", "zncc-optim-1", "zncc-optim-2", "mutual_information"])
+    def test_cpp_method_is_accepted(self, configuration, pandora2d_machine):
+        """
+        Description : incomplete_disparity_range can be used with a cpp matching cost method.
+        """
+        check_conf(configuration, pandora2d_machine)
+
+    @pytest.mark.parametrize("matching_cost_method", ["sad", "ssd", "zncc_python"])
+    def test_pandora_method_without_skip_mode(self, configuration, pandora2d_machine):
+        """
+        Description : Without skip_mode section, pandora matching cost methods are accepted.
+        """
+        del configuration["skip_mode"]
+
+        check_conf(configuration, pandora2d_machine)

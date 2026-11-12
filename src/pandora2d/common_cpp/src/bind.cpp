@@ -26,6 +26,7 @@ This module contains functions associated to the binding pybind of cpp common to
 #include <vector>
 
 #include "cost_volume.hpp"
+#include "margins.hpp"
 #include "pandora2d_type.hpp"
 
 using namespace pybind11::literals;
@@ -42,4 +43,12 @@ PYBIND11_MODULE(common_bind, m) {
       .def_property_readonly("nb_disps", &CostVolumeSize::nb_disps, R"mydelimiter(
             Returns the disparity number : nb_disp_row * nb_disp_col.
             )mydelimiter");
+
+  pybind11::class_<Margins>(m, "Margins")
+      .def(pybind11::init<int, int, int, int>(), pybind11::arg("left"), pybind11::arg("up"),
+           pybind11::arg("right"), pybind11::arg("down"))
+      .def_readwrite("left", &Margins::left)
+      .def_readwrite("up", &Margins::up)
+      .def_readwrite("right", &Margins::right)
+      .def_readwrite("down", &Margins::down);
 }

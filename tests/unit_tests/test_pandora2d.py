@@ -26,6 +26,7 @@ Test state_machine
 
 import copy
 import json
+import logging
 from importlib.metadata import version
 
 import pytest
@@ -40,6 +41,39 @@ class TestPandora2D:
     """
     TestCheckJson class allows to test all the methods in the class CheckJson
     """
+
+    @pytest.fixture()
+    def input_config(self, left_img_path, right_img_path):
+        """Left and right images with a constant disparity range."""
+        return {
+            "left": {"img": left_img_path, "nodata": -9999},
+            "right": {"img": right_img_path, "nodata": -9999},
+            "col_disparity": {"init": 1, "range": 2},
+            "row_disparity": {"init": 1, "range": 2},
+        }
+
+    @pytest.fixture(
+        params=[
+            pytest.param(False, id="without skip_mode"),
+            pytest.param(True, id="with incomplete_disparity_range"),
+        ]
+    )
+    def incomplete_disparity_range_configuration(self, request, input_config):
+        """Pipeline configuration, with or without the incomplete_disparity_range rule."""
+        enabled = request.param
+        configuration = {
+            "input": input_config,
+            "pipeline": {
+                "matching_cost": {"matching_cost_method": "zncc", "window_size": 5},
+                "disparity": {"disparity_method": "wta", "invalid_disparity": -99},
+            },
+        }
+        if enabled:
+            configuration["skip_mode"] = {
+                "type": "custom",
+                "rules": [{"type": "incomplete_disparity_range"}],
+            }
+        return configuration, enabled
 
     @staticmethod
     def test_run_pandora(correct_pipeline, false_pipeline_mc, false_pipeline_disp) -> None:
@@ -61,18 +95,12 @@ class TestPandora2D:
             pandora2d_machine.check_conf(false_cfg_disp)
 
     @staticmethod
-    def test_run_prepare(left_img_path, right_img_path) -> None:
+    def test_run_prepare(input_config) -> None:
         """
         Test run_prepare function
         """
         pandora2d_machine = state_machine.Pandora2DMachine()
 
-        input_config = {
-            "left": {"img": left_img_path, "nodata": -9999},
-            "right": {"img": right_img_path, "nodata": -9999},
-            "col_disparity": {"init": 1, "range": 2},
-            "row_disparity": {"init": 1, "range": 2},
-        }
         img_left, img_right = create_datasets_from_inputs(input_config=input_config)
 
         pandora2d_machine.run_prepare(img_left, img_right, input_config)
@@ -138,6 +166,26 @@ class TestPandora2D:
         pandora2d_machine.check_conf(pipeline_cfg)
 
         assert pandora2d_machine.margins_img.global_margins == expected
+
+    def test_matching_cost_prepare_incomplete_disparity_range(
+        self, input_config, incomplete_disparity_range_configuration, caplog
+    ) -> None:
+        """
+        Test that matching_cost_prepare gives the incomplete_disparity_range information to the cost volumes.
+        """
+        cfg, expected = incomplete_disparity_range_configuration
+        img_left, img_right = create_datasets_from_inputs(input_config=input_config)
+
+        pandora2d_machine = state_machine.Pandora2DMachine()
+        pandora2d_machine.check_conf(cfg)
+        cfg["pipeline"] = pandora2d_machine.pipeline_cfg["pipeline"]
+        pandora2d_machine.run_prepare(img_left, img_right, cfg)
+
+        with caplog.at_level(logging.INFO):
+            pandora2d_machine.matching_cost_prepare(cfg, "matching_cost")
+
+        assert pandora2d_machine.matching_cost_.cost_volumes.attrs["incomplete_disparity_range"] is expected
+        assert ("user disparity range valid will be computed" in caplog.text) is expected
 
     def test_version_in_output_config(
         self, run_pipeline, correct_input_cfg, correct_pipeline_without_refinement
