@@ -35,7 +35,7 @@ from json_checker.core.exceptions import MissKeyCheckerError
 import pandora2d
 from pandora2d import Pandora2DMachine
 from pandora2d.check_configuration import check_conf
-from pandora2d.img_tools import create_datasets_from_inputs
+from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 
 
 def remove_extra_keys(extended: dict, reference: dict) -> dict:
@@ -287,6 +287,7 @@ def test_multiband(run_pipeline, correct_multiband_input_cfg, correct_pipeline_w
     assert list(result["pipeline"].keys()) == list(configuration["pipeline"].keys()), "Pipeline order not respected"
 
 
+@pytest.mark.additional_functional_test
 def test_optical_flow_configuration(run_pipeline, correct_input_cfg, correct_pipeline_with_optical_flow, tmp_path):
     """
     Description : Test optical_flow configuration has a window_size and a step identical to matching_cost step.
@@ -390,6 +391,120 @@ def test_expert_mode(
     if output_expert_dir.exists():
         file_extensions = [f.suffix for f in output_expert_dir.iterdir() if f.is_file()]
         assert set(file_extensions) == set(ground_truth)
+
+
+def _cost_volumes_after_matching_cost(configuration):
+    """Run check_conf and the matching cost step, then return the cost volumes."""
+    pandora2d_machine = Pandora2DMachine()
+    check_conf(configuration, pandora2d_machine)
+
+    configuration["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+    roi = get_roi_processing(
+        configuration["ROI"],
+        configuration["input"]["col_disparity"],
+        configuration["input"]["row_disparity"],
+    )
+    img_left, img_right = create_datasets_from_inputs(input_config=configuration["input"], roi=roi)
+
+    pandora2d_machine.run_prepare(img_left, img_right, configuration)
+    pandora2d_machine.run("matching_cost", configuration)
+    return pandora2d_machine.cost_volumes
+
+
+@pytest.fixture
+def incomplete_disparity_range_corner_roi():
+    """Corner ROI for testing incomplete_disparity_range."""
+    return {"col": {"first": 0, "last": 20}, "row": {"first": 0, "last": 20}}
+
+
+def test_incomplete_disparity_range_leaves_invalid_points_unchanged(
+    correct_input_cfg, correct_pipeline_without_refinement, incomplete_disparity_range_corner_roi
+):
+    """
+    With incomplete_disparity_range, cost-volume points that have at least one invalid disparity
+    stay at the initial fill. Without the rule, those points are computed on their valid disparities.
+
+    The corner ROI includes the left border (fully invalid) and, just inside it, points whose
+    negative disparities fall outside the right image.
+    """
+    # Shared pipeline and corner ROI; incomplete_disparity_range false (rule not set).
+    base_configuration = {
+        **correct_input_cfg,
+        **correct_pipeline_without_refinement,
+        "ROI": incomplete_disparity_range_corner_roi,
+        "output": {"path": "relative"},
+    }
+    with_skip_mode = deepcopy(base_configuration)
+    # Same config with incomplete_disparity_range: partially invalid points are not computed at all.
+    with_skip_mode["skip_mode"] = {"type": "custom", "rules": [{"type": "incomplete_disparity_range"}]}
+
+    cost_volumes_with_skip_mode = _cost_volumes_after_matching_cost(with_skip_mode)
+    cost_volumes_without_skip_mode = _cost_volumes_after_matching_cost(base_configuration)
+
+    # Get the cost volume criteria.
+    criteria = cost_volumes_with_skip_mode["criteria"].data
+    invalid_disparity = criteria != 0  # invalid when the criterion is non-zero
+    # True at (row, col) if invalid_disparity is True for at least one disparity, False otherwise.
+    has_invalid_disparity = np.any(invalid_disparity, axis=(-2, -1))
+    # True where the point has both valid and invalid disparities in their cost surface.
+    partially_invalid = has_invalid_disparity & ~np.all(invalid_disparity, axis=(-2, -1))
+    assert partially_invalid.any()  # at least one partially invalid point
+
+    # incomplete_disparity_range true: skipped points are never written by C++; they stay at initial fill (0).
+    assert np.all(cost_volumes_with_skip_mode["cost_volumes"].data[has_invalid_disparity] == 0)
+    # incomplete_disparity_range false: at least one cost is non-zero on those same points.
+    assert np.any(cost_volumes_without_skip_mode["cost_volumes"].data[has_invalid_disparity] != 0)
+
+
+def test_incomplete_disparity_range_with_variable_initial_grids(
+    left_img_path,
+    right_img_path,
+    correct_grid,
+    second_correct_grid,
+    correct_pipeline_without_refinement,
+    incomplete_disparity_range_corner_roi,
+):
+    """
+    Functional test: With incomplete_disparity_range and variable initial disparity grids,
+    the pipeline correctly skips or computes pixels based on whether invalid disparities
+    fall within their individual user ranges.
+
+    Detailed per-pixel behavior is covered by unit test:
+    test_incomplete_disparity_range_with_variable_initial_grids in TestIncompleteDisparityRange.
+    """
+    base_configuration = {
+        "input": {
+            "left": {"img": left_img_path, "nodata": "NaN"},
+            "right": {"img": right_img_path},
+            "col_disparity": second_correct_grid,
+            "row_disparity": correct_grid,
+        },
+        **correct_pipeline_without_refinement,
+        "ROI": incomplete_disparity_range_corner_roi,
+        "output": {"path": "relative"},
+    }
+    with_skip_mode = deepcopy(base_configuration)
+    with_skip_mode["skip_mode"] = {"type": "custom", "rules": [{"type": "incomplete_disparity_range"}]}
+
+    cost_volumes_with_skip_mode = _cost_volumes_after_matching_cost(with_skip_mode)
+    cost_volumes_without_skip_mode = _cost_volumes_after_matching_cost(base_configuration)
+
+    # Get the cost volume criteria.
+    criteria = cost_volumes_with_skip_mode["criteria"].data
+    invalid_disparity = criteria != 0  # invalid when the criterion is non-zero
+    # True at (row, col) if invalid_disparity is True for at least one disparity, False otherwise.
+    has_invalid_disparity = np.any(invalid_disparity, axis=(-2, -1))
+    # True where the point has both valid and invalid disparities in their cost surface.
+    partially_invalid = has_invalid_disparity & ~np.all(invalid_disparity, axis=(-2, -1))
+    assert partially_invalid.any()  # at least one partially invalid point
+
+    with_partial = cost_volumes_with_skip_mode["cost_volumes"].data[partially_invalid]
+    without_partial = cost_volumes_without_skip_mode["cost_volumes"].data[partially_invalid]
+    # incomplete_disparity_range true: partially invalid points differ from incomplete_disparity_range false.
+    assert np.any(with_partial != without_partial)
+    # incomplete_disparity_range false: at least one cost is non-zero on those same points.
+    # isfinite excludes -inf set by set_out_of_disparity_range_to_other_value outside the pixel range.
+    assert np.any(np.isfinite(without_partial) & (without_partial != 0))
 
 
 class TestAttributes:
@@ -748,6 +863,7 @@ class TestDeformationGridMode:
             **{"output": {"path": str(tmp_path), "deformation_grid": {"init_pixel_conv_grid": init_pixel_conv_grid}}},
         }
 
+    @pytest.mark.additional_functional_test
     @pytest.mark.parametrize("init_pixel_conv_grid", [[0, 0], [0.5, 0.5]])
     def test_deformation_grid_pipeline(self, configuration, run_pipeline, tmp_path):
         """
@@ -771,6 +887,7 @@ class TestDataSamplesOutputConfigReusability:  # pylint: disable=too-few-public-
     Test that output configurations from data_samples pipelines can be re-executed.
     """
 
+    @pytest.mark.additional_functional_test
     @pytest.mark.parametrize("config_data", list(filelist_parametrize_generator()))
     def test_output_config_can_be_reused(self, run_pipeline, tmp_path, config_data, cones_support_files):
         """

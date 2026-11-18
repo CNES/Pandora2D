@@ -124,12 +124,6 @@ PYBIND11_MODULE(interpolation_filter_bind, m) {
             :return: an array of interpolator coefficients whose size depends on the filter margins
             :rtype: np.ndarray
             )mydelimiter");
-
-  py::class_<Margins>(m, "Margins")
-      .def_readwrite("up", &Margins::up)
-      .def_readwrite("down", &Margins::down)
-      .def_readwrite("left", &Margins::left)
-      .def_readwrite("right", &Margins::right);
 }
 
 // Compilation command

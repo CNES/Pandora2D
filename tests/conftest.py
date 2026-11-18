@@ -38,6 +38,21 @@ from pytest import DoctestItem
 import pandora2d
 
 
+@pytest.fixture(autouse=True, scope="module")
+def prf_module_tracer():
+    """
+    Override the module-level fixture of the pytest-monitor plugin.
+
+    The original fixture accesses `request.node._nodeid`, a private attribute removed in recent
+    versions of pytest, which raises an AttributeError at the teardown of every test module.
+    As pytest-monitor is no longer maintained, this fixture shadows it (same name) with a no-op.
+
+    Only the per-test (function-level) metrics are used by the resource tests, so no
+    module-level metrics are lost. Function-level metrics are still collected by the plugin.
+    """
+    yield
+
+
 def pytest_collection_modifyitems(config, items):
     """
     Update marker collections

@@ -748,6 +748,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
             "row",
             "col",
             "pixel_convention",
+            "invalid_disp",
             "row_grid_gt",
             "col_grid_gt",
         ],
@@ -760,6 +761,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.arange(5),
                 np.arange(5),
                 [0, 0],
+                -9999,
                 np.array(
                     [
                         [0.0, 0.0, 0.0, 0.0, 0.0],
@@ -788,20 +790,58 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
+                -9999,
                 np.array([[0.5, 0.5, 1.5, 2.5], [5.5, 6.5, 2.5, 4.5], [2.5, 3.5, 4.5, 4.5]]),
                 np.array([[3.5, 2.5, 3.5, 7.5], [1.5, 2.5, 4.5, 9.5], [0.5, 2.5, 2.5, 5.5]]),
                 id="Pixel convention = [0.5,0.5]",
             ),
+            pytest.param(
+                np.array([[0.0, -9999, 1.0, 2.0], [-9999, 5.0, -9999, 3.0], [0.0, 1.0, 2.0, -9999]]),
+                np.array([[3.0, -9999, 1.0, 4.0], [-9999, 1.0, -9999, 6.0], [0.0, 1.0, 0.0, -9999]]),
+                np.zeros((3, 4)),
+                np.zeros((3, 4, 10)),
+                np.arange(3),
+                np.arange(4),
+                [0.5, 0.5],
+                -9999,
+                np.array([[0.5, -9999, 1.5, 2.5], [-9999, 6.5, -9999, 4.5], [2.5, 3.5, 4.5, -9999]]),
+                np.array([[3.5, -9999, 3.5, 7.5], [-9999, 2.5, -9999, 9.5], [0.5, 2.5, 2.5, -9999]]),
+                id="Integer invalid disparity pixels are ignored",
+            ),
+            pytest.param(
+                np.array([[0.0, np.nan, 1.0, 2.0], [np.nan, 5.0, np.nan, 3.0], [0.0, 1.0, 2.0, np.nan]]),
+                np.array([[3.0, np.nan, 1.0, 4.0], [np.nan, 1.0, np.nan, 6.0], [0.0, 1.0, 0.0, np.nan]]),
+                np.zeros((3, 4)),
+                np.zeros((3, 4, 10)),
+                np.arange(3),
+                np.arange(4),
+                [0.5, 0.5],
+                np.nan,
+                np.array([[0.5, np.nan, 1.5, 2.5], [np.nan, 6.5, np.nan, 4.5], [2.5, 3.5, 4.5, np.nan]]),
+                np.array([[3.5, np.nan, 3.5, 7.5], [np.nan, 2.5, np.nan, 9.5], [0.5, 2.5, 2.5, np.nan]]),
+                id="NaN invalid disparity pixels are ignored",
+            ),
         ],
     )
     def test_convert_disp_to_grid(  # pylint: disable=too-many-positional-arguments, too-many-arguments
-        self, data_row, data_col, data_score, data_validity, row, col, pixel_convention, row_grid_gt, col_grid_gt
+        self,
+        data_row,
+        data_col,
+        data_score,
+        data_validity,
+        row,
+        col,
+        pixel_convention,
+        invalid_disp,
+        row_grid_gt,
+        col_grid_gt,
     ):
         """
         Test the convert_disp_to_grid method
         """
 
         dataset = create_dataset_coords(data_row, data_col, data_score, data_validity, row, col)
+        dataset.attrs.update({"invalid_disp": invalid_disp})
 
         # Check that the conversion of disparity maps into deformation grids is correct
         dataset = common.convert_disp_to_grid(dataset, pixel_convention)
@@ -819,6 +859,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
             "row",
             "col",
             "pixel_convention",
+            "invalid_disp",
             "row_map_gt",
             "col_map_gt",
         ],
@@ -847,6 +888,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.arange(5),
                 np.arange(5),
                 [0, 0],
+                -9999,
                 np.zeros((5, 5)),
                 np.zeros((5, 5)),
                 id="Pixel convention = [0,0]",
@@ -859,9 +901,36 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
+                -9999,
                 np.array([[0.0, 0.0, 1.0, 2.0], [4.0, 5.0, 1.0, 3.0], [0.0, 1.0, 2.0, 2.0]]),
                 np.array([[3.0, 1.0, 1.0, 4.0], [1.0, 1.0, 2.0, 6.0], [0.0, 1.0, 0.0, 2.0]]),
                 id="Pixel convention = [0.5,0.5]",
+            ),
+            pytest.param(
+                np.array([[0.5, 0.5, -9999, 2.5], [5.5, 6.5, 2.5, 4.5], [-9999, 3.5, 4.5, 4.5]]),
+                np.array([[3.5, 2.5, -9999, 7.5], [1.5, 2.5, 4.5, 9.5], [-9999, 2.5, 2.5, 5.5]]),
+                np.zeros((3, 4)),
+                np.zeros((3, 4, 10)),
+                np.arange(3),
+                np.arange(4),
+                [0.5, 0.5],
+                -9999,
+                np.array([[0.0, 0.0, -9999, 2.0], [4.0, 5.0, 1.0, 3.0], [-9999, 1.0, 2.0, 2.0]]),
+                np.array([[3.0, 1.0, -9999, 4.0], [1.0, 1.0, 2.0, 6.0], [-9999, 1.0, 0.0, 2.0]]),
+                id="Integer invalid disparity pixels are ignored",
+            ),
+            pytest.param(
+                np.array([[0.5, 0.5, np.nan, 2.5], [5.5, 6.5, 2.5, 4.5], [np.nan, 3.5, 4.5, 4.5]]),
+                np.array([[3.5, 2.5, np.nan, 7.5], [1.5, 2.5, 4.5, 9.5], [np.nan, 2.5, 2.5, 5.5]]),
+                np.zeros((3, 4)),
+                np.zeros((3, 4, 10)),
+                np.arange(3),
+                np.arange(4),
+                [0.5, 0.5],
+                np.nan,
+                np.array([[0.0, 0.0, np.nan, 2.0], [4.0, 5.0, 1.0, 3.0], [np.nan, 1.0, 2.0, 2.0]]),
+                np.array([[3.0, 1.0, np.nan, 4.0], [1.0, 1.0, 2.0, 6.0], [np.nan, 1.0, 0.0, 2.0]]),
+                id="NaN invalid disparity pixels are ignored",
             ),
         ],
     )
@@ -874,6 +943,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
         row,
         col,
         pixel_convention,
+        invalid_disp,
         row_map_gt,
         col_map_gt,
     ):
@@ -882,6 +952,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
         """
 
         dataset = self.create_dataset_grid(data_row_grid, data_col_grid, data_score, data_validity, row, col)
+        dataset.attrs.update({"invalid_disp": invalid_disp})
 
         # Check that the conversion of deformation grids into disparity maps is correct
         dataset = common.convert_grid_to_disp(dataset, pixel_convention)

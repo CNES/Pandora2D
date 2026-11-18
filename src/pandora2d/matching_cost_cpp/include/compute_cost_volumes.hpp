@@ -30,6 +30,7 @@ This module contains functions associated to the computation of cost volumes in 
 #include <variant>
 
 #include "cost_volume.hpp"
+#include "margins.hpp"
 #include "mutual_information.hpp"
 #include "zncc.hpp"
 
@@ -65,6 +66,68 @@ int interpolated_right_image_index(int subpix, double disp_row, double disp_col)
  * @return true or false
  */
 bool all_non_zero_elements(const P2d::MatrixUI& mat);
+
+/**
+ * @brief Returns true if at least one element is other than 0 in the matrix
+ *
+ * @param mat
+ * @return true or false
+ */
+bool any_non_zero_element(const P2d::MatrixUI& mat);
+
+/**
+ * @brief Compute the first and last cost-volume disparity indices for one pixel's user range.
+ *
+ * For variable initial disparity grids, the interval is derived from the point min/max values.
+ *
+ * min/max grids passed here are already expanded by refinement margins (Python side).
+ * Margins are subtracted back in disparity value space to recover the user range,
+ * then mapped to cost-volume indices via disparity_index().
+ *
+ * @param min_row minimum row disparity value in expanded range
+ * @param max_row maximum row disparity value in expanded range
+ * @param min_col minimum col disparity value in expanded range
+ * @param max_col maximum col disparity value in expanded range
+ * @param disparity_margins refinement margins on cost surface edges
+ * @param subpix subpixel factor
+ * @param disp_range_row cost volume row disparity range
+ * @param disp_range_col cost volume col disparity range
+ * @param user_d_row_start first disparity row index in user range
+ * @param user_d_row_end last disparity row index in user range
+ * @param user_d_col_start first disparity col index in user range
+ * @param user_d_col_end last disparity col index in user range
+ */
+void compute_user_disparity_range_indices(float min_row,
+                                          float max_row,
+                                          float min_col,
+                                          float max_col,
+                                          const Margins& disparity_margins,
+                                          int subpix,
+                                          const P2d::VectorD& disp_range_row,
+                                          const P2d::VectorD& disp_range_col,
+                                          int& user_d_row_start,
+                                          int& user_d_row_end,
+                                          int& user_d_col_start,
+                                          int& user_d_col_end);
+
+/**
+ * @brief Returns true if the cost volumes must not be computed for a point
+ *
+ * @param criteria_cost_surface criteria cost surface of the point
+ * @param incomplete_disparity_range if true, the point is skipped as soon as one disparity of the
+ * user range is invalid, otherwise only if all disparities are invalid
+ * @param user_d_row_start first disparity row index in user range
+ * @param user_d_row_end last disparity row index in user range
+ * @param user_d_col_start first disparity col index in user range
+ * @param user_d_col_end last disparity col index in user range
+ * @return true or false
+ */
+bool is_point_skipped(const P2d::MatrixUI& criteria_cost_surface,
+                      bool incomplete_disparity_range,
+                      int user_d_row_start = 0,
+                      int user_d_row_end = 0,
+                      int user_d_col_start = 0,
+                      int user_d_col_end = 0);
 
 /**
  * @brief Get the index corresponding to the disp_val value in the disparity range
@@ -117,6 +180,9 @@ Correlator<T> make_correlator(const std::string& method) {
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
  * @param matching_cost_method is the method used within the loop
+ * @param incomplete_disparity_range if true, points with at least one invalid disparity in the
+ * user range are not computed
+ * @param disparity_margins refinement margins on the cost surface edges
  */
 template <typename T>
 void compute_cost_volumes_loop(const Eigen::Ref<const P2d::Matrixf>& left,
@@ -134,7 +200,9 @@ void compute_cost_volumes_loop(const Eigen::Ref<const P2d::Matrixf>& left,
                                int offset_cv_img_col,
                                int window_size,
                                const Eigen::Vector2i& step,
-                               const std::string matching_cost_method) {
+                               const std::string matching_cost_method,
+                               bool incomplete_disparity_range,
+                               const Margins& disparity_margins = Margins(0, 0, 0, 0)) {
   auto correlator = make_correlator<T>(matching_cost_method);
 
   P2d::Matrixf left_window;
@@ -152,24 +220,39 @@ void compute_cost_volumes_loop(const Eigen::Ref<const P2d::Matrixf>& left,
   int cost_surface_size = cv_size.nb_disps();
   P2d::MatrixUI criteria_cost_surface(cv_size.nb_disp_row, cv_size.nb_disp_col);
 
+  // User-range disparity indices, reused for each pixel
+  int user_d_row_start = 0;
+  int user_d_row_end = 0;
+  int user_d_col_start = 0;
+  int user_d_col_end = 0;
+
   for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
     for (std::size_t col = 0; col < cv_size.nb_col; ++col) {
       // Compute ind_cv
       ind_cv = (row * cv_size.nb_col + col) * cost_surface_size;
-
-      // Get criteria cost surface to check if the entire cost surface is invalid
-      criteria_cost_surface = get_cost_surface<uint8_t, uint8_t>(criteria_values, ind_cv, cv_size);
-
-      // If the entire cost surface is invalid, we do not compute cost volumes for this point
-      if (all_non_zero_elements(criteria_cost_surface)) {
-        continue;
-      }
 
       // Get local disparity range for pixel (row, col)
       int d_row_start = disparity_index(disp_range_row, min_disp_row_view(row, col));
       int d_row_end = disparity_index(disp_range_row, max_disp_row_view(row, col));
       int d_col_start = disparity_index(disp_range_col, min_disp_col_view(row, col));
       int d_col_end = disparity_index(disp_range_col, max_disp_col_view(row, col));
+
+      // Update user-range disparity indices for this pixel (min/max grids, margins subtracted in
+      // value space).
+      compute_user_disparity_range_indices(
+          min_disp_row_view(row, col), max_disp_row_view(row, col), min_disp_col_view(row, col),
+          max_disp_col_view(row, col), disparity_margins, subpix, disp_range_row, disp_range_col,
+          user_d_row_start, user_d_row_end, user_d_col_start, user_d_col_end);
+
+      // Get criteria cost surface to check which disparities of the point are invalid
+      criteria_cost_surface = get_cost_surface<uint8_t, uint8_t>(criteria_values, ind_cv, cv_size);
+
+      // Skip the point if its entire cost surface is invalid, or if at least one user-range
+      // disparity is invalid with the incomplete_disparity_range rule
+      if (is_point_skipped(criteria_cost_surface, incomplete_disparity_range, user_d_row_start,
+                           user_d_row_end, user_d_col_start, user_d_col_end)) {
+        continue;
+      }
 
       // Window computation for left image for point (row,col)
       left_window = get_window(left, window_size, offset_cv_img_row + row * step[0],
@@ -233,6 +316,9 @@ void compute_cost_volumes_loop(const Eigen::Ref<const P2d::Matrixf>& left,
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
  * @param matching_cost_method unused, template of the main function
+ * @param incomplete_disparity_range if true, points with at least one invalid disparity in the
+ * user range are not computed
+ * @param disparity_margins refinement margins on the cost surface edges
  */
 template <typename T>
 void compute_zncc_cv_opt1(const Eigen::Ref<const P2d::Matrixf>& left,
@@ -250,9 +336,42 @@ void compute_zncc_cv_opt1(const Eigen::Ref<const P2d::Matrixf>& left,
                           int offset_cv_img_col,
                           int window_size,
                           const Eigen::Vector2i& step,
-                          const std::string matching_cost_method) {
+                          const std::string matching_cost_method,
+                          bool incomplete_disparity_range,
+                          const Margins& disparity_margins = Margins(0, 0, 0, 0)) {
   const int half_window = floor(window_size / 2);
   int subpix = sqrt(right.size());
+
+  auto min_disp_row_view = min_disp_row.unchecked<2>();
+  auto max_disp_row_view = max_disp_row.unchecked<2>();
+  auto min_disp_col_view = min_disp_col.unchecked<2>();
+  auto max_disp_col_view = max_disp_col.unchecked<2>();
+
+  // Points to skip are computed once, as disparities are looped over before points
+  Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> points_to_skip(cv_size.nb_row,
+                                                                     cv_size.nb_col);
+
+  // User-range disparity indices, reused for each pixel
+  int user_d_row_start = 0;
+  int user_d_row_end = 0;
+  int user_d_col_start = 0;
+  int user_d_col_end = 0;
+
+  for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
+    for (std::size_t col = 0; col < cv_size.nb_col; ++col) {
+      // Update user-range disparity indices for this pixel (min/max grids, margins subtracted in
+      // value space).
+      compute_user_disparity_range_indices(
+          min_disp_row_view(row, col), max_disp_row_view(row, col), min_disp_col_view(row, col),
+          max_disp_col_view(row, col), disparity_margins, subpix, disp_range_row, disp_range_col,
+          user_d_row_start, user_d_row_end, user_d_col_start, user_d_col_end);
+      int ind_cv = (row * cv_size.nb_col + col) * cv_size.nb_disps();
+      points_to_skip(row, col) =
+          is_point_skipped(get_cost_surface<uint8_t, uint8_t>(criteria_values, ind_cv, cv_size),
+                           incomplete_disparity_range, user_d_row_start, user_d_row_end,
+                           user_d_col_start, user_d_col_end);
+    }
+  }
 
   // Compute left integral images
   // Computation is done in double type to avoid rounding errors
@@ -265,10 +384,6 @@ void compute_zncc_cv_opt1(const Eigen::Ref<const P2d::Matrixf>& left,
   // Declaration of variables used in for loop
   auto cv_mutable_view = cv_values.template mutable_unchecked<4>();
   auto criteria_value_view = criteria_values.template unchecked<4>();
-  auto min_disp_row_view = min_disp_row.unchecked<2>();
-  auto max_disp_row_view = max_disp_row.unchecked<2>();
-  auto min_disp_col_view = min_disp_col.unchecked<2>();
-  auto max_disp_col_view = max_disp_col.unchecked<2>();
 
   int disp_row_value;
   int disp_col_value;
@@ -301,7 +416,7 @@ void compute_zncc_cv_opt1(const Eigen::Ref<const P2d::Matrixf>& left,
 
       for (std::size_t row = 0; row < cv_size.nb_row; ++row) {
         for (std::size_t col = 0; col < cv_size.nb_col; ++col) {
-          if (criteria_value_view(row, col, d_row, d_col) != 0)
+          if (points_to_skip(row, col) || criteria_value_view(row, col, d_row, d_col) != 0)
             continue;
 
           // Skip if this disparity is outside the local range for (row, col)
@@ -350,7 +465,9 @@ using ComputeFunction = std::function<void(const Eigen::Ref<const P2d::Matrixf>&
                                            int,
                                            int,
                                            const Eigen::Vector2i&,
-                                           std::string)>;
+                                           std::string,
+                                           bool,
+                                           const Margins&)>;
 
 /**
  * @brief Compute the cost values with method given as parameter
@@ -371,6 +488,9 @@ using ComputeFunction = std::function<void(const Eigen::Ref<const P2d::Matrixf>&
  * @param window_size size of the correlation window
  * @param step [step_row, step_col]
  * @param method method used to compute cost values
+ * @param incomplete_disparity_range if true, points with at least one invalid disparity in the
+ * user range are not computed
+ * @param disparity_margins refinement margins on the cost surface edges
  */
 template <typename T>
 void compute_cost_volumes_cpp(const Eigen::Ref<const P2d::Matrixf>& left,
@@ -388,7 +508,9 @@ void compute_cost_volumes_cpp(const Eigen::Ref<const P2d::Matrixf>& left,
                               int offset_cv_img_col,
                               int window_size,
                               const Eigen::Vector2i& step,
-                              const std::string& method) {
+                              const std::string& method,
+                              bool incomplete_disparity_range,
+                              const Margins& disparity_margins = Margins(0, 0, 0, 0)) {
   static const std::map<std::string, ComputeFunction<T>> method_map = {
       {"mutual_information", compute_cost_volumes_loop<T>},
       {"zncc-optim-1", compute_zncc_cv_opt1<T>},
@@ -398,7 +520,8 @@ void compute_cost_volumes_cpp(const Eigen::Ref<const P2d::Matrixf>& left,
   if (it != method_map.end()) {
     it->second(left, min_disp_row, max_disp_row, min_disp_col, max_disp_col, right, cv_values,
                criteria_values, cv_size, disp_range_row, disp_range_col, offset_cv_img_row,
-               offset_cv_img_col, window_size, step, method);
+               offset_cv_img_col, window_size, step, method, incomplete_disparity_range,
+               disparity_margins);
   } else {
     throw std::invalid_argument("Unknown correlation method: " + method);
   }

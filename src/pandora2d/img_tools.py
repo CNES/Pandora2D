@@ -25,13 +25,6 @@ This module contains functions associated to raster images.
 
 # mypy: disable-error-code="attr-defined, no-redef"
 # pylint: disable="useless-import-alias,redefined-outer-name"
-# xarray.Coordinates corresponds to the latest version of xarray.
-# xarray.Coordinate corresponds to the version installed by the artifactory.
-# Try/except block to be deleted once the version of xarray has been updated by CNES.
-try:
-    from xarray import Coordinates as Coordinates
-except ImportError:
-    from xarray import Coordinate as Coordinates
 
 import copy
 from math import floor
@@ -483,100 +476,16 @@ def remove_roi_margins(dataset: xr.Dataset, cfg: dict):
     return new_dataset
 
 
-def row_zoom_img(
-    img: np.ndarray,
-    ny: int,
-    subpix: int,
-    coords: Coordinates,
-    ind: int,
-    no_data: float | int,
-    order: int = 1,
-) -> xr.Dataset:
-    """
-    Return a list that contains the shifted right images in row
-
-    This method is temporary, the user can then choose the filter for this function
-
-    :param img: image to shift
-    :param ny: row number in data
-    :param subpix: subpixel precision = (1 or pair number)
-    :param coords: coordinates for output datasets
-    :param ind: index of range(subpix)
-    :param no_data: no_data value in img
-    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
-    :return: an array that contains the shifted right images in row
-    """
-
-    shift = 1 / subpix
-    # For each index, shift the right image for subpixel precision 1/subpix*index
-    data = zoom(img, ((ny * subpix - (subpix - 1)) / float(ny), 1), order=order)[ind::subpix, :]
-
-    # Add a row full of no data at the end of data have the same shape as img
-    # It enables to use Pandora's compute_cost_volume() methods,
-    # which only accept left and right images of the same shape.
-    data = np.pad(data, ((0, 1), (0, 0)), "constant", constant_values=no_data)
-
-    row = np.arange(
-        coords.get("row").values[0] + shift * ind, coords.get("row").values[-1] + 1, step=1
-    )  # type: np.ndarray
-
-    return xr.Dataset(
-        {"im": (["row", "col"], data)},
-        coords={"row": row, "col": coords.get("col")},
-    )
-
-
-def col_zoom_img(
-    img: np.ndarray,
-    nx: int,
-    subpix: int,
-    coords: Coordinates,
-    ind: int,
-    no_data: float | int,
-    order: int = 1,
-) -> xr.Dataset:
-    """
-    Return a list that contains the shifted right images in col
-
-    This method is temporary, the user can then choose the filter for this function
-
-    :param img: image to shift
-    :param nx: col number in data
-    :param subpix: subpixel precision = (1 or pair number)
-    :param coords: coordinates for output datasets
-    :param ind: index of range(subpix)
-    :param no_data: no_data value in img
-    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
-    :return: an array that contains the shifted right images in col
-    """
-
-    shift = 1 / subpix
-    # For each index, shift the right image for subpixel precision 1/subpix*index
-    data = zoom(img, (1, (nx * subpix - (subpix - 1)) / float(nx)), order=order)[:, ind::subpix]
-
-    # Add a col full of no data at the end of data to have the same shape as img
-    # It enables to use Pandora's compute_cost_volume() methods,
-    # which only accept left and right images of the same shape.
-    data = np.pad(data, ((0, 0), (0, 1)), "constant", constant_values=no_data)
-
-    col = np.arange(
-        coords.get("col").values[0] + shift * ind, coords.get("col").values[-1] + 1, step=1
-    )  # type: np.ndarray
-    return xr.Dataset(
-        {"im": (["row", "col"], data)},
-        coords={"row": coords.get("row"), "col": col},
-    )
-
-
 def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order: int = 1) -> list[xr.Dataset]:
     """
-    Return an array that contains the shifted right images
+    Shift the input image by a sub-pixel amount either along rows or columns
+    to generate sub-pixel shifted images.
 
-    :param img_right: Dataset image containing the image im : 2D (row, col) xarray.Dataset
-    :param subpix: subpixel precision = (1 or pair number)
-    :param row: row to shift (otherwise column)
-    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
-    :return: an array that contains the shifted right images
+    :param img_right: input image as an xarray Dataset.
+    :param subpix: matching cost subpix value indicating the number of sub-pixel shifts.
+    :param row: if True, shift along rows; otherwise, shift along columns.
+    :param order: order of the spline interpolation used for shifting.
+    :return: list of xarray Datasets representing the shifted images.
     """
     img_right_shift = [img_right]
 
@@ -584,54 +493,101 @@ def shift_subpix_img(img_right: xr.Dataset, subpix: int, row: bool = True, order
 
         # To avoid propagation of nan in shifted data, we use -9999 instead of nan if necessary
         no_data = convert_no_data(img_right.attrs["no_data_img"])
+        img_data = img_right["im"].data
+        coords = img_right.coords
+        shift = 1 / subpix
 
+        if row:
+            ny = img_right.sizes["row"]
+            zoom_factor = ((ny * subpix - (subpix - 1)) / float(ny), 1)
+        else:
+            nx = img_right.sizes["col"]
+            zoom_factor = (1, (nx * subpix - (subpix - 1)) / float(nx))
+
+        # Zoom the image to obtain sub-pixel shifts
+        zoomed_image = zoom(img_data, zoom_factor, order=order)
+
+        # Extract the image corresponding to the current sub-pixel shift
+        # and create an xarray Dataset with the updated coordinates
         for ind in range(1, subpix):
             if row:
-                img_right_shift.append(
-                    row_zoom_img(
-                        img_right["im"].data,
-                        img_right.sizes["row"],
-                        subpix,
-                        img_right.coords,
-                        ind,
-                        no_data,
-                        order,
-                    ).assign_attrs(img_right.attrs)
+                # We add a row full of no data at the end of data have the same shape as img_right
+                # It enables to use Pandora's compute_cost_volume() methods,
+                # which only accept left and right images of the same shape.
+                data = np.pad(zoomed_image[ind::subpix, :], ((0, 1), (0, 0)), "constant", constant_values=no_data)
+                row_coord = np.arange(
+                    coords.get("row").values[0] + shift * ind, coords.get("row").values[-1] + 1, step=1
+                )
+                dataset = xr.Dataset(
+                    {"im": (["row", "col"], data)}, coords={"row": row_coord, "col": coords.get("col")}
                 )
             else:
-                img_right_shift.append(
-                    col_zoom_img(
-                        img_right["im"].data,
-                        img_right.sizes["col"],
-                        subpix,
-                        img_right.coords,
-                        ind,
-                        no_data,
-                        order,
-                    ).assign_attrs(img_right.attrs)
+                # We add a col full of no data at the end of data to have the same shape as img_right
+                # It enables to use Pandora's compute_cost_volume() methods,
+                # which only accept left and right images of the same shape.
+                data = np.pad(zoomed_image[:, ind::subpix], ((0, 0), (0, 1)), "constant", constant_values=no_data)
+                col_coord = np.arange(
+                    coords.get("col").values[0] + shift * ind, coords.get("col").values[-1] + 1, step=1
                 )
+                dataset = xr.Dataset(
+                    {"im": (["row", "col"], data)}, coords={"row": coords.get("row"), "col": col_coord}
+                )
+
+            img_right_shift.append(dataset.assign_attrs(img_right.attrs))
 
     return img_right_shift
 
 
 def shift_subpix_img_2d(img_right: xr.Dataset, subpix: int, order: int = 1) -> list[xr.Dataset]:
     """
-    Return an array that contains the shifted right images in rows and columns
+    Shift the input image along both rows and columns to generate sub-pixel shifted images.
 
-    :param img_right: Dataset image containing the image im : 2D (row, col) xarray.Dataset
-    :param subpix: subpixel precision = (1 or pair number)
-    :param column: column to shift (otherwise row)
-    :param order: The order of the spline interpolation, default is 1. The order has to be in the range 0-5.
-    :return: an array that contains the shifted right images
+    :param img_right: input image as an xarray Dataset.
+    :param subpix: matching cost subpix value indicating the number of sub-pixel shifts.
+    :param order: order of the spline interpolation used for shifting.
+    :return: list of xarray Datasets representing the shifted images.
     """
+    img_right_shift_2d = [img_right]
 
-    # Row shifted images
-    img_right_shift = shift_subpix_img(img_right, subpix, row=True, order=order)
-    img_right_shift_2d = []
+    if subpix > 1:
 
-    # Columns shifted images
-    for _, img in enumerate(img_right_shift):
-        img_right_shift_2d += shift_subpix_img(img, subpix, row=False, order=order)
+        # To avoid propagation of nan in shifted data, we use -9999 instead of nan if necessary
+        no_data = convert_no_data(img_right.attrs["no_data_img"])
+        ny, nx = img_right.sizes["row"], img_right.sizes["col"]
+        shift = 1 / subpix
+        # Zoom the image along both rows and columns to obtain sub-pixel shifts
+        zoomed_image = zoom(
+            img_right["im"].data,
+            ((ny * subpix - (subpix - 1)) / float(ny), (nx * subpix - (subpix - 1)) / float(nx)),
+            order=order,
+        )
+
+        for row_ind in range(subpix):
+            for col_ind in range(subpix):
+                if row_ind == 0 and col_ind == 0:
+                    continue
+                # Extract the image corresponding to the current 2D sub-pixel shift
+                data = zoomed_image[row_ind::subpix, col_ind::subpix]
+
+                # Add a row and column of no data at the end of the data to match the original image shape
+                # It enables to use Pandora's compute_cost_volume() methods,
+                # which only accept left and right images of the same shape.
+                data = np.pad(
+                    data,
+                    ((0, 1 if data.shape[0] < ny else 0), (0, 1 if data.shape[1] < nx else 0)),
+                    "constant",
+                    constant_values=no_data,
+                )
+                # Update row and column coordinates according to the sub-pixel shift
+                row = img_right.coords.get("row").values + shift * row_ind
+                col = img_right.coords.get("col").values + shift * col_ind
+                # Create a xarray Dataset for the current 2D sub-pixel shifted image
+                img_right_shift_2d.append(
+                    xr.Dataset(
+                        {"im": (["row", "col"], data)},
+                        coords={"row": row, "col": col},
+                    ).assign_attrs(img_right.attrs)
+                )
 
     return img_right_shift_2d
 

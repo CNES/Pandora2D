@@ -150,6 +150,7 @@ def test_image_resampling_warning(make_cfg_for_dichotomy, caplog):
     )
 
 
+@pytest.mark.additional_functional_test
 @pytest.mark.parametrize(
     ("dicho_method", "filter_method"),
     [

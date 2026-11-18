@@ -33,6 +33,8 @@ from pandora2d.constants import Criteria
 from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d.state_machine import Pandora2DMachine
 
+pytestmark = pytest.mark.additional_functional_test
+
 
 @pytest.fixture()
 def ground_truth_criteria_dataarray(left_img_shape):

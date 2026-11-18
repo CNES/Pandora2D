@@ -21,11 +21,7 @@
 
 import numpy as np
 
-class Margins:
-    up: int
-    down: int
-    left: int
-    right: int
+from ..common_cpp.common_bind import Margins
 
 class AbstractFilter:
     def __init__(self) -> None: ...

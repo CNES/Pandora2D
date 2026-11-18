@@ -21,6 +21,8 @@
 This file contains useful function declarations for tests.
 */
 
+#include <cmath>
+
 #include "global_conftest.hpp"
 
 /**
@@ -29,3 +31,21 @@ This file contains useful function declarations for tests.
 auto position2d_to_index(Position2D& pixel, CostVolumeSize& cv_size) -> unsigned int {
   return pixel.row * (cv_size.nb_col * cv_size.nb_disps()) + pixel.col * cv_size.nb_disps();
 };
+
+/**
+ * @brief Compare two float matrices, treating NaN as equal to NaN
+ */
+bool matrixf_equal_with_nan(const P2d::Matrixf& lhs, const P2d::Matrixf& rhs) {
+  if (lhs.rows() != rhs.rows() || lhs.cols() != rhs.cols()) {
+    return false;
+  }
+  for (int row = 0; row < lhs.rows(); ++row) {
+    for (int col = 0; col < lhs.cols(); ++col) {
+      const bool both_nan = std::isnan(lhs(row, col)) && std::isnan(rhs(row, col));
+      if (!both_nan && lhs(row, col) != rhs(row, col)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}

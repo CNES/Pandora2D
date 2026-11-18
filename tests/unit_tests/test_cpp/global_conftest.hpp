@@ -76,4 +76,16 @@ P2d::MatrixX<T> create_normal_matrix(std::size_t size, T mean, T std) {
  */
 auto position2d_to_index(Position2D& pixel, CostVolumeSize& cv_size) -> unsigned int;
 
+/**
+ * @brief Compare two float matrices, treating NaN as equal to NaN
+ *
+ * Eigen operator == is false when both values are NaN. Two elements match when both are NaN or
+ * when their values compare equal. Matrices of different size do not match.
+ *
+ * @param lhs left matrix
+ * @param rhs right matrix
+ * @return true when both matrices have the same size and matching elements
+ */
+bool matrixf_equal_with_nan(const P2d::Matrixf& lhs, const P2d::Matrixf& rhs);
+
 #endif

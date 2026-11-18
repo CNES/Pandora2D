@@ -108,7 +108,7 @@ def test_compute_cost_volumes_passes_resolved_cpp_method(
     correlation_matcher.allocate(left_dataset, right_dataset, matching_cost_config)
     correlation_matcher.compute_cost_volumes(left_dataset, right_dataset)
 
-    assert mock_cpp.call_args.args[-1] == expected_cpp_method
+    assert mock_cpp.call_args.args[-2] == expected_cpp_method
 
 
 def test_unsupported_correlation_method_raises_error(mocker: MockerFixture):

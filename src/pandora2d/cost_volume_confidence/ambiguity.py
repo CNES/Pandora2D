@@ -120,7 +120,7 @@ class Ambiguity(CostVolumeConfidence):
             confidence_method="ambiguity",
             eta_max=self._eta_max,
             eta_step=self._eta_step,
-            normalization=False,
+            normalization={"enable": False},
         )
 
         # Compute ambiguity

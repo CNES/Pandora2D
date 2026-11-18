@@ -26,6 +26,7 @@ This module contains functions associated to the binding pybind of cpp cost volu
 #include <pybind11/stl.h>
 
 #include "compute_cost_volumes.hpp"
+#include "margins.hpp"
 
 using namespace pybind11::literals;
 
@@ -34,7 +35,8 @@ PYBIND11_MODULE(matching_cost_bind, m) {
         "min_disp_row"_a, "max_disp_row"_a, "min_disp_col"_a, "max_disp_col"_a, "right"_a,
         "cv_values"_a, "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
         "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a,
-        "matching_cost_method"_a,
+        "matching_cost_method"_a, "incomplete_disparity_range"_a,
+        "disparity_margins"_a = Margins(0, 0, 0, 0),
         R"mydelimiter(
             Computes the cost values in float32
 
@@ -70,13 +72,18 @@ PYBIND11_MODULE(matching_cost_bind, m) {
             :type step: NDArray[np.integer]
             :param matching_cost_method: correlation method
             :type matching_cost_method: string
+            :param incomplete_disparity_range: if True, points with at least one invalid user-range disparity are not computed
+            :type incomplete_disparity_range: bool
+            :param disparity_margins: refinement margins on the cost surface edges
+            :type disparity_margins: common_bind.Margins
             )mydelimiter");
 
   m.def("compute_cost_volumes_cpp_double", &compute_cost_volumes_cpp<double>, "left"_a.noconvert(),
         "min_disp_row"_a, "max_disp_row"_a, "min_disp_col"_a, "max_disp_col"_a, "right"_a,
         "cv_values"_a, "criteria_values"_a, "cv_size"_a, "disp_range_row"_a, "disp_range_col"_a,
         "offset_cv_img_row"_a, "offset_cv_img_col"_a, "window_size"_a, "step"_a,
-        "matching_cost_method"_a,
+        "matching_cost_method"_a, "incomplete_disparity_range"_a,
+        "disparity_margins"_a = Margins(0, 0, 0, 0),
         R"mydelimiter(
             Computes the cost values in float64
 
@@ -114,5 +121,9 @@ PYBIND11_MODULE(matching_cost_bind, m) {
             :type no_data: float
             :param matching_cost_method: correlation method
             :type matching_cost_method: string
+            :param incomplete_disparity_range: if True, points with at least one invalid user-range disparity are not computed
+            :type incomplete_disparity_range: bool
+            :param disparity_margins: refinement margins on the cost surface edges
+            :type disparity_margins: common_bind.Margins
             )mydelimiter");
 }

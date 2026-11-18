@@ -75,14 +75,14 @@ struct CostVolumeSize {
    *
    * @return unsigned int
    */
-  unsigned int size() { return nb_row * nb_col * nb_disp_row * nb_disp_col; };
+  unsigned int size() const { return nb_row * nb_col * nb_disp_row * nb_disp_col; };
 
   /**
    * @brief Get the disparity number : nb_disp_row * nb_disp_col
    *
    * @return unsigned int
    */
-  unsigned int nb_disps() { return nb_disp_row * nb_disp_col; };
+  unsigned int nb_disps() const { return nb_disp_row * nb_disp_col; };
 
   unsigned int nb_row;       ///< Number of rows on cost_volume element
   unsigned int nb_col;       ///< Number of columns on cost_volume element
@@ -125,8 +125,8 @@ struct Position2D {
 template <typename T, typename U>
 P2d::MatrixX<U> get_cost_surface(const py::array_t<T>& cost_volume,
                                  unsigned int index,
-                                 CostVolumeSize& cv_size) {
-  auto index_to_position = [](unsigned int index, CostVolumeSize& cv_size) -> Position2D {
+                                 const CostVolumeSize& cv_size) {
+  auto index_to_position = [](unsigned int index, const CostVolumeSize& cv_size) -> Position2D {
     int quot = index / (cv_size.nb_col * cv_size.nb_disps());
     int rem = index % (cv_size.nb_col * cv_size.nb_disps());
     return Position2D(quot, rem / cv_size.nb_disps());
