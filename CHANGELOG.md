@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.1 (November 2026)
+
+### Added 
+
+- Added ZNCC auto selection tests with ROI. [#499]
+- Added pytest markers to make functional tests optional. [#459]
+- Added search_new_best_point_on_image method for image resampling. [#482]
+- Added image_resampling method. [#484]
+- Added method to avoid invalid windows in image resampling. [#488]
+- Added skip modes configuration. [#511]
+- Added incomplete disparity range skip mode. [#512]
+
+### Fixed
+
+- Fixed invalid disparities in deformation grid. [#520]
+
+### Changed 
+
+- Optimization of the call to the scipy.zoom method. [#492]
+
 ## 1.2.0 (September 2026)
 
 ### Added
