@@ -557,6 +557,20 @@ class Pandora2DMachine(BaseMachine):
 
         logging.info("Refinement computation...")
 
+        if common.is_score_threshold_enabled(cfg):
+            threshold = common.get_score_threshold_value(cfg)
+            type_measure = self.cost_volumes.attrs["type_measure"]
+            if type_measure == "max":
+                logging.info(
+                    "score_threshold rule is activated: points with correlation score below %s will not be refined.",
+                    threshold,
+                )
+            else:
+                logging.info(
+                    "score_threshold rule is activated: points with correlation score above %s will not be refined.",
+                    threshold,
+                )
+
         if cfg["pipeline"][input_step]["refinement_method"] == "optical_flow":
             logging.warning("The optical flow method is still in an experimental phase.")
             logging.warning("The correlation score map is at a disparity level for the optical flow method.")

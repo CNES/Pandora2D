@@ -31,6 +31,7 @@ from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
 
 import pandora2d.schema as cst_schema
+from pandora2d.constants import Criteria
 from pandora2d.margins import Margins
 
 from . import refinement
@@ -345,6 +346,10 @@ class OpticalFlow(refinement.AbstractRefinement):
         )
 
         idx_to_compute = np.arange(reshaped_left.shape[2]).tolist()
+        # Skip points marked by P2D_SCORE_THRESHOLD when the band is present.
+        if Criteria.P2D_SCORE_THRESHOLD.name in disp_map["validity"].coords["criteria"]:
+            skip_band = disp_map_sub["validity"].sel(criteria=Criteria.P2D_SCORE_THRESHOLD.name).data.flatten()
+            idx_to_compute = [idx for idx in idx_to_compute if skip_band[idx] == 0]
 
         for _ in range(self._iterations):
             computed_drow, computed_dcol, idx_to_compute = self.optical_flow(

@@ -125,10 +125,14 @@ class Dichotomy(refinement.AbstractRefinement):
         cost_values = create_cost_values_map(cost_volumes, disp_map)
 
         refine_on_right_image = self.cfg.get("resampling_type") == "image"
-        criteria_map = (
-            (disp_map["validity"].sel(criteria="partial_validity_mask") == 1).astype(int)  # select invalids
-            | disp_map["validity"].sel(criteria=Criteria.P2D_PEAK_ON_EDGE.name)
-        ).data.astype(np.uint8)
+        skip_refinement_criteria = (disp_map["validity"].sel(criteria="partial_validity_mask") == 1).astype(
+            int
+        ) | disp_map["validity"].sel(criteria=Criteria.P2D_PEAK_ON_EDGE.name)
+        if Criteria.P2D_SCORE_THRESHOLD.name in disp_map["validity"].coords["criteria"]:
+            skip_refinement_criteria = skip_refinement_criteria | disp_map["validity"].sel(
+                criteria=Criteria.P2D_SCORE_THRESHOLD.name
+            )
+        criteria_map = skip_refinement_criteria.data.astype(np.uint8)
 
         subpixel = cost_volumes.attrs["subpixel"]
         cost_volume_type = cost_volumes["cost_volumes"].data.dtype

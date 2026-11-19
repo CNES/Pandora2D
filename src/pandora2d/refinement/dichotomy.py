@@ -159,6 +159,10 @@ class DichotomyPython(refinement.AbstractRefinement):
         row_map = row_map.to_numpy()
         col_map = col_map.to_numpy()
 
+        score_threshold_skip: np.ndarray | None = None
+        if Criteria.P2D_SCORE_THRESHOLD.name in disp_map["validity"].coords["criteria"]:
+            score_threshold_skip = disp_map["validity"].sel(criteria=Criteria.P2D_SCORE_THRESHOLD.name).data.ravel()
+
         # See usage of np.nditer:
         # https://numpy.org/doc/stable/reference/arrays.nditer.html#modifying-array-values
         with np.nditer(
@@ -173,15 +177,21 @@ class DichotomyPython(refinement.AbstractRefinement):
                 ["readonly"],
             ],
         ) as iterators:
-            for cost_volume_surface, (
-                cost_value,
-                disp_row_init,
-                disp_col_init,
-                d_row_min,
-                d_row_max,
-                d_col_min,
-                d_col_max,
-            ) in zip(cost_surfaces, iterators):
+            for point_index, (
+                cost_volume_surface,
+                (
+                    cost_value,
+                    disp_row_init,
+                    disp_col_init,
+                    d_row_min,
+                    d_row_max,
+                    d_col_min,
+                    d_col_max,
+                ),
+            ) in enumerate(zip(cost_surfaces, iterators)):
+
+                if score_threshold_skip is not None and score_threshold_skip[point_index] == 1:
+                    continue
 
                 # Get disparity area & criteria area
                 cost_surface = cost_volume_surface.cost_volumes
