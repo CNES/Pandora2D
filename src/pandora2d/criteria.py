@@ -32,13 +32,20 @@ from scipy.ndimage import binary_dilation
 from pandora2d.constants import Criteria
 from pandora2d.common import build_usable_data_mask, get_disparity_grids
 
+# Set in matching cost for each tested disparity at a given point.
 DISPARITY_INDEPENDENT_CRITERIA = {
     Criteria.P2D_LEFT_BORDER,
     Criteria.P2D_LEFT_NODATA,
     Criteria.P2D_INVALID_MASK_LEFT,
     Criteria.P2D_INVALID_INIT_DISPARITY,
 }
-DISPARITY_DEPENDENT_CRITERIA = set(Criteria) - {Criteria.VALID} - DISPARITY_INDEPENDENT_CRITERIA
+# Filled after the matching cost step on the validity dataset only (disparity step),
+# not in the criteria data array stored alongside the cost volumes.
+VALIDITY_MASK_ONLY_CRITERIA = {Criteria.P2D_SCORE_THRESHOLD, Criteria.P2D_PEAK_ON_EDGE}
+# Flags on the criteria data array that can differ between tested disparities at the same point.
+DISPARITY_DEPENDENT_CRITERIA = (
+    set(Criteria) - {Criteria.VALID} - DISPARITY_INDEPENDENT_CRITERIA - VALIDITY_MASK_ONLY_CRITERIA
+)
 
 
 class FlagArray(np.ndarray):
@@ -503,6 +510,35 @@ def apply_peak_on_edge(
 
     # Update global validity mask according to P2D_PEAK_ON_EDGE band.
     global_validity_mask = (validity_mask_band == 0) & (peak_on_edge_band == 1)
+    validity_mask_band[global_validity_mask] = 1
+
+
+def apply_score_threshold(
+    validity_map: xr.DataArray,
+    correlation_score: NDArray,
+    threshold: float,
+    type_measure: str,
+) -> None:
+    """
+    Raise P2D_SCORE_THRESHOLD for points whose best correlation score does not meet the threshold.
+    Refinement is skipped for these points.
+
+    :param validity_map: 3D validity map
+    :param correlation_score: best correlation score per point (row, col)
+    :param threshold: user threshold from score_threshold skip rule
+    :param type_measure: max or min, from matching cost attrs
+    """
+    score_threshold_band = validity_map.loc[{"criteria": Criteria.P2D_SCORE_THRESHOLD.name}].data
+    validity_mask_band = validity_map.loc[{"criteria": "validity_mask"}].data
+
+    if type_measure == "max":
+        below_threshold = correlation_score < threshold
+    else:
+        below_threshold = correlation_score > threshold
+
+    score_threshold_band[below_threshold] = 1
+
+    global_validity_mask = (validity_mask_band == 0) & (score_threshold_band == 1)
     validity_mask_band[global_validity_mask] = 1
 
 

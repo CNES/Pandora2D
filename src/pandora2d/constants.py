@@ -53,6 +53,10 @@ class Criteria(IntFlag):
     """
     The pixel is invalid : initial disparity of the pixel is invalid.
     """
+    P2D_SCORE_THRESHOLD = auto()
+    """
+    The pixel is invalid for refinement : the correlation score does not meet the configured threshold.
+    """
 
     def is_in(self, array: NDArray):
         """Returns a bool array, where True if Criteria value is part of array element."""

@@ -536,6 +536,15 @@ class Pandora2DMachine(BaseMachine):
             self.dataset_disp_maps["col_map"].data,
         )
 
+        if common.is_score_threshold_enabled(cfg):
+            threshold = common.get_score_threshold_value(cfg)
+            criteria.apply_score_threshold(
+                self.dataset_disp_maps["validity"],
+                self.dataset_disp_maps["correlation_score"].data,
+                threshold,
+                self.cost_volumes.attrs["type_measure"],
+            )
+
     @mem_time_profile(name="Refinement step")
     def refinement_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
