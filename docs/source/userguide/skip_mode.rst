@@ -12,9 +12,8 @@ The section is optional and sits at the same level as ``segment_mode`` or the RO
 When it is absent, no skip mode is active.
 
 .. warning::
-   **Skip mode is still in development.** Currently, only the ``incomplete_disparity_range``
-   skip rule is implemented. Other rules like ``score_threshold`` will be added
-   in future releases. Additional rules may have restrictions or be adjusted as implementation progresses.
+   **Skip mode is still in development.** Additional rules may have restrictions
+   or be adjusted as implementation progresses.
 
 .. warning::
    The ``incomplete_disparity_range`` rule is not compatible with Pandora matching cost
@@ -40,12 +39,15 @@ Configuration and parameters
      - ``fast``, ``complete``, ``custom``
      - Yes
    * - **rules**
-     - Associated rules to activate (``custom``), or to override defaults (``fast``, ``complete``)
+     - | Associated rules to activate (``custom``), or to override defaults (``fast``,
+       | ``complete``)
      - list
      - See available rules
-     - Yes for ``custom``. Optional for ``fast`` and ``complete``
+     - | Yes for ``custom``. Optional for ``fast``
+       | and ``complete``
 
-The ``fast`` mode activates every rule that skips calculations.
+The ``fast`` mode activates every rule that skips calculations
+(``incomplete_disparity_range`` and ``score_threshold`` with default parameters).
 
 .. warning::
    **The ``fast`` skip mode can affect results.** Using skip rules means some points may not have a
@@ -79,7 +81,16 @@ Available rules
      - Description
    * - **incomplete_disparity_range**
      - skip
-     - Rule with no parameter. A point is not computed as soon as at least one disparity of its user search range is invalid. Disparities added by refinement margins are ignored by this check. Without this rule, a point is skipped only if every disparity of its cost surface is invalid.
+     - | Rule with no parameter. A point is not computed as soon as at least one disparity of its user search range is invalid.
+       | Disparities added by refinement margins are ignored by this check.
+       | Without this rule, a point is skipped only if every disparity of its cost surface is invalid.
+   * - **score_threshold**
+     - skip
+     - | Rule with parameter **value** (float, default ``0.5``). Requires a **refinement** step in the pipeline.
+       | After the disparity step, points whose best correlation score does not meet the threshold do not go through refinement.
+       | For correlation metrics where higher is better, refinement is skipped when the score is below the threshold;
+       | for cost metrics where lower is better, refinement is skipped when the score is above the threshold.
+       | The ``P2D_SCORE_THRESHOLD`` band is added to the validity mask.
 
 
 **Examples**
@@ -93,7 +104,7 @@ Available rules
     "skip_mode": {
       "type": "fast",
       "rules": [
-        { "type": "incomplete_disparity_range" }
+        { "type": "score_threshold", "value": 0.4 }
       ]
     }
 
@@ -106,7 +117,8 @@ Available rules
     "skip_mode": {
       "type": "custom",
       "rules": [
-        { "type": "incomplete_disparity_range" }
+        { "type": "incomplete_disparity_range" },
+        { "type": "score_threshold", "value": 0.6 }
       ]
     }
 

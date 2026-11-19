@@ -53,6 +53,9 @@ Below is a summary of each criterion (clic on criterion's name to jump to its de
    * - :ref:`P2D_INVALID_INIT_DISPARITY_explanation`
      - 2⁷ = 128
      - | The initial disparity is invalid
+   * - :ref:`P2D_SCORE_THRESHOLD_explanation`
+     - 2⁸ = 256
+     - | Refinement skipped because the correlation score does not meet the threshold
 
 Detailed Criteria's explanations
 --------------------------------
@@ -205,6 +208,18 @@ the invalid pixels in these initial disparity grids correspond to pixels that co
 
 .. image:: ./Images/criteria/invalid_init_disparity_criteria.drawio.svg
     :align: center
+
+|
+|
+
+.. _P2D_SCORE_THRESHOLD_explanation:
+
+P2D_SCORE_THRESHOLD
+^^^^^^^^^^^^^^^^^^^
+
+When the ``score_threshold`` skip rule is active, refinement is skipped for points whose best
+correlation score does not meet the user threshold (below the threshold for maximization metrics,
+above it for minimization metrics). The criterion marks these points in the validity mask.
 
 |
 |
