@@ -35,6 +35,7 @@ from json_checker.core.exceptions import MissKeyCheckerError
 import pandora2d
 from pandora2d import Pandora2DMachine
 from pandora2d.check_configuration import check_conf
+from pandora2d.constants import Criteria
 from pandora2d.img_tools import create_datasets_from_inputs, get_roi_processing
 
 
@@ -505,6 +506,46 @@ def test_incomplete_disparity_range_with_variable_initial_grids(
     # incomplete_disparity_range false: at least one cost is non-zero on those same points.
     # isfinite excludes -inf set by set_out_of_disparity_range_to_other_value outside the pixel range.
     assert np.any(np.isfinite(without_partial) & (without_partial != 0))
+
+
+def test_score_threshold_keeps_correlation_on_skipped_points(
+    correct_input_cfg, correct_pipeline_with_dichotomy_cpp, tmp_path, score_threshold_custom_skip_mode
+):
+    """
+    With score_threshold, correlation scores of skipped points are unchanged after refinement.
+    """
+    configuration = {
+        **correct_input_cfg,
+        **correct_pipeline_with_dichotomy_cpp,
+        "skip_mode": score_threshold_custom_skip_mode,
+        "output": {"path": str(tmp_path)},
+    }
+    pandora2d_machine = Pandora2DMachine()
+    check_conf(configuration, pandora2d_machine)
+
+    img_left, img_right = create_datasets_from_inputs(input_config=configuration["input"])
+    pandora2d_machine.run_prepare(img_left, img_right, configuration)
+    # Stop after disparity: P2D_SCORE_THRESHOLD is set there, before refinement.
+    pandora2d_machine.run("matching_cost", configuration)
+    pandora2d_machine.run("disparity", configuration)
+
+    invalid_disp = configuration["pipeline"]["disparity"]["invalid_disparity"]
+    scores_after_disparity = pandora2d_machine.dataset_disp_maps["correlation_score"].values.copy()
+    # Points the score_threshold rule asks refinement to skip.
+    skip_mask = (
+        pandora2d_machine.dataset_disp_maps["validity"].sel(criteria=Criteria.P2D_SCORE_THRESHOLD.name).values == 1
+    )
+    valid_scores = scores_after_disparity != invalid_disp
+    # check_mask is True where score_threshold skips the point and the correlation score
+    # is not the invalid disparity fill. The comparison below uses it, so it must select at least one point.
+    check_mask = skip_mask & valid_scores
+    assert check_mask.any()
+
+    pandora2d_machine.run("refinement", configuration)
+    scores_after_refinement = pandora2d_machine.dataset_disp_maps["correlation_score"].values
+    # On skipped points with a valid correlation score, the score after refinement
+    # equals the score computed at the disparity step.
+    np.testing.assert_array_equal(scores_after_disparity[check_mask], scores_after_refinement[check_mask])
 
 
 class TestAttributes:

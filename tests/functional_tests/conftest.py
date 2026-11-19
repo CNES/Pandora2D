@@ -48,6 +48,12 @@ def cones_support_files(left_img_path, right_img_path, correct_grid, mask_path):
 
 
 @pytest.fixture()
+def score_threshold_custom_skip_mode():
+    """Custom skip_mode with score_threshold for ZNCC runs (threshold 0.8, skips most scores)."""
+    return {"type": "custom", "rules": [{"type": "score_threshold", "value": 0.8}]}
+
+
+@pytest.fixture()
 def correct_pipeline_with_optical_flow(matching_cost_method, subpix):
     return {
         "pipeline": {
