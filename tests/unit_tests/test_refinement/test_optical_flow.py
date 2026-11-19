@@ -29,6 +29,7 @@ import xarray as xr
 from json_checker.core.exceptions import DictCheckerError
 
 from pandora2d import common, criteria, disparity, matching_cost, refinement
+from pandora2d.constants import Criteria
 from pandora2d.img_tools import add_disparity_grid
 from pandora2d.margins import Margins
 from pandora2d.refinement.optical_flow import OpticalFlow
@@ -595,6 +596,46 @@ def test_window_size_refinement_method(make_left_right_images, row, col, step_ro
     assert np.array_equal(row, delta_row.shape[1])
     assert np.array_equal(col, delta_col.shape[0])
     assert np.array_equal(col, delta_col.shape[1])
+
+
+@pytest.mark.parametrize(
+    ["row", "col", "step_row", "step_col", "window_size"],
+    [(11, 11, 1, 1, 3)],
+)
+def test_score_threshold_skips_refinement(make_left_right_images, step_row, step_col, window_size):
+    """Points with P2D_SCORE_THRESHOLD keep disparity and score after optical flow refinement."""
+    dataset_img, dataset_img_shift = make_left_right_images
+    cfg_mc = {
+        "pipeline": {
+            "matching_cost": {
+                "matching_cost_method": "zncc_python",
+                "window_size": window_size,
+                "step": [step_row, step_col],
+            }
+        }
+    }
+    dataset_cv = make_cv_dataset(dataset_img, dataset_img_shift, cfg_mc)
+    dataset_disp_map = make_disparity_dataset(dataset_cv, {"disparity_method": "wta", "invalid_disparity": np.nan})
+
+    center_row, center_col = 5, 5
+    row_before = dataset_disp_map["row_map"].values[center_row, center_col]
+    col_before = dataset_disp_map["col_map"].values[center_row, center_col]
+    score_before = dataset_disp_map["correlation_score"].values[center_row, center_col]
+
+    dataset_disp_map["validity"].loc[
+        {"criteria": Criteria.P2D_SCORE_THRESHOLD.name, "row": center_row, "col": center_col}
+    ] = 1
+
+    refinement_class = refinement.AbstractRefinement(
+        {"refinement_method": "optical_flow"}, [step_row, step_col], window_size
+    )  # type: ignore[abstract]
+    delta_col, delta_row, scores = refinement_class.refinement_method(
+        dataset_cv, dataset_disp_map, dataset_img, dataset_img_shift
+    )
+
+    assert delta_row[center_row, center_col] == row_before
+    assert delta_col[center_row, center_col] == col_before
+    assert scores[center_row, center_col] == score_before
 
 
 class TestDisparityGrids:

@@ -27,7 +27,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from pandora2d import refinement
+from pandora2d import criteria, refinement
+from pandora2d.constants import Criteria
 from pandora2d.matching_cost import MatchingCostRegistry
 
 
@@ -263,3 +264,32 @@ def dichotomy_python_instance(config_dichotomy):
 def dichotomy_cpp_instance(config_dichotomy):
     config_dichotomy["refinement_method"] = "dichotomy"
     return refinement.dichotomy_cpp.Dichotomy(config_dichotomy)
+
+
+@pytest.fixture()
+def refinement_method_cost_volumes(zeros_cost_volumes):
+    """Cost volumes for TestRefinementMethod and score_threshold skip tests."""
+    # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
+    # but use coordinates for disp_row and disp_col
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[{"disp_col": [1, 2], "disp_row": 4}] = [8, 9]
+    zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[{"disp_col": [1, 2], "disp_row": 5}] = [10, 8]
+    zeros_cost_volumes["cost_volumes"].isel(row=1, col=0).loc[{"disp_col": [-2, -1, 0], "disp_row": 4}] = [
+        4.9,
+        4.99,
+        5,
+    ]
+    return zeros_cost_volumes
+
+
+@pytest.fixture()
+def refinement_method_disp_map(disp_map, refinement_method_cost_volumes):
+    """Disparity map for TestRefinementMethod and score_threshold skip tests."""
+    cost_volumes = refinement_method_cost_volumes
+    # Remove Criteria.P2D_RIGHT_DISPARITY_OUTSIDE because it invalidates everything:
+    cost_volumes["criteria"].data[Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.is_in(cost_volumes["criteria"])] -= np.uint8(
+        Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
+    )
+    row_disp = cost_volumes.attrs["row_disparity_source"]
+    col_disp = cost_volumes.attrs["col_disparity_source"]
+    disp_map["validity"] = criteria.get_validity_dataset(cost_volumes["criteria"], row_disp, col_disp)["validity"]
+    return disp_map

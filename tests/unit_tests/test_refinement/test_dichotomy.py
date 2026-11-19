@@ -35,6 +35,7 @@ from pytest_mock import MockerFixture
 
 from pandora2d import criteria, refinement
 from pandora2d.constants import Criteria
+from pandora2d.refinement.dichotomy_cpp import create_cost_values_map
 from pandora2d.interpolation_filter.bicubic import BicubicPython
 from pandora2d.interpolation_filter.bicubic_cpp import Bicubic
 from pandora2d.margins import Margins
@@ -282,30 +283,12 @@ class TestRefinementMethod:
     """Test refinement method."""
 
     @pytest.fixture()
-    def cost_volumes(self, zeros_cost_volumes):
-        """Build cost volumes."""
-        # use indexes for row and col to be independent of coordinates which depend on ROI themselves,
-        # but use coordinates for disp_row and disp_col
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[{"disp_col": [1, 2], "disp_row": 4}] = [8, 9]
-        zeros_cost_volumes["cost_volumes"].isel(row=0, col=2).loc[{"disp_col": [1, 2], "disp_row": 5}] = [10, 8]
-        zeros_cost_volumes["cost_volumes"].isel(row=1, col=0).loc[{"disp_col": [-2, -1, 0], "disp_row": 4}] = [
-            4.9,
-            4.99,
-            5,
-        ]
-        return zeros_cost_volumes
+    def cost_volumes(self, refinement_method_cost_volumes):
+        return refinement_method_cost_volumes
 
     @pytest.fixture()
-    def disp_map(self, disp_map, cost_volumes):
-        """Disparity map associated to cost_volumes without Criteria.P2D_RIGHT_DISPARITY_OUTSIDE."""
-        # Remove Criteria.P2D_RIGHT_DISPARITY_OUTSIDE because it invalidates everything:
-        cost_volumes["criteria"].data[Criteria.P2D_RIGHT_DISPARITY_OUTSIDE.is_in(cost_volumes["criteria"])] -= np.uint8(
-            Criteria.P2D_RIGHT_DISPARITY_OUTSIDE
-        )
-        row_disp = cost_volumes.attrs["row_disparity_source"]
-        col_disp = cost_volumes.attrs["col_disparity_source"]
-        disp_map["validity"] = criteria.get_validity_dataset(cost_volumes["criteria"], row_disp, col_disp)["validity"]
-        return disp_map
+    def disp_map(self, refinement_method_disp_map):
+        return refinement_method_disp_map
 
     @pytest.fixture()
     def iterations(self):
@@ -1648,3 +1631,48 @@ class TestChangeDisparityToIndex:
         """Test index_to_disparity_method"""
         result = refinement.dichotomy_cpp.index_to_disparity(map, shift, subpix)
         np.testing.assert_array_equal(result, expected)
+
+
+class TestScoreThresholdSkipRefinement:
+    """Refinement is skipped for points marked by P2D_SCORE_THRESHOLD."""
+
+    @pytest.fixture()
+    def iterations(self):
+        return 1
+
+    @pytest.mark.parametrize(
+        "dichotomy_class, dichotomy_class_str",
+        [
+            pytest.param(refinement.dichotomy.DichotomyPython, "dichotomy_python", id="Dichotomy Python"),
+            pytest.param(refinement.dichotomy_cpp.Dichotomy, "dichotomy", id="Dichotomy C++"),
+        ],
+    )
+    def test_score_threshold_skips_refinement(
+        self,
+        dichotomy_class,
+        dichotomy_class_str,
+        config_dichotomy,
+        refinement_method_cost_volumes,
+        refinement_method_disp_map,
+        left_img,
+        mocker: MockerFixture,
+    ):
+        """Points with P2D_SCORE_THRESHOLD keep disparity and score after refinement."""
+        config_dichotomy["refinement_method"] = dichotomy_class_str
+        dichotomy_instance = dichotomy_class(config_dichotomy)
+        copy_disp_map = copy.deepcopy(refinement_method_disp_map)
+
+        scores_before = create_cost_values_map(refinement_method_cost_volumes, copy_disp_map)
+        row_before = copy_disp_map["row_map"].values
+        col_before = copy_disp_map["col_map"].values
+
+        copy_disp_map["validity"].loc[{"criteria": Criteria.P2D_SCORE_THRESHOLD.name, "row": 0, "col": 2}] = 1
+
+        result_disp_col, result_disp_row, result_scores = dichotomy_instance.refinement_method(
+            refinement_method_cost_volumes, copy_disp_map, left_img, img_right=mocker.ANY
+        )
+
+        assert result_disp_row[0, 2] == row_before[0, 2]
+        assert result_disp_col[0, 2] == col_before[0, 2]
+        assert result_scores[0, 2] == scores_before[0, 2]
+        assert result_disp_col[1, 0] == refinement_method_disp_map["col_map"][1, 0] - 0.5
