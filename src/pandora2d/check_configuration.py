@@ -44,7 +44,7 @@ from pandora.check_configuration import (
 from pandora.img_tools import rasterio_open
 from rasterio.io import DatasetReader
 
-from pandora2d.common import all_same, is_incomplete_disparity_range_enabled
+from pandora2d.common import all_same, is_incomplete_disparity_range_enabled, is_score_threshold_enabled
 from pandora2d.matching_cost.pandora import PandoraMatchingCostMethods
 from pandora2d.matching_cost.registry import MatchingCostRegistry
 from pandora2d.state_machine import Pandora2DMachine
@@ -190,9 +190,14 @@ def check_skip_mode_section(user_cfg: dict[str, dict]) -> None:
     if isinstance(user_section, dict) and user_section.get("type") == "custom" and not user_section.get("rules"):
         raise ValueError("skip_mode type custom requires rules")
 
-    # Add missing defaults values in user_cfg
-    cfg = build_default_skip_mode_configuration()
-    update_global_conf(cfg, user_cfg_skip_mode)
+    mode_type = user_section["type"]
+    user_rules = user_section.get("rules")
+    if user_rules == [] and mode_type in ("fast", "complete"):
+        raise ValueError("skip_mode rules must not be an empty list")
+
+    completed_rules = complete_skip_mode_rules(mode_type, user_rules)
+
+    cfg = {"skip_mode": {"type": mode_type, "rules": completed_rules}}
 
     # Check schema
     checker = Checker({"skip_mode": skip_mode_configuration_schema})
@@ -257,6 +262,18 @@ def check_pipeline_section(user_cfg: dict[str, dict], pandora2d_machine: Pandora
 
     # The matching cost section is completed above, so the method is known.
     check_skip_mode_with_matching_cost(user_cfg)
+    check_skip_mode_requires_refinement(user_cfg)
+
+
+def check_skip_mode_requires_refinement(user_cfg: dict[str, dict]) -> None:
+    """
+    Check that the score_threshold rule is only used when a refinement step is present.
+
+    :param user_cfg: user configuration dictionary
+    :raises ValueError: If score_threshold is active without a refinement step
+    """
+    if is_score_threshold_enabled(user_cfg) and "refinement" not in user_cfg["pipeline"]:
+        raise ValueError("The score_threshold rule requires a refinement step in the pipeline.")
 
 
 def check_subpix_value_with_dichotomy(refinement_method: str, subpix: int) -> None:
@@ -775,13 +792,69 @@ def build_default_segment_mode_configuration() -> dict:
     }
 
 
-def build_default_skip_mode_configuration() -> dict:
-    """Default skip mode rule. The section mode comes from the user configuration."""
-    return {
-        "skip_mode": {
-            "rules": [{"type": "incomplete_disparity_range"}],
-        },
-    }
+SCORE_THRESHOLD_DEFAULT_VALUE = 0.5
+
+SKIP_MODE_RULE_SCHEMA = Or(
+    {"type": "incomplete_disparity_range"},
+    {"type": "score_threshold", OptionalKey("value"): float},
+)
+
+
+def build_default_skip_rules(mode_type: str) -> list[dict]:
+    """
+    Return the default skip mode rules for fast and complete presets.
+
+    :param mode_type: skip_mode type (fast or complete)
+    :return: default rule list
+    """
+    if mode_type in ("fast", "complete"):
+        return [
+            {"type": "incomplete_disparity_range"},
+            {"type": "score_threshold", "value": SCORE_THRESHOLD_DEFAULT_VALUE},
+        ]
+    return []
+
+
+def complete_score_threshold_rule(rule: dict) -> dict:
+    """
+    Fill the default value for a score_threshold rule when value is absent.
+
+    :param rule: score_threshold rule from user configuration
+    :return: rule with value set
+    """
+    if rule.get("type") != "score_threshold":
+        return rule
+    completed_rule = dict(rule)
+    if "value" not in completed_rule:
+        completed_rule["value"] = SCORE_THRESHOLD_DEFAULT_VALUE
+    return completed_rule
+
+
+def complete_skip_mode_rules(mode_type: str, user_rules: list[dict] | None) -> list[dict]:
+    """
+    Build the rule list saved in configuration according to skip_mode type.
+
+    custom uses only the listed rules. fast and complete start from preset rules and merge user overrides.
+
+    :param mode_type: skip_mode type
+    :param user_rules: rules given by the user, if any
+    :return: completed rule list
+    """
+    if mode_type == "custom":
+        return [complete_score_threshold_rule(rule) for rule in (user_rules or [])]
+
+    preset_rules = build_default_skip_rules(mode_type)
+    if not user_rules:
+        return preset_rules
+
+    overrides = {rule["type"]: rule for rule in user_rules}
+    merged_rules: list[dict] = []
+    for rule in preset_rules:
+        if rule["type"] in overrides:
+            merged_rules.append(complete_score_threshold_rule({**rule, **overrides[rule["type"]]}))
+        else:
+            merged_rules.append(dict(rule))
+    return merged_rules
 
 
 input_configuration_schema = {
@@ -810,7 +883,7 @@ segment_mode_configuration_schema = {
 
 skip_mode_configuration_schema = {
     "type": And(str, lambda value: value in ("fast", "complete", "custom")),
-    OptionalKey("rules"): [{"type": "incomplete_disparity_range"}],
+    OptionalKey("rules"): [SKIP_MODE_RULE_SCHEMA],
 }
 
 roi_configuration_schema = {
