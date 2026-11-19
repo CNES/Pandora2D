@@ -45,6 +45,8 @@ from pandora2d.img_tools import create_datasets_from_inputs
 from pandora2d.margins import Margins
 from pandora2d.state_machine import Pandora2DMachine
 
+NUM_VALIDITY_CRITERIA_BANDS = len(["validity_mask", "partial_validity_mask"] + list(Criteria.__members__.keys())[1:])
+
 
 def assert_equal_or_isnan(actual, expected):
     """
@@ -757,7 +759,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.zeros((5, 5)),
                 np.zeros((5, 5)),
                 np.zeros((5, 5)),
-                np.zeros((5, 5, 10)),
+                np.zeros((5, 5, NUM_VALIDITY_CRITERIA_BANDS)),
                 np.arange(5),
                 np.arange(5),
                 [0, 0],
@@ -786,7 +788,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.0, 0.0, 1.0, 2.0], [4.0, 5.0, 1.0, 3.0], [0.0, 1.0, 2.0, 2.0]]),
                 np.array([[3.0, 1.0, 1.0, 4.0], [1.0, 1.0, 2.0, 6.0], [0.0, 1.0, 0.0, 2.0]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 10)),
+                np.zeros((3, 4, NUM_VALIDITY_CRITERIA_BANDS)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
@@ -799,7 +801,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.0, -9999, 1.0, 2.0], [-9999, 5.0, -9999, 3.0], [0.0, 1.0, 2.0, -9999]]),
                 np.array([[3.0, -9999, 1.0, 4.0], [-9999, 1.0, -9999, 6.0], [0.0, 1.0, 0.0, -9999]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 10)),
+                np.zeros((3, 4, NUM_VALIDITY_CRITERIA_BANDS)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
@@ -812,7 +814,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.0, np.nan, 1.0, 2.0], [np.nan, 5.0, np.nan, 3.0], [0.0, 1.0, 2.0, np.nan]]),
                 np.array([[3.0, np.nan, 1.0, 4.0], [np.nan, 1.0, np.nan, 6.0], [0.0, 1.0, 0.0, np.nan]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 10)),
+                np.zeros((3, 4, NUM_VALIDITY_CRITERIA_BANDS)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
@@ -884,7 +886,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                     ]
                 ),
                 np.zeros((5, 5)),
-                np.zeros((5, 5, 10)),
+                np.zeros((5, 5, NUM_VALIDITY_CRITERIA_BANDS)),
                 np.arange(5),
                 np.arange(5),
                 [0, 0],
@@ -897,7 +899,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.5, 0.5, 1.5, 2.5], [5.5, 6.5, 2.5, 4.5], [2.5, 3.5, 4.5, 4.5]]),
                 np.array([[3.5, 2.5, 3.5, 7.5], [1.5, 2.5, 4.5, 9.5], [0.5, 2.5, 2.5, 5.5]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 10)),
+                np.zeros((3, 4, NUM_VALIDITY_CRITERIA_BANDS)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
@@ -910,7 +912,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.5, 0.5, -9999, 2.5], [5.5, 6.5, 2.5, 4.5], [-9999, 3.5, 4.5, 4.5]]),
                 np.array([[3.5, 2.5, -9999, 7.5], [1.5, 2.5, 4.5, 9.5], [-9999, 2.5, 2.5, 5.5]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 10)),
+                np.zeros((3, 4, NUM_VALIDITY_CRITERIA_BANDS)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
@@ -923,7 +925,7 @@ class TestConvertDispToGrid:  # pylint: disable=too-few-public-methods
                 np.array([[0.5, 0.5, np.nan, 2.5], [5.5, 6.5, 2.5, 4.5], [np.nan, 3.5, 4.5, 4.5]]),
                 np.array([[3.5, 2.5, np.nan, 7.5], [1.5, 2.5, 4.5, 9.5], [np.nan, 2.5, 2.5, 5.5]]),
                 np.zeros((3, 4)),
-                np.zeros((3, 4, 10)),
+                np.zeros((3, 4, NUM_VALIDITY_CRITERIA_BANDS)),
                 np.arange(3),
                 np.arange(4),
                 [0.5, 0.5],
