@@ -42,6 +42,7 @@ def make_cfg_for_dichotomy(
     step,
     iterations,
     roi,
+    resampling_type,
 ):
     """
     Creates user configuration to test dichotomy loop
@@ -69,17 +70,21 @@ def make_cfg_for_dichotomy(
         },
         "output": {"path": "home"},
     }
+    if resampling_type is not None:
+        user_cfg["pipeline"]["refinement"]["resampling_type"] = resampling_type
 
     return user_cfg
 
 
 @pytest.mark.parametrize(
-    ("dicho_method", "filter_method"),
+    ("dicho_method", "filter_method", "resampling_type"),
     [
-        ("dichotomy_python", "bicubic_python"),
-        ("dichotomy_python", "sinc_python"),
-        ("dichotomy", "sinc"),
-        ("dichotomy", "bicubic"),
+        ("dichotomy_python", "bicubic_python", None),
+        ("dichotomy_python", "sinc_python", None),
+        ("dichotomy", "sinc", "cost_surface"),
+        ("dichotomy", "bicubic", "cost_surface"),
+        ("dichotomy", "sinc", "image"),
+        ("dichotomy", "bicubic", "image"),
     ],
 )
 @pytest.mark.parametrize("subpix", [1, 2, 4])
@@ -111,53 +116,67 @@ def test_dichotomy_execution(make_cfg_for_dichotomy):
     dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg)
 
     # Checking that resulting disparity maps are not full of nans
-    with np.testing.assert_raises(AssertionError):
-        assert np.all(np.isnan(dataset_disp_maps.row_map.data))
-        assert np.all(np.isnan(dataset_disp_maps.col_map.data))
+    assert not np.all(np.isnan(dataset_disp_maps.row_map.data))
+    assert not np.all(np.isnan(dataset_disp_maps.col_map.data))
 
 
-@pytest.mark.parametrize("dicho_method", ["dichotomy"])
-@pytest.mark.parametrize("filter_method", ["bicubic"])
+@pytest.mark.parametrize(
+    ("input_cfg"),
+    [
+        pytest.param("correct_input_with_left_mask", id="Left mask"),
+        pytest.param("correct_input_with_right_mask", id="Right mask"),
+        pytest.param("correct_input_with_left_right_mask", id="Left and Right mask"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("dicho_method", "filter_method", "resampling_type"),
+    [
+        pytest.param("dichotomy_python", "bicubic_python", None, id="python-bicubic"),
+        pytest.param("dichotomy_python", "sinc_python", None, id="python-sinc"),
+        pytest.param("dichotomy", "bicubic", "cost_surface", id="cpp-bicubic-cost-surface"),
+        pytest.param("dichotomy", "sinc", "cost_surface", id="cpp-sinc-cost-surface"),
+        pytest.param("dichotomy", "bicubic", "image", id="cpp-bicubic-image"),
+        pytest.param("dichotomy", "sinc", "image", id="cpp-sinc-image"),
+    ],
+)
 @pytest.mark.parametrize("subpix", [2])
-@pytest.mark.parametrize("step", [[1, 1]])
-@pytest.mark.parametrize("iterations", [1])
-@pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
-@pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
-@pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
-def test_image_resampling_warning(make_cfg_for_dichotomy, caplog):
+@pytest.mark.parametrize("step", [[2, 3]])
+@pytest.mark.parametrize("iterations", [2])
+@pytest.mark.parametrize("roi", [{"col": {"first": 205, "last": 245}, "row": {"first": 165, "last": 205}}])
+def test_dichotomy_with_mask(make_cfg_for_dichotomy, input_cfg, request):
     """
-    Description : Test that a warning is raised when the image resampling option is activated.
-    Data :
-           * Left_img : cones/monoband/left.png
-           * Right_img : cones/monoband/right.png
-    """
-    pandora2d_machine = Pandora2DMachine()
+    Description : Test dichotomy refinement execution with left and/or right input masks.
 
+    Data :
+        * Left_img : cones/monoband/left.png
+        * Right_img : cones/monoband/right.png
+    """
     user_cfg = copy.deepcopy(make_cfg_for_dichotomy)
-    user_cfg["pipeline"]["refinement"]["resampling_type"] = "image"
+    user_cfg["input"] = copy.deepcopy(request.getfixturevalue(input_cfg)["input"])
+    pandora2d_machine = Pandora2DMachine()
     check_conf(user_cfg, pandora2d_machine)
 
     user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
     roi = get_roi_processing(user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"])
-
     image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
 
-    pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg)
+    dataset_disp_maps, _ = pandora2d.run(pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg)
 
-    assert (
-        "Image resampling is being implemented: a dichotomy on the cost surface will be performed instead."
-        in caplog.messages
-    )
+    # Checking that resulting disparity maps are not full of nans
+    assert not np.all(np.isnan(dataset_disp_maps.row_map.data))
+    assert not np.all(np.isnan(dataset_disp_maps.col_map.data))
 
 
 @pytest.mark.additional_functional_test
 @pytest.mark.parametrize(
-    ("dicho_method", "filter_method"),
+    ("dicho_method", "filter_method", "resampling_type"),
     [
-        ("dichotomy_python", "bicubic_python"),
-        ("dichotomy_python", "sinc_python"),
-        ("dichotomy", "bicubic"),
-        ("dichotomy", "sinc"),
+        ("dichotomy_python", "bicubic_python", None),
+        ("dichotomy_python", "sinc_python", None),
+        ("dichotomy", "sinc", "cost_surface"),
+        ("dichotomy", "bicubic", "cost_surface"),
+        ("dichotomy", "sinc", "image"),
+        ("dichotomy", "bicubic", "image"),
     ],
 )
 @pytest.mark.parametrize("subpix", [1])
@@ -239,3 +258,53 @@ def test_extrema_disparities_not_processed(make_cfg_for_dichotomy):
         pandora2d_machine.dataset_disp_maps["col_map"].data[mask_max_col[0], mask_max_col[1]]
         == image_datasets.left.col_disparity.data[1, mask_max_col[0], mask_max_col[1]]
     )
+
+
+@pytest.mark.additional_functional_test
+@pytest.mark.parametrize("dicho_method", ["dichotomy"])
+@pytest.mark.parametrize("filter_method", ["bicubic", "sinc"])
+@pytest.mark.parametrize("resampling_type", ["cost_surface"])
+@pytest.mark.parametrize("min_ratio", [pytest.param(0.75, id="min ratio 75 percent")])
+@pytest.mark.parametrize("subpix", [2, 4])
+@pytest.mark.parametrize("step", [[1, 1]])
+@pytest.mark.parametrize("iterations", [1, 2, 4, 6])
+@pytest.mark.parametrize("roi", [{"col": {"first": 100, "last": 120}, "row": {"first": 100, "last": 120}}])
+@pytest.mark.parametrize("col_disparity", [{"init": 0, "range": 1}])
+@pytest.mark.parametrize("row_disparity", [{"init": 0, "range": 3}])
+def test_dichotomy_resampling_types_comparison(make_cfg_for_dichotomy, min_ratio):
+    """
+    Description : Compare disparity maps obtained with image and cost surface resampling.
+    Data :
+           * Left_img : cones/monoband/left.png
+           * Right_img : cones/monoband/right.png
+    """
+    disparity_maps = {}
+    # Run pandora2d machine for both resampling types
+    for resampling_type in ("cost_surface", "image"):
+        user_cfg = copy.deepcopy(make_cfg_for_dichotomy)
+        user_cfg["pipeline"]["refinement"]["resampling_type"] = resampling_type
+        pandora2d_machine = Pandora2DMachine()
+        check_conf(user_cfg, pandora2d_machine)
+
+        user_cfg["ROI"]["margins"] = pandora2d_machine.margins_img.global_margins.astuple()
+        roi = get_roi_processing(
+            user_cfg["ROI"], user_cfg["input"]["col_disparity"], user_cfg["input"]["row_disparity"]
+        )
+        image_datasets = create_datasets_from_inputs(input_config=user_cfg["input"], roi=roi)
+        disparity_maps[resampling_type], _ = pandora2d.run(
+            pandora2d_machine, image_datasets.left, image_datasets.right, user_cfg
+        )
+
+    invalid_disp = make_cfg_for_dichotomy["pipeline"]["disparity"]["invalid_disparity"]
+    for name in ("row_map", "col_map"):
+        cost_surface_map = disparity_maps["cost_surface"][name].data
+        image_map = disparity_maps["image"][name].data
+
+        # Compare only valid pixels in both maps
+        valid_pixels = (cost_surface_map != invalid_disp) & (image_map != invalid_disp)
+        cost_surface_map = cost_surface_map[valid_pixels]
+        image_map = image_map[valid_pixels]
+
+        # Proportion of valid points with identical disparities
+        ratio = np.mean(cost_surface_map == image_map)
+        assert ratio >= min_ratio

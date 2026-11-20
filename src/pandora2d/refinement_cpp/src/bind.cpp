@@ -30,59 +30,147 @@ This module contains functions associated to the binding pybind of cpp dichotomy
 using namespace pybind11::literals;
 
 PYBIND11_MODULE(refinement_bind, m) {
-  m.def("compute_dichotomy_float", &compute_dichotomy<float, P2d::Vectorf>, "cost_volume"_a,
+  m.def("compute_dichotomy_cost_surface_float",
+        &compute_dichotomy_cost_surface<float, P2d::Vectorf>, "cost_volumes"_a,
         "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "invalid_map"_a.noconvert(),
-        "criteria_map"_a, "subpixel"_a, "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
+        "criteria_map"_a, "subpixel"_a, "nb_iterations"_a, "filter"_a,
+        "type_method_matching_cost"_a,
         R"mydelimiter(
-            Dichotomy calculation with float data
+                Dichotomy refinement by resampling the cost surface (float data).
 
-            :param cost_volume: cost volume data
-            :type cost_volume: NDArray[np.floating]
-            :param disparity_map_col: column disparity map data
-            :type disparity_map_col: NDArray[np.floating]
-            :param disparity_map_row: row disparity map data
-            :type disparity_map_row: NDArray[np.floating]
-            :param score_map: score map data
-            :type score_map: NDArray[np.floating]
-            :param invalid_map: invalid map data
-            :type invalid_map: NDArray[np.uint8]
-            :param criteria_map: criteria map data
-            :type criteria_map: NDArray[np.floating]
-            :param subpixel: sub-sampling of cost_volume
-            :type subpixel: int
-            :param nb_iterations: number of iterations of the dichotomy
-            :type nb_iterations: int
-            :param filter: interpolation filter
-            :type filter: abstractfilter::AbstractFilter
-            :param method_matching_cost: max or min
-            :type method_matching_cost: str
+                :param cost_volumes: cost volumes data
+                :type cost_volumes: NDArray[np.floating]
+                :param disparity_map_col: column disparity map data
+                :type disparity_map_col: NDArray[np.floating]
+                :param disparity_map_row: row disparity map data
+                :type disparity_map_row: NDArray[np.floating]
+                :param score_map: score map data
+                :type score_map: NDArray[np.floating]
+                :param invalid_map: invalid map data
+                :type invalid_map: NDArray[np.uint8]
+                :param criteria_map: criteria map data
+                :type criteria_map: NDArray[np.floating]
+                :param subpixel: sub-sampling of cost_volume
+                :type subpixel: int
+                :param nb_iterations: number of iterations of the dichotomy
+                :type nb_iterations: int
+                :param filter: interpolation filter
+                :type filter: abstractfilter::AbstractFilter
+                :param type_method_matching_cost: max or min
+                :type type_method_matching_cost: str
             )mydelimiter");
 
-  m.def("compute_dichotomy_double", &compute_dichotomy<double, P2d::VectorD>, "cost_volume"_a,
+  m.def("compute_dichotomy_cost_surface_double",
+        &compute_dichotomy_cost_surface<double, P2d::VectorD>, "cost_volumes"_a,
         "disparity_map_col"_a, "disparity_map_row"_a, "score_map"_a, "invalid_map"_a.noconvert(),
-        "criteria_map"_a, "subpixel"_a, "nb_iterations"_a, "filter"_a, "method_matching_cost"_a,
+        "criteria_map"_a, "subpixel"_a, "nb_iterations"_a, "filter"_a,
+        "type_method_matching_cost"_a,
         R"mydelimiter(
-            Dichotomy calculation with double data
+                Dichotomy refinement by resampling the cost surface (double data).
 
-            :param cost_volume: cost volume data
-            :type cost_volume: NDArray[np.floating]
-            :param disparity_map_col: column disparity map data
-            :type disparity_map_col: NDArray[np.floating]
-            :param disparity_map_row: row disparity map data
-            :type disparity_map_row: NDArray[np.floating]
-            :param score_map: score map data
-            :type score_map: NDArray[np.floating]
-            :param invalid_map: invalid map data
-            :type invalid_map: NDArray[np.uint8]
-            :param criteria_map: criteria map data
-            :type criteria_map: NDArray[np.floating]
-            :param subpixel: sub-sampling of cost_volume
-            :type subpixel: int
-            :param nb_iterations: number of iterations of the dichotomy
-            :type nb_iterations: int
-            :param filter: interpolation filter
-            :type filter: abstractfilter::AbstractFilter
-            :param method_matching_cost: max or min
-            :type method_matching_cost: str
+                :param cost_volumes: cost volumes data
+                :type cost_volumes: NDArray[np.floating]
+                :param disparity_map_col: column disparity map data
+                :type disparity_map_col: NDArray[np.floating]
+                :param disparity_map_row: row disparity map data
+                :type disparity_map_row: NDArray[np.floating]
+                :param score_map: score map data
+                :type score_map: NDArray[np.floating]
+                :param invalid_map: invalid map data
+                :type invalid_map: NDArray[np.uint8]
+                :param criteria_map: criteria map data
+                :type criteria_map: NDArray[np.floating]
+                :param subpixel: sub-sampling of cost_volume
+                :type subpixel: int
+                :param nb_iterations: number of iterations of the dichotomy
+                :type nb_iterations: int
+                :param filter: interpolation filter
+                :type filter: abstractfilter::AbstractFilter
+                :param type_method_matching_cost: max or min
+                :type type_method_matching_cost: str
+            )mydelimiter");
+
+  m.def("compute_dichotomy_image_float", &compute_dichotomy_image<P2d::Vectorf>, "nb_cols"_a,
+        "left_image"_a, "right_image"_a, "disparity_map_col"_a, "disparity_map_row"_a,
+        "score_map"_a, "invalid_map"_a.noconvert(), "subpixel"_a, "nb_iterations"_a, "filter"_a,
+        "method_matching_cost"_a, "window_size"_a, "step"_a, "offset_cv_img"_a, "disp_min"_a,
+        "right_valid_mask"_a,
+        R"mydelimiter(
+                Dichotomy refinement by resampling the right image (float data).
+
+                :param nb_cols: number of columns in the cost volume
+                :type nb_cols: int
+                :param left_image: left image data
+                :type left_image: NDArray[np.floating]
+                :param right_image: right image data
+                :type right_image: NDArray[np.floating]
+                :param disparity_map_col: column disparity map data
+                :type disparity_map_col: NDArray[np.floating]
+                :param disparity_map_row: row disparity map data
+                :type disparity_map_row: NDArray[np.floating]
+                :param score_map: score map data
+                :type score_map: NDArray[np.floating]
+                :param invalid_map: invalid map data
+                :type invalid_map: NDArray[np.uint8]
+                :param subpixel: sub-sampling of cost_volume
+                :type subpixel: int
+                :param nb_iterations: number of iterations of the dichotomy
+                :type nb_iterations: int
+                :param filter: interpolation filter
+                :type filter: abstractfilter::AbstractFilter
+                :param method_matching_cost: matching cost method
+                :type method_matching_cost: str
+                :param window_size: size of the correlation window
+                :type window_size: int
+                :param step: step of the matching cost
+                :type step: list[int]
+                :param offset_cv_img: offset of the cost volume in the image
+                :type offset_cv_img: list[int]
+                :param disp_min: minimum disparity values
+                :type disp_min: list[float]
+                :param right_valid_mask: mask of valid pixels in the right image
+                :type right_valid_mask: NDArray[np.uint8]
+            )mydelimiter");
+
+  m.def("compute_dichotomy_image_double", &compute_dichotomy_image<P2d::VectorD>, "nb_cols"_a,
+        "left_image"_a, "right_image"_a, "disparity_map_col"_a, "disparity_map_row"_a,
+        "score_map"_a, "invalid_map"_a.noconvert(), "subpixel"_a, "nb_iterations"_a, "filter"_a,
+        "method_matching_cost"_a, "window_size"_a, "step"_a, "offset_cv_img"_a, "disp_min"_a,
+        "right_valid_mask"_a,
+        R"mydelimiter(
+                Dichotomy refinement by resampling the right image (double data).
+
+                :param nb_cols: number of columns in the cost volume
+                :type nb_cols: int
+                :param left_image: left image data
+                :type left_image: NDArray[np.floating]
+                :param right_image: right image data
+                :type right_image: NDArray[np.floating]
+                :param disparity_map_col: column disparity map data
+                :type disparity_map_col: NDArray[np.floating]
+                :param disparity_map_row: row disparity map data
+                :type disparity_map_row: NDArray[np.floating]
+                :param score_map: score map data
+                :type score_map: NDArray[np.floating]
+                :param invalid_map: invalid map data
+                :type invalid_map: NDArray[np.uint8]
+                :param subpixel: sub-sampling of cost_volume
+                :type subpixel: int
+                :param nb_iterations: number of iterations of the dichotomy
+                :type nb_iterations: int
+                :param filter: interpolation filter
+                :type filter: abstractfilter::AbstractFilter
+                :param method_matching_cost: matching cost method
+                :type method_matching_cost: str
+                :param window_size: size of the correlation window
+                :type window_size: int
+                :param step: step of the matching cost
+                :type step: list[int]
+                :param offset_cv_img: offset of the cost volume in the image
+                :type offset_cv_img: list[int]
+                :param disp_min: minimum disparity values
+                :type disp_min: list[float]
+                :param right_valid_mask: mask of valid pixels in the right image
+                :type right_valid_mask: NDArray[np.uint8]
             )mydelimiter");
 }

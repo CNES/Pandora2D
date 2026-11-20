@@ -37,7 +37,7 @@ This module contains functions associated to the Dichotomy refinement method.
  * @param pos_col_disp : initial position on col
  * @param score : best score on cost surface (minimum or maximum)
  * @param filter : interpolation filter
- * @param method_matching_cost : max or min
+ * @param type_method_matching_cost : max or min
  */
 void search_new_best_point(const P2d::MatrixD& cost_surface,
                            const double precision,
@@ -46,7 +46,7 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
                            double& pos_col_disp,
                            double& score,
                            abstractfilter::AbstractFilter& filter,
-                           std::string method_matching_cost) {
+                           std::string type_method_matching_cost) {
   // Used to compute new positions and new disparities based on precision
   P2d::VectorD disp_row_shifts(9);
   P2d::VectorD disp_col_shifts(9);
@@ -71,7 +71,7 @@ void search_new_best_point(const P2d::MatrixD& cost_surface,
 
   // search index of new best score
   if (not all_same(candidates)) {
-    int best_index = COST_SELECTION_METHOD_MAPPING.at(method_matching_cost)(candidates);
+    int best_index = COST_SELECTION_METHOD_MAPPING.at(type_method_matching_cost)(candidates);
 
     // Update variables
     pos_row_disp = new_row_pos[best_index];
