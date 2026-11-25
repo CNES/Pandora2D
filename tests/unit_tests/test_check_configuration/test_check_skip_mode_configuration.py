@@ -25,7 +25,8 @@ import pytest
 from json_checker import DictCheckerError
 
 from pandora2d.check_configuration import (
-    build_default_skip_mode_configuration,
+    SCORE_THRESHOLD_DEFAULT_VALUE,
+    build_default_skip_rules,
     check_conf,
     check_skip_mode_section,
 )
@@ -54,9 +55,8 @@ class TestCheckSkipMode:
             pytest.param("rules", "incomplete_disparity_range", id="error rules value with a string"),
             pytest.param(
                 "rules",
-                [{"type": "score_threshold", "value": 0.5}],
-                id="score_threshold still in development",
-                marks=pytest.mark.skip(reason="score_threshold rule is still in development"),
+                [{"type": "score_threshold", "value": "0.5"}],
+                id="error rules value with a string threshold",
             ),
             pytest.param(
                 "rules",
@@ -102,7 +102,7 @@ class TestCheckSkipMode:
         """
         Description : An empty rules list is rejected for fast and complete (schema error)
         """
-        with pytest.raises(DictCheckerError):
+        with pytest.raises(ValueError, match="skip_mode rules must not be an empty list"):
             check_skip_mode_section({"skip_mode": {"type": mode_type, "rules": []}})
 
     def test_update_configuration_without_skip_mode_section(self):
@@ -134,7 +134,73 @@ class TestCheckSkipMode:
         check_skip_mode_section(cfg)
 
         assert cfg["skip_mode"]["type"] == mode_type
-        assert cfg["skip_mode"]["rules"] == build_default_skip_mode_configuration()["skip_mode"]["rules"]
+        assert cfg["skip_mode"]["rules"] == build_default_skip_rules(mode_type)
+
+    def test_score_threshold_custom_nominal(self, correct_skip_mode) -> None:
+        """score_threshold is accepted in custom mode."""
+        correct_skip_mode["skip_mode"] = {
+            "type": "custom",
+            "rules": [{"type": "score_threshold", "value": 0.5}],
+        }
+        check_skip_mode_section(correct_skip_mode)
+        assert correct_skip_mode["skip_mode"]["rules"] == [{"type": "score_threshold", "value": 0.5}]
+
+    def test_score_threshold_default_value(self) -> None:
+        """score_threshold without value gets the default threshold."""
+        cfg = {"skip_mode": {"type": "custom", "rules": [{"type": "score_threshold"}]}}
+        check_skip_mode_section(cfg)
+        assert cfg["skip_mode"]["rules"] == [{"type": "score_threshold", "value": SCORE_THRESHOLD_DEFAULT_VALUE}]
+
+    @pytest.mark.parametrize(
+        ["skip_mode_type"],
+        [
+            pytest.param("fast", id="fast default"),
+            pytest.param("complete", id="complete default"),
+        ],
+    )
+    def test_preset_overrides_score_threshold_value(self, skip_mode_type: str) -> None:
+        """Preset merges rules and overrides score_threshold value only."""
+        cfg = {"skip_mode": {"type": skip_mode_type, "rules": [{"type": "score_threshold", "value": 0.4}]}}
+        check_skip_mode_section(cfg)
+        default_rules = build_default_skip_rules(skip_mode_type)
+        expected_rules = default_rules.copy()
+        # Find and update score_threshold value
+        for rule in expected_rules:
+            if rule["type"] == "score_threshold":
+                rule["value"] = 0.4
+                break
+        assert cfg["skip_mode"]["rules"] == expected_rules
+
+
+class TestScoreThresholdRequiresRefinement:
+    """score_threshold is only valid when the pipeline includes refinement."""
+
+    @pytest.fixture()
+    def configuration_with_refinement(self, correct_input_cfg, correct_pipeline_with_dichotomy_cpp):
+        return {
+            **correct_input_cfg,
+            **correct_pipeline_with_dichotomy_cpp,
+            "output": {"path": "here"},
+        }
+
+    def test_score_threshold_without_refinement_raises(
+        self, correct_input_cfg, correct_pipeline_without_refinement, pandora2d_machine
+    ):
+        configuration = {
+            **correct_input_cfg,
+            **correct_pipeline_without_refinement,
+            "skip_mode": {"type": "custom", "rules": [{"type": "score_threshold", "value": 0.5}]},
+            "output": {"path": "here"},
+        }
+        with pytest.raises(ValueError, match="score_threshold rule requires a refinement step"):
+            check_conf(configuration, pandora2d_machine)
+
+    def test_score_threshold_with_refinement_is_accepted(self, configuration_with_refinement, pandora2d_machine):
+        configuration_with_refinement["skip_mode"] = {
+            "type": "custom",
+            "rules": [{"type": "score_threshold", "value": 0.5}],
+        }
+        check_conf(configuration_with_refinement, pandora2d_machine)
 
 
 class TestIncompleteDisparityRangeWithMatchingCost:

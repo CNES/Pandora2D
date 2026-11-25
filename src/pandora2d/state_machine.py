@@ -536,6 +536,15 @@ class Pandora2DMachine(BaseMachine):
             self.dataset_disp_maps["col_map"].data,
         )
 
+        if common.is_score_threshold_enabled(cfg):
+            threshold = common.get_score_threshold_value(cfg)
+            criteria.apply_score_threshold(
+                self.dataset_disp_maps["validity"],
+                self.dataset_disp_maps["correlation_score"].data,
+                threshold,
+                self.cost_volumes.attrs["type_measure"],
+            )
+
     @mem_time_profile(name="Refinement step")
     def refinement_run(self, cfg: dict[str, dict], input_step: str) -> None:
         """
@@ -547,6 +556,20 @@ class Pandora2DMachine(BaseMachine):
         """
 
         logging.info("Refinement computation...")
+
+        if common.is_score_threshold_enabled(cfg):
+            threshold = common.get_score_threshold_value(cfg)
+            type_measure = self.cost_volumes.attrs["type_measure"]
+            if type_measure == "max":
+                logging.info(
+                    "score_threshold rule is activated: points with correlation score below %s will not be refined.",
+                    threshold,
+                )
+            else:
+                logging.info(
+                    "score_threshold rule is activated: points with correlation score above %s will not be refined.",
+                    threshold,
+                )
 
         if cfg["pipeline"][input_step]["refinement_method"] == "optical_flow":
             logging.warning("The optical flow method is still in an experimental phase.")

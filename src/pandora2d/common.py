@@ -504,6 +504,30 @@ def is_incomplete_disparity_range_enabled(cfg: dict) -> bool:
     return any(rule.get("type") == "incomplete_disparity_range" for rule in rules)
 
 
+def is_score_threshold_enabled(cfg: dict) -> bool:
+    """
+    Return True if the score_threshold rule is activated in the configuration.
+
+    :param cfg: configuration with a completed skip_mode section
+    :return: True if the score_threshold rule is present
+    """
+    return get_score_threshold_value(cfg) is not None
+
+
+def get_score_threshold_value(cfg: dict) -> float | None:
+    """
+    Return the score_threshold value from the configuration when the rule is active.
+
+    :param cfg: configuration with a completed skip_mode section
+    :return: threshold value, or None if the rule is not enabled
+    """
+    rules = cfg.get("skip_mode", {}).get("rules", [])
+    for rule in rules:
+        if rule.get("type") == "score_threshold":
+            return float(rule["value"])
+    return None
+
+
 def build_usable_data_mask(disp_data: NDArray, nodata: float | None) -> NDArray[np.bool_]:
     """
     Build a boolean mask indicating which elements of the input array are usable.

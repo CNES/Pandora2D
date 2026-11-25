@@ -151,9 +151,34 @@ def test_validity_mask_saved(
 
     # Check that validity_mask.tif contains eight bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 10
+        assert dataset.count == len(expected_band_names)
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names
+
+
+def test_validity_mask_score_threshold_band_with_refinement(
+    correct_input_cfg, correct_pipeline_with_dichotomy_cpp, run_pipeline, tmp_path, score_threshold_custom_skip_mode
+):
+    """
+    When score_threshold is active with refinement, the saved validity mask contains its band.
+    """
+    configuration = {
+        **correct_input_cfg,
+        **correct_pipeline_with_dichotomy_cpp,
+        "skip_mode": score_threshold_custom_skip_mode,
+        "output": {"path": str(tmp_path)},
+    }
+    run_pipeline(configuration)
+
+    validity_mask_path = tmp_path / "disparity_map" / "validity.tif"
+    with rasterio.open(validity_mask_path) as dataset:
+        # score_threshold adds the P2D_SCORE_THRESHOLD band to the saved validity mask.
+        assert Criteria.P2D_SCORE_THRESHOLD.name in dataset.descriptions
+        # dataset.read() numbers bands from 1, while descriptions.index() starts at 0.
+        band_index = dataset.descriptions.index(Criteria.P2D_SCORE_THRESHOLD.name) + 1
+        band_data = dataset.read(band_index)
+        # At least one point is flagged, so the band is not left at its initial fill.
+        assert np.any(band_data == 1)
 
 
 @pytest.mark.parametrize(
@@ -216,6 +241,6 @@ def test_validity_mask_saved_with_roi(
 
     # Check that validity_mask.tif contains eight bands of type uint8 with correct names
     with rasterio.open(validity_mask_path) as dataset:
-        assert dataset.count == 10
+        assert dataset.count == len(expected_band_names)
         assert all(dtype == "uint8" for dtype in dataset.dtypes)
         assert dataset.descriptions == expected_band_names
